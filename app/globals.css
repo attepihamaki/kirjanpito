@@ -45,6 +45,16 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
+
+    /* Kirjanpito additions. See CLAUDE.md §11. */
+    --color-income: var(--income);
+    --color-income-subtle: var(--income-subtle);
+    --color-expense: var(--expense);
+    --color-expense-subtle: var(--expense-subtle);
+    --color-paper: var(--paper);
+    --color-paper-foreground: var(--paper-foreground);
+    --color-paper-edge: var(--paper-edge);
+    --color-warning: var(--warning);
 }
 
 :root {
@@ -80,6 +90,22 @@
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+
+    /*
+     * Kirjanpito additions (CLAUDE.md §11). The theme has no income/expense
+     * pair, no warm paper tone and no amber, and the two colours it does have
+     * already mean something else: --primary is the call-to-action fill and
+     * --destructive means "error", not "expense". Income sits at hue 148 so it
+     * stays distinguishable from the emerald primary at 165.
+     */
+    --income: oklch(0.52 0.12 148);
+    --income-subtle: oklch(0.955 0.025 148);
+    --expense: oklch(0.525 0.155 25);
+    --expense-subtle: oklch(0.955 0.025 25);
+    --paper: oklch(0.993 0.008 85);
+    --paper-foreground: oklch(0.205 0.012 85);
+    --paper-edge: oklch(0.915 0.016 85);
+    --warning: oklch(0.69 0.13 75);
 }
 
 .dark {
@@ -114,6 +140,16 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
+
+    /* Kirjanpito additions, dark. */
+    --income: oklch(0.76 0.14 150);
+    --income-subtle: oklch(0.27 0.05 150);
+    --expense: oklch(0.73 0.14 25);
+    --expense-subtle: oklch(0.27 0.055 25);
+    --paper: oklch(0.225 0.007 85);
+    --paper-foreground: oklch(0.93 0.012 85);
+    --paper-edge: oklch(0.32 0.009 85);
+    --warning: oklch(0.79 0.14 75);
 }
 
 @layer base {
@@ -129,4 +165,39 @@
   html {
     @apply font-sans;
     }
+}
+
+@layer components {
+  /* Money and dates line up in columns (CLAUDE.md §11). */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+}
+
+/* §8.8: the income statement prints as a bare sheet. */
+@media print {
+  .print-hidden {
+    display: none !important;
+  }
+  .print-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+  body {
+    background: white;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

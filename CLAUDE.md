@@ -34,7 +34,7 @@ There is **no backend, no account and no database**. The user opens their bookke
 - Suggested libraries:
   - `papaparse` for CSV parsing, plus `zod` for row validation. The prototype has a hand-written parser; its behaviour is described in §7.
   - `jszip` for ZIP import and export.
-  - `pdfjs-dist` for rendering PDFs. Configure the worker the Next.js way, e.g. `GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString()`, and load it only on the client with a dynamic import.
+  - `pdfjs-dist` for rendering PDFs. **The worker is copied to `public/pdf.worker.min.mjs` by `scripts/copy-pdf-worker.mjs` on `predev`/`prebuild`, and `workerSrc` points at that fixed URL.** The `new URL(..., import.meta.url)` form was rejected: the worker is an ES module bundle, and whether Turbopack copies it as an asset or pulls it into the module graph differs between the dev server and the export — a failure that would surface only in production. pdfjs is still imported dynamically, from `lib/browser/pdf.ts` alone.
   - `idb` or `idb-keyval` for IndexedDB.
   - `next-themes` for light, dark and system theme (the standard shadcn approach).
   - `@tanstack/react-table` for the sortable, filterable, paginated tables (the shadcn data-table pattern).
@@ -243,7 +243,7 @@ For the selected year, by month (net amounts):
   - `pvm` is ISO `YYYY-MM-DD`. `tyyppi` is `tulo` or `kulu`. `tili` is the account number.
   - `luokka` is the category's **Finnish** name (stable across UI languages).
   - `summa` uses a decimal comma with no thousands separator (`1882,50`). `alv` uses a decimal comma (`25,5`). `syotto` is `brutto` or `netto`.
-  - `tosite` holds the receipt paths inside the ZIP, separated by `|`.
+  - `tosite` holds the receipt paths inside the ZIP, separated by `|`. **These are written even when exporting CSV only**, so a plain CSV still records which receipts existed and a re-import can mark them missing per §7.2. The prototype dropped them, which made a CSV-only export lossy.
   - Rows are sorted by date. The format is identical in both UI languages, so it opens directly in Finnish Excel.
 - **Import (be lenient):**
   - Strip a BOM. Detect the delimiter from the header line (`;`, tab or `,`, whichever splits it most). Headers are matched case-insensitively. `pvm`, `tyyppi` and `summa` are required; the rest are optional.
@@ -502,7 +502,30 @@ The user also provided two real receipts for testing (a Motonet till receipt as 
 
 The aim is a calm, Nordic, functional tool. The one bold element is the **paper receipt motif**: the live preview in the entry dialog, the landing hero, and the printed income statement. Everything around it stays quiet. Avoid generic SaaS-card layouts, gradients, all-caps labels and decorative motion.
 
-### Colour tokens (CSS variables, mapped onto shadcn's theme variables)
+> **The project's shadcn theme is the source of truth for colours and typography.**
+> `app/globals.css` — style `base-nova` on Base UI, neutral greys with an emerald
+> `--primary`, `--radius: 0.625rem`, Geist via `next/font/google` — wins over the
+> hex table below, which is kept only as a record of the prototype's palette.
+> Use the theme's semantic variables (`background`, `card`, `muted`, `primary`,
+> `destructive`, `border`, `ring`, `sidebar-*`) and the standard component
+> variants. Never hard-code a hex value and never write a manual `dark:` override.
+>
+> **Seven variables were added** on `:root` and `.dark`, because the theme has no
+> equivalent and its nearest colours already mean something else — `--primary` is
+> the call-to-action fill and `--destructive` means "error", not "expense":
+>
+> | variable | use |
+> |---|---|
+> | `--income` / `--income-subtle` | income amounts, the Tulo segment, row edge, income bars. Hue 148, kept clear of the emerald primary at 165 |
+> | `--expense` / `--expense-subtle` | expense amounts, the Kulu segment, row edge, expense bars. Less saturated than `--destructive` |
+> | `--paper` / `--paper-foreground` / `--paper-edge` | the receipt motif: the entry dialog preview, the landing hero, the printed income statement |
+> | `--warning` | the amber "Muutoksia, joita ei ole viety" status dot |
+>
+> They are exposed through `@theme inline` as `--color-income`, `--color-expense`
+> and so on, so they work as `bg-income`, `text-expense`, `bg-paper`.
+> A `.tabular` utility and the `@media print` rules also live in `globals.css`.
+
+### Colour tokens (historical — the prototype's palette, superseded by the theme)
 
 | token | light | dark | use |
 |---|---|---|---|
@@ -534,9 +557,58 @@ Sidebar → `Sidebar`. Buttons → `Button` (variants default, outline, ghost, d
 
 ---
 
+## 11b. SEO and the route structure
+
+The landing pages are public, indexed documents; the bookkeeping app is not.
+
+```
+app/
+  robots.ts                      → /robots.txt      (disallows /app/)
+  sitemap.ts                     → /sitemap.xml     (/ and /en, with alternates)
+
+  (fi)/                          ROOT LAYOUT — <html lang="fi">
+    page.tsx                     /                  landing FI, indexed
+    opengraph-image.tsx          1200×630 via next/og
+    app/
+      layout.tsx                 AppShell + metadata.robots = noindex, nofollow
+      kirjanpito/  alv/  tulos/  yhteenveto/  asetukset/
+
+  (en)/                          ROOT LAYOUT — <html lang="en">
+    en/page.tsx                  /en                landing EN, indexed
+    en/opengraph-image.tsx
+```
+
+- **Two root layouts**, because only a root layout renders `<html lang>` and each
+  indexed document must ship the right one in its static HTML. `/` and `/app/*`
+  share the `(fi)` layout, so entering the app is a soft navigation; switching
+  landing language is a full reload, which is correct for a document-language
+  change.
+- **`output: "export"`** with `trailingSlash: true` and `images.unoptimized`.
+  `robots.ts`, `sitemap.ts` and both `opengraph-image.tsx` are Route Handlers and
+  need `export const dynamic = "force-static"` — without it the build fails.
+  `ImageResponse` does emit PNGs under static export; verified in `out/`.
+- **Language**: the *document* language is fixed by the route and baked at build
+  time; the *UI* language inside the app is the persisted preference. The landing
+  never redirects on a stored preference — that would be cloaking-adjacent and
+  would break the back button. On a first visit only, the route seeds the
+  preference. This is how §9's "no locale routing is needed" coexists with having
+  two indexed URLs.
+- **The landing bundle must not contain `pdfjs-dist`, `jszip`, `papaparse` or
+  `recharts`.** Commands are split into `lib/commands/book-commands.ts` (safe to
+  import statically) and `lib/commands/io-commands.ts` (pulled in with
+  `await import()` from the landing's file handler). `lib/browser/pdf.ts` is the
+  only module importing pdfjs and is always dynamically imported. The build
+  verification greps the chunks referenced by `out/index.html`.
+- `SITE_URL` comes from `NEXT_PUBLIC_SITE_URL` in `lib/site.ts`, which also holds
+  the route constants.
+
 ## 12. Persistence keys (prototype)
 
-- localStorage `kirjanpito.v1`: `{ entries, cats, year, dirty, fileName, lastMode, lastType, lang, theme, open, ledgerSize, ctSize }`.
+- localStorage `kirjanpito.v1`: `{ entries, cats, year, dirty, fileName, lastMode, lastType, lang, open, ledgerSize, ctSize }`.
+  **`theme` is no longer in this blob.** next-themes owns it under its own key,
+  because its pre-paint inline script reads that key before any of our JS runs;
+  two sources of truth would drift. A `persist.migrate` step seeds next-themes
+  from a prototype-era blob and drops the field.
 - IndexedDB `kirjanpito-tositteet`, store `files`: receipt Blobs keyed by attachment id.
 
 Wrap all storage access in try/catch, and render correctly when storage is empty or unavailable.

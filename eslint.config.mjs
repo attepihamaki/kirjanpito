@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "coverage/**",
+    // Generated on predev/prebuild by scripts/copy-pdf-worker.mjs.
+    "public/**",
   ]),
 ]);
 
