@@ -3,7 +3,7 @@
 import * as React from "react"
 import { CopyIcon, PaperclipIcon, PencilIcon, Trash2Icon } from "lucide-react"
 
-import { Money } from "@/components/common/money"
+import { Money, ZeroDash } from "@/components/common/money"
 import { SortableHeader } from "@/components/common/sortable-header"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,7 +18,6 @@ import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { deleteEntry } from "@/lib/commands/book-commands"
 import { calcEntry } from "@/lib/domain/calc"
-import { MINUS } from "@/lib/domain/money"
 import type { Category, Entry } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
 import { useBookStore, type LedgerSortKey } from "@/stores/book-store"
@@ -213,15 +212,12 @@ function LedgerRow({
             </span>
           </span>
         ) : (
-          <span className="text-muted-foreground">–</span>
+          <ZeroDash />
         )}
       </TableCell>
 
       <TableCell className="text-right font-medium">
-        <span className="tabular whitespace-nowrap">
-          {income ? "" : MINUS}
-          {f.money(gross)}
-        </span>
+        <Money cents={gross} signed={!income} />
       </TableCell>
 
       <TableCell className="hidden min-[560px]:table-cell">

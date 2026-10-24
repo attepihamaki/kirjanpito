@@ -12,7 +12,6 @@ import { uid } from "@/lib/domain/id"
 import { formatAmountForCsv, parseAmount, parseRate } from "@/lib/domain/money"
 import { attachmentKey, buildReceiptPaths } from "@/lib/domain/receipt-path"
 import {
-  indexCategories,
   type AmountMode,
   type Category,
   type CategoryMap,
@@ -438,9 +437,4 @@ function resolveCategory(a: ResolveArgs): { cat: Category; created: boolean } {
     bookedTo: fallbackId,
   })
   return { cat: fallback, created: false }
-}
-
-/** Convenience for round-trip tests and the import command. */
-export function categoryMapOf(cats: readonly Category[]): CategoryMap {
-  return indexCategories(cats)
 }

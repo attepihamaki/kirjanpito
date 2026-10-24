@@ -1,5 +1,4 @@
 import type { AppT } from "@/lib/i18n/messages"
-import { useBookStore } from "@/stores/book-store"
 
 /**
  * What a command needs beyond the store: translated strings, and a way to
@@ -9,5 +8,3 @@ export interface Ctx {
   t: AppT
   navigate: (href: string) => void
 }
-
-export const store = useBookStore

@@ -1,13 +1,4 @@
-import {
-  clear,
-  createStore,
-  del,
-  delMany,
-  get,
-  keys,
-  set,
-  type UseStore,
-} from "idb-keyval"
+import { createStore, delMany, get, keys, set, type UseStore } from "idb-keyval"
 
 /**
  * Receipt blobs in IndexedDB, per CLAUDE.md §7.4.
@@ -58,18 +49,6 @@ export function putReceipt(id: string, blob: Blob): Promise<void> {
 
 export function getReceipt(id: string): Promise<Blob | undefined> {
   return guard("get", () => get<Blob>(id, db()))
-}
-
-export function delReceipt(id: string): Promise<void> {
-  return guard("del", () => del(id, db()))
-}
-
-export function listReceiptKeys(): Promise<string[]> {
-  return guard("keys", async () => (await keys(db())) as string[])
-}
-
-export function clearReceipts(): Promise<void> {
-  return guard("clear", () => clear(db()))
 }
 
 /**

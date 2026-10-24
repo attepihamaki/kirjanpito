@@ -41,7 +41,7 @@ export function Money({
   )
 }
 
-/** An em dash for a zero line on the income statement (§6.3). */
+/** The en dash that stands in for a zero or absent amount. */
 export function ZeroDash() {
   return <span className="text-muted-foreground">–</span>
 }

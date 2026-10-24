@@ -27,8 +27,6 @@ export const APP_ROUTES = {
 
 export type AppRoute = (typeof APP_ROUTES)[keyof typeof APP_ROUTES]
 
-export const APP_ROUTE_LIST = Object.values(APP_ROUTES)
-
 /** Where "no bookkeeping open" sends the user back to. */
 export function landingFor(lang: "fi" | "en"): string {
   return lang === "en" ? LANDING_ROUTES.en : LANDING_ROUTES.fi

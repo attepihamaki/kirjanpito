@@ -32,13 +32,13 @@ There is **no backend, no account and no database**. The user opens their bookke
 - **Next.js** (App Router) with **TypeScript**, **React** and **shadcn/ui**. The user will create the project from a shadcn/ui template and connect the shadcn/ui skill.
 - The whole app is **client-side**. Prefer `output: "export"` (static export). No API routes or server actions are needed.
 - Suggested libraries:
-  - `papaparse` for CSV parsing, plus `zod` for row validation. The prototype has a hand-written parser; its behaviour is described in §7.
+  - `papaparse` for CSV parsing. Row validation is hand-written in `lib/domain/csv.ts` rather than done with `zod`: §7.1 requires the import to be _lenient_ — a bad row is skipped and counted, never rejected — and every problem is reported as a machine-readable code the i18n layer translates. A schema validator would have to be unwrapped back into exactly that shape. `zod` was removed from the dependencies.
   - `jszip` for ZIP import and export.
   - `pdfjs-dist` for rendering PDFs. **The worker is copied to `public/pdf.worker.min.mjs` by `scripts/copy-pdf-worker.mjs` on `predev`/`prebuild`, and `workerSrc` points at that fixed URL.** The `new URL(..., import.meta.url)` form was rejected: the worker is an ES module bundle, and whether Turbopack copies it as an asset or pulls it into the module graph differs between the dev server and the export — a failure that would surface only in production. pdfjs is still imported dynamically, from `lib/browser/pdf.ts` alone.
   - `idb` or `idb-keyval` for IndexedDB.
   - `next-themes` for light, dark and system theme (the standard shadcn approach).
-  - `@tanstack/react-table` for the sortable, filterable, paginated tables (the shadcn data-table pattern).
-  - `sonner` for toasts (shadcn's toast).
+  - Tables are hand-composed on shadcn's `Table`, **not** `@tanstack/react-table`, which was removed from the dependencies. Sorting, filtering and pagination all live in the store — they have to, because the toolbar, the month chips and the totals strip read the same state — which would leave a table adapter owning nothing. See the comment at the top of `components/ledger/ledger-table.tsx`.
+  - Toasts are `components/ui/toast.tsx`, **not** `sonner`, which was removed from the dependencies. It is a provider, so it wraps the tree in `HtmlShell` rather than sitting beside it.
   - State: a small store such as Zustand with a persistence layer, or React context plus `useReducer`. Keep the domain logic (calculations, CSV, paths) in plain TypeScript modules with no React, so it can be unit-tested.
 - Money is always stored as **integer cents**, never floats.
 
@@ -89,19 +89,19 @@ that is the file format (§7.1), and `lib/domain/csv.ts` is the only module that
 knows the Finnish names. Nothing else, including `Entry`, mentions them.
 
 ```ts
-type EntryType = "income" | "expense";
-type AmountMode = "gross" | "net";         // amount includes VAT | excludes VAT
+type EntryType = "income" | "expense"
+type AmountMode = "gross" | "net" // amount includes VAT | excludes VAT
 
 interface Entry {
-  id: string;
-  date: string;           // ISO date "YYYY-MM-DD"
-  description: string;
-  type: EntryType;
-  catId: string;          // Category.id
-  amount: number;         // integer cents, as entered (gross or net per amountMode)
-  vatRate: number;        // VAT rate in percent, e.g. 25.5
-  amountMode: AmountMode; // stored per entry (the Excel had one switch per month)
-  atts?: Attachment[];    // receipts, may be several
+  id: string
+  date: string // ISO date "YYYY-MM-DD"
+  description: string
+  type: EntryType
+  catId: string // Category.id
+  amount: number // integer cents, as entered (gross or net per amountMode)
+  vatRate: number // VAT rate in percent, e.g. 25.5
+  amountMode: AmountMode // stored per entry (the Excel had one switch per month)
+  atts?: Attachment[] // receipts, may be several
 }
 ```
 
@@ -109,12 +109,12 @@ interface Entry {
 
 ```ts
 interface Attachment {
-  id: string | null;      // IndexedDB key, null if the file is missing
-  name: string;           // display / original file name
-  type: string;           // MIME type
-  size: number;           // bytes
-  missing?: true;         // listed in the CSV but the file wasn't available on import
-  path?: string;          // original path from the CSV, kept for missing files
+  id: string | null // IndexedDB key, null if the file is missing
+  name: string // display / original file name
+  type: string // MIME type
+  size: number // bytes
+  missing?: true // listed in the CSV but the file wasn't available on import
+  path?: string // original path from the CSV, kept for missing files
 }
 ```
 
@@ -122,13 +122,13 @@ interface Attachment {
 
 ```ts
 interface Category {
-  id: string;             // e.g. "300-domestic", "333", "344-travel", or "c-<uid>" for custom
-  line: string;           // key of the income statement line it belongs to (see §5)
-  name: string;           // Finnish name (custom categories: the user's name)
-  vatRate: number;        // default VAT %
-  kind?: "domestic" | "eu" | "nonEu" | "reverse"; // for income categories
-  enabled: boolean;       // shown in the entry dialog's dropdown
-  custom: boolean;        // user-created
+  id: string // e.g. "300-domestic", "333", "344-travel", or "c-<uid>" for custom
+  line: string // key of the income statement line it belongs to (see §5)
+  name: string // Finnish name (custom categories: the user's name)
+  vatRate: number // default VAT %
+  kind?: "domestic" | "eu" | "nonEu" | "reverse" // for income categories
+  enabled: boolean // shown in the entry dialog's dropdown
+  custom: boolean // user-created
 }
 ```
 
@@ -150,48 +150,48 @@ All in cents with `Math.round`.
 
 Each line has a key, an account number (tili), a side, Finnish and English names, an optional group heading, a default VAT %, a summary bucket (expenses only), and a non-deductible flag.
 
-| key | tili | side | Finnish | English | group (fi / en) | default VAT | bucket |
-|---|---|---|---|---|---|---|---|
-| 300 | 300 | income | Tuotot ammatista | Business revenue | – | (see sales categories) | – |
-| 301 | 301 | income | Muut tuotot | Other revenue | – | 0 | – |
-| 312 | 312 | income | Varausten vähennys | Decrease in provisions | Varausten vähennys / Decrease in provisions | 0 | – |
-| 313 | 313 | income | Auton yksityiskäyttö | Private use of car | Yksityiskäyttö / Private use | 0 | – |
-| 314 | 314 | income | Tavaroiden yksityiskäyttö | Private use of goods | Yksityiskäyttö / Private use | 0 | – |
-| 315 | 315 | income | Muu yksityiskäyttö | Other private use | Yksityiskäyttö / Private use | 0 | – |
-| 317 | 317 | income | Tuloslaskelman verovapaat tuotot | Tax-exempt income | Muut tuotot / Other income | 0 | – |
-| 318 | 318 | income | Saadut avustukset ja tuet | Grants and subsidies received | Muut tuotot / Other income | 0 | – |
-| 319 | 319 | income | Saadut osingot | Dividends received | Muut tuotot / Other income | 0 | – |
-| 323 | 323 | income | Korkotuotot ja muut rahoitustuotot | Interest and other financial income | Muut tuotot / Other income | 0 | – |
-| 324 | 324 | income | Muut veronalaiset tuotot | Other taxable income | Muut tuotot / Other income | 0 | – |
-| 333 | 333 | expense | Ostot ja varastojen muutokset | Purchases and change in inventory | – | 25.5 | purchases |
-| 334 | 334 | expense | Ulkopuoliset palvelut | External services | – | 25.5 | purchases |
-| 335 | 335 | expense | Palkat ja palkkiot | Wages and fees | Henkilöstökulut / Personnel expenses | 0 | personnel |
-| 336 | 336 | expense | Eläke- ja henkilösivukulut | Pension and other personnel costs | Henkilöstökulut / Personnel expenses | 0 | personnel |
-| 337 | 337 | expense | Poistot | Depreciation | Poistot, edustuskulut ja vuokrat / Depreciation, entertainment and rent | 0 | depreciation |
-| 341 | 341 | expense | Edustuskulut | Entertainment expenses | (same) | 0 | depreciation |
-| 343 | 343 | expense | Vuokrat | Rent | (same) | 25.5 | depreciation |
-| 344-travel | 344 | expense | Matkakulut | Travel expenses | Muut vähennyskelpoiset kulut / Other deductible expenses | 25.5 | otherDeductible |
-| 344-vehicle | 344 | expense | Ajoneuvokulut | Vehicle expenses | (same) | 25.5 | otherDeductible |
-| 344-meeting | 344 | expense | Kokous- ja neuvottelukulut | Meeting expenses | (same) | 25.5 | otherDeductible |
-| 344-other | 344 | expense | Muut vähennyskelpoiset kulut | Other deductible expenses | (same) | 25.5 | otherDeductible |
-| 354 | 354 | expense | Kirjanpidon ulkopuoliset vähennyskelpoiset kulut | Deductible expenses outside bookkeeping | (same) | 0 | otherDeductible |
-| 346 | 346 | expense | Korkokulut | Interest expenses | Rahoituskulut / Financial expenses | 0 | financial |
-| 349 | 349 | expense | Muut rahoituskulut | Other financial expenses | (same) | 0 | financial |
-| 353 | 353 | expense | Varausten lisäykset | Increase in provisions | Varausten muutokset / Changes in provisions | 0 | provisions |
-| 365 | 365 | expense | Välittömät verot | Direct taxes | Vähennyskelvottomat kulut / Non-deductible expenses | 0 | nondeductible |
-| 366 | 366 | expense | Sakot ja muut rangaistusmaksut | Fines and penalties | (same) | 0 | nondeductible |
-| 367 | 367 | expense | Muut vähennyskelvottomat kulut | Other non-deductible expenses | (same) | 0 | nondeductible |
+| key         | tili | side    | Finnish                                          | English                                 | group (fi / en)                                                         | default VAT            | bucket          |
+| ----------- | ---- | ------- | ------------------------------------------------ | --------------------------------------- | ----------------------------------------------------------------------- | ---------------------- | --------------- |
+| 300         | 300  | income  | Tuotot ammatista                                 | Business revenue                        | –                                                                       | (see sales categories) | –               |
+| 301         | 301  | income  | Muut tuotot                                      | Other revenue                           | –                                                                       | 0                      | –               |
+| 312         | 312  | income  | Varausten vähennys                               | Decrease in provisions                  | Varausten vähennys / Decrease in provisions                             | 0                      | –               |
+| 313         | 313  | income  | Auton yksityiskäyttö                             | Private use of car                      | Yksityiskäyttö / Private use                                            | 0                      | –               |
+| 314         | 314  | income  | Tavaroiden yksityiskäyttö                        | Private use of goods                    | Yksityiskäyttö / Private use                                            | 0                      | –               |
+| 315         | 315  | income  | Muu yksityiskäyttö                               | Other private use                       | Yksityiskäyttö / Private use                                            | 0                      | –               |
+| 317         | 317  | income  | Tuloslaskelman verovapaat tuotot                 | Tax-exempt income                       | Muut tuotot / Other income                                              | 0                      | –               |
+| 318         | 318  | income  | Saadut avustukset ja tuet                        | Grants and subsidies received           | Muut tuotot / Other income                                              | 0                      | –               |
+| 319         | 319  | income  | Saadut osingot                                   | Dividends received                      | Muut tuotot / Other income                                              | 0                      | –               |
+| 323         | 323  | income  | Korkotuotot ja muut rahoitustuotot               | Interest and other financial income     | Muut tuotot / Other income                                              | 0                      | –               |
+| 324         | 324  | income  | Muut veronalaiset tuotot                         | Other taxable income                    | Muut tuotot / Other income                                              | 0                      | –               |
+| 333         | 333  | expense | Ostot ja varastojen muutokset                    | Purchases and change in inventory       | –                                                                       | 25.5                   | purchases       |
+| 334         | 334  | expense | Ulkopuoliset palvelut                            | External services                       | –                                                                       | 25.5                   | purchases       |
+| 335         | 335  | expense | Palkat ja palkkiot                               | Wages and fees                          | Henkilöstökulut / Personnel expenses                                    | 0                      | personnel       |
+| 336         | 336  | expense | Eläke- ja henkilösivukulut                       | Pension and other personnel costs       | Henkilöstökulut / Personnel expenses                                    | 0                      | personnel       |
+| 337         | 337  | expense | Poistot                                          | Depreciation                            | Poistot, edustuskulut ja vuokrat / Depreciation, entertainment and rent | 0                      | depreciation    |
+| 341         | 341  | expense | Edustuskulut                                     | Entertainment expenses                  | (same)                                                                  | 0                      | depreciation    |
+| 343         | 343  | expense | Vuokrat                                          | Rent                                    | (same)                                                                  | 25.5                   | depreciation    |
+| 344-travel  | 344  | expense | Matkakulut                                       | Travel expenses                         | Muut vähennyskelpoiset kulut / Other deductible expenses                | 25.5                   | otherDeductible |
+| 344-vehicle | 344  | expense | Ajoneuvokulut                                    | Vehicle expenses                        | (same)                                                                  | 25.5                   | otherDeductible |
+| 344-meeting | 344  | expense | Kokous- ja neuvottelukulut                       | Meeting expenses                        | (same)                                                                  | 25.5                   | otherDeductible |
+| 344-other   | 344  | expense | Muut vähennyskelpoiset kulut                     | Other deductible expenses               | (same)                                                                  | 25.5                   | otherDeductible |
+| 354         | 354  | expense | Kirjanpidon ulkopuoliset vähennyskelpoiset kulut | Deductible expenses outside bookkeeping | (same)                                                                  | 0                      | otherDeductible |
+| 346         | 346  | expense | Korkokulut                                       | Interest expenses                       | Rahoituskulut / Financial expenses                                      | 0                      | financial       |
+| 349         | 349  | expense | Muut rahoituskulut                               | Other financial expenses                | (same)                                                                  | 0                      | financial       |
+| 353         | 353  | expense | Varausten lisäykset                              | Increase in provisions                  | Varausten muutokset / Changes in provisions                             | 0                      | provisions      |
+| 365         | 365  | expense | Välittömät verot                                 | Direct taxes                            | Vähennyskelvottomat kulut / Non-deductible expenses                     | 0                      | nondeductible   |
+| 366         | 366  | expense | Sakot ja muut rangaistusmaksut                   | Fines and penalties                     | (same)                                                                  | 0                      | nondeductible   |
+| 367         | 367  | expense | Muut vähennyskelvottomat kulut                   | Other non-deductible expenses           | (same)                                                                  | 0                      | nondeductible   |
 
 The table order is also the display order of the income statement.
 
 **Sales categories on line 300** (income), each its own category:
 
-| id | Finnish | English | default VAT | kind |
-|---|---|---|---|---|
-| 300-domestic | Myynti – Suomi | Sales – Finland | 25.5 | domestic |
-| 300-eu | Myynti – EU | Sales – EU | 0 | eu |
-| 300-other | Myynti – muut maat | Sales – other countries | 0 | nonEu |
-| 300-reverse | Myynti – käänteinen verotus | Sales – reverse charge | 0 | reverse |
+| id           | Finnish                     | English                 | default VAT | kind     |
+| ------------ | --------------------------- | ----------------------- | ----------- | -------- |
+| 300-domestic | Myynti – Suomi              | Sales – Finland         | 25.5        | domestic |
+| 300-eu       | Myynti – EU                 | Sales – EU              | 0           | eu       |
+| 300-other    | Myynti – muut maat          | Sales – other countries | 0           | nonEu    |
+| 300-reverse  | Myynti – käänteinen verotus | Sales – reverse charge  | 0           | reverse  |
 
 **Default categories:** the four sales categories, plus one category per remaining line, with `id = line key`, `name = Finnish line name`, `vatRate = line default VAT`, and `kind = "domestic"` for income lines.
 
@@ -231,6 +231,7 @@ For the selected month (or the whole year): income net total, expense net total,
 ### 6.4 Summary (Yhteenveto)
 
 For the selected year, by month (net amounts):
+
 - A bar chart of income versus expenses per month, with year totals in the legend.
 - A sales table: total sales (line 300 only), then columns Finland 25.5 / 24 / 14 / 13.5 / 10 / 0 %, EU, other countries, reverse charge, and "Muut tulot" (income on lines 301–324). Totals row.
 - An expenses table: total, then one column per bucket. Totals row.
@@ -439,16 +440,16 @@ See §6.4. Wide tables scroll horizontally with a sticky first column.
 
 Use one shared `AlertDialog`-based `confirm()` helper, with a title, a message, a destructive confirm button (red) and a cancel button. The cancel button can be relabelled, e.g. "Jatka muokkausta", and gets focus by default. Cases:
 
-| Trigger | Condition | Title / confirm label |
-|---|---|---|
-| Close file ("Sulje") | unexported changes | "Suljetaanko tiedosto?" / "Sulje viemättä" |
-| Start new bookkeeping | unexported changes | same as above |
-| Open a file over the current one | unexported changes | "Korvataanko avoin kirjanpito?" / "Korvaa" |
-| Delete an entry (row or dialog) | always | "Poistetaanko kirjaus?" / "Poista" |
-| Clear all entries | always | "Tyhjennetäänkö kirjaukset?" / "Tyhjennä" |
-| Close the entry dialog (Peruuta / Esc) | form differs from its snapshot | "Hylätäänkö muutokset?" / "Hylkää muutokset", cancel = "Jatka muokkausta" |
-| Navigate away from Settings | the new-category name is filled | same as above, with the category message |
-| Browser tab close (`beforeunload`) | any of the above dirty states | the browser's native prompt |
+| Trigger                                | Condition                       | Title / confirm label                                                     |
+| -------------------------------------- | ------------------------------- | ------------------------------------------------------------------------- |
+| Close file ("Sulje")                   | unexported changes              | "Suljetaanko tiedosto?" / "Sulje viemättä"                                |
+| Start new bookkeeping                  | unexported changes              | same as above                                                             |
+| Open a file over the current one       | unexported changes              | "Korvataanko avoin kirjanpito?" / "Korvaa"                                |
+| Delete an entry (row or dialog)        | always                          | "Poistetaanko kirjaus?" / "Poista"                                        |
+| Clear all entries                      | always                          | "Tyhjennetäänkö kirjaukset?" / "Tyhjennä"                                 |
+| Close the entry dialog (Peruuta / Esc) | form differs from its snapshot  | "Hylätäänkö muutokset?" / "Hylkää muutokset", cancel = "Jatka muokkausta" |
+| Navigate away from Settings            | the new-category name is filled | same as above, with the category message                                  |
+| Browser tab close (`beforeunload`)     | any of the above dirty states   | the browser's native prompt                                               |
 
 **Dirty bookkeeping** means the entries changed since the last import or export. It is set by any add, edit or delete, and cleared by a successful export or an import.
 
@@ -477,24 +478,24 @@ Closing a file clears entries, the file name and filters, sets the bookkeeping t
 
 Sixteen gross entries for 2026. **The app has no sample ledger**: there is no "Kokeile esimerkillä" button, no `loadDemo` command and no way for a user to load these entries. They live only in `lib/domain/test-helpers/sample-book.ts` (`sampleEntries()`) as the fixture the calculations are verified against. An eslint `no-restricted-imports` rule blocks `lib/domain/test-helpers/*` outside test files, so the fixture cannot drift back into the app.
 
-| date | description | type | catId | amount (€) | vatRate |
-|---|---|---|---|---|---|
-| 2026-01-08 | Lasku 1001 – Mäkinen Rakennus Oy | income | 300-domestic | 2510.00 | 25.5 |
-| 2026-01-15 | Osto – K-Rauta – tarvikkeet | expense | 333 | 186.40 | 25.5 |
-| 2026-01-31 | Puhelinliittymä – Elisa | expense | 344-other | 29.90 | 25.5 |
-| 2026-02-12 | Lasku 1002 – Virtanen | income | 300-domestic | 1255.00 | 25.5 |
-| 2026-02-20 | Työtilan vuokra, helmikuu | expense | 343 | 450.00 | 25.5 |
-| 2026-03-03 | Lasku 1003 – Nordic Build AB | income | 300-eu | 3200.00 | 0 |
-| 2026-03-18 | Polttoaine – Neste | expense | 344-vehicle | 92.35 | 25.5 |
-| 2026-03-20 | Työtilan vuokra, maaliskuu | expense | 343 | 450.00 | 25.5 |
-| 2026-04-09 | Lounaspalaveri asiakkaan kanssa | expense | 344-meeting | 48.60 | 13.5 |
-| 2026-04-20 | Työtilan vuokra, huhtikuu | expense | 343 | 450.00 | 25.5 |
-| 2026-05-14 | Lasku 1004 – Laaksonen Oy | income | 300-reverse | 4800.00 | 0 |
-| 2026-06-02 | YEL-maksu | expense | 336 | 310.00 | 0 |
-| 2026-09-22 | Kirjanpito-ohjelma, vuosimaksu | expense | 344-other | 119.00 | 25.5 |
-| 2026-10-10 | Osto – K-Rauta – Tarvikkeet | expense | 333 | 100.00 | 25.5 |
-| 2026-10-28 | Lasku 1005 – Mäkinen Rakennus Oy | income | 300-domestic | 1882.50 | 25.5 |
-| 2026-10-30 | Pankin palvelumaksut | expense | 349 | 8.50 | 0 |
+| date       | description                      | type    | catId        | amount (€) | vatRate |
+| ---------- | -------------------------------- | ------- | ------------ | ---------- | ------- |
+| 2026-01-08 | Lasku 1001 – Mäkinen Rakennus Oy | income  | 300-domestic | 2510.00    | 25.5    |
+| 2026-01-15 | Osto – K-Rauta – tarvikkeet      | expense | 333          | 186.40     | 25.5    |
+| 2026-01-31 | Puhelinliittymä – Elisa          | expense | 344-other    | 29.90      | 25.5    |
+| 2026-02-12 | Lasku 1002 – Virtanen            | income  | 300-domestic | 1255.00    | 25.5    |
+| 2026-02-20 | Työtilan vuokra, helmikuu        | expense | 343          | 450.00     | 25.5    |
+| 2026-03-03 | Lasku 1003 – Nordic Build AB     | income  | 300-eu       | 3200.00    | 0       |
+| 2026-03-18 | Polttoaine – Neste               | expense | 344-vehicle  | 92.35      | 25.5    |
+| 2026-03-20 | Työtilan vuokra, maaliskuu       | expense | 343          | 450.00     | 25.5    |
+| 2026-04-09 | Lounaspalaveri asiakkaan kanssa  | expense | 344-meeting  | 48.60      | 13.5    |
+| 2026-04-20 | Työtilan vuokra, huhtikuu        | expense | 343          | 450.00     | 25.5    |
+| 2026-05-14 | Lasku 1004 – Laaksonen Oy        | income  | 300-reverse  | 4800.00    | 0       |
+| 2026-06-02 | YEL-maksu                        | expense | 336          | 310.00     | 0       |
+| 2026-09-22 | Kirjanpito-ohjelma, vuosimaksu   | expense | 344-other    | 119.00     | 25.5    |
+| 2026-10-10 | Osto – K-Rauta – Tarvikkeet      | expense | 333          | 100.00     | 25.5    |
+| 2026-10-28 | Lasku 1005 – Mäkinen Rakennus Oy | income  | 300-domestic | 1882.50    | 25.5    |
+| 2026-10-30 | Pankin palvelumaksut             | expense | 349          | 8.50       | 0       |
 
 Useful checks against this data (all verified by the unit tests in `lib/domain`):
 
@@ -524,12 +525,12 @@ The aim is a calm, Nordic, functional tool. The one bold element is the **paper 
 > equivalent and its nearest colours already mean something else — `--primary` is
 > the call-to-action fill and `--destructive` means "error", not "expense":
 >
-> | variable | use |
-> |---|---|
-> | `--income` / `--income-subtle` | income amounts, the Tulo segment, row edge, income bars. Hue 148, kept clear of the emerald primary at 165 |
-> | `--expense` / `--expense-subtle` | expense amounts, the Kulu segment, row edge, expense bars. Less saturated than `--destructive` |
-> | `--paper` / `--paper-foreground` / `--paper-edge` | the receipt motif: the entry dialog preview, the landing hero, the printed income statement |
-> | `--warning` | the amber "Muutoksia, joita ei ole viety" status dot |
+> | variable                                          | use                                                                                                        |
+> | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+> | `--income` / `--income-subtle`                    | income amounts, the Tulo segment, row edge, income bars. Hue 148, kept clear of the emerald primary at 165 |
+> | `--expense` / `--expense-subtle`                  | expense amounts, the Kulu segment, row edge, expense bars. Less saturated than `--destructive`             |
+> | `--paper` / `--paper-foreground` / `--paper-edge` | the receipt motif: the entry dialog preview, the landing hero, the printed income statement                |
+> | `--warning`                                       | the amber "Muutoksia, joita ei ole viety" status dot                                                       |
 >
 > They are exposed through `@theme inline` as `--color-income`, `--color-expense`
 > and so on, so they work as `bg-income`, `text-expense`, `bg-paper`.
@@ -537,23 +538,23 @@ The aim is a calm, Nordic, functional tool. The one bold element is the **paper 
 
 ### Colour tokens (historical — the prototype's palette, superseded by the theme)
 
-| token | light | dark | use |
-|---|---|---|---|
-| bg | `#F3F5F4` | `#101513` | page background |
-| surface | `#FFFFFF` | `#171D1A` | panels, sidebar, dialogs |
-| sunken | `#EAEEEC` | `#1F2724` | segmented controls, chips, viewer stage, receipt column |
-| ink | `#17201D` | `#E5EBE8` | text |
-| muted | `#5E6B66` | `#9AA7A1` | secondary text |
-| faint | `#8A9590` | `#6F7C76` | tertiary, zero values |
-| rule | `#D9DFDC` | `#2A3330` | borders |
-| rule-strong | `#B9C2BE` | `#3B4642` | input borders |
-| accent | `#1D4F91` | `#7FA9E3` | primary buttons, active nav, focus ring |
-| accent-ink | `#FFFFFF` | `#0E1A2B` | text on accent |
-| accent-soft | `#E3ECF7` | `#1B2A3F` | active nav background, landing hero panel |
-| in / in-soft | `#24704A` / `#E1F0E7` | `#6FC296` / `#17301F` | income, positive |
-| out / out-soft | `#A63A32` / `#F6E4E2` | `#E8877F` / `#3A1E1B` | expenses, destructive |
-| paper / paper-edge | `#FFFDF8` / `#E7E1D4` | `#1E2320` / `#323A36` | receipts, income statement sheet |
-| unexported-changes dot | `#C58A1A` | same | file status |
+| token                  | light                 | dark                  | use                                                     |
+| ---------------------- | --------------------- | --------------------- | ------------------------------------------------------- |
+| bg                     | `#F3F5F4`             | `#101513`             | page background                                         |
+| surface                | `#FFFFFF`             | `#171D1A`             | panels, sidebar, dialogs                                |
+| sunken                 | `#EAEEEC`             | `#1F2724`             | segmented controls, chips, viewer stage, receipt column |
+| ink                    | `#17201D`             | `#E5EBE8`             | text                                                    |
+| muted                  | `#5E6B66`             | `#9AA7A1`             | secondary text                                          |
+| faint                  | `#8A9590`             | `#6F7C76`             | tertiary, zero values                                   |
+| rule                   | `#D9DFDC`             | `#2A3330`             | borders                                                 |
+| rule-strong            | `#B9C2BE`             | `#3B4642`             | input borders                                           |
+| accent                 | `#1D4F91`             | `#7FA9E3`             | primary buttons, active nav, focus ring                 |
+| accent-ink             | `#FFFFFF`             | `#0E1A2B`             | text on accent                                          |
+| accent-soft            | `#E3ECF7`             | `#1B2A3F`             | active nav background, landing hero panel               |
+| in / in-soft           | `#24704A` / `#E1F0E7` | `#6FC296` / `#17301F` | income, positive                                        |
+| out / out-soft         | `#A63A32` / `#F6E4E2` | `#E8877F` / `#3A1E1B` | expenses, destructive                                   |
+| paper / paper-edge     | `#FFFDF8` / `#E7E1D4` | `#1E2320` / `#323A36` | receipts, income statement sheet                        |
+| unexported-changes dot | `#C58A1A`             | same                  | file status                                             |
 
 - **Type:** Geist (400–700) for everything, with tabular figures for numbers. Page titles are 26 px / 600 / −0.02 em. The landing headline is `clamp(38px, 5.4vw, 64px)` with tight leading (1.03) and −0.035 em tracking.
 - **Radii:** 6 px for inputs and buttons, 10 px for panels, 14 px for dialogs and large cards. Segmented controls and chips are pills.
@@ -563,7 +564,9 @@ The aim is a calm, Nordic, functional tool. The one bold element is the **paper 
 
 ### Suggested shadcn/ui mapping
 
-Sidebar → `Sidebar`. Buttons → `Button` (variants default, outline, ghost, destructive). Segmented controls → `ToggleGroup`. Selects → `Select`. Entry, export and viewer dialogs → `Dialog`. Confirmations → `AlertDialog`. Tables → `Table` with TanStack Table. Pagination → custom controls in the style of the user's screenshot ("Rows per page", "Page 1 of 2", «‹›»). Toasts → `Sonner`. FAQ → `Accordion`. Checkboxes → `Checkbox`. Inputs → `Input`. Badges → `Badge`. Chart → a simple SVG or Recharts. Use the shadcn/ui skill for component usage.
+Sidebar → hand-written in `AppShell`; shadcn's `Sidebar` was removed, since its collapsible/mobile machinery bought nothing here. Buttons → `Button` (variants default, outline, ghost, destructive). Segmented controls → `ToggleGroup`. Selects → `Select`. Entry, export and viewer dialogs → `Dialog`. Confirmations → `AlertDialog`. Tables → `Table`, hand-composed (see §2). Pagination → `components/common/table-pagination.tsx` ("Rows per page", "Page 1 of 2", «‹›»). Toasts → `components/ui/toast.tsx` (see §2). FAQ → `Accordion`. Checkboxes → `Checkbox`. Inputs → `Input`. Chart → Recharts, used directly in `summary-view.tsx`; shadcn's `Chart` wrapper was removed. Use the shadcn/ui skill for component usage.
+
+**Only the components actually in use are kept.** `components/ui/` holds 18 files; `avatar`, `badge`, `breadcrumb`, `card`, `chart`, `drawer`, `dropdown-menu`, `scroll-area`, `sheet`, `sidebar`, `sonner`, `tabs` and `tooltip` were generated by the shadcn CLI, never imported, and deleted. Re-add any of them with `npx shadcn add <name>` if a use appears — do not keep unused ones around on spec.
 
 ---
 
@@ -616,8 +619,8 @@ app/
   `robots.ts`, `sitemap.ts` and both `opengraph-image.tsx` are Route Handlers and
   need `export const dynamic = "force-static"` — without it the build fails.
   `ImageResponse` does emit PNGs under static export; verified in `out/`.
-- **Language**: the *document* language is fixed by the route and baked at build
-  time; the *UI* language inside the app is the persisted preference. The landing
+- **Language**: the _document_ language is fixed by the route and baked at build
+  time; the _UI_ language inside the app is the persisted preference. The landing
   never redirects on a stored preference — that would be cloaking-adjacent and
   would break the back button. On a first visit only, the route seeds the
   preference. This is how §9's "no locale routing is needed" coexists with having
@@ -638,9 +641,14 @@ browser holds is legible without Finnish. The CSV and the ZIP's `tositteet/`
 folder are the file format and stay Finnish (§7.1, §7.2) — the two vocabularies
 meet only in `lib/domain/csv.ts`.
 
-- localStorage `bookkeeping.v1` — exported as `BOOK_STORAGE_KEY` from
+- localStorage `bookkeeping` — exported as `BOOK_STORAGE_KEY` from
   `stores/book-store.ts`, so nothing hard-codes the string twice:
   `{ entries, cats, year, dirty, fileName, lastMode, lastType, lang, open, ledgerSize, ctSize }`.
+  **The key carries no version suffix.** Zustand's `persist` already writes its
+  `version` into the stored value and owns the `migrate` hook, which can
+  transform old data; a version in the key could only orphan it, and two version
+  numbers would eventually disagree. A future break not worth migrating renames
+  the key to `bookkeeping.v2` at that point.
   **`theme` is no longer in this blob.** next-themes owns it under its own key,
   because its pre-paint inline script reads that key before any of our JS runs;
   two sources of truth would drift. A `persist.migrate` step seeds next-themes

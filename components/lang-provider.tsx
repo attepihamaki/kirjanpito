@@ -44,10 +44,6 @@ export function useT() {
   return React.useContext(LangContext).t
 }
 
-export function useLang(): Lang {
-  return React.useContext(LangContext).lang
-}
-
 /**
  * Keeps `document.documentElement.lang` in step with the stored preference.
  *

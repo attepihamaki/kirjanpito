@@ -14,10 +14,6 @@ import type {
  * these inside useMemo keyed on the narrow slices they select.
  */
 
-export function entriesInYear(entries: readonly Entry[], year: number) {
-  return entries.filter((e) => yearOf(e.date) === year)
-}
-
 /** Entries for the selected year, narrowed to a month when one is picked. */
 export function entriesInPeriod(
   entries: readonly Entry[],

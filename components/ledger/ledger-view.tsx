@@ -34,6 +34,7 @@ import {
   entriesInPeriod,
   filterAndSortEntries,
   paginate,
+  usedCategoryIds,
 } from "@/stores/selectors"
 import { useBookStore, type TypeFilter } from "@/stores/book-store"
 
@@ -95,7 +96,7 @@ export function LedgerView() {
 
   // Only categories actually used in this period (§8.4).
   const usedCats = React.useMemo(() => {
-    const ids = new Set(periodEntries.map((e) => e.catId))
+    const ids = usedCategoryIds(periodEntries)
     return cats
       .filter((c) => ids.has(c.id))
       .sort((a, b) =>

@@ -36,7 +36,12 @@ import { LINES, categoryName } from "@/lib/domain/accounts"
 import { uid } from "@/lib/domain/id"
 import { parseRate } from "@/lib/domain/money"
 import type { Category, EntryType } from "@/lib/domain/types"
-import { categoryAccount, categorySide, paginate } from "@/stores/selectors"
+import {
+  categoryAccount,
+  categorySide,
+  paginate,
+  usedCategoryIds,
+} from "@/stores/selectors"
 import {
   useBookStore,
   type CatSortKey,
@@ -208,10 +213,7 @@ function CategoryTable() {
   const upsertCategory = useBookStore((s) => s.upsertCategory)
   const removeCategory = useBookStore((s) => s.removeCategory)
 
-  const usedIds = React.useMemo(
-    () => new Set(entries.map((e) => e.catId)),
-    [entries]
-  )
+  const usedIds = React.useMemo(() => usedCategoryIds(entries), [entries])
 
   const rows = React.useMemo(() => {
     const needle = query.trim().toLowerCase()
