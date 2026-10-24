@@ -13,6 +13,7 @@ import {
 } from "recharts"
 
 import { PageHeader } from "@/components/common/page-header"
+import { Panel } from "@/components/common/panel"
 import { Money } from "@/components/common/money"
 import {
   Table,
@@ -209,50 +210,47 @@ function WideTable({
   const sticky = "sticky left-0 z-10 bg-background [tr:hover_&]:bg-muted"
 
   return (
-    <section className="rounded-lg border">
-      <h2 className="border-b px-4 py-3 font-medium">{title}</h2>
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className={cn(sticky, "min-w-20")}>
-                {f.t("mo")}
+    <Panel title={title} bodyClassName="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className={cn(sticky, "min-w-20")}>
+              {f.t("mo")}
+            </TableHead>
+            {columns.map((c) => (
+              <TableHead key={c.key} className="text-right whitespace-nowrap">
+                {c.label}
               </TableHead>
-              {columns.map((c) => (
-                <TableHead key={c.key} className="text-right whitespace-nowrap">
-                  {c.label}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row, i) => (
-              <TableRow key={row.month}>
-                <TableCell className={cn(sticky, "font-medium")}>
-                  {f.month(i, true)}
-                </TableCell>
-                {columns.map((c) => (
-                  <TableCell key={c.key} className="text-right">
-                    <Money cents={c.get(row)} />
-                  </TableCell>
-                ))}
-              </TableRow>
             ))}
-          </TableBody>
-          <TableFooter>
-            <TableRow>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((row, i) => (
+            <TableRow key={row.month}>
               <TableCell className={cn(sticky, "font-medium")}>
-                {f.t("tot")}
+                {f.month(i, true)}
               </TableCell>
               {columns.map((c) => (
-                <TableCell key={c.key} className="text-right font-medium">
-                  <Money cents={c.get(totals)} />
+                <TableCell key={c.key} className="text-right">
+                  <Money cents={c.get(row)} />
                 </TableCell>
               ))}
             </TableRow>
-          </TableFooter>
-        </Table>
-      </div>
-    </section>
+          ))}
+        </TableBody>
+        <TableFooter>
+          <TableRow>
+            <TableCell className={cn(sticky, "font-medium")}>
+              {f.t("tot")}
+            </TableCell>
+            {columns.map((c) => (
+              <TableCell key={c.key} className="text-right font-medium">
+                <Money cents={c.get(totals)} />
+              </TableCell>
+            ))}
+          </TableRow>
+        </TableFooter>
+      </Table>
+    </Panel>
   )
 }

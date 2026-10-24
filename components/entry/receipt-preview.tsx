@@ -1,10 +1,15 @@
 "use client"
 
-import { ReceiptPaper } from "@/components/common/receipt-paper"
+import {
+  ReceiptHead,
+  ReceiptPaper,
+  ReceiptRow,
+  ReceiptRule,
+  ReceiptTotal,
+} from "@/components/common/receipt-paper"
 import { useFormatters } from "@/components/lang-provider"
 import { calcEntry } from "@/lib/domain/calc"
 import type { AmountMode, Category, EntryType } from "@/lib/domain/types"
-import { cn } from "@/lib/utils"
 
 /**
  * The live paper receipt (§8.5) — the one bold element in the design (§11).
@@ -39,21 +44,11 @@ export function ReceiptPreview({
 
   return (
     <ReceiptPaper>
-      <div className="flex items-start justify-between gap-2">
-        <span
-          className={cn(
-            "rounded-sm px-1.5 py-0.5 font-heading text-[0.65rem] font-semibold tracking-wide",
-            income
-              ? "bg-income-subtle text-income"
-              : "bg-expense-subtle text-expense"
-          )}
-        >
-          {income ? f.t("r_income") : f.t("r_expense")}
-        </span>
-        <span className="tabular text-xs text-paper-foreground/70">
-          {date ? f.date(date) : "—"}
-        </span>
-      </div>
+      <ReceiptHead
+        label={income ? f.t("r_income") : f.t("r_expense")}
+        date={date ? f.date(date) : "—"}
+        tone={income ? "income" : "expense"}
+      />
 
       <p className="mt-3 text-sm font-medium break-words">
         {description.trim() || (
@@ -64,17 +59,15 @@ export function ReceiptPreview({
         {cat ? f.catLabel(cat) : f.t("unknownCat")}
       </p>
 
-      <div className="mt-4 flex flex-col gap-1 border-t border-dashed border-paper-edge pt-3 text-sm">
-        <Line label={f.t("r_net")} value={f.money(net)} />
-        <Line
+      <ReceiptRule className="mt-4 mb-3" />
+      <div className="flex flex-col gap-1">
+        <ReceiptRow label={f.t("r_net")} value={f.money(net)} />
+        <ReceiptRow
           label={`${f.t("c_vat")} ${vatRate ? f.rate(vatRate) : ""}`.trim()}
           value={f.money(vat)}
         />
-        <div className="mt-1 flex items-baseline justify-between border-t border-paper-edge pt-2">
-          <span className="font-medium">{f.t("r_total")}</span>
-          <span className="tabular text-lg font-semibold">
-            {f.money(gross)}
-          </span>
+        <div className="mt-1 border-t border-paper-edge pt-2">
+          <ReceiptTotal label={f.t("r_total")} value={f.money(gross)} />
         </div>
       </div>
 
@@ -82,14 +75,5 @@ export function ReceiptPreview({
         {badge}
       </p>
     </ReceiptPaper>
-  )
-}
-
-function Line({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-baseline justify-between gap-2">
-      <span className="text-paper-foreground/70">{label}</span>
-      <span className="tabular">{value}</span>
-    </div>
   )
 }

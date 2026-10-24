@@ -187,6 +187,25 @@
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
   }
+
+  /*
+   * The visible focus ring (§11), for the hand-rolled interactive elements —
+   * month chips, nav links, sortable headers, thumbnails, table rows. shadcn's
+   * own components carry their own; this is for everything else, which was
+   * repeating the same three utilities and could drift one of them.
+   */
+  .focus-ring {
+    @apply focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none;
+  }
+
+  /* A horizontally scrolling strip with no visible scrollbar: the month
+     chips and the mobile nav tabs (§8.2, §8.4). */
+  .scroll-strip {
+    @apply flex [scrollbar-width:none] overflow-x-auto;
+  }
+  .scroll-strip::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* §8.8: the income statement prints as a bare sheet. */

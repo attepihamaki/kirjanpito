@@ -31,7 +31,7 @@ export function MonthChips() {
 
   return (
     <div
-      className="-mx-1 flex [scrollbar-width:none] gap-1.5 overflow-x-auto px-1 pb-1 [&::-webkit-scrollbar]:hidden"
+      className="scroll-strip -mx-1 gap-1.5 px-1 pb-1"
       role="group"
       aria-label={f.t("period")}
     >
@@ -46,7 +46,7 @@ export function MonthChips() {
             onClick={() => setMonth(chip.value)}
             className={cn(
               "shrink-0 rounded-full border px-3 py-1 text-sm whitespace-nowrap transition-colors",
-              "focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+              "focus-ring",
               selected
                 ? "border-primary bg-primary font-medium text-primary-foreground"
                 : empty

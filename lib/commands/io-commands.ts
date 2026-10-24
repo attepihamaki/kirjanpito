@@ -13,6 +13,7 @@ import {
   putReceipt,
 } from "@/lib/browser/receipt-store"
 import { parseCsv, serializeCsv, type ImportSuccess } from "@/lib/domain/csv"
+import { CSV_HEADER_LINE } from "@/lib/domain/csv-header"
 import { uid } from "@/lib/domain/id"
 import {
   attachmentKey,
@@ -182,7 +183,7 @@ function failureMessage(
   if (result.code === "missing-columns") {
     return ctx.t("missingCol", {
       c: result.missing.join(", "),
-      h: "pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite",
+      h: CSV_HEADER_LINE,
     })
   }
   return ctx.t("noRows", { e: String(result.skipped.length) })

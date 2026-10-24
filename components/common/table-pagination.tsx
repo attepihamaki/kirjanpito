@@ -7,19 +7,13 @@ import {
   ChevronsRightIcon,
 } from "lucide-react"
 
+import { OptionSelect } from "@/components/common/option-select"
 import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { useT } from "@/components/lang-provider"
 import type { PageSize } from "@/stores/book-store"
 
 const SIZES: PageSize[] = [10, 25, 50, 100]
+const SIZE_OPTIONS = SIZES.map((s) => ({ value: String(s), label: String(s) }))
 
 /** "Rivejä sivulla", "Sivu 1 / 2" and « ‹ › » (§8.4). */
 export function TablePagination({
@@ -45,26 +39,14 @@ export function TablePagination({
         <span className="text-sm text-muted-foreground">
           {t("rowsPerPage")}
         </span>
-        <Select
-          items={Object.fromEntries(SIZES.map((s) => [String(s), String(s)]))}
+        <OptionSelect
+          options={SIZE_OPTIONS}
           value={String(size)}
-          onValueChange={(value) =>
-            value && onSizeChange(Number(value) as PageSize)
-          }
-        >
-          <SelectTrigger size="sm" className="w-[4.5rem]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {SIZES.map((s) => (
-                <SelectItem key={s} value={String(s)}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+          onChange={(value) => onSizeChange(Number(value) as PageSize)}
+          label={t("rowsPerPage")}
+          size="sm"
+          className="w-[4.5rem]"
+        />
       </div>
 
       <div className="flex items-center gap-2">

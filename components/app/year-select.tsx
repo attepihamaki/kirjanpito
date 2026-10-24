@@ -2,14 +2,7 @@
 
 import * as React from "react"
 
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { OptionSelect } from "@/components/common/option-select"
 import { useT } from "@/components/lang-provider"
 import { yearsAvailable } from "@/stores/selectors"
 import { useBookStore } from "@/stores/book-store"
@@ -21,29 +14,22 @@ export function YearSelect({ className }: { className?: string }) {
   const year = useBookStore((s) => s.year)
   const setYear = useBookStore((s) => s.setYear)
 
-  const years = React.useMemo(
-    () => yearsAvailable(entries, year),
+  const options = React.useMemo(
+    () =>
+      yearsAvailable(entries, year).map((y) => ({
+        value: String(y),
+        label: String(y),
+      })),
     [entries, year]
   )
 
   return (
-    <Select
-      items={Object.fromEntries(years.map((y) => [String(y), String(y)]))}
+    <OptionSelect
+      options={options}
       value={String(year)}
-      onValueChange={(value) => value && setYear(Number(value))}
-    >
-      <SelectTrigger className={className} aria-label={t("fiscal")}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          {years.map((y) => (
-            <SelectItem key={y} value={String(y)}>
-              {y}
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
+      onChange={(value) => setYear(Number(value))}
+      label={t("fiscal")}
+      className={className}
+    />
   )
 }

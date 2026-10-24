@@ -4,15 +4,9 @@ import * as React from "react"
 
 import { PageHeader } from "@/components/common/page-header"
 import { Money } from "@/components/common/money"
+import { OptionSelect } from "@/components/common/option-select"
+import { Panel } from "@/components/common/panel"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -61,21 +55,24 @@ export function VatView() {
   )
 
   // Month names or quarter labels, so the trigger shows a name not an index.
-  const periodItems = React.useMemo(() => {
+  const periodOptions = React.useMemo(() => {
     if (mode === "month") {
-      return Object.fromEntries(
-        Array.from({ length: 12 }, (_, i) => [String(i + 1), f.month(i)])
-      )
+      return Array.from({ length: 12 }, (_, i) => ({
+        value: String(i + 1),
+        label: f.month(i),
+      }))
     }
-    return Object.fromEntries(
-      ([1, 2, 3, 4] as const).map((q) => {
-        const [a, b] = quarterMonths(q)
-        return [
-          String(q),
-          f.t("qOpt", { q, a: f.month(a - 1, true), b: f.month(b - 1, true) }),
-        ]
-      })
-    )
+    return ([1, 2, 3, 4] as const).map((q) => {
+      const [a, b] = quarterMonths(q)
+      return {
+        value: String(q),
+        label: f.t("qOpt", {
+          q,
+          a: f.month(a - 1, true),
+          b: f.month(b - 1, true),
+        }),
+      }
+    })
   }, [mode, f])
 
   const refund = report.due < 0
@@ -108,37 +105,13 @@ export function VatView() {
           </ToggleGroup>
 
           {mode !== "year" ? (
-            <Select
-              items={periodItems}
+            <OptionSelect
+              options={periodOptions}
               value={String(index)}
-              onValueChange={(value) => value && setIndex(Number(value))}
-            >
-              <SelectTrigger className="w-[15rem]" aria-label={f.t("period")}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {mode === "month"
-                    ? Array.from({ length: 12 }, (_, i) => (
-                        <SelectItem key={i + 1} value={String(i + 1)}>
-                          {f.month(i)}
-                        </SelectItem>
-                      ))
-                    : ([1, 2, 3, 4] as const).map((q) => {
-                        const [a, b] = quarterMonths(q)
-                        return (
-                          <SelectItem key={q} value={String(q)}>
-                            {f.t("qOpt", {
-                              q,
-                              a: f.month(a - 1, true),
-                              b: f.month(b - 1, true),
-                            })}
-                          </SelectItem>
-                        )
-                      })}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+              onChange={(value) => setIndex(Number(value))}
+              label={f.t("period")}
+              className="w-[15rem]"
+            />
           ) : null}
         </div>
 
@@ -185,10 +158,7 @@ export function VatView() {
           />
         </div>
 
-        <div className="rounded-lg border">
-          <h2 className="border-b px-4 py-3 font-medium">
-            {f.t("otherSales")}
-          </h2>
+        <Panel title={f.t("otherSales")}>
           <dl className="divide-y">
             <OtherRow label={f.t("euSales")} cents={report.otherSales.eu} />
             <OtherRow label={f.t("nonEu")} cents={report.otherSales.nonEu} />
@@ -197,7 +167,7 @@ export function VatView() {
               cents={report.otherSales.reverse}
             />
           </dl>
-        </div>
+        </Panel>
 
         <p className="text-xs text-muted-foreground">{f.t("vatNote")}</p>
       </div>
@@ -221,8 +191,7 @@ function RateTable({
   )
 
   return (
-    <div className="overflow-x-auto rounded-lg border">
-      <h2 className="border-b px-4 py-3 font-medium">{title}</h2>
+    <Panel title={title} bodyClassName="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
@@ -267,7 +236,7 @@ function RateTable({
           </TableRow>
         </TableFooter>
       </Table>
-    </div>
+    </Panel>
   )
 }
 

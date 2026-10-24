@@ -2,12 +2,11 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { PlusIcon, UploadIcon } from "lucide-react"
 
 import { LandingReceipts } from "@/components/landing/landing-receipts"
 import { ThemeToggle } from "@/components/app/theme-toggle"
-import { BrandMark } from "@/components/common/brand-mark"
+import { SiteFooter, SiteHeader } from "@/components/common/site-chrome"
 import {
   Accordion,
   AccordionContent,
@@ -16,11 +15,11 @@ import {
 } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 import { LangProvider, useFormatters } from "@/components/lang-provider"
+import { useCommandCtx } from "@/hooks/use-commands"
 import type { Lang } from "@/lib/domain/types"
-
-// Spelled out rather than imported from lib/domain/csv: that module pulls in
-// papaparse, which has no business in the landing page bundle.
-const CSV_COLUMNS = "pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite"
+// From csv-header, not csv: that module pulls in papaparse, which has no
+// business in the landing page bundle. csv-header has no dependencies.
+import { CSV_HEADER_LINE } from "@/lib/domain/csv-header"
 import { startNewBook } from "@/lib/commands/book-commands"
 import { APP_ROUTES, LANDING_ROUTES } from "@/lib/site"
 import { BOOK_STORAGE_KEY, useBookStore } from "@/stores/book-store"
@@ -41,7 +40,7 @@ export function LandingPage({ lang }: { lang: Lang }) {
 
 function LandingBody({ lang }: { lang: Lang }) {
   const f = useFormatters()
-  const router = useRouter()
+  const ctx = useCommandCtx()
   const hydrated = useBookStore((s) => s.hydrated)
   const setLang = useBookStore((s) => s.setLang)
   const inputRef = React.useRef<HTMLInputElement>(null)
@@ -60,11 +59,6 @@ function LandingBody({ lang }: { lang: Lang }) {
       // No storage: the app falls back to its default language.
     }
   }, [hydrated, lang, setLang])
-
-  const ctx = React.useMemo(
-    () => ({ t: f.t, navigate: (href: string) => router.push(href) }),
-    [f.t, router]
-  )
 
   return (
     <div className="flex min-h-svh flex-col">
@@ -85,17 +79,11 @@ function LandingBody({ lang }: { lang: Lang }) {
         }}
       />
 
-      <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 py-4">
-        <Link href={LANDING_ROUTES[lang]} className="flex items-center gap-2.5">
-          <BrandMark />
-          <span className="font-heading font-semibold">{f.t("appName")}</span>
-        </Link>
-        <div className="flex items-center gap-1">
-          <LandingLangLinks lang={lang} />
-          <ThemeToggle />
-          <OpenOrContinue onPick={() => inputRef.current?.click()} compact />
-        </div>
-      </header>
+      <SiteHeader home={LANDING_ROUTES[lang]}>
+        <LandingLangLinks lang={lang} />
+        <ThemeToggle />
+        <OpenOrContinue onPick={() => inputRef.current?.click()} compact />
+      </SiteHeader>
 
       <main className="flex-1">
         {/* Hero */}
@@ -205,7 +193,7 @@ function LandingBody({ lang }: { lang: Lang }) {
             </div>
             <pre className="overflow-x-auto rounded-lg border bg-muted/50 p-3 text-[0.7rem] leading-relaxed">
               <code>
-                <b>{CSV_COLUMNS}</b>
+                <b>{CSV_HEADER_LINE}</b>
                 {"\n"}
                 2026-10-10;Osto – K-Rauta – tarvikkeet;kulu;333;Ostot ja
                 varastojen muutokset;100,00;25,5;brutto;tositteet/2026/10/…jpg
@@ -246,12 +234,7 @@ function LandingBody({ lang }: { lang: Lang }) {
         </section>
       </main>
 
-      <footer className="border-t">
-        <div className="mx-auto flex w-full max-w-5xl flex-wrap justify-between gap-2 px-4 py-6 text-sm text-muted-foreground">
-          <span>{f.t("appName")}</span>
-          <span>{f.t("lp_foot")}</span>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }
@@ -302,17 +285,12 @@ function HeroCta({
   className?: string
 }) {
   const f = useFormatters()
-  const router = useRouter()
+  const ctx = useCommandCtx()
   const hydrated = useBookStore((s) => s.hydrated)
   const open = useBookStore((s) => s.open)
   const entries = useBookStore((s) => s.entries)
   const fileName = useBookStore((s) => s.fileName)
   const dirty = useBookStore((s) => s.dirty)
-
-  const ctx = React.useMemo(
-    () => ({ t: f.t, navigate: (href: string) => router.push(href) }),
-    [f.t, router]
-  )
 
   const openState = hydrated && open
 
@@ -345,7 +323,7 @@ function HeroCta({
         <button
           type="button"
           onClick={onPick}
-          className="flex items-center gap-3 rounded-lg border border-dashed px-4 py-3 text-left transition-colors hover:border-primary focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+          className="focus-ring flex items-center gap-3 rounded-lg border border-dashed px-4 py-3 text-left transition-colors hover:border-primary"
         >
           <UploadIcon className="size-5 shrink-0 text-muted-foreground" />
           <span className="flex flex-col">

@@ -42,7 +42,7 @@ export function SortableHeader<K extends string>({
         onClick={() => onToggle(columnKey)}
         className={cn(
           "inline-flex items-center gap-1 rounded-sm whitespace-nowrap",
-          "focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+          "focus-ring",
           active ? "text-foreground" : "hover:text-foreground",
           align === "right" && "flex-row-reverse"
         )}

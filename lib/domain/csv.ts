@@ -7,6 +7,7 @@ import {
   LINE_BY_KEY,
   type AccountLine,
 } from "@/lib/domain/accounts"
+import { CSV_HEADER, CSV_HEADER_LINE } from "@/lib/domain/csv-header"
 import { parseCsvDate, yearOf } from "@/lib/domain/dates"
 import { uid } from "@/lib/domain/id"
 import { formatAmountForCsv, parseAmount, parseRate } from "@/lib/domain/money"
@@ -20,24 +21,12 @@ import {
 } from "@/lib/domain/types"
 
 /**
- * The nine columns, always in this order (§7.1).
- *
- * The file format is Finnish and stays Finnish whatever the UI language, so a
- * CSV opens directly in Finnish Excel. This module is the only place those
- * names — and the `tulo`/`kulu` and `brutto`/`netto` values below — appear;
- * everything in memory and in storage uses the English field names of `Entry`.
+ * The column names live in `csv-header.ts`, which has no dependencies, so the
+ * landing page and the import command can name them without pulling papaparse
+ * into their bundles. This module is the only place the `tulo`/`kulu` and
+ * `brutto`/`netto` *values* appear.
  */
-export const CSV_HEADER = [
-  "pvm",
-  "selite",
-  "tyyppi",
-  "tili",
-  "luokka",
-  "summa",
-  "alv",
-  "syotto",
-  "tosite",
-] as const
+export { CSV_HEADER, CSV_HEADER_LINE }
 
 const REQUIRED = ["pvm", "tyyppi", "summa"] as const
 
@@ -80,7 +69,7 @@ export function serializeCsv(
   cats: CategoryMap,
   paths: ReadonlyMap<string, string> = buildReceiptPaths(entries)
 ): string {
-  const lines: string[] = [CSV_HEADER.join(";")]
+  const lines: string[] = [CSV_HEADER_LINE]
   const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date))
 
   for (const e of sorted) {

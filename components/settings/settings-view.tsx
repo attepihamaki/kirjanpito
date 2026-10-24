@@ -1,23 +1,21 @@
 "use client"
 
 import * as React from "react"
-import { PlusIcon, SearchIcon, Trash2Icon } from "lucide-react"
+import { PlusIcon, Trash2Icon } from "lucide-react"
 
+import {
+  SearchInput,
+  TypeFilterToggle,
+} from "@/components/common/filter-controls"
+import { OptionSelect } from "@/components/common/option-select"
 import { PageHeader } from "@/components/common/page-header"
+import { Panel } from "@/components/common/panel"
 import { SortableHeader } from "@/components/common/sortable-header"
 import { TablePagination } from "@/components/common/table-pagination"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -42,11 +40,7 @@ import {
   paginate,
   usedCategoryIds,
 } from "@/stores/selectors"
-import {
-  useBookStore,
-  type CatSortKey,
-  type TypeFilter,
-} from "@/stores/book-store"
+import { useBookStore, type CatSortKey } from "@/stores/book-store"
 
 export function SettingsView() {
   const f = useFormatters()
@@ -133,26 +127,15 @@ function AddCategoryForm() {
 
         <Field>
           <FieldLabel>{f.t("line")}</FieldLabel>
-          <Select
-            items={Object.fromEntries(
-              lineOptions.map((l) => [l.key, l.account + " " + f.lineName(l)])
-            )}
+          <OptionSelect
+            options={lineOptions.map((l) => ({
+              value: l.key,
+              label: `${l.account} ${f.lineName(l)}`,
+            }))}
             value={line}
-            onValueChange={(value) => value && setLine(value)}
-          >
-            <SelectTrigger aria-label={f.t("line")}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {lineOptions.map((l) => (
-                  <SelectItem key={l.key} value={l.key}>
-                    {l.account} {f.lineName(l)}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+            onChange={setLine}
+            label={f.t("line")}
+          />
         </Field>
 
         <Field data-invalid={error ? true : undefined}>
@@ -269,43 +252,22 @@ function CategoryTable() {
   )
 
   return (
-    <section className="rounded-lg border">
-      <div className="flex flex-wrap items-center gap-2 border-b p-4">
-        <h2 className="mr-2 font-medium">{f.t("categories")}</h2>
-        <div className="relative min-w-[12rem] flex-1">
-          <SearchIcon
-            aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
-          />
-          <Input
+    <Panel
+      title={f.t("categories")}
+      actions={
+        <>
+          <SearchInput
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={setQuery}
             placeholder={f.t("catSearch")}
-            aria-label={f.t("catSearch")}
-            className="pl-8"
           />
-        </div>
-        <ToggleGroup
-          aria-label={f.t("typeFilter")}
-          value={[typeFilter]}
-          onValueChange={(value) => {
-            const next = value[0]
-            if (next) setType(next as TypeFilter)
-          }}
-        >
-          <ToggleGroupItem value="all">{f.t("all")}</ToggleGroupItem>
-          <ToggleGroupItem value="income">
-            {f.t("incomePlural")}
-          </ToggleGroupItem>
-          <ToggleGroupItem value="expense">
-            {f.t("expensePlural")}
-          </ToggleGroupItem>
-        </ToggleGroup>
-        <span className="text-sm text-muted-foreground">
-          {f.t("nCats", { n: view.total })}
-        </span>
-      </div>
-
+          <TypeFilterToggle value={typeFilter} onChange={setType} />
+          <span className="text-sm text-muted-foreground">
+            {f.t("nCats", { n: view.total })}
+          </span>
+        </>
+      }
+    >
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -380,7 +342,7 @@ function CategoryTable() {
           onSizeChange={setSize}
         />
       </div>
-    </section>
+    </Panel>
   )
 }
 

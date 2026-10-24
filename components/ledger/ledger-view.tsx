@@ -1,8 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { PlusIcon, SearchIcon, XIcon } from "lucide-react"
+import { PlusIcon, XIcon } from "lucide-react"
 
+import {
+  SearchInput,
+  TypeFilterToggle,
+} from "@/components/common/filter-controls"
+import { OptionSelect } from "@/components/common/option-select"
 import { PageHeader } from "@/components/common/page-header"
 import { TablePagination } from "@/components/common/table-pagination"
 import { LedgerTable } from "@/components/ledger/ledger-table"
@@ -16,16 +21,6 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useFormatters } from "@/components/lang-provider"
 import { categoryName } from "@/lib/domain/accounts"
 import { indexCategories } from "@/lib/domain/types"
@@ -36,7 +31,7 @@ import {
   paginate,
   usedCategoryIds,
 } from "@/stores/selectors"
-import { useBookStore, type TypeFilter } from "@/stores/book-store"
+import { useBookStore } from "@/stores/book-store"
 
 export function LedgerView() {
   const f = useFormatters()
@@ -112,12 +107,11 @@ export function LedgerView() {
     }
   }, [catFilter, usedCats, setCat])
 
-  // Base UI needs this to render the trigger's label rather than the id.
-  const catFilterItems = React.useMemo(
-    () => ({
-      all: f.t("catAll"),
-      ...Object.fromEntries(usedCats.map((c) => [c.id, f.catName(c)])),
-    }),
+  const catFilterOptions = React.useMemo(
+    () => [
+      { value: "all", label: f.t("catAll") },
+      ...usedCats.map((c) => ({ value: c.id, label: f.catName(c) })),
+    ],
     [usedCats, f]
   )
 
@@ -167,56 +161,22 @@ export function LedgerView() {
         <TotalsStrip totals={totals} />
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[14rem] flex-1">
-            <SearchIcon
-              aria-hidden="true"
-              className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={f.t("search")}
-              aria-label={f.t("search")}
-              className="pl-8"
-            />
-          </div>
+          <SearchInput
+            value={query}
+            onChange={setQuery}
+            placeholder={f.t("search")}
+            className="min-w-[14rem]"
+          />
 
-          <ToggleGroup
-            aria-label={f.t("typeFilter")}
-            value={[typeFilter]}
-            onValueChange={(value) => {
-              const next = value[0]
-              if (next) setType(next as TypeFilter)
-            }}
-          >
-            <ToggleGroupItem value="all">{f.t("all")}</ToggleGroupItem>
-            <ToggleGroupItem value="income">
-              {f.t("incomePlural")}
-            </ToggleGroupItem>
-            <ToggleGroupItem value="expense">
-              {f.t("expensePlural")}
-            </ToggleGroupItem>
-          </ToggleGroup>
+          <TypeFilterToggle value={typeFilter} onChange={setType} />
 
-          <Select
+          <OptionSelect
+            options={catFilterOptions}
             value={catFilter}
-            onValueChange={(value) => setCat(value ?? "all")}
-            items={catFilterItems}
-          >
-            <SelectTrigger className="w-[13rem]" aria-label={f.t("c_cat")}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="all">{f.t("catAll")}</SelectItem>
-                {usedCats.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {f.catName(c)}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+            onChange={setCat}
+            label={f.t("c_cat")}
+            className="w-[13rem]"
+          />
 
           {hasFilters ? (
             <Button variant="ghost" size="sm" onClick={clearFilters}>

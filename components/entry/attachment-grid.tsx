@@ -57,7 +57,7 @@ function Thumb({
         type="button"
         onClick={onOpen}
         aria-label={f.t("att_open")}
-        className="size-full focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+        className="focus-ring size-full"
       >
         {att.missing ? (
           <span className="flex size-full flex-col items-center justify-center gap-1 p-2 text-center">
@@ -140,7 +140,7 @@ export function AttachmentGrid({
           className={cn(
             "flex aspect-3/4 flex-col items-center justify-center gap-1 rounded-md border border-dashed text-muted-foreground transition-colors",
             "hover:border-primary hover:text-foreground",
-            "focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+            "focus-ring",
             "disabled:cursor-not-allowed disabled:opacity-60"
           )}
         >

@@ -50,7 +50,7 @@ export function AppNav() {
             aria-current={active ? "page" : undefined}
             className={cn(
               "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors",
-              "focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+              "focus-ring",
               active
                 ? "bg-accent font-medium text-accent-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -73,7 +73,7 @@ export function AppNavTabs() {
   return (
     <nav
       aria-label={t("appName")}
-      className="-mx-4 flex [scrollbar-width:none] gap-1 overflow-x-auto px-4 pb-2 [&::-webkit-scrollbar]:hidden"
+      className="scroll-strip -mx-4 gap-1 px-4 pb-2"
     >
       {NAV_ITEMS.map(({ href, key }) => {
         const active = isActive(href)
@@ -84,7 +84,7 @@ export function AppNavTabs() {
             aria-current={active ? "page" : undefined}
             className={cn(
               "shrink-0 rounded-full px-3 py-1.5 text-sm whitespace-nowrap transition-colors",
-              "focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+              "focus-ring",
               active
                 ? "bg-primary font-medium text-primary-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"

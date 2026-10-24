@@ -5,7 +5,7 @@ import { ArrowLeftIcon } from "lucide-react"
 
 import { LangToggle } from "@/components/app/lang-toggle"
 import { ThemeToggle } from "@/components/app/theme-toggle"
-import { BrandMark } from "@/components/common/brand-mark"
+import { SiteFooter, SiteHeader } from "@/components/common/site-chrome"
 import {
   AppLangProvider,
   LangHtmlAttr,
@@ -41,16 +41,10 @@ function NotFoundBody() {
 
   return (
     <div className="flex min-h-svh flex-col">
-      <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 py-4">
-        <Link href={landingFor(lang)} className="flex items-center gap-2.5">
-          <BrandMark />
-          <span className="font-heading font-semibold">{f.t("appName")}</span>
-        </Link>
-        <div className="flex items-center gap-1">
-          <LangToggle />
-          <ThemeToggle />
-        </div>
-      </header>
+      <SiteHeader home={landingFor(lang)}>
+        <LangToggle />
+        <ThemeToggle />
+      </SiteHeader>
 
       <main className="mx-auto flex w-full max-w-5xl flex-1 items-center px-4 py-10">
         <div className="flex w-full flex-col">
@@ -82,12 +76,7 @@ function NotFoundBody() {
         </div>
       </main>
 
-      <footer className="border-t">
-        <div className="mx-auto flex w-full max-w-5xl flex-wrap justify-between gap-2 px-4 py-6 text-sm text-muted-foreground">
-          <span>{f.t("appName")}</span>
-          <span>{f.t("lp_foot")}</span>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

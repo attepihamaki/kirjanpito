@@ -30,3 +30,74 @@ export function ReceiptPaper({
     </div>
   )
 }
+
+/**
+ * The parts a receipt is printed from.
+ *
+ * Both receipts in the app are built from these: the live preview in the
+ * entry dialog, and the pair in the landing hero. They used to be two private
+ * sets of near-identical helpers, which meant a change to the paper's look
+ * had to be made twice and silently drifted when it wasn't.
+ */
+
+/** The type badge and date across the top of a receipt. */
+export function ReceiptHead({
+  label,
+  date,
+  tone,
+}: {
+  label: string
+  date: string
+  tone: "income" | "expense"
+}) {
+  return (
+    <div className="flex items-start justify-between gap-2">
+      <span
+        className={cn(
+          "rounded-sm px-1.5 py-0.5 font-heading text-[0.65rem] font-semibold tracking-wide",
+          tone === "income"
+            ? "bg-income-subtle text-income"
+            : "bg-expense-subtle text-expense"
+        )}
+      >
+        {label}
+      </span>
+      <span className="tabular text-xs text-paper-foreground/70">{date}</span>
+    </div>
+  )
+}
+
+/** A dashed tear line between sections of a receipt. */
+export function ReceiptRule({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn("my-3 border-t border-dashed border-paper-edge", className)}
+    />
+  )
+}
+
+/** A quiet label / amount pair. */
+export function ReceiptRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2 text-sm">
+      <span className="text-paper-foreground/70">{label}</span>
+      <span className="tabular">{value}</span>
+    </div>
+  )
+}
+
+/** The bold bottom line. */
+export function ReceiptTotal({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <span className="text-sm font-medium">{label}</span>
+      <span className="tabular text-lg font-semibold">{value}</span>
+    </div>
+  )
+}

@@ -3,6 +3,7 @@
 import * as React from "react"
 import { CopyIcon, Trash2Icon } from "lucide-react"
 
+import { OptionSelect } from "@/components/common/option-select"
 import { AttachmentGrid } from "@/components/entry/attachment-grid"
 import { ReceiptPreview } from "@/components/entry/receipt-preview"
 import { Button } from "@/components/ui/button"
@@ -15,14 +16,6 @@ import {
 } from "@/components/ui/dialog"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { toast } from "@/components/ui/toast"
 import { useFormatters } from "@/components/lang-provider"
@@ -241,9 +234,10 @@ function EntryDialogForm({
       )
   }, [cats, form.type, form.catId, f.collator, f.lang])
 
-  const catItems = Object.fromEntries(
-    typeCats.map((c) => [c.id, f.catLabel(c)])
-  )
+  const catOptions = typeCats.map((c) => ({
+    value: c.id,
+    label: f.catLabel(c),
+  }))
   const selectedCat = cats.find((c) => c.id === form.catId)
   const rateOptions = RATES.includes(form.vatRate)
     ? RATES
@@ -414,11 +408,10 @@ function EntryDialogForm({
 
             <Field>
               <FieldLabel>{f.t("f_cat")}</FieldLabel>
-              <Select
-                items={catItems}
+              <OptionSelect
+                options={catOptions}
                 value={form.catId}
-                onValueChange={(value) => {
-                  if (!value) return
+                onChange={(value) => {
                   const cat = cats.find((c) => c.id === value)
                   // Picking a category pre-fills its default rate (§8.5).
                   update({
@@ -426,20 +419,9 @@ function EntryDialogForm({
                     vatRate: cat ? cat.vatRate : form.vatRate,
                   })
                 }}
-              >
-                <SelectTrigger aria-label={f.t("f_cat")}>
-                  <SelectValue placeholder={f.t("e_cat")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {typeCats.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {f.catLabel(c)}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+                placeholder={f.t("e_cat")}
+                label={f.t("f_cat")}
+              />
             </Field>
 
             <Field>
@@ -455,28 +437,15 @@ function EntryDialogForm({
 
             <Field>
               <FieldLabel>{f.t("f_vat")}</FieldLabel>
-              <Select
-                items={Object.fromEntries(
-                  rateOptions.map((rate) => [String(rate), f.rate(rate)])
-                )}
+              <OptionSelect
+                options={rateOptions.map((rate) => ({
+                  value: String(rate),
+                  label: f.rate(rate),
+                }))}
                 value={String(form.vatRate)}
-                onValueChange={(value) =>
-                  value && update({ vatRate: Number(value) })
-                }
-              >
-                <SelectTrigger aria-label={f.t("f_vat")}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {rateOptions.map((rate) => (
-                      <SelectItem key={rate} value={String(rate)}>
-                        {f.rate(rate)}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+                onChange={(value) => update({ vatRate: Number(value) })}
+                label={f.t("f_vat")}
+              />
             </Field>
 
             <Field>

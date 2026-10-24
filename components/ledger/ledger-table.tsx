@@ -147,7 +147,7 @@ function LedgerRow({
           onEdit()
         }
       }}
-      className="cursor-pointer focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+      className="focus-ring cursor-pointer"
     >
       <TableCell className="tabular relative pl-5 whitespace-nowrap">
         {/* Coloured left edge: green for income, red for expenses. */}
