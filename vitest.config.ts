@@ -1,18 +1,21 @@
 import { fileURLToPath } from "node:url"
+import react from "@vitejs/plugin-react"
 import { defineConfig } from "vitest/config"
 
 export default defineConfig({
+  plugins: [react()],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./", import.meta.url)),
     },
   },
   test: {
-    // The domain layer is pure TypeScript. Component tests opt into jsdom
-    // per file with `// @vitest-environment jsdom`.
+    // The domain layer is pure TypeScript and needs no DOM. Component tests
+    // opt in per file with `// @vitest-environment jsdom`.
     environment: "node",
     globals: false,
-    include: ["lib/**/*.test.ts", "lib/**/*.test.tsx"],
+    include: ["lib/**/*.test.ts", "test/**/*.test.tsx"],
+    setupFiles: ["test/setup.ts"],
     // Pins the clock so date tests behave the same here and on CI.
     env: { TZ: "Europe/Helsinki" },
     restoreMocks: true,
