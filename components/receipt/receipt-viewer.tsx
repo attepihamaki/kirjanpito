@@ -236,8 +236,12 @@ function ViewerBody({
         setZoom((z) => Math.max(MIN_ZOOM, z / ZOOM_STEP))
       }
     }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
+    // Capture phase: Base UI's dialog consumes arrow keys for its own focus
+    // handling before they bubble to window, so ArrowLeft/Right never
+    // reached us. "+" and "-" were unaffected, which is what made it look
+    // like the listener was working.
+    window.addEventListener("keydown", onKey, true)
+    return () => window.removeEventListener("keydown", onKey, true)
   }, [go])
 
   const blob =
