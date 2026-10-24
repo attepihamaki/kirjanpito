@@ -6,7 +6,6 @@ import { PlusIcon, SearchIcon, Trash2Icon } from "lucide-react"
 import { PageHeader } from "@/components/common/page-header"
 import { SortableHeader } from "@/components/common/sortable-header"
 import { TablePagination } from "@/components/common/table-pagination"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
@@ -30,6 +29,7 @@ import {
 import { toast } from "@/components/ui/toast"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useFormatters } from "@/components/lang-provider"
+import { cn } from "@/lib/utils"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { clearAllEntries, resetCategories } from "@/lib/commands/book-commands"
 import { LINES, categoryName } from "@/lib/domain/accounts"
@@ -328,9 +328,16 @@ function CategoryTable() {
                     />
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">
+                    <span
+                      className={cn(
+                        "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
+                        income
+                          ? "bg-income-subtle text-income"
+                          : "bg-expense-subtle text-expense"
+                      )}
+                    >
                       {income ? f.t("tulo") : f.t("kulu")}
-                    </Badge>
+                    </span>
                   </TableCell>
                   <TableCell className="tabular text-muted-foreground">
                     {categoryAccount(cat)}

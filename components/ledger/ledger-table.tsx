@@ -62,7 +62,9 @@ export function LedgerTable({
   )
 
   return (
-    <div className="overflow-x-auto rounded-lg border">
+    // Row density matched to the prototype: the default p-2 cells read as
+    // cramped in a ledger you scan down a single column of.
+    <div className="overflow-x-auto rounded-lg border [&_td]:px-3 [&_td]:py-3.5 [&_th]:px-3">
       <Table>
         <TableHeader>
           <TableRow>
@@ -148,12 +150,12 @@ function LedgerRow({
       }}
       className="cursor-pointer focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
     >
-      <TableCell className="tabular relative whitespace-nowrap">
+      <TableCell className="tabular relative pl-5 whitespace-nowrap">
         {/* Coloured left edge: green for income, red for expenses. */}
         <span
           aria-hidden="true"
           className={cn(
-            "absolute inset-y-0 left-0 w-[3px]",
+            "absolute inset-y-1 left-0 w-[3px] rounded-r-sm",
             income ? "bg-income" : "bg-expense"
           )}
         />
@@ -191,7 +193,7 @@ function LedgerRow({
 
       <TableCell className="hidden max-w-[16rem] min-[1240px]:table-cell">
         <span className="block truncate text-muted-foreground">
-          {cat ? f.catName(cat) : f.t("unknownCat")}
+          {cat ? f.catLabel(cat) : f.t("unknownCat")}
         </span>
       </TableCell>
 
@@ -213,12 +215,7 @@ function LedgerRow({
       </TableCell>
 
       <TableCell className="text-right font-medium">
-        <span
-          className={cn(
-            "tabular whitespace-nowrap",
-            income ? "text-income" : "text-expense"
-          )}
-        >
+        <span className="tabular whitespace-nowrap">
           {income ? "" : MINUS}
           {f.money(gross)}
         </span>

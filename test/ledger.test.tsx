@@ -187,14 +187,13 @@ describe("LedgerView with the demo data", () => {
     const user = userEvent.setup()
     mount(<LedgerView />)
 
-    await user.click(screen.getByRole("button", { name: /^Pvm/ }))
+    await user.click(screen.getByRole("button", { name: /^Päivämäärä/ }))
 
     const rows = screen.getAllByRole("row")
     expect(within(rows[1]).getByText("30.10.2026")).toBeInTheDocument()
-    expect(screen.getByRole("columnheader", { name: /^Pvm/ })).toHaveAttribute(
-      "aria-sort",
-      "descending"
-    )
+    expect(
+      screen.getByRole("columnheader", { name: /^Päivämäärä/ })
+    ).toHaveAttribute("aria-sort", "descending")
   })
 
   it("opens the entry dialog when a row is clicked", async () => {

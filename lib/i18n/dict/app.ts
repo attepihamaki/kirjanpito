@@ -76,7 +76,7 @@ export const APP_DICT = {
   vatPay: ["Maksettava ALV", "VAT payable"],
   vatRef: ["Palautettava ALV", "VAT refundable"],
   search: ["Hae selitteestä tai luokasta", "Search description or category"],
-  c_date: ["Pvm", "Date"],
+  c_date: ["Päivämäärä", "Date"],
   c_desc: ["Selite", "Description"],
   c_cat: ["Luokka", "Category"],
   c_net: ["Veroton", "Net"],
