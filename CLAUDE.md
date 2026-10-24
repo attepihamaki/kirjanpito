@@ -83,19 +83,24 @@ This is what the app replaces. Useful for understanding the domain and for check
 
 ### Entry (kirjaus)
 
+**Identifiers are English everywhere in the code and in browser storage.** The
+CSV columns and their `tulo`/`kulu` and `brutto`/`netto` values stay Finnish —
+that is the file format (§7.1), and `lib/domain/csv.ts` is the only module that
+knows the Finnish names. Nothing else, including `Entry`, mentions them.
+
 ```ts
-type EntryType = "tulo" | "kulu";          // income | expense
-type AmountMode = "brutto" | "netto";      // amount includes VAT | excludes VAT
+type EntryType = "income" | "expense";
+type AmountMode = "gross" | "net";         // amount includes VAT | excludes VAT
 
 interface Entry {
   id: string;
-  pvm: string;            // ISO date "YYYY-MM-DD"
-  selite: string;         // description
-  tyyppi: EntryType;
+  date: string;           // ISO date "YYYY-MM-DD"
+  description: string;
+  type: EntryType;
   catId: string;          // Category.id
-  summa: number;          // integer cents, as entered (gross or net depending on syotto)
-  alv: number;            // VAT rate in percent, e.g. 25.5
-  syotto: AmountMode;     // stored per entry (the Excel had one switch per month)
+  amount: number;         // integer cents, as entered (gross or net per amountMode)
+  vatRate: number;        // VAT rate in percent, e.g. 25.5
+  amountMode: AmountMode; // stored per entry (the Excel had one switch per month)
   atts?: Attachment[];    // receipts, may be several
 }
 ```
@@ -117,12 +122,12 @@ interface Attachment {
 
 ```ts
 interface Category {
-  id: string;             // e.g. "300-suomi", "333", "344-matka", or "c-<uid>" for custom
+  id: string;             // e.g. "300-domestic", "333", "344-travel", or "c-<uid>" for custom
   line: string;           // key of the income statement line it belongs to (see §5)
-  nimi: string;           // Finnish name (custom categories: the user's name)
-  alv: number;            // default VAT %
-  kind?: "kotimaa" | "eu" | "muutmaat" | "kaanteinen"; // for income categories
-  on: boolean;            // enabled = shown in the entry dialog's dropdown
+  name: string;           // Finnish name (custom categories: the user's name)
+  vatRate: number;        // default VAT %
+  kind?: "domestic" | "eu" | "nonEu" | "reverse"; // for income categories
+  enabled: boolean;       // shown in the entry dialog's dropdown
   custom: boolean;        // user-created
 }
 ```
@@ -132,9 +137,9 @@ interface Category {
 ### Calculation per entry
 
 ```
-rate = entry.alv
-if syotto == "netto":  net = summa; vat = round(net * rate / 100);           gross = net + vat
-else (brutto):         gross = summa; vat = round(gross * rate / (100 + rate)); net = gross - vat
+rate = entry.vatRate
+if amountMode == "net":  net = amount; vat = round(net * rate / 100);           gross = net + vat
+else (gross):            gross = amount; vat = round(gross * rate / (100 + rate)); net = gross - vat
 ```
 
 All in cents with `Math.round`.
@@ -147,35 +152,35 @@ Each line has a key, an account number (tili), a side, Finnish and English names
 
 | key | tili | side | Finnish | English | group (fi / en) | default VAT | bucket |
 |---|---|---|---|---|---|---|---|
-| 300 | 300 | tulo | Tuotot ammatista | Business revenue | – | (see sales categories) | – |
-| 301 | 301 | tulo | Muut tuotot | Other revenue | – | 0 | – |
-| 312 | 312 | tulo | Varausten vähennys | Decrease in provisions | Varausten vähennys / Decrease in provisions | 0 | – |
-| 313 | 313 | tulo | Auton yksityiskäyttö | Private use of car | Yksityiskäyttö / Private use | 0 | – |
-| 314 | 314 | tulo | Tavaroiden yksityiskäyttö | Private use of goods | Yksityiskäyttö / Private use | 0 | – |
-| 315 | 315 | tulo | Muu yksityiskäyttö | Other private use | Yksityiskäyttö / Private use | 0 | – |
-| 317 | 317 | tulo | Tuloslaskelman verovapaat tuotot | Tax-exempt income | Muut tuotot / Other income | 0 | – |
-| 318 | 318 | tulo | Saadut avustukset ja tuet | Grants and subsidies received | Muut tuotot / Other income | 0 | – |
-| 319 | 319 | tulo | Saadut osingot | Dividends received | Muut tuotot / Other income | 0 | – |
-| 323 | 323 | tulo | Korkotuotot ja muut rahoitustuotot | Interest and other financial income | Muut tuotot / Other income | 0 | – |
-| 324 | 324 | tulo | Muut veronalaiset tuotot | Other taxable income | Muut tuotot / Other income | 0 | – |
-| 333 | 333 | kulu | Ostot ja varastojen muutokset | Purchases and change in inventory | – | 25.5 | ostot |
-| 334 | 334 | kulu | Ulkopuoliset palvelut | External services | – | 25.5 | ostot |
-| 335 | 335 | kulu | Palkat ja palkkiot | Wages and fees | Henkilöstökulut / Personnel expenses | 0 | henk |
-| 336 | 336 | kulu | Eläke- ja henkilösivukulut | Pension and other personnel costs | Henkilöstökulut / Personnel expenses | 0 | henk |
-| 337 | 337 | kulu | Poistot | Depreciation | Poistot, edustuskulut ja vuokrat / Depreciation, entertainment and rent | 0 | poist |
-| 341 | 341 | kulu | Edustuskulut | Entertainment expenses | (same) | 0 | poist |
-| 343 | 343 | kulu | Vuokrat | Rent | (same) | 25.5 | poist |
-| 344-matka | 344 | kulu | Matkakulut | Travel expenses | Muut vähennyskelpoiset kulut / Other deductible expenses | 25.5 | muut |
-| 344-ajo | 344 | kulu | Ajoneuvokulut | Vehicle expenses | (same) | 25.5 | muut |
-| 344-kokous | 344 | kulu | Kokous- ja neuvottelukulut | Meeting expenses | (same) | 25.5 | muut |
-| 344-muut | 344 | kulu | Muut vähennyskelpoiset kulut | Other deductible expenses | (same) | 25.5 | muut |
-| 354 | 354 | kulu | Kirjanpidon ulkopuoliset vähennyskelpoiset kulut | Deductible expenses outside bookkeeping | (same) | 0 | muut |
-| 346 | 346 | kulu | Korkokulut | Interest expenses | Rahoituskulut / Financial expenses | 0 | rah |
-| 349 | 349 | kulu | Muut rahoituskulut | Other financial expenses | (same) | 0 | rah |
-| 353 | 353 | kulu | Varausten lisäykset | Increase in provisions | Varausten muutokset / Changes in provisions | 0 | var |
-| 365 | 365 | kulu | Välittömät verot | Direct taxes | Vähennyskelvottomat kulut / Non-deductible expenses | 0 | vk (non-deductible) |
-| 366 | 366 | kulu | Sakot ja muut rangaistusmaksut | Fines and penalties | (same) | 0 | vk (non-deductible) |
-| 367 | 367 | kulu | Muut vähennyskelvottomat kulut | Other non-deductible expenses | (same) | 0 | vk (non-deductible) |
+| 300 | 300 | income | Tuotot ammatista | Business revenue | – | (see sales categories) | – |
+| 301 | 301 | income | Muut tuotot | Other revenue | – | 0 | – |
+| 312 | 312 | income | Varausten vähennys | Decrease in provisions | Varausten vähennys / Decrease in provisions | 0 | – |
+| 313 | 313 | income | Auton yksityiskäyttö | Private use of car | Yksityiskäyttö / Private use | 0 | – |
+| 314 | 314 | income | Tavaroiden yksityiskäyttö | Private use of goods | Yksityiskäyttö / Private use | 0 | – |
+| 315 | 315 | income | Muu yksityiskäyttö | Other private use | Yksityiskäyttö / Private use | 0 | – |
+| 317 | 317 | income | Tuloslaskelman verovapaat tuotot | Tax-exempt income | Muut tuotot / Other income | 0 | – |
+| 318 | 318 | income | Saadut avustukset ja tuet | Grants and subsidies received | Muut tuotot / Other income | 0 | – |
+| 319 | 319 | income | Saadut osingot | Dividends received | Muut tuotot / Other income | 0 | – |
+| 323 | 323 | income | Korkotuotot ja muut rahoitustuotot | Interest and other financial income | Muut tuotot / Other income | 0 | – |
+| 324 | 324 | income | Muut veronalaiset tuotot | Other taxable income | Muut tuotot / Other income | 0 | – |
+| 333 | 333 | expense | Ostot ja varastojen muutokset | Purchases and change in inventory | – | 25.5 | purchases |
+| 334 | 334 | expense | Ulkopuoliset palvelut | External services | – | 25.5 | purchases |
+| 335 | 335 | expense | Palkat ja palkkiot | Wages and fees | Henkilöstökulut / Personnel expenses | 0 | personnel |
+| 336 | 336 | expense | Eläke- ja henkilösivukulut | Pension and other personnel costs | Henkilöstökulut / Personnel expenses | 0 | personnel |
+| 337 | 337 | expense | Poistot | Depreciation | Poistot, edustuskulut ja vuokrat / Depreciation, entertainment and rent | 0 | depreciation |
+| 341 | 341 | expense | Edustuskulut | Entertainment expenses | (same) | 0 | depreciation |
+| 343 | 343 | expense | Vuokrat | Rent | (same) | 25.5 | depreciation |
+| 344-travel | 344 | expense | Matkakulut | Travel expenses | Muut vähennyskelpoiset kulut / Other deductible expenses | 25.5 | otherDeductible |
+| 344-vehicle | 344 | expense | Ajoneuvokulut | Vehicle expenses | (same) | 25.5 | otherDeductible |
+| 344-meeting | 344 | expense | Kokous- ja neuvottelukulut | Meeting expenses | (same) | 25.5 | otherDeductible |
+| 344-other | 344 | expense | Muut vähennyskelpoiset kulut | Other deductible expenses | (same) | 25.5 | otherDeductible |
+| 354 | 354 | expense | Kirjanpidon ulkopuoliset vähennyskelpoiset kulut | Deductible expenses outside bookkeeping | (same) | 0 | otherDeductible |
+| 346 | 346 | expense | Korkokulut | Interest expenses | Rahoituskulut / Financial expenses | 0 | financial |
+| 349 | 349 | expense | Muut rahoituskulut | Other financial expenses | (same) | 0 | financial |
+| 353 | 353 | expense | Varausten lisäykset | Increase in provisions | Varausten muutokset / Changes in provisions | 0 | provisions |
+| 365 | 365 | expense | Välittömät verot | Direct taxes | Vähennyskelvottomat kulut / Non-deductible expenses | 0 | nondeductible |
+| 366 | 366 | expense | Sakot ja muut rangaistusmaksut | Fines and penalties | (same) | 0 | nondeductible |
+| 367 | 367 | expense | Muut vähennyskelvottomat kulut | Other non-deductible expenses | (same) | 0 | nondeductible |
 
 The table order is also the display order of the income statement.
 
@@ -183,14 +188,14 @@ The table order is also the display order of the income statement.
 
 | id | Finnish | English | default VAT | kind |
 |---|---|---|---|---|
-| 300-suomi | Myynti – Suomi | Sales – Finland | 25.5 | kotimaa |
+| 300-domestic | Myynti – Suomi | Sales – Finland | 25.5 | domestic |
 | 300-eu | Myynti – EU | Sales – EU | 0 | eu |
-| 300-muut | Myynti – muut maat | Sales – other countries | 0 | muutmaat |
-| 300-kaant | Myynti – käänteinen verotus | Sales – reverse charge | 0 | kaanteinen |
+| 300-other | Myynti – muut maat | Sales – other countries | 0 | nonEu |
+| 300-reverse | Myynti – käänteinen verotus | Sales – reverse charge | 0 | reverse |
 
-**Default categories:** the four sales categories, plus one category per remaining line, with `id = line key`, `nimi = Finnish line name`, `alv = line default VAT`, and `kind = "kotimaa"` for income lines.
+**Default categories:** the four sales categories, plus one category per remaining line, with `id = line key`, `name = Finnish line name`, `vatRate = line default VAT`, and `kind = "domestic"` for income lines.
 
-**Expense summary buckets** (Yhteenveto columns): ostot = Ostot ja ulkopuoliset palvelut, henk = Henkilöstökulut, poist = Poistot, edustuskulut ja vuokrat, muut = Muut vähennyskelpoiset kulut, rah = Rahoituskulut, var = Varausten muutokset, vk = Vähennyskelvottomat kulut.
+**Expense summary buckets** (Yhteenveto columns): `purchases` = Ostot ja ulkopuoliset palvelut, `personnel` = Henkilöstökulut, `depreciation` = Poistot, edustuskulut ja vuokrat, `otherDeductible` = Muut vähennyskelpoiset kulut, `financial` = Rahoituskulut, `provisions` = Varausten muutokset, `nondeductible` = Vähennyskelvottomat kulut.
 
 **VAT rates offered** in the entry dialog: 25.5, 24, 14, 13.5, 10, 0, plus the entry's own rate if it differs. Background: the general rate rose to 25.5 % on 1 September 2024, and the 14 % rate was lowered to 13.5 % at the start of 2026. Older rates are kept for older entries and corrections. **Not yet implemented:** suggesting or validating the rate from the entry's date. The prototype only pre-fills the category default. Verify current rates with Verohallinto before relying on them.
 
@@ -238,6 +243,12 @@ For the selected year, by month (net amounts):
 
 - **Header row**, always exactly these columns in this order:
   `pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite`
+- **The column names and their values are Finnish and must stay Finnish** — this
+  is the user's file, it opens in Finnish Excel, and files already exported have
+  to keep importing. The in-memory and stored field names are English (§4), and
+  `lib/domain/csv.ts` is the single translation layer: `TYPE_TO_CSV` /
+  `TYPE_FROM_CSV` for `tulo`/`kulu` and `MODE_TO_CSV` for `brutto`/`netto`.
+  Nothing else in the codebase may spell a Finnish column name.
 - **Export:**
   - UTF-8 with BOM, `;` delimiter, CRLF line endings. Fields containing `;`, `"` or line breaks are quoted with `"` (doubled inside).
   - `pvm` is ISO `YYYY-MM-DD`. `tyyppi` is `tulo` or `kulu`. `tili` is the account number.
@@ -250,7 +261,7 @@ For the selected year, by month (net amounts):
   - Dates are accepted as `YYYY-MM-DD` or `D.M.YYYY` and validated as real dates.
   - Amounts may contain spaces, NBSP, `€` and a Unicode minus. If both `,` and `.` appear, the last one is the decimal separator. A lone comma is a decimal comma, except in English mode when the value matches a thousands pattern such as `1,234`.
   - `syotto` values `netto` or `veroton` mean net; anything else means gross. An empty `alv` uses the category default.
-  - Category matching: same account number and side, and the name matches the Finnish name or the English default name (case-insensitive). If no name is given, the first category on that account is used. If there's no match but the account number exists, a **custom category** is created with that name. If the account is unknown, the entry is booked to 301 (income) or 344-muut (expense) with a warning.
+  - Category matching: same account number and side, and the name matches the Finnish name or the English default name (case-insensitive). If no name is given, the first category on that account is used. If there's no match but the account number exists, a **custom category** is created with that name. If the account is unknown, the entry is booked to 301 (income) or 344-other (expense) with a warning.
   - Invalid rows (bad date, type or amount) are skipped. A toast summarises: N entries imported, new categories, receipts imported or missing, and the first skipped rows.
   - After import, the selected year is the latest year found in the file.
 
@@ -284,8 +295,8 @@ An export dialog lets the user edit the base name, with a fixed extension shown 
 - Accepted: images (`image/*`, including `.heic`/`.heif`) and PDF. Several per entry.
 - Images: if the long edge is ≤ 2000 px, the file is ≤ 1.5 MB and the type is JPEG/PNG/WebP, the original is kept. Otherwise it is redrawn onto a white canvas with the long edge at 2000 px and saved as JPEG at quality 0.85, with the extension renamed to `.jpg`. If the browser can't decode it (e.g. HEIC outside Safari), the original is kept and the preview shows the file name instead.
 - PDFs are stored as they are.
-- Stored in IndexedDB (prototype: database `kirjanpito-tositteet`, object store `files`, key = attachment id, value = Blob).
-- **Garbage collection:** after saving or deleting entries, closing the file, importing, loading the demo, or closing the entry dialog, delete IndexedDB files that no entry (and no open dialog) references. Revoke object URLs of removed thumbnails.
+- Stored in IndexedDB: database `bookkeeping-receipts`, object store `files`, key = attachment id, value = Blob. (The prototype used `kirjanpito-tositteet`; see §12.)
+- **Garbage collection:** after saving or deleting entries, closing the file, importing, or closing the entry dialog, delete IndexedDB files that no entry (and no open dialog) references. Revoke object URLs of removed thumbnails.
 
 ---
 
@@ -295,7 +306,7 @@ An export dialog lets the user edit the base name, with a fixed extension shown 
 
 - An **open/closed** flag: whether a bookkeeping is open. It is persisted. On load, if it isn't stored, it is true when entries exist.
 - When **no bookkeeping is open**, every route shows the **landing page**.
-- Views (the prototype uses hash routes, which should become Next.js routes): landing (`etusivu`), ledger (`kirjanpito`), VAT return (`alv`), income statement (`tulos`), summary (`yhteenveto`), settings (`asetukset`). The old `kirjaukset` route redirects to the ledger.
+- Views: landing, ledger, VAT return, income statement, summary, settings. The prototype used Finnish hash routes (`etusivu`, `kirjanpito`, `alv`, `tulos`, `yhteenveto`, `asetukset`); the real app uses **English** Next.js routes — see §11b. Only the visible labels are translated.
 - The app logo / brand links to the landing page.
 - Persisted UI preferences: language, theme, selected year, last amount mode and type used in the entry dialog, and rows per page for each table.
 
@@ -319,7 +330,7 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
 1. **Hero.**
    - Headline "Toiminimen kirjanpito, joka mahtuu yhteen tiedostoon." and a lead paragraph.
    - Calls to action:
-     - Closed state: "Aloita uusi kirjanpito", "Avaa tiedosto" and "Kokeile esimerkillä", plus a dashed drop zone ("Pudota CSV- tai ZIP-tiedosto tähän…").
+     - Closed state: "Aloita uusi kirjanpito" and "Avaa tiedosto", plus a dashed drop zone ("Pudota CSV- tai ZIP-tiedosto tähän…").
      - Open state: "Jatka kirjanpitoa" and "Avaa tiedosto", with a meta line showing the file name, the number of entries and the unexported-changes status.
    - Visual: two overlapping, slightly rotated paper receipts on a soft accent panel. One is an expense receipt, the other the October VAT calculation ending in "Maksettava 617,18 €". On small screens only the VAT receipt is shown.
 2. **"Tositteesta veroilmoitukseen neljässä vaiheessa".** Four numbered steps: open or start, record receipts (including attaching), check the figures, export (a ZIP organised by year and month).
@@ -329,7 +340,6 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
 6. A closing call to action, "Aloita tämän kuun tositteista.", and a footer disclaimer: "Laskelmat eivät ole vero- tai kirjanpitoneuvontaa."
 
 - "Aloita uusi kirjanpito" opens an empty ledger and sets the year to the current year. If there are unexported changes, it asks first.
-- "Kokeile esimerkillä" loads the demo data (§10), asking first if there are unexported changes.
 
 ### 8.4 Ledger (Kirjanpito)
 
@@ -414,7 +424,7 @@ See §6.4. Wide tables scroll horizontally with a sticky first column.
   - Name (required).
   - Default VAT % (validated as 0 ≤ x < 100).
   - "Lisää" button.
-  - New income categories get `kind: "kotimaa"`.
+  - New income categories get `kind: "domestic"`.
   - The typed values survive re-renders. Leaving the page with a typed but unadded name asks first.
 - **Categories table:**
   - Search, a type filter, and a count.
@@ -433,14 +443,14 @@ Use one shared `AlertDialog`-based `confirm()` helper, with a title, a message, 
 |---|---|---|
 | Close file ("Sulje") | unexported changes | "Suljetaanko tiedosto?" / "Sulje viemättä" |
 | Start new bookkeeping | unexported changes | same as above |
-| Open a file / load the demo over the current one | unexported changes | "Korvataanko avoin kirjanpito?" / "Korvaa" |
+| Open a file over the current one | unexported changes | "Korvataanko avoin kirjanpito?" / "Korvaa" |
 | Delete an entry (row or dialog) | always | "Poistetaanko kirjaus?" / "Poista" |
 | Clear all entries | always | "Tyhjennetäänkö kirjaukset?" / "Tyhjennä" |
 | Close the entry dialog (Peruuta / Esc) | form differs from its snapshot | "Hylätäänkö muutokset?" / "Hylkää muutokset", cancel = "Jatka muokkausta" |
 | Navigate away from Settings | the new-category name is filled | same as above, with the category message |
 | Browser tab close (`beforeunload`) | any of the above dirty states | the browser's native prompt |
 
-**Dirty bookkeeping** means the entries changed since the last import or export. It is set by any add, edit, delete or demo load, and cleared by a successful export or an import.
+**Dirty bookkeeping** means the entries changed since the last import or export. It is set by any add, edit or delete, and cleared by a successful export or an import.
 
 Closing a file clears entries, the file name and filters, sets the bookkeeping to closed, garbage-collects receipts, and returns to the landing page.
 
@@ -463,28 +473,28 @@ Closing a file clears entries, the file name and filters, sets the bookkeeping t
 
 ---
 
-## 10. Demo data ("Kokeile esimerkillä")
+## 10. Reference data (test fixture)
 
-Sixteen gross entries for 2026. The file name is empty (so export uses the default name), and the bookkeeping is marked dirty.
+Sixteen gross entries for 2026. **The app has no sample ledger**: there is no "Kokeile esimerkillä" button, no `loadDemo` command and no way for a user to load these entries. They live only in `lib/domain/test-helpers/sample-book.ts` (`sampleEntries()`) as the fixture the calculations are verified against. An eslint `no-restricted-imports` rule blocks `lib/domain/test-helpers/*` outside test files, so the fixture cannot drift back into the app.
 
-| pvm | selite | tyyppi | catId | summa (€) | alv |
+| date | description | type | catId | amount (€) | vatRate |
 |---|---|---|---|---|---|
-| 2026-01-08 | Lasku 1001 – Mäkinen Rakennus Oy | tulo | 300-suomi | 2510.00 | 25.5 |
-| 2026-01-15 | Osto – K-Rauta – tarvikkeet | kulu | 333 | 186.40 | 25.5 |
-| 2026-01-31 | Puhelinliittymä – Elisa | kulu | 344-muut | 29.90 | 25.5 |
-| 2026-02-12 | Lasku 1002 – Virtanen | tulo | 300-suomi | 1255.00 | 25.5 |
-| 2026-02-20 | Työtilan vuokra, helmikuu | kulu | 343 | 450.00 | 25.5 |
-| 2026-03-03 | Lasku 1003 – Nordic Build AB | tulo | 300-eu | 3200.00 | 0 |
-| 2026-03-18 | Polttoaine – Neste | kulu | 344-ajo | 92.35 | 25.5 |
-| 2026-03-20 | Työtilan vuokra, maaliskuu | kulu | 343 | 450.00 | 25.5 |
-| 2026-04-09 | Lounaspalaveri asiakkaan kanssa | kulu | 344-kokous | 48.60 | 13.5 |
-| 2026-04-20 | Työtilan vuokra, huhtikuu | kulu | 343 | 450.00 | 25.5 |
-| 2026-05-14 | Lasku 1004 – Laaksonen Oy | tulo | 300-kaant | 4800.00 | 0 |
-| 2026-06-02 | YEL-maksu | kulu | 336 | 310.00 | 0 |
-| 2026-09-22 | Kirjanpito-ohjelma, vuosimaksu | kulu | 344-muut | 119.00 | 25.5 |
-| 2026-10-10 | Osto – K-Rauta – Tarvikkeet | kulu | 333 | 100.00 | 25.5 |
-| 2026-10-28 | Lasku 1005 – Mäkinen Rakennus Oy | tulo | 300-suomi | 1882.50 | 25.5 |
-| 2026-10-30 | Pankin palvelumaksut | kulu | 349 | 8.50 | 0 |
+| 2026-01-08 | Lasku 1001 – Mäkinen Rakennus Oy | income | 300-domestic | 2510.00 | 25.5 |
+| 2026-01-15 | Osto – K-Rauta – tarvikkeet | expense | 333 | 186.40 | 25.5 |
+| 2026-01-31 | Puhelinliittymä – Elisa | expense | 344-other | 29.90 | 25.5 |
+| 2026-02-12 | Lasku 1002 – Virtanen | income | 300-domestic | 1255.00 | 25.5 |
+| 2026-02-20 | Työtilan vuokra, helmikuu | expense | 343 | 450.00 | 25.5 |
+| 2026-03-03 | Lasku 1003 – Nordic Build AB | income | 300-eu | 3200.00 | 0 |
+| 2026-03-18 | Polttoaine – Neste | expense | 344-vehicle | 92.35 | 25.5 |
+| 2026-03-20 | Työtilan vuokra, maaliskuu | expense | 343 | 450.00 | 25.5 |
+| 2026-04-09 | Lounaspalaveri asiakkaan kanssa | expense | 344-meeting | 48.60 | 13.5 |
+| 2026-04-20 | Työtilan vuokra, huhtikuu | expense | 343 | 450.00 | 25.5 |
+| 2026-05-14 | Lasku 1004 – Laaksonen Oy | income | 300-reverse | 4800.00 | 0 |
+| 2026-06-02 | YEL-maksu | expense | 336 | 310.00 | 0 |
+| 2026-09-22 | Kirjanpito-ohjelma, vuosimaksu | expense | 344-other | 119.00 | 25.5 |
+| 2026-10-10 | Osto – K-Rauta – Tarvikkeet | expense | 333 | 100.00 | 25.5 |
+| 2026-10-28 | Lasku 1005 – Mäkinen Rakennus Oy | income | 300-domestic | 1882.50 | 25.5 |
+| 2026-10-30 | Pankin palvelumaksut | expense | 349 | 8.50 | 0 |
 
 Useful checks against this data (all verified by the unit tests in `lib/domain`):
 
@@ -492,9 +502,9 @@ Useful checks against this data (all verified by the unit tests in `lib/domain`)
 - **October 2026:** sales VAT 382,50 € − purchase VAT 20,32 € = **VAT payable 362,18 €**. (Q4 is the same, because November and December are empty.)
 - **January 2026:** income net 2 000,00 €, expenses net 172,35 €, VAT payable 466,05 €.
 
-> An earlier version of this section claimed October showed 617,18 € payable from sales VAT 637,50 €. Those two figures are decorative constants in the prototype's landing hero (`docs/prototype/kirjanpito.html` lines 1037 and 1039, `fmt(63750)` / `fmt(61718)`) and do not follow from the demo entries: the only October sale is 1 882,50 € gross at 25,5 %, giving 382,50 € of sales VAT. The hero's numbers are illustration and may stay as they are.
+> An earlier version of this section claimed October showed 617,18 € payable from sales VAT 637,50 €. Those two figures are decorative constants in the prototype's landing hero (`docs/prototype/kirjanpito.html` lines 1037 and 1039, `fmt(63750)` / `fmt(61718)`) and do not follow from the §10 entries: the only October sale is 1 882,50 € gross at 25,5 %, giving 382,50 € of sales VAT. The hero's numbers are illustration and may stay as they are.
 
-The user also provided two real receipts for testing (a Motonet till receipt as JPG, and a Pleksi invoice as PDF). **Do not bundle them into the demo or commit them**: the invoice contains a person's name, phone number and email address.
+The user also provided two real receipts for testing (a Motonet till receipt as JPG, and a Pleksi invoice as PDF). **Do not bundle them into the fixture or commit them**: the invoice contains a person's name, phone number and email address.
 
 ---
 
@@ -565,24 +575,43 @@ The landing pages are public, indexed documents; the bookkeeping app is not.
 app/
   robots.ts                      → /robots.txt      (disallows /app/)
   sitemap.ts                     → /sitemap.xml     (/ and /en, with alternates)
+  global-not-found.tsx           → /404.html        noindex, renders its own <html>
 
   (fi)/                          ROOT LAYOUT — <html lang="fi">
     page.tsx                     /                  landing FI, indexed
     opengraph-image.tsx          1200×630 via next/og
     app/
       layout.tsx                 AppShell + metadata.robots = noindex, nofollow
-      kirjanpito/  alv/  tulos/  yhteenveto/  asetukset/
+      ledger/  vat/  statement/  summary/  settings/
 
   (en)/                          ROOT LAYOUT — <html lang="en">
     en/page.tsx                  /en                landing EN, indexed
     en/opengraph-image.tsx
 ```
 
+- **The app routes are English** (`/app/ledger`, `/app/vat`, `/app/statement`,
+  `/app/summary`, `/app/settings`), in both UI languages. Each segment is the key
+  it has in `APP_ROUTES`, so a route and the code linking to it cannot drift.
+  Nothing under `/app` is indexed, so there is no SEO reason to localise the
+  paths, and a single set of URLs keeps language switching a pure state change
+  rather than a navigation.
 - **Two root layouts**, because only a root layout renders `<html lang>` and each
   indexed document must ship the right one in its static HTML. `/` and `/app/*`
   share the `(fi)` layout, so entering the app is a soft navigation; switching
   landing language is a full reload, which is correct for a document-language
   change.
+- **The 404 is `app/global-not-found.tsx`**, behind `experimental.globalNotFound`
+  in `next.config.ts`. The plain `not-found.tsx` convention wants a single root
+  layout to wrap it in; here both root layouts sit inside route groups, so Next
+  wraps the 404 in a bare default layout and `out/404.html` comes out with two
+  `<html>` elements. The global convention lets the file render its own document
+  through `HtmlShell`, exactly as a root layout does. Next already adds the
+  `noindex` meta, so the file only sets a title. The page is plain text and
+  buttons — no receipt motif: it is a dead end, not a document. Its language
+  cannot come from
+  the route — one document serves every unmatched URL — so it follows the stored
+  preference like the app: Finnish in the prerendered HTML (the store's default,
+  so the first client render still matches) and the preference after rehydration.
 - **`output: "export"`** with `trailingSlash: true` and `images.unoptimized`.
   `robots.ts`, `sitemap.ts` and both `opengraph-image.tsx` are Route Handlers and
   need `export const dynamic = "force-static"` — without it the build fails.
@@ -602,14 +631,30 @@ app/
 - `SITE_URL` comes from `NEXT_PUBLIC_SITE_URL` in `lib/site.ts`, which also holds
   the route constants.
 
-## 12. Persistence keys (prototype)
+## 12. Persistence keys
 
-- localStorage `kirjanpito.v1`: `{ entries, cats, year, dirty, fileName, lastMode, lastType, lang, open, ledgerSize, ctSize }`.
+**Storage names and the field names inside them are English**, so what a
+browser holds is legible without Finnish. The CSV and the ZIP's `tositteet/`
+folder are the file format and stay Finnish (§7.1, §7.2) — the two vocabularies
+meet only in `lib/domain/csv.ts`.
+
+- localStorage `bookkeeping.v1` — exported as `BOOK_STORAGE_KEY` from
+  `stores/book-store.ts`, so nothing hard-codes the string twice:
+  `{ entries, cats, year, dirty, fileName, lastMode, lastType, lang, open, ledgerSize, ctSize }`.
   **`theme` is no longer in this blob.** next-themes owns it under its own key,
   because its pre-paint inline script reads that key before any of our JS runs;
   two sources of truth would drift. A `persist.migrate` step seeds next-themes
   from a prototype-era blob and drops the field.
-- IndexedDB `kirjanpito-tositteet`, store `files`: receipt Blobs keyed by attachment id.
+- localStorage `theme` — owned by next-themes: `system` | `light` | `dark`.
+- IndexedDB `bookkeeping-receipts`, store `files`: receipt Blobs keyed by
+  attachment id.
+- **sessionStorage is not used.**
+
+**No migration from the prototype-era names** (`kirjanpito.v1`,
+`kirjanpito-tositteet`). A browser still holding them starts empty and the old
+data is orphaned; the user re-opens their exported CSV or ZIP. This was a
+deliberate choice over writing a one-shot copy step — the exported file is the
+real copy of the bookkeeping, and the browser is only a working buffer (§1).
 
 Wrap all storage access in try/catch, and render correctly when storage is empty or unavailable.
 
@@ -617,7 +662,7 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 
 ## 13. Suggested implementation order
 
-1. Domain modules with no React: types, the chart of accounts and default categories, money and format helpers, `calc`, VAT report, income statement, summary, CSV parse and serialize, path and slug building, and ZIP pack and unpack. **Unit-test these first** (Vitest), including the demo-data figures in §10 and comparisons with the Excel's monthly sheets.
+1. Domain modules with no React: types, the chart of accounts and default categories, money and format helpers, `calc`, VAT report, income statement, summary, CSV parse and serialize, path and slug building, and ZIP pack and unpack. **Unit-test these first** (Vitest), including the reference figures in §10 and comparisons with the Excel's monthly sheets.
 2. A store with persistence (localStorage and IndexedDB), the open/dirty/year/language/theme state, and the i18n dictionary.
 3. The shell (sidebar, mobile top bar), routing, and the theme and language switches.
 4. The ledger with the data table (sort, filter, paginate), the entry dialog, and the confirmation helper.
@@ -629,7 +674,7 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 
 ### Acceptance checklist
 
-- [ ] The demo data gives the figures in §10.
+- [ ] The §10 fixture gives the figures in §10.
 - [ ] Exporting a CSV and importing it back reproduces the same entries (including custom categories and the `syotto` mode).
 - [ ] Exporting a ZIP with receipts and importing it back restores the receipts. A plain CSV import keeps their paths as missing.
 - [ ] Every confirmation in §8.11 appears in the right situations, and only then.

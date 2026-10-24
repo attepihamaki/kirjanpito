@@ -14,6 +14,10 @@ import type {
  * Entry, category and attachment ids are deliberately excluded: they are
  * regenerated on import. Category identity across the file boundary is
  * (account number, side, Finnish name) — exactly what the CSV carries.
+ *
+ * The field names are the CSV's own Finnish column names, not `Entry`'s
+ * English ones: this type is the file row, and naming it after the columns is
+ * what makes a failing assertion point at a column.
  */
 export interface CanonicalEntry {
   pvm: string
@@ -43,14 +47,14 @@ export function canonical(
       const cat = cats.get(e.catId)
       const line = cat ? LINE_BY_KEY.get(cat.line) : undefined
       return {
-        pvm: e.pvm,
-        selite: e.selite.trim(),
-        tyyppi: e.tyyppi,
-        tili: line ? line.tili : null,
-        luokka: cat ? cat.nimi : "",
-        summa: e.summa,
-        alv: e.alv,
-        syotto: e.syotto,
+        pvm: e.date,
+        selite: e.description.trim(),
+        tyyppi: e.type,
+        tili: line ? line.account : null,
+        luokka: cat ? cat.name : "",
+        summa: e.amount,
+        alv: e.vatRate,
+        syotto: e.amountMode,
         tosite: (e.atts ?? [])
           .map((a, i) => paths.get(attachmentKey(e.id, i)) ?? a.path ?? "")
           .filter(Boolean),
@@ -68,14 +72,14 @@ export function canonicalImported(
       const cat = cats.get(e.catId)
       const line = cat ? LINE_BY_KEY.get(cat.line) : undefined
       return {
-        pvm: e.pvm,
-        selite: e.selite.trim(),
-        tyyppi: e.tyyppi,
-        tili: line ? line.tili : null,
-        luokka: cat ? cat.nimi : "",
-        summa: e.summa,
-        alv: e.alv,
-        syotto: e.syotto,
+        pvm: e.date,
+        selite: e.description.trim(),
+        tyyppi: e.type,
+        tili: line ? line.account : null,
+        luokka: cat ? cat.name : "",
+        summa: e.amount,
+        alv: e.vatRate,
+        syotto: e.amountMode,
         tosite: e.paths,
       }
     })

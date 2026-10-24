@@ -28,7 +28,7 @@ export interface IncomeStatement {
 
 /**
  * Net amount per income-statement line. Entries whose category is unknown fall
- * back to 301 (income) or 344-muut (expense), matching CSV import.
+ * back to 301 (income) or 344-other (expense), matching CSV import.
  */
 export function netByLine(
   entries: readonly Entry[],
@@ -37,7 +37,7 @@ export function netByLine(
   const out = new Map<string, Cents>()
   for (const e of entries) {
     const cat = cats.get(e.catId)
-    const key = cat?.line ?? (e.tyyppi === "tulo" ? "301" : "344-muut")
+    const key = cat?.line ?? (e.type === "income" ? "301" : "344-other")
     out.set(key, (out.get(key) ?? 0) + calcEntry(e).net)
   }
   return out
@@ -50,7 +50,7 @@ export function incomeStatement(
   year: number
 ): IncomeStatement {
   const byLine = netByLine(
-    entries.filter((e) => yearOf(e.pvm) === year),
+    entries.filter((e) => yearOf(e.date) === year),
     cats
   )
 
@@ -60,7 +60,7 @@ export function incomeStatement(
 
   const lines: StatementLine[] = LINES.map((line) => {
     const net = byLine.get(line.key) ?? 0
-    if (line.side === "tulo") revenueTotal += net
+    if (line.side === "income") revenueTotal += net
     else if (line.nondeductible) nonDeductibleTotal += net
     else deductibleTotal += net
     return { line, net }

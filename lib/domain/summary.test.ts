@@ -1,31 +1,31 @@
 import { describe, expect, it } from "vitest"
 
 import { RATES, defaultCategories } from "@/lib/domain/accounts"
-import { demoEntries } from "@/lib/domain/demo"
+import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { createIdFactory } from "@/lib/domain/id"
 import { salesTotal, summary } from "@/lib/domain/summary"
 import { indexCategories, type Category, type Entry } from "@/lib/domain/types"
 
 const baseCats = defaultCategories()
 const cats = indexCategories(baseCats)
-const demo = demoEntries(createIdFactory())
-const s = summary(demo, cats, 2026)
+const sample = sampleEntries(createIdFactory())
+const s = summary(sample, cats, 2026)
 
 function entry(over: Partial<Entry>): Entry {
   return {
     id: "e1",
-    pvm: "2026-05-05",
-    selite: "Testi",
-    tyyppi: "tulo",
-    catId: "300-suomi",
-    summa: 10000,
-    alv: 0,
-    syotto: "netto",
+    date: "2026-05-05",
+    description: "Testi",
+    type: "income",
+    catId: "300-domestic",
+    amount: 10000,
+    vatRate: 0,
+    amountMode: "net",
     ...over,
   }
 }
 
-describe("summary — demo 2026", () => {
+describe("summary — sample 2026", () => {
   it("returns twelve month rows, January first", () => {
     expect(s.months).toHaveLength(12)
     expect(s.months.map((m) => m.month)).toEqual([
@@ -52,26 +52,26 @@ describe("summary — demo 2026", () => {
 
   it("splits expenses into buckets", () => {
     expect(s.totals.byBucket).toEqual({
-      ostot: 22821,
-      henk: 31000,
-      poist: 107571,
-      muut: 23505,
-      rah: 850,
-      var: 0,
-      vk: 0,
+      purchases: 22821,
+      personnel: 31000,
+      depreciation: 107571,
+      otherDeductible: 23505,
+      financial: 850,
+      provisions: 0,
+      nondeductible: 0,
     })
   })
 
   it("places sales in the right columns", () => {
     expect(s.months[9].salesByRate.get(25.5)).toBe(150000)
     expect(s.months[2].eu).toBe(320000)
-    expect(s.months[4].kaanteinen).toBe(480000)
+    expect(s.months[4].reverse).toBe(480000)
     expect(s.months.every((m) => m.otherIncome === 0)).toBe(true)
   })
 
   it("sums the totals row column-wise", () => {
     expect(s.totals.eu).toBe(320000)
-    expect(s.totals.kaanteinen).toBe(480000)
+    expect(s.totals.reverse).toBe(480000)
     expect(s.totals.salesByRate.get(25.5)).toBe(450000)
   })
 })
@@ -84,18 +84,18 @@ describe("summary — column integrity", () => {
       for (const row of [...sum.months, sum.totals]) {
         const visible =
           row.eu +
-          row.muutmaat +
-          row.kaanteinen +
+          row.nonEu +
+          row.reverse +
           sum.rateColumns.reduce((a, r) => a + (row.salesByRate.get(r) ?? 0), 0)
         expect(visible).toBe(salesTotal(row))
       }
     }
     check(s)
-    check(summary([entry({ alv: 9, summa: 5000 })], cats, 2026))
+    check(summary([entry({ vatRate: 9, amount: 5000 })], cats, 2026))
   })
 
   it("adds a column for a rate that is used but not standard", () => {
-    const custom = summary([entry({ alv: 9 })], cats, 2026)
+    const custom = summary([entry({ vatRate: 9 })], cats, 2026)
     expect(custom.rateColumns).toContain(9)
     expect(custom.rateColumns).toEqual(
       [...custom.rateColumns].sort((a, b) => b - a)
@@ -109,7 +109,7 @@ describe("summary — column integrity", () => {
 
 describe("summary — classification", () => {
   it("puts income on lines 301–324 into otherIncome, not a sales column", () => {
-    const r = summary([entry({ catId: "318", summa: 7000 })], cats, 2026)
+    const r = summary([entry({ catId: "318", amount: 7000 })], cats, 2026)
     expect(r.totals.otherIncome).toBe(7000)
     expect(salesTotal(r.totals)).toBe(0)
     expect(r.totals.incomeNet).toBe(7000)
@@ -119,22 +119,22 @@ describe("summary — classification", () => {
     const orphan: Category = {
       id: "c-orphan",
       line: "nope",
-      nimi: "Tuntematon",
-      alv: 0,
-      on: true,
+      name: "Tuntematon",
+      vatRate: 0,
+      enabled: true,
       custom: true,
     }
     const withOrphan = indexCategories([...baseCats, orphan])
     const r = summary(
-      [entry({ tyyppi: "kulu", catId: "c-orphan", summa: 1200 })],
+      [entry({ type: "expense", catId: "c-orphan", amount: 1200 })],
       withOrphan,
       2026
     )
-    expect(r.totals.byBucket.muut).toBe(1200)
+    expect(r.totals.byBucket.otherDeductible).toBe(1200)
   })
 
   it("ignores entries from other years", () => {
-    const r = summary([entry({ pvm: "2025-05-05" })], cats, 2026)
+    const r = summary([entry({ date: "2025-05-05" })], cats, 2026)
     expect(r.totals.incomeNet).toBe(0)
   })
 })

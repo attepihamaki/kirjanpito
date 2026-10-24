@@ -32,7 +32,6 @@ export const LANDING_DICT = {
   ],
   lp_start: ["Aloita uusi kirjanpito", "Start new bookkeeping"],
   lp_open: ["Avaa tiedosto", "Open a file"],
-  lp_demo: ["Kokeile esimerkillä", "Try the sample"],
   lp_continue: ["Jatka kirjanpitoa", "Continue bookkeeping"],
   lp_toApp: ["Avaa kirjanpito", "Open bookkeeping"],
   lp_drop: [
@@ -140,10 +139,20 @@ export const LANDING_DICT = {
     "The calculations are not tax or accounting advice.",
   ],
 
+  // 404. Lives here rather than in the app dictionary: the page is served for
+  // every unmatched URL, including ones outside /app.
+  nf_badge: ["VIRHE", "ERROR"],
+  nf_title: ["Tätä sivua ei löytynyt.", "This page could not be found."],
+  nf_lead: [
+    "Osoite ei vastaa mitään kirjanpidon sivua. Linkki voi olla vanha tai osoitteessa voi olla kirjoitusvirhe. Kirjauksesi ovat tallessa tässä selaimessa – pääset niihin etusivun kautta.",
+    "That address doesn’t match any page in the app. The link may be old, or the address mistyped. Your entries are safe in this browser — you can get back to them from the home page.",
+  ],
+  nf_home: ["Takaisin etusivulle", "Back to the home page"],
+
   // Also used by the hero's decorative receipt and the mini statement.
-  v_alv: ["ALV-laskelma", "VAT return"],
-  r_tulo: ["TULO", "INCOME"],
-  r_kulu: ["KULU", "EXPENSE"],
+  v_vat: ["ALV-laskelma", "VAT return"],
+  r_income: ["TULO", "INCOME"],
+  r_expense: ["KULU", "EXPENSE"],
   r_net: ["Veroton", "Net"],
   r_total: ["Yhteensä", "Total"],
   r_salesTax: ["Kasvattaa myynnin veroa", "Adds to VAT on sales"],

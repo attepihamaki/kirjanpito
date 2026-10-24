@@ -10,9 +10,14 @@ import {
 } from "idb-keyval"
 
 /**
- * Receipt blobs in IndexedDB. Database and store names are fixed by
- * CLAUDE.md §7.4 so a prototype-era database still opens.
+ * Receipt blobs in IndexedDB, per CLAUDE.md §7.4.
+ *
+ * The prototype-era database was `kirjanpito-tositteet`; nothing migrates from
+ * it, so receipts stored under that name are not reachable and the user
+ * re-imports their ZIP to get them back.
  */
+const DB_NAME = "bookkeeping-receipts"
+const STORE_NAME = "files"
 
 export class ReceiptStorageError extends Error {
   constructor(
@@ -27,7 +32,7 @@ export class ReceiptStorageError extends Error {
 let store: UseStore | null = null
 
 function db(): UseStore {
-  if (!store) store = createStore("kirjanpito-tositteet", "files")
+  if (!store) store = createStore(DB_NAME, STORE_NAME)
   return store
 }
 

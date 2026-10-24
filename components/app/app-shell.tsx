@@ -109,7 +109,7 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
       />
 
       {/* Desktop sidebar (>= 900px) */}
-      <aside className="hidden w-64 shrink-0 flex-col gap-5 self-start border-r bg-sidebar p-4 min-[900px]:sticky min-[900px]:top-0 min-[900px]:flex min-[900px]:h-svh min-[900px]:overflow-y-auto">
+      <aside className="hidden w-72 shrink-0 flex-col gap-5 self-start border-r bg-sidebar p-4 min-[900px]:sticky min-[900px]:top-0 min-[900px]:flex min-[900px]:h-svh min-[900px]:overflow-y-auto">
         <Link
           href={landingFor(lang)}
           className="flex items-center gap-2.5 rounded-md focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"

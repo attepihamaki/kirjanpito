@@ -34,9 +34,15 @@ export function StatementView() {
    */
   const rows = React.useMemo(() => {
     type Row =
-      | { kind: "section"; side: "tulo" | "kulu"; total: number }
+      | { kind: "section"; side: "income" | "expense"; total: number }
       | { kind: "group"; id: string; label: string }
-      | { kind: "line"; id: string; tili: number; label: string; net: number }
+      | {
+          kind: "line"
+          id: string
+          account: number
+          label: string
+          net: number
+        }
 
     const out: Row[] = []
     let side: string | null = null
@@ -50,7 +56,7 @@ export function StatementView() {
           kind: "section",
           side: line.side,
           total:
-            line.side === "tulo"
+            line.side === "income"
               ? statement.revenueTotal
               : statement.deductibleTotal + statement.nonDeductibleTotal,
         })
@@ -63,7 +69,7 @@ export function StatementView() {
       out.push({
         kind: "line",
         id: line.key,
-        tili: line.tili,
+        account: line.account,
         label: f.lineName(line),
         net,
       })
@@ -75,7 +81,7 @@ export function StatementView() {
     <>
       <div className="print-hidden">
         <PageHeader
-          title={f.t("v_tulos")}
+          title={f.t("v_statement")}
           subtitle={f.t("isSub")}
           actions={
             <Button variant="outline" onClick={() => window.print()}>
@@ -89,7 +95,7 @@ export function StatementView() {
       <div className="print-sheet mx-auto max-w-2xl rounded-lg border border-paper-edge bg-paper p-6 text-paper-foreground shadow-sm md:p-8">
         <header className="mb-6">
           <h2 className="font-heading text-xl font-semibold">
-            {f.t("v_tulos")}
+            {f.t("v_statement")}
           </h2>
           <p className="tabular text-sm text-paper-foreground/70">
             1.1.{year} – 31.12.{year}
@@ -105,7 +111,7 @@ export function StatementView() {
                     scope="colgroup"
                     className="pt-5 pb-1 text-left font-heading text-[0.95rem] font-semibold"
                   >
-                    {row.side === "tulo" ? f.t("revenue") : f.t("bizExp")}
+                    {row.side === "income" ? f.t("revenue") : f.t("bizExp")}
                   </th>
                   <td className="tabular pt-5 pb-1 text-right font-semibold">
                     {f.money(row.total)}
@@ -130,7 +136,7 @@ export function StatementView() {
                 >
                   <td className="py-1.5">
                     <span className="tabular mr-2 text-xs text-paper-foreground/50">
-                      {row.tili}
+                      {row.account}
                     </span>
                     {row.label}
                   </td>

@@ -35,13 +35,13 @@ function att(over: Partial<Attachment> = {}): Attachment {
 function entry(over: Partial<Entry> = {}): Entry {
   return {
     id: "e1",
-    pvm: "2026-10-28",
-    selite: "Lasku 1005",
-    tyyppi: "tulo",
-    catId: "300-suomi",
-    summa: 188250,
-    alv: 25.5,
-    syotto: "brutto",
+    date: "2026-10-28",
+    description: "Lasku 1005",
+    type: "income",
+    catId: "300-domestic",
+    amount: 188250,
+    vatRate: 25.5,
+    amountMode: "gross",
     ...over,
   }
 }
@@ -193,11 +193,11 @@ describe("full ZIP round trip", () => {
   const entries = [
     entry({
       id: "e1",
-      pvm: "2026-01-15",
-      selite: "Osto – K-Rauta – tarvikkeet",
-      tyyppi: "kulu",
+      date: "2026-01-15",
+      description: "Osto – K-Rauta – tarvikkeet",
+      type: "expense",
       catId: "333",
-      summa: 18640,
+      amount: 18640,
       atts: [
         att({ id: "a1", name: "kuitti.jpg", type: "image/jpeg" }),
         att({ id: "a2", name: "lasku.pdf" }),

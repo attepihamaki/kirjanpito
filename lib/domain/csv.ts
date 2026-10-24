@@ -20,7 +20,14 @@ import {
   type EntryType,
 } from "@/lib/domain/types"
 
-/** The nine columns, always in this order (§7.1). */
+/**
+ * The nine columns, always in this order (§7.1).
+ *
+ * The file format is Finnish and stays Finnish whatever the UI language, so a
+ * CSV opens directly in Finnish Excel. This module is the only place those
+ * names — and the `tulo`/`kulu` and `brutto`/`netto` values below — appear;
+ * everything in memory and in storage uses the English field names of `Entry`.
+ */
 export const CSV_HEADER = [
   "pvm",
   "selite",
@@ -34,6 +41,22 @@ export const CSV_HEADER = [
 ] as const
 
 const REQUIRED = ["pvm", "tyyppi", "summa"] as const
+
+/** Entry type ⇄ the `tyyppi` column. */
+const TYPE_TO_CSV: Readonly<Record<EntryType, string>> = {
+  income: "tulo",
+  expense: "kulu",
+}
+const TYPE_FROM_CSV: Readonly<Record<string, EntryType>> = {
+  tulo: "income",
+  kulu: "expense",
+}
+
+/** Amount mode ⇄ the `syotto` column. "veroton" is accepted on import only. */
+const MODE_TO_CSV: Readonly<Record<AmountMode, string>> = {
+  gross: "brutto",
+  net: "netto",
+}
 
 // ---------------------------------------------------------------------------
 // Serialize
@@ -59,7 +82,7 @@ export function serializeCsv(
   paths: ReadonlyMap<string, string> = buildReceiptPaths(entries)
 ): string {
   const lines: string[] = [CSV_HEADER.join(";")]
-  const sorted = [...entries].sort((a, b) => a.pvm.localeCompare(b.pvm))
+  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date))
 
   for (const e of sorted) {
     const cat = cats.get(e.catId)
@@ -71,14 +94,14 @@ export function serializeCsv(
 
     lines.push(
       [
-        e.pvm,
-        e.selite.trim(),
-        e.tyyppi,
-        line ? String(line.tili) : "",
-        cat ? cat.nimi : "",
-        formatAmountForCsv(e.summa),
-        String(e.alv).replace(".", ","),
-        e.syotto,
+        e.date,
+        e.description.trim(),
+        TYPE_TO_CSV[e.type],
+        line ? String(line.account) : "",
+        cat ? cat.name : "",
+        formatAmountForCsv(e.amount),
+        String(e.vatRate).replace(".", ","),
+        MODE_TO_CSV[e.amountMode],
         tosite,
       ]
         .map(quote)
@@ -148,11 +171,11 @@ export type ImportWarning =
   | {
       code: "unknown-account"
       line: number
-      tili: string
-      nimi: string
+      account: string
+      name: string
       bookedTo: string
     }
-  | { code: "new-category"; line: number; catId: string; nimi: string }
+  | { code: "new-category"; line: number; catId: string; name: string }
 
 export type ImportFailure =
   | { ok: false; code: "empty-file" }
@@ -175,12 +198,14 @@ export type ImportResult = ImportSuccess | ImportFailure
 
 /** The line to put a custom category on, for a given account and side. */
 function primaryLineForAccount(
-  tili: number,
+  account: number,
   side: EntryType
 ): AccountLine | undefined {
-  const candidates = LINES.filter((l) => l.tili === tili && l.side === side)
+  const candidates = LINES.filter(
+    (l) => l.account === account && l.side === side
+  )
   if (candidates.length <= 1) return candidates[0]
-  const preferred = DEFAULT_CATEGORY_FOR_ACCOUNT[tili]
+  const preferred = DEFAULT_CATEGORY_FOR_ACCOUNT[account]
   return candidates.find((l) => l.key === preferred) ?? candidates[0]
 }
 
@@ -188,8 +213,8 @@ function sideOf(cat: Category): EntryType | undefined {
   return LINE_BY_KEY.get(cat.line)?.side
 }
 
-function tiliOf(cat: Category): number | undefined {
-  return LINE_BY_KEY.get(cat.line)?.tili
+function accountOf(cat: Category): number | undefined {
+  return LINE_BY_KEY.get(cat.line)?.account
 }
 
 /**
@@ -245,33 +270,32 @@ export function parseCsv(
       return i == null ? "" : (cells[i] ?? "").trim()
     }
 
-    const pvm = parseCsvDate(get("pvm"))
-    if (!pvm) {
+    const date = parseCsvDate(get("pvm"))
+    if (!date) {
       skipped.push({ line, code: "bad-date" })
       continue
     }
 
-    const tyyppiRaw = get("tyyppi").toLowerCase()
-    if (tyyppiRaw !== "tulo" && tyyppiRaw !== "kulu") {
+    const type = TYPE_FROM_CSV[get("tyyppi").toLowerCase()]
+    if (!type) {
       skipped.push({ line, code: "bad-type" })
       continue
     }
-    const tyyppi: EntryType = tyyppiRaw
 
-    const summa = parseAmount(get("summa"))
-    if (summa == null) {
+    const amount = parseAmount(get("summa"))
+    if (amount == null) {
       skipped.push({ line, code: "bad-amount" })
       continue
     }
 
-    const nimi = get("luokka")
-    const tiliRaw = get("tili")
-    const tili = /^\d+$/.test(tiliRaw) ? Number(tiliRaw) : null
+    const name = get("luokka")
+    const accountRaw = get("tili")
+    const account = /^\d+$/.test(accountRaw) ? Number(accountRaw) : null
 
     const resolved = resolveCategory({
-      tili,
-      nimi,
-      side: tyyppi,
+      account,
+      name,
+      side: type,
       line,
       working,
       byId,
@@ -282,13 +306,14 @@ export function parseCsv(
     if (resolved.created) newCategoryCount++
     const cat = resolved.cat
 
-    const alvRaw = get("alv")
+    const rateRaw = get("alv")
     // "" means "use the category default"; "0" is an explicit zero.
-    const alv = alvRaw === "" ? cat.alv : (parseRate(alvRaw) ?? cat.alv)
+    const vatRate =
+      rateRaw === "" ? cat.vatRate : (parseRate(rateRaw) ?? cat.vatRate)
 
-    const syottoRaw = get("syotto").toLowerCase()
-    const syotto: AmountMode =
-      syottoRaw === "netto" || syottoRaw === "veroton" ? "netto" : "brutto"
+    const modeRaw = get("syotto").toLowerCase()
+    const amountMode: AmountMode =
+      modeRaw === "netto" || modeRaw === "veroton" ? "net" : "gross"
 
     const paths = get("tosite")
       .split("|")
@@ -297,17 +322,17 @@ export function parseCsv(
 
     entries.push({
       id: makeId(),
-      pvm,
-      selite: get("selite"),
-      tyyppi,
+      date,
+      description: get("selite"),
+      type,
       catId: cat.id,
-      summa,
-      alv,
-      syotto,
+      amount,
+      vatRate,
+      amountMode,
       paths,
     })
 
-    const y = yearOf(pvm)
+    const y = yearOf(date)
     if (latestYear == null || y > latestYear) latestYear = y
   }
 
@@ -326,8 +351,8 @@ export function parseCsv(
 }
 
 interface ResolveArgs {
-  tili: number | null
-  nimi: string
+  account: number | null
+  name: string
   side: EntryType
   line: number
   working: Category[]
@@ -338,23 +363,23 @@ interface ResolveArgs {
 }
 
 function resolveCategory(a: ResolveArgs): { cat: Category; created: boolean } {
-  const { tili, nimi, side, working } = a
+  const { account, name, side, working } = a
   const onAccount = working.filter(
-    (c) => sideOf(c) === side && (tili == null || tiliOf(c) === tili)
+    (c) => sideOf(c) === side && (account == null || accountOf(c) === account)
   )
 
-  if (nimi) {
-    const needle = nimi.toLowerCase()
+  if (name) {
+    const needle = name.toLowerCase()
     const match = onAccount.find(
       (c) =>
-        c.nimi.toLowerCase() === needle ||
+        c.name.toLowerCase() === needle ||
         (!c.custom && DEFAULT_EN_NAMES[c.id]?.toLowerCase() === needle)
     )
     if (match) return { cat: match, created: false }
-  } else if (tili != null) {
+  } else if (account != null) {
     // No name given: use the documented default for the account rather than
     // whichever category happens to come first.
-    const preferredId = DEFAULT_CATEGORY_FOR_ACCOUNT[tili]
+    const preferredId = DEFAULT_CATEGORY_FOR_ACCOUNT[account]
     const preferred = preferredId ? a.byId.get(preferredId) : undefined
     if (preferred && sideOf(preferred) === side) {
       return { cat: preferred, created: false }
@@ -366,15 +391,15 @@ function resolveCategory(a: ResolveArgs): { cat: Category; created: boolean } {
 
   // Unknown name on a known account: create a custom category there.
   const accountLine =
-    tili == null ? undefined : primaryLineForAccount(tili, side)
-  if (accountLine && nimi) {
+    account == null ? undefined : primaryLineForAccount(account, side)
+  if (accountLine && name) {
     const cat: Category = {
       id: `c-${a.makeId()}`,
       line: accountLine.key,
-      nimi,
-      alv: a.rateHint ?? accountLine.alv,
-      ...(side === "tulo" ? { kind: "kotimaa" as const } : {}),
-      on: true,
+      name,
+      vatRate: a.rateHint ?? accountLine.vatRate,
+      ...(side === "income" ? { kind: "domestic" as const } : {}),
+      enabled: true,
       custom: true,
     }
     working.push(cat)
@@ -383,23 +408,23 @@ function resolveCategory(a: ResolveArgs): { cat: Category; created: boolean } {
       code: "new-category",
       line: a.line,
       catId: cat.id,
-      nimi,
+      name,
     })
     return { cat, created: true }
   }
 
-  // Unknown account: book to 301 (income) or 344-muut (expense).
-  const fallbackId = side === "tulo" ? "301" : "344-muut"
+  // Unknown account: book to 301 (income) or 344-other (expense).
+  const fallbackId = side === "income" ? "301" : "344-other"
   let fallback = a.byId.get(fallbackId)
   if (!fallback) {
     const fallbackLine = LINE_BY_KEY.get(fallbackId)!
     fallback = {
       id: fallbackId,
       line: fallbackId,
-      nimi: fallbackLine.name.fi,
-      alv: fallbackLine.alv,
-      ...(side === "tulo" ? { kind: "kotimaa" as const } : {}),
-      on: true,
+      name: fallbackLine.name.fi,
+      vatRate: fallbackLine.vatRate,
+      ...(side === "income" ? { kind: "domestic" as const } : {}),
+      enabled: true,
       custom: false,
     }
     working.push(fallback)
@@ -408,8 +433,8 @@ function resolveCategory(a: ResolveArgs): { cat: Category; created: boolean } {
   a.warnings.push({
     code: "unknown-account",
     line: a.line,
-    tili: tili == null ? "" : String(tili),
-    nimi,
+    account: account == null ? "" : String(account),
+    name,
     bookedTo: fallbackId,
   })
   return { cat: fallback, created: false }

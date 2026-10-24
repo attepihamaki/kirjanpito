@@ -44,8 +44,8 @@ export function VatView() {
   const catMap = React.useMemo(() => indexCategories(cats), [cats])
 
   const period: Period = React.useMemo(() => {
-    if (mode === "v") return { kind: "year", year }
-    if (mode === "q") {
+    if (mode === "year") return { kind: "year", year }
+    if (mode === "quarter") {
       return {
         kind: "quarter",
         year,
@@ -62,7 +62,7 @@ export function VatView() {
 
   // Month names or quarter labels, so the trigger shows a name not an index.
   const periodItems = React.useMemo(() => {
-    if (mode === "kk") {
+    if (mode === "month") {
       return Object.fromEntries(
         Array.from({ length: 12 }, (_, i) => [String(i + 1), f.month(i)])
       )
@@ -80,15 +80,15 @@ export function VatView() {
 
   const refund = report.due < 0
   const periodLabel =
-    mode === "v"
+    mode === "year"
       ? f.t("yearN", { y: year })
-      : mode === "q"
+      : mode === "quarter"
         ? f.t("qN", { q: index, y: year })
         : `${f.month(index - 1)} ${year}`
 
   return (
     <>
-      <PageHeader title={f.t("v_alv")} subtitle={periodLabel} />
+      <PageHeader title={f.t("v_vat")} subtitle={periodLabel} />
 
       <div className="flex flex-col gap-5">
         <div className="flex flex-wrap items-center gap-2">
@@ -100,12 +100,14 @@ export function VatView() {
               if (next) setMode(next)
             }}
           >
-            <ToggleGroupItem value="kk">{f.t("periodMonth")}</ToggleGroupItem>
-            <ToggleGroupItem value="q">{f.t("periodQ")}</ToggleGroupItem>
-            <ToggleGroupItem value="v">{f.t("periodY")}</ToggleGroupItem>
+            <ToggleGroupItem value="month">
+              {f.t("periodMonth")}
+            </ToggleGroupItem>
+            <ToggleGroupItem value="quarter">{f.t("periodQ")}</ToggleGroupItem>
+            <ToggleGroupItem value="year">{f.t("periodY")}</ToggleGroupItem>
           </ToggleGroup>
 
-          {mode !== "v" ? (
+          {mode !== "year" ? (
             <Select
               items={periodItems}
               value={String(index)}
@@ -116,7 +118,7 @@ export function VatView() {
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  {mode === "kk"
+                  {mode === "month"
                     ? Array.from({ length: 12 }, (_, i) => (
                         <SelectItem key={i + 1} value={String(i + 1)}>
                           {f.month(i)}
@@ -167,7 +169,7 @@ export function VatView() {
               {f.t("vatOnExemptSale", {
                 x:
                   entries.find((e) => e.id === report.anomalies[0].entryId)
-                    ?.selite || f.t("noDesc"),
+                    ?.description || f.t("noDesc"),
               })}
             </AlertDescription>
           </Alert>
@@ -189,10 +191,10 @@ export function VatView() {
           </h2>
           <dl className="divide-y">
             <OtherRow label={f.t("euSales")} cents={report.otherSales.eu} />
-            <OtherRow label={f.t("nonEu")} cents={report.otherSales.muutmaat} />
+            <OtherRow label={f.t("nonEu")} cents={report.otherSales.nonEu} />
             <OtherRow
               label={f.t("rcSales")}
-              cents={report.otherSales.kaanteinen}
+              cents={report.otherSales.reverse}
             />
           </dl>
         </div>

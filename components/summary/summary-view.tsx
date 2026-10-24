@@ -32,15 +32,21 @@ import { useBookStore } from "@/stores/book-store"
 
 const BUCKET_KEYS: Record<
   Bucket,
-  "b_ostot" | "b_henk" | "b_poist" | "b_muut" | "b_rah" | "b_var" | "b_vk"
+  | "b_purchases"
+  | "b_personnel"
+  | "b_depreciation"
+  | "b_otherDeductible"
+  | "b_financial"
+  | "b_provisions"
+  | "b_nondeductible"
 > = {
-  ostot: "b_ostot",
-  henk: "b_henk",
-  poist: "b_poist",
-  muut: "b_muut",
-  rah: "b_rah",
-  var: "b_var",
-  vk: "b_vk",
+  purchases: "b_purchases",
+  personnel: "b_personnel",
+  depreciation: "b_depreciation",
+  otherDeductible: "b_otherDeductible",
+  financial: "b_financial",
+  provisions: "b_provisions",
+  nondeductible: "b_nondeductible",
 }
 
 export function SummaryView() {
@@ -63,7 +69,7 @@ export function SummaryView() {
   return (
     <>
       <PageHeader
-        title={f.t("v_yhteenveto")}
+        title={f.t("v_summary")}
         subtitle={f.t("sumSub", { y: year })}
       />
 
@@ -100,14 +106,16 @@ export function SummaryView() {
                   }}
                   formatter={(value, name) => [
                     f.money(Math.round(Number(value) * 100)),
-                    name === "income" ? f.t("tulot") : f.t("kulut"),
+                    name === "income"
+                      ? f.t("incomePlural")
+                      : f.t("expensePlural"),
                   ]}
                 />
                 <Legend
                   formatter={(value) =>
                     value === "income"
-                      ? `${f.t("tulot")} · ${f.money(data.totals.incomeNet)}`
-                      : `${f.t("kulut")} · ${f.money(data.totals.expenseNet)}`
+                      ? `${f.t("incomePlural")} · ${f.money(data.totals.incomeNet)}`
+                      : `${f.t("expensePlural")} · ${f.money(data.totals.expenseNet)}`
                   }
                   wrapperStyle={{ fontSize: 12 }}
                 />
@@ -139,12 +147,12 @@ export function SummaryView() {
             {
               key: "other",
               label: f.t("s_other"),
-              get: (r: MonthRow) => r.muutmaat,
+              get: (r: MonthRow) => r.nonEu,
             },
             {
               key: "rc",
               label: f.t("s_rc"),
-              get: (r: MonthRow) => r.kaanteinen,
+              get: (r: MonthRow) => r.reverse,
             },
             {
               key: "otherInc",

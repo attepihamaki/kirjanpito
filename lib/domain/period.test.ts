@@ -1,48 +1,48 @@
 import { describe, expect, it } from "vitest"
 
-import { demoEntries } from "@/lib/domain/demo"
+import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { createIdFactory } from "@/lib/domain/id"
 import { filterPeriod, inPeriod, periodRange } from "@/lib/domain/period"
 
-const demo = demoEntries(createIdFactory())
+const sample = sampleEntries(createIdFactory())
 
 describe("inPeriod", () => {
   it("matches a whole year", () => {
-    expect(inPeriod({ pvm: "2026-07-01" }, { kind: "year", year: 2026 })).toBe(
+    expect(inPeriod({ date: "2026-07-01" }, { kind: "year", year: 2026 })).toBe(
       true
     )
-    expect(inPeriod({ pvm: "2025-12-31" }, { kind: "year", year: 2026 })).toBe(
+    expect(inPeriod({ date: "2025-12-31" }, { kind: "year", year: 2026 })).toBe(
       false
     )
   })
 
   it("matches a single month", () => {
     const p = { kind: "month", year: 2026, month: 10 } as const
-    expect(inPeriod({ pvm: "2026-10-01" }, p)).toBe(true)
-    expect(inPeriod({ pvm: "2026-10-31" }, p)).toBe(true)
-    expect(inPeriod({ pvm: "2026-09-30" }, p)).toBe(false)
-    expect(inPeriod({ pvm: "2026-11-01" }, p)).toBe(false)
+    expect(inPeriod({ date: "2026-10-01" }, p)).toBe(true)
+    expect(inPeriod({ date: "2026-10-31" }, p)).toBe(true)
+    expect(inPeriod({ date: "2026-09-30" }, p)).toBe(false)
+    expect(inPeriod({ date: "2026-11-01" }, p)).toBe(false)
   })
 
   it("matches a quarter at both edges", () => {
     const q4 = { kind: "quarter", year: 2026, quarter: 4 } as const
-    expect(inPeriod({ pvm: "2026-10-01" }, q4)).toBe(true)
-    expect(inPeriod({ pvm: "2026-12-31" }, q4)).toBe(true)
-    expect(inPeriod({ pvm: "2026-09-30" }, q4)).toBe(false)
-    expect(inPeriod({ pvm: "2027-01-01" }, q4)).toBe(false)
+    expect(inPeriod({ date: "2026-10-01" }, q4)).toBe(true)
+    expect(inPeriod({ date: "2026-12-31" }, q4)).toBe(true)
+    expect(inPeriod({ date: "2026-09-30" }, q4)).toBe(false)
+    expect(inPeriod({ date: "2027-01-01" }, q4)).toBe(false)
   })
 })
 
 describe("filterPeriod", () => {
-  it("slices the demo data", () => {
-    expect(filterPeriod(demo, { kind: "year", year: 2026 })).toHaveLength(16)
+  it("slices the sample data", () => {
+    expect(filterPeriod(sample, { kind: "year", year: 2026 })).toHaveLength(16)
     expect(
-      filterPeriod(demo, { kind: "month", year: 2026, month: 10 })
+      filterPeriod(sample, { kind: "month", year: 2026, month: 10 })
     ).toHaveLength(3)
     expect(
-      filterPeriod(demo, { kind: "quarter", year: 2026, quarter: 1 })
+      filterPeriod(sample, { kind: "quarter", year: 2026, quarter: 1 })
     ).toHaveLength(8)
-    expect(filterPeriod(demo, { kind: "year", year: 2025 })).toEqual([])
+    expect(filterPeriod(sample, { kind: "year", year: 2025 })).toEqual([])
   })
 })
 

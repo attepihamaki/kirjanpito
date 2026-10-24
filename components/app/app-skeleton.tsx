@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 export function AppSkeleton() {
   return (
     <div className="flex min-h-svh">
-      <div className="hidden w-64 shrink-0 flex-col gap-6 border-r p-4 min-[900px]:flex">
+      <div className="hidden w-72 shrink-0 flex-col gap-6 border-r p-4 min-[900px]:flex">
         <div className="flex items-center gap-2">
           <BrandMark />
           <Skeleton className="h-4 w-28" />

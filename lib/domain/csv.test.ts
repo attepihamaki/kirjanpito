@@ -9,7 +9,7 @@ import {
   serializeCsv,
   type ImportSuccess,
 } from "@/lib/domain/csv"
-import { demoEntries } from "@/lib/domain/demo"
+import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { createIdFactory } from "@/lib/domain/id"
 import { MINUS, NBSP } from "@/lib/domain/money"
 import {
@@ -26,20 +26,20 @@ import {
 
 const baseCats = defaultCategories()
 const cats = indexCategories(baseCats)
-const demo = demoEntries(createIdFactory("e"))
+const sample = sampleEntries(createIdFactory("e"))
 
 const HEADER = CSV_HEADER.join(";")
 
 function entry(over: Partial<Entry> = {}): Entry {
   return {
     id: "e1",
-    pvm: "2026-10-28",
-    selite: "Lasku 1005",
-    tyyppi: "tulo",
-    catId: "300-suomi",
-    summa: 188250,
-    alv: 25.5,
-    syotto: "brutto",
+    date: "2026-10-28",
+    description: "Lasku 1005",
+    type: "income",
+    catId: "300-domestic",
+    amount: 188250,
+    vatRate: 25.5,
+    amountMode: "gross",
     ...over,
   }
 }
@@ -61,7 +61,7 @@ function ok(result: ReturnType<typeof parseCsv>): ImportSuccess {
 }
 
 describe("serializeCsv", () => {
-  const out = serializeCsv(demo, cats)
+  const out = serializeCsv(sample, cats)
 
   it("starts with a BOM and the exact header", () => {
     expect(out.startsWith(`﻿${HEADER}\r\n`)).toBe(true)
@@ -98,7 +98,7 @@ describe("serializeCsv", () => {
   })
 
   it("contains no Unicode minus and no no-break space", () => {
-    const withNegative = serializeCsv([entry({ summa: -5099 })], cats)
+    const withNegative = serializeCsv([entry({ amount: -5099 })], cats)
     expect(withNegative).toContain(";-50,99;")
     expect(withNegative).not.toContain(MINUS)
     expect(withNegative).not.toContain(NBSP)
@@ -106,7 +106,10 @@ describe("serializeCsv", () => {
 
   it("quotes only the fields that need it, doubling inner quotes", () => {
     const text = serializeCsv(
-      [entry({ selite: 'Lasku; "iso"' }), entry({ id: "e2", selite: "Tavis" })],
+      [
+        entry({ description: 'Lasku; "iso"' }),
+        entry({ id: "e2", description: "Tavis" }),
+      ],
       cats
     )
     expect(text).toContain('"Lasku; ""iso"""')
@@ -114,12 +117,12 @@ describe("serializeCsv", () => {
   })
 
   it("quotes a description containing a newline", () => {
-    const text = serializeCsv([entry({ selite: "Rivi1\nRivi2" })], cats)
+    const text = serializeCsv([entry({ description: "Rivi1\nRivi2" })], cats)
     expect(text).toContain('"Rivi1\nRivi2"')
   })
 
   it("trims the description", () => {
-    expect(serializeCsv([entry({ selite: "  Lasku  " })], cats)).toContain(
+    expect(serializeCsv([entry({ description: "  Lasku  " })], cats)).toContain(
       ";Lasku;"
     )
   })
@@ -165,7 +168,7 @@ describe("detectDelimiter", () => {
 describe("parseCsv — happy path", () => {
   it("reads a standard export", () => {
     const r = ok(
-      parseCsv(serializeCsv(demo, cats), baseCats, createIdFactory())
+      parseCsv(serializeCsv(sample, cats), baseCats, createIdFactory())
     )
     expect(r.entries).toHaveLength(16)
     expect(r.skipped).toEqual([])
@@ -181,7 +184,7 @@ describe("parseCsv — happy path", () => {
         baseCats
       )
     )
-    expect(r.entries[0].summa).toBe(10000)
+    expect(r.entries[0].amount).toBe(10000)
   })
 
   it("strips a BOM and tolerates LF, CRLF and trailing blank lines", () => {
@@ -239,10 +242,10 @@ describe("parseCsv — required columns", () => {
       parseCsv(csvText(["pvm;tyyppi;summa", "8.1.2026;kulu;12,50"]), baseCats)
     )
     expect(r.entries[0]).toMatchObject({
-      pvm: "2026-01-08",
-      tyyppi: "kulu",
-      summa: 1250,
-      syotto: "brutto",
+      date: "2026-01-08",
+      type: "expense",
+      amount: 1250,
+      amountMode: "gross",
     })
   })
 })
@@ -259,7 +262,7 @@ describe("parseCsv — leniency", () => {
         baseCats
       )
     )
-    expect(r.entries.map((e) => e.pvm)).toEqual(["2026-01-08", "2026-01-09"])
+    expect(r.entries.map((e) => e.date)).toEqual(["2026-01-08", "2026-01-09"])
   })
 
   it("accepts messy amounts", () => {
@@ -274,17 +277,19 @@ describe("parseCsv — leniency", () => {
         baseCats
       )
     )
-    expect(r.entries.map((e) => e.summa)).toEqual([188250, 188250, -1200])
+    expect(r.entries.map((e) => e.amount)).toEqual([188250, 188250, -1200])
   })
 
+  // The input is the CSV's own `syotto` value and stays Finnish; the expected
+  // value is the English AmountMode the parser maps it to.
   it.each([
-    ["netto", "netto"],
-    ["veroton", "netto"],
-    ["NETTO", "netto"],
-    ["brutto", "brutto"],
-    ["verollinen", "brutto"],
-    ["", "brutto"],
-    ["roskaa", "brutto"],
+    ["netto", "net"],
+    ["veroton", "net"],
+    ["NETTO", "net"],
+    ["brutto", "gross"],
+    ["verollinen", "gross"],
+    ["", "gross"],
+    ["roskaa", "gross"],
   ])("maps syotto %j to %s", (input, expected) => {
     const r = ok(
       parseCsv(
@@ -292,7 +297,7 @@ describe("parseCsv — leniency", () => {
         baseCats
       )
     )
-    expect(r.entries[0].syotto).toBe(expected)
+    expect(r.entries[0].amountMode).toBe(expected)
   })
 
   it("falls back to the category default when alv is empty", () => {
@@ -305,7 +310,7 @@ describe("parseCsv — leniency", () => {
         baseCats
       )
     )
-    expect(r.entries[0].alv).toBe(25.5)
+    expect(r.entries[0].vatRate).toBe(25.5)
   })
 
   it("falls back to the category default when alv is unparseable", () => {
@@ -318,7 +323,7 @@ describe("parseCsv — leniency", () => {
         baseCats
       )
     )
-    expect(r.entries[0].alv).toBe(25.5)
+    expect(r.entries[0].vatRate).toBe(25.5)
   })
 
   it("honours an explicit zero rate rather than the default", () => {
@@ -331,7 +336,7 @@ describe("parseCsv — leniency", () => {
         baseCats
       )
     )
-    expect(r.entries[0].alv).toBe(0)
+    expect(r.entries[0].vatRate).toBe(0)
   })
 })
 
@@ -362,23 +367,23 @@ describe("parseCsv — category matching", () => {
   // Matkakulut rather than Muut vähennyskelpoiset kulut.
   it("books an empty luokka on 344 to Muut vähennyskelpoiset kulut", () => {
     expect(parse(["2026-01-08;kulu;344;;1,00;"]).entries[0].catId).toBe(
-      "344-muut"
+      "344-other"
     )
   })
 
   it("books an empty luokka on 300 to Myynti – Suomi", () => {
     expect(parse(["2026-01-08;tulo;300;;1,00;"]).entries[0].catId).toBe(
-      "300-suomi"
+      "300-domestic"
     )
   })
 
   it("creates a custom category for an unknown name on a known account", () => {
     const r = parse(["2026-01-08;kulu;344;Pilvipalvelut;1,00;25,5"])
-    const created = r.categories.find((c) => c.nimi === "Pilvipalvelut")!
+    const created = r.categories.find((c) => c.name === "Pilvipalvelut")!
     expect(created).toMatchObject({
-      line: "344-muut",
-      alv: 25.5,
-      on: true,
+      line: "344-other",
+      vatRate: 25.5,
+      enabled: true,
       custom: true,
     })
     expect(r.entries[0].catId).toBe(created.id)
@@ -387,7 +392,7 @@ describe("parseCsv — category matching", () => {
       code: "new-category",
       line: 2,
       catId: created.id,
-      nimi: "Pilvipalvelut",
+      name: "Pilvipalvelut",
     })
   })
 
@@ -409,26 +414,26 @@ describe("parseCsv — category matching", () => {
     expect(r.entries[0].catId).not.toBe(r.entries[1].catId)
   })
 
-  it("books an unknown account to 301 or 344-muut with a warning", () => {
+  it("books an unknown account to 301 or 344-other with a warning", () => {
     const r = parse([
       "2026-01-08;tulo;999;Jotain;1,00;0",
       "2026-02-08;kulu;999;Jotain;1,00;0",
     ])
-    expect(r.entries.map((e) => e.catId)).toEqual(["301", "344-muut"])
+    expect(r.entries.map((e) => e.catId)).toEqual(["301", "344-other"])
     expect(r.warnings).toEqual([
       {
         code: "unknown-account",
         line: 2,
-        tili: "999",
-        nimi: "Jotain",
+        account: "999",
+        name: "Jotain",
         bookedTo: "301",
       },
       {
         code: "unknown-account",
         line: 3,
-        tili: "999",
-        nimi: "Jotain",
-        bookedTo: "344-muut",
+        account: "999",
+        name: "Jotain",
+        bookedTo: "344-other",
       },
     ])
   })
@@ -501,24 +506,24 @@ describe("CSV round trip", () => {
     return { text, result: r, cats: indexCategories(r.categories) }
   }
 
-  it("reproduces the demo data", () => {
-    const { result, cats: after } = roundTrip(demo)
+  it("reproduces the sample data", () => {
+    const { result, cats: after } = roundTrip(sample)
     expect(canonicalImported(result.entries, after)).toEqual(
-      canonical(demo, cats)
+      canonical(sample, cats)
     )
   })
 
   it("preserves custom categories, matched by account, side and name", () => {
     const custom = {
       id: "c-local",
-      line: "344-muut",
-      nimi: "Pilvipalvelut",
-      alv: 25.5,
-      on: true,
+      line: "344-other",
+      name: "Pilvipalvelut",
+      vatRate: 25.5,
+      enabled: true,
       custom: true,
     }
     const startCats = [...baseCats, custom]
-    const entries = [entry({ tyyppi: "kulu", catId: "c-local", summa: 5000 })]
+    const entries = [entry({ type: "expense", catId: "c-local", amount: 5000 })]
     const { result, cats: after } = roundTrip(entries, startCats)
     expect(result.newCategoryCount).toBe(0)
     expect(canonicalImported(result.entries, after)).toEqual(
@@ -531,37 +536,49 @@ describe("CSV round trip", () => {
       ...baseCats,
       {
         id: "c-a",
-        line: "344-muut",
-        nimi: "Sama",
-        alv: 10,
-        on: true,
+        line: "344-other",
+        name: "Sama",
+        vatRate: 10,
+        enabled: true,
         custom: true,
       },
       {
         id: "c-b",
-        line: "344-muut",
-        nimi: "Sama",
-        alv: 10,
-        on: true,
+        line: "344-other",
+        name: "Sama",
+        vatRate: 10,
+        enabled: true,
         custom: true,
       },
     ]
     const entries = [
-      entry({ id: "x", tyyppi: "kulu", catId: "c-a", summa: 100, alv: 10 }),
-      entry({ id: "y", tyyppi: "kulu", catId: "c-b", summa: 200, alv: 10 }),
+      entry({
+        id: "x",
+        type: "expense",
+        catId: "c-a",
+        amount: 100,
+        vatRate: 10,
+      }),
+      entry({
+        id: "y",
+        type: "expense",
+        catId: "c-b",
+        amount: 200,
+        vatRate: 10,
+      }),
     ]
     const { result } = roundTrip(entries, startCats)
     expect(result.entries[0].catId).toBe(result.entries[1].catId)
   })
 
   it.each([
-    ["netto", { syotto: "netto" as const }],
-    ["brutto", { syotto: "brutto" as const }],
-    ["a negative amount", { summa: -4500 }],
-    ["a zero rate", { alv: 0 }],
-    ["a rate outside RATES", { alv: 9 }],
-    ["a semicolon and quotes", { selite: 'Lasku; "iso" – 1/2' }],
-    ["a newline", { selite: "Rivi1\nRivi2" }],
+    ["net", { amountMode: "net" as const }],
+    ["gross", { amountMode: "gross" as const }],
+    ["a negative amount", { amount: -4500 }],
+    ["a zero rate", { vatRate: 0 }],
+    ["a rate outside RATES", { vatRate: 9 }],
+    ["a semicolon and quotes", { description: 'Lasku; "iso" – 1/2' }],
+    ["a newline", { description: "Rivi1\nRivi2" }],
   ])("survives %s", (_name, over) => {
     const entries = [entry(over)]
     const { result, cats: after } = roundTrip(entries)
@@ -599,7 +616,7 @@ describe("CSV round trip", () => {
   // The strongest assertion here: if anything about the normalisation
   // disagreed between the two sides, the second pass would differ.
   it("is idempotent — a second serialize is byte-identical", () => {
-    const first = serializeCsv(demo, cats)
+    const first = serializeCsv(sample, cats)
     const r = ok(parseCsv(first, baseCats, createIdFactory("r")))
     const second = serializeCsv(
       entriesFromImport(r.entries),
@@ -611,7 +628,7 @@ describe("CSV round trip", () => {
   it("round-trips through a comma-delimited file", () => {
     // Re-emit the same cells with commas, quoting as a real comma file must:
     // the decimal commas in `summa` force every amount to be quoted.
-    const cells = Papa.parse<string[]>(serializeCsv(demo, cats).slice(1), {
+    const cells = Papa.parse<string[]>(serializeCsv(sample, cats).slice(1), {
       header: false,
       delimiter: ";",
       skipEmptyLines: true,
@@ -621,7 +638,7 @@ describe("CSV round trip", () => {
     const r = ok(parseCsv(commaText, baseCats, createIdFactory("r")))
     expect(r.delimiter).toBe(",")
     expect(canonicalImported(r.entries, indexCategories(r.categories))).toEqual(
-      canonical(demo, cats)
+      canonical(sample, cats)
     )
   })
 })

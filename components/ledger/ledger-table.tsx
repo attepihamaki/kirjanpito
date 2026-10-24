@@ -68,10 +68,10 @@ export function LedgerTable({
       <Table>
         <TableHeader>
           <TableRow>
-            {header("pvm", f.t("c_date"))}
-            {header("selite", f.t("c_desc"))}
+            {header("date", f.t("c_date"))}
+            {header("description", f.t("c_desc"))}
             {header(
-              "luokka",
+              "category",
               f.t("c_cat"),
               "left",
               "hidden min-[1240px]:table-cell"
@@ -135,7 +135,7 @@ function LedgerRow({
 }) {
   const f = useFormatters()
   const { net, vat, gross } = calcEntry(entry)
-  const income = entry.tyyppi === "tulo"
+  const income = entry.type === "income"
   const attachments = entry.atts ?? []
 
   return (
@@ -159,15 +159,18 @@ function LedgerRow({
             income ? "bg-income" : "bg-expense"
           )}
         />
-        {f.date(entry.pvm)}
+        {f.date(entry.date)}
       </TableCell>
 
       <TableCell className="max-w-[22rem]">
         <div className="flex items-center gap-1.5">
           <span
-            className={cn("truncate", !entry.selite && "text-muted-foreground")}
+            className={cn(
+              "truncate",
+              !entry.description && "text-muted-foreground"
+            )}
           >
-            {entry.selite || f.t("noDesc")}
+            {entry.description || f.t("noDesc")}
           </span>
           {attachments.length ? (
             <Button
@@ -202,11 +205,11 @@ function LedgerRow({
       </TableCell>
 
       <TableCell className="hidden text-right min-[560px]:table-cell">
-        {entry.alv ? (
+        {entry.vatRate ? (
           <span className="flex flex-col items-end leading-tight">
             <Money cents={vat} />
             <span className="text-[0.7rem] text-muted-foreground">
-              {f.rate(entry.alv)}
+              {f.rate(entry.vatRate)}
             </span>
           </span>
         ) : (

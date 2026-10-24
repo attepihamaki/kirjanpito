@@ -45,10 +45,10 @@ describe("LINES", () => {
       "337",
       "341",
       "343",
-      "344-matka",
-      "344-ajo",
-      "344-kokous",
-      "344-muut",
+      "344-travel",
+      "344-vehicle",
+      "344-meeting",
+      "344-other",
       "354",
       "346",
       "349",
@@ -66,7 +66,7 @@ describe("LINES", () => {
 
   it("gives every expense line a bucket and no income line one", () => {
     for (const l of LINES) {
-      if (l.side === "kulu") expect(l.bucket).not.toBeNull()
+      if (l.side === "expense") expect(l.bucket).not.toBeNull()
       else expect(l.bucket).toBeNull()
     }
   })
@@ -82,12 +82,12 @@ describe("LINES", () => {
   })
 
   it("matches the §5 default rates", () => {
-    expect(LINE_BY_KEY.get("333")!.alv).toBe(25.5)
-    expect(LINE_BY_KEY.get("343")!.alv).toBe(25.5)
-    expect(LINE_BY_KEY.get("344-matka")!.alv).toBe(25.5)
-    expect(LINE_BY_KEY.get("354")!.alv).toBe(0)
-    expect(LINE_BY_KEY.get("335")!.alv).toBe(0)
-    expect(LINE_BY_KEY.get("336")!.alv).toBe(0)
+    expect(LINE_BY_KEY.get("333")!.vatRate).toBe(25.5)
+    expect(LINE_BY_KEY.get("343")!.vatRate).toBe(25.5)
+    expect(LINE_BY_KEY.get("344-travel")!.vatRate).toBe(25.5)
+    expect(LINE_BY_KEY.get("354")!.vatRate).toBe(0)
+    expect(LINE_BY_KEY.get("335")!.vatRate).toBe(0)
+    expect(LINE_BY_KEY.get("336")!.vatRate).toBe(0)
   })
 })
 
@@ -99,11 +99,11 @@ describe("RATES", () => {
 
 describe("SALES", () => {
   it("defines the four line-300 categories", () => {
-    expect(SALES.map((s) => [s.id, s.alv, s.kind])).toEqual([
-      ["300-suomi", 25.5, "kotimaa"],
+    expect(SALES.map((s) => [s.id, s.vatRate, s.kind])).toEqual([
+      ["300-domestic", 25.5, "domestic"],
       ["300-eu", 0, "eu"],
-      ["300-muut", 0, "muutmaat"],
-      ["300-kaant", 0, "kaanteinen"],
+      ["300-other", 0, "nonEu"],
+      ["300-reverse", 0, "reverse"],
     ])
   })
 })
@@ -117,7 +117,7 @@ describe("defaultCategories", () => {
   })
 
   it("enables all of them and marks none custom", () => {
-    expect(cats.every((c) => c.on && !c.custom)).toBe(true)
+    expect(cats.every((c) => c.enabled && !c.custom)).toBe(true)
   })
 
   it("gives them unique ids", () => {
@@ -131,7 +131,7 @@ describe("defaultCategories", () => {
   it("gives every income category a kind and no expense category one", () => {
     for (const c of cats) {
       const side = LINE_BY_KEY.get(c.line)!.side
-      if (side === "tulo") expect(c.kind).toBeDefined()
+      if (side === "income") expect(c.kind).toBeDefined()
       else expect(c.kind).toBeUndefined()
     }
   })
@@ -158,10 +158,10 @@ describe("naming", () => {
   it("never translates a custom category", () => {
     const custom: Category = {
       id: "c-1",
-      line: "344-muut",
-      nimi: "Pilvipalvelut",
-      alv: 25.5,
-      on: true,
+      line: "344-other",
+      name: "Pilvipalvelut",
+      vatRate: 25.5,
+      enabled: true,
       custom: true,
     }
     expect(categoryName(custom, "en")).toBe("Pilvipalvelut")

@@ -21,8 +21,8 @@ interface Pending {
 
 /**
  * Backs `confirm()` with a shadcn AlertDialog. Mounted once per root layout —
- * including the landing one, since "Aloita uusi kirjanpito" and "Kokeile
- * esimerkillä" can both hit the unexported-changes confirm from there.
+ * including the landing one, since "Aloita uusi kirjanpito" and "Avaa tiedosto"
+ * can both hit the unexported-changes confirm from there.
  */
 export function ConfirmDialogHost() {
   const [pending, setPending] = React.useState<Pending | null>(null)

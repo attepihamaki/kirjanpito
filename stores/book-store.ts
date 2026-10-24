@@ -12,10 +12,24 @@ import type {
   Lang,
 } from "@/lib/domain/types"
 
+/**
+ * The localStorage key holding the persisted slice below.
+ *
+ * Exported so the landing page can test for a first visit without hard-coding
+ * the name a second time. The prototype-era key was `kirjanpito.v1`; nothing
+ * migrates from it, so a browser that still holds one starts empty.
+ *
+ * Deliberately carries no version suffix: `persist` already writes its
+ * `version` into the stored value and owns `migrate` below, which can actually
+ * transform old data — a version in the key could only orphan it. A future
+ * break that is not worth migrating renames the key to `bookkeeping.v2` then.
+ */
+export const BOOK_STORAGE_KEY = "bookkeeping"
+
 export type PageSize = 10 | 25 | 50 | 100
 export type MonthFilter = number // 0 = whole year, 1-12 = that month
 export type TypeFilter = "all" | EntryType
-export type VatMode = "kk" | "q" | "v"
+export type VatMode = "month" | "quarter" | "year"
 
 export interface SortState<K extends string> {
   key: K
@@ -23,9 +37,9 @@ export interface SortState<K extends string> {
 }
 
 export type LedgerSortKey =
-  "pvm" | "selite" | "luokka" | "net" | "vat" | "gross"
+  "date" | "description" | "category" | "net" | "vat" | "gross"
 
-export type CatSortKey = "on" | "side" | "tili" | "nimi" | "alv"
+export type CatSortKey = "enabled" | "side" | "account" | "name" | "vatRate"
 
 export type DialogState =
   | { kind: "none" }
@@ -133,8 +147,8 @@ function initialState(): BookState {
     year: CURRENT_YEAR,
     dirty: false,
     fileName: null,
-    lastMode: "brutto",
-    lastType: "kulu",
+    lastMode: "gross",
+    lastType: "expense",
     lang: "fi",
     ledgerSize: 10,
     ctSize: 25,
@@ -145,13 +159,13 @@ function initialState(): BookState {
     ledgerQuery: "",
     ledgerType: "all",
     ledgerCat: "all",
-    ledgerSort: { key: "pvm", dir: 1 },
+    ledgerSort: { key: "date", dir: 1 },
     ledgerPage: 1,
     catQuery: "",
     catType: "all",
-    catSort: { key: "tili", dir: 1 },
+    catSort: { key: "account", dir: 1 },
     catPage: 1,
-    vatMode: "kk",
+    vatMode: "month",
     vatIndex: new Date().getMonth() + 1,
     dialog: { kind: "none" },
     draftAttachmentIds: [],
@@ -313,9 +327,9 @@ export const useBookStore = create<BookStore>()(
           // Clamp when switching into quarter mode (the prototype reset this
           // from today's date, which could land outside the selected year).
           vatIndex:
-            vatMode === "q"
+            vatMode === "quarter"
               ? Math.min(Math.max(1, Math.ceil(get().vatIndex / 3)), 4)
-              : vatMode === "kk"
+              : vatMode === "month"
                 ? Math.min(Math.max(1, get().vatIndex), 12)
                 : get().vatIndex,
         }),
@@ -333,7 +347,7 @@ export const useBookStore = create<BookStore>()(
       requestGc: () => set({ gcTick: get().gcTick + 1 }),
     }),
     {
-      name: "kirjanpito.v1",
+      name: BOOK_STORAGE_KEY,
       version: 1,
       // Prerender must not touch localStorage; StoreHydrator rehydrates
       // after mount so the first client render matches the server HTML.

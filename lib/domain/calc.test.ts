@@ -2,17 +2,21 @@ import { describe, expect, it } from "vitest"
 
 import { RATES } from "@/lib/domain/accounts"
 import { calcEntry, signedGross } from "@/lib/domain/calc"
-import { demoEntries } from "@/lib/domain/demo"
+import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { createIdFactory } from "@/lib/domain/id"
 
 describe("calcEntry", () => {
   it("splits a gross amount", () => {
-    expect(calcEntry({ summa: 251000, alv: 25.5, syotto: "brutto" })).toEqual({
+    expect(
+      calcEntry({ amount: 251000, vatRate: 25.5, amountMode: "gross" })
+    ).toEqual({
       gross: 251000,
       vat: 51000,
       net: 200000,
     })
-    expect(calcEntry({ summa: 4860, alv: 13.5, syotto: "brutto" })).toEqual({
+    expect(
+      calcEntry({ amount: 4860, vatRate: 13.5, amountMode: "gross" })
+    ).toEqual({
       gross: 4860,
       vat: 578,
       net: 4282,
@@ -20,7 +24,9 @@ describe("calcEntry", () => {
   })
 
   it("adds VAT to a net amount", () => {
-    expect(calcEntry({ summa: 200000, alv: 25.5, syotto: "netto" })).toEqual({
+    expect(
+      calcEntry({ amount: 200000, vatRate: 25.5, amountMode: "net" })
+    ).toEqual({
       net: 200000,
       vat: 51000,
       gross: 251000,
@@ -28,7 +34,9 @@ describe("calcEntry", () => {
   })
 
   it("leaves a zero-rated amount untouched", () => {
-    expect(calcEntry({ summa: 320000, alv: 0, syotto: "brutto" })).toEqual({
+    expect(
+      calcEntry({ amount: 320000, vatRate: 0, amountMode: "gross" })
+    ).toEqual({
       gross: 320000,
       vat: 0,
       net: 320000,
@@ -37,20 +45,24 @@ describe("calcEntry", () => {
 
   it("treats a missing or non-numeric rate as zero", () => {
     expect(
-      calcEntry({ summa: 1000, alv: Number.NaN, syotto: "brutto" }).vat
+      calcEntry({ amount: 1000, vatRate: Number.NaN, amountMode: "gross" }).vat
     ).toBe(0)
   })
 
   it("never produces negative zero", () => {
-    const { vat } = calcEntry({ summa: -1, alv: 25.5, syotto: "brutto" })
+    const { vat } = calcEntry({
+      amount: -1,
+      vatRate: 25.5,
+      amountMode: "gross",
+    })
     expect(Object.is(vat, 0)).toBe(true)
   })
 
   it("holds net + vat === gross for every rate and mode", () => {
-    for (const alv of RATES) {
-      for (const syotto of ["brutto", "netto"] as const) {
-        for (let summa = 0; summa <= 20000; summa += 97) {
-          const r = calcEntry({ summa, alv, syotto })
+    for (const vatRate of RATES) {
+      for (const amountMode of ["gross", "net"] as const) {
+        for (let amount = 0; amount <= 20000; amount += 97) {
+          const r = calcEntry({ amount, vatRate, amountMode })
           expect(r.net + r.vat).toBe(r.gross)
           expect(Number.isInteger(r.net)).toBe(true)
           expect(Number.isInteger(r.vat)).toBe(true)
@@ -61,25 +73,27 @@ describe("calcEntry", () => {
   })
 
   // Documented, not fixed: the two directions round differently, so toggling
-  // the mode can shift a value by one cent. The CSV stores summa together
-  // with syotto, so nothing is actually lost.
+  // the mode can shift a value by one cent. The CSV stores the amount together
+  // with its mode, so nothing is actually lost.
   it("is deliberately not round-trip stable", () => {
-    const net = calcEntry({ summa: 2, alv: 25.5, syotto: "brutto" }).net
+    const net = calcEntry({ amount: 2, vatRate: 25.5, amountMode: "gross" }).net
     expect(net).toBe(2)
-    expect(calcEntry({ summa: net, alv: 25.5, syotto: "netto" }).gross).toBe(3)
+    expect(
+      calcEntry({ amount: net, vatRate: 25.5, amountMode: "net" }).gross
+    ).toBe(3)
   })
 })
 
 describe("signedGross", () => {
   it("negates expenses and leaves income positive", () => {
-    const base = { summa: 10000, alv: 25.5, syotto: "brutto" } as const
-    expect(signedGross({ ...base, tyyppi: "tulo" })).toBe(10000)
-    expect(signedGross({ ...base, tyyppi: "kulu" })).toBe(-10000)
+    const base = { amount: 10000, vatRate: 25.5, amountMode: "gross" } as const
+    expect(signedGross({ ...base, type: "income" })).toBe(10000)
+    expect(signedGross({ ...base, type: "expense" })).toBe(-10000)
   })
 })
 
-describe("the sixteen demo entries", () => {
-  const entries = demoEntries(createIdFactory())
+describe("the sixteen sample entries", () => {
+  const entries = sampleEntries(createIdFactory())
   const expected: ReadonlyArray<readonly [string, number, number]> = [
     ["2026-01-08", 200000, 51000],
     ["2026-01-15", 14853, 3787],

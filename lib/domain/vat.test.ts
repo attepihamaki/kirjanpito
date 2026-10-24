@@ -1,31 +1,31 @@
 import { describe, expect, it } from "vitest"
 
 import { RATES, defaultCategories } from "@/lib/domain/accounts"
-import { demoEntries } from "@/lib/domain/demo"
+import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { createIdFactory } from "@/lib/domain/id"
 import { filterPeriod, type Period } from "@/lib/domain/period"
 import { indexCategories, type Entry } from "@/lib/domain/types"
 import { ledgerTotals, vatReport } from "@/lib/domain/vat"
 
 const cats = indexCategories(defaultCategories())
-const demo = demoEntries(createIdFactory())
-const reportFor = (p: Period) => vatReport(filterPeriod(demo, p), cats)
+const sample = sampleEntries(createIdFactory())
+const reportFor = (p: Period) => vatReport(filterPeriod(sample, p), cats)
 
 function entry(over: Partial<Entry>): Entry {
   return {
     id: "e1",
-    pvm: "2026-05-05",
-    selite: "Testi",
-    tyyppi: "tulo",
-    catId: "300-suomi",
-    summa: 10000,
-    alv: 25.5,
-    syotto: "brutto",
+    date: "2026-05-05",
+    description: "Testi",
+    type: "income",
+    catId: "300-domestic",
+    amount: 10000,
+    vatRate: 25.5,
+    amountMode: "gross",
     ...over,
   }
 }
 
-describe("vatReport — demo data, whole year 2026", () => {
+describe("vatReport — sample data, whole year 2026", () => {
   const r = reportFor({ kind: "year", year: 2026 })
 
   it("totals sales VAT at 114 750", () => {
@@ -58,8 +58,8 @@ describe("vatReport — demo data, whole year 2026", () => {
   it("reports EU and reverse-charge sales separately", () => {
     expect(r.otherSales).toEqual({
       eu: 320000,
-      muutmaat: 0,
-      kaanteinen: 480000,
+      nonEu: 0,
+      reverse: 480000,
     })
   })
 
@@ -79,10 +79,10 @@ describe("vatReport — demo data, whole year 2026", () => {
  * 637,50 € minus purchase VAT 20,32 €. Those two figures are decorative
  * constants from the prototype's landing hero (docs/prototype/kirjanpito.html
  * lines 1037 and 1039, fmt(63750) / fmt(61718)) and do not follow from the
- * demo entries: the only October sale is 1 882,50 € gross at 25,5 %, so sales
+ * sample entries: the only October sale is 1 882,50 € gross at 25,5 %, so sales
  * VAT is 382,50 € and the payable is 362,18 €. §10 has been corrected.
  */
-describe("vatReport — demo data, October 2026", () => {
+describe("vatReport — sample data, October 2026", () => {
   const r = reportFor({ kind: "month", year: 2026, month: 10 })
 
   it("collects 38 250 cents (382,50 €) of sales VAT", () => {
@@ -98,7 +98,7 @@ describe("vatReport — demo data, October 2026", () => {
   })
 })
 
-describe("vatReport — demo data, Q4 2026", () => {
+describe("vatReport — sample data, Q4 2026", () => {
   it("matches October, because November and December are empty", () => {
     const r = reportFor({ kind: "quarter", year: 2026, quarter: 4 })
     expect(r.sales.total.vat).toBe(38250)
@@ -109,27 +109,27 @@ describe("vatReport — demo data, Q4 2026", () => {
 
 describe("vatReport — exclusions", () => {
   it("keeps an EU sale out of sales VAT", () => {
-    const r = vatReport([entry({ catId: "300-eu", alv: 0 })], cats)
+    const r = vatReport([entry({ catId: "300-eu", vatRate: 0 })], cats)
     expect(r.otherSales.eu).toBe(10000)
     expect(r.sales.total).toEqual({ net: 0, vat: 0 })
   })
 
   it("keeps a non-EU sale out of sales VAT", () => {
-    const r = vatReport([entry({ catId: "300-muut", alv: 0 })], cats)
-    expect(r.otherSales.muutmaat).toBe(10000)
+    const r = vatReport([entry({ catId: "300-other", vatRate: 0 })], cats)
+    expect(r.otherSales.nonEu).toBe(10000)
     expect(r.sales.total.vat).toBe(0)
   })
 
   it("keeps a reverse-charge sale out of sales VAT", () => {
-    const r = vatReport([entry({ catId: "300-kaant", alv: 0 })], cats)
-    expect(r.otherSales.kaanteinen).toBe(10000)
+    const r = vatReport([entry({ catId: "300-reverse", vatRate: 0 })], cats)
+    expect(r.otherSales.reverse).toBe(10000)
     expect(r.sales.total.vat).toBe(0)
   })
 
   // The exclusion is kept (§6.1 is unconditional), but the prototype dropped
   // the VAT in silence. Now the UI can warn about it.
   it("still excludes an EU sale that carries a rate, and flags it", () => {
-    const r = vatReport([entry({ catId: "300-eu", alv: 25.5 })], cats)
+    const r = vatReport([entry({ catId: "300-eu", vatRate: 25.5 })], cats)
     expect(r.sales.total.vat).toBe(0)
     expect(r.otherSales.eu).toBe(7968)
     expect(r.anomalies).toEqual([
@@ -138,26 +138,26 @@ describe("vatReport — exclusions", () => {
   })
 
   it("includes 0 % income on line 300 in the 0 % sales row", () => {
-    const r = vatReport([entry({ catId: "300-suomi", alv: 0 })], cats)
+    const r = vatReport([entry({ catId: "300-domestic", vatRate: 0 })], cats)
     expect(r.sales.byRate.get(0)).toEqual({ net: 10000, vat: 0 })
   })
 
   it("excludes 0 % income on line 318 from sales VAT and other sales", () => {
-    const r = vatReport([entry({ catId: "318", alv: 0 })], cats)
+    const r = vatReport([entry({ catId: "318", vatRate: 0 })], cats)
     expect(r.sales.total).toEqual({ net: 0, vat: 0 })
-    expect(r.otherSales).toEqual({ eu: 0, muutmaat: 0, kaanteinen: 0 })
+    expect(r.otherSales).toEqual({ eu: 0, nonEu: 0, reverse: 0 })
   })
 
   it("excludes 0 % expenses from purchases", () => {
     const r = vatReport(
-      [entry({ tyyppi: "kulu", catId: "336", alv: 0, summa: 31000 })],
+      [entry({ type: "expense", catId: "336", vatRate: 0, amount: 31000 })],
       cats
     )
     expect(r.purchases.total).toEqual({ net: 0, vat: 0 })
   })
 
   it("puts an unlisted rate in the other bucket", () => {
-    const r = vatReport([entry({ alv: 9 })], cats)
+    const r = vatReport([entry({ vatRate: 9 })], cats)
     expect(r.sales.other.net).toBe(9174)
     expect(r.sales.byRate.get(25.5)).toEqual({ net: 0, vat: 0 })
   })
@@ -170,16 +170,16 @@ describe("vatReport — exclusions", () => {
 })
 
 describe("ledgerTotals", () => {
-  it("matches the demo year", () => {
-    expect(ledgerTotals(demo, cats)).toEqual({
+  it("matches the sample year", () => {
+    expect(ledgerTotals(sample, cats)).toEqual({
       incomeNet: 1250000,
       expenseNet: 185747,
       due: 76022,
     })
   })
 
-  it("matches demo January", () => {
-    const jan = filterPeriod(demo, { kind: "month", year: 2026, month: 1 })
+  it("matches sample January", () => {
+    const jan = filterPeriod(sample, { kind: "month", year: 2026, month: 1 })
     expect(ledgerTotals(jan, cats)).toEqual({
       incomeNet: 200000,
       expenseNet: 17235,
@@ -187,8 +187,8 @@ describe("ledgerTotals", () => {
     })
   })
 
-  it("matches demo October", () => {
-    const oct = filterPeriod(demo, { kind: "month", year: 2026, month: 10 })
+  it("matches sample October", () => {
+    const oct = filterPeriod(sample, { kind: "month", year: 2026, month: 10 })
     expect(ledgerTotals(oct, cats)).toEqual({
       incomeNet: 150000,
       expenseNet: 8818,
@@ -206,7 +206,7 @@ describe("ledgerTotals", () => {
 
   it("reports a refund as a negative due", () => {
     const r = ledgerTotals(
-      [entry({ tyyppi: "kulu", catId: "333", summa: 12550, alv: 25.5 })],
+      [entry({ type: "expense", catId: "333", amount: 12550, vatRate: 25.5 })],
       cats
     )
     expect(r.due).toBe(-2550)

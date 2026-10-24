@@ -8,7 +8,7 @@ import { LangProvider } from "@/components/lang-provider"
 import { LedgerView } from "@/components/ledger/ledger-view"
 import { TotalsStrip } from "@/components/ledger/totals-strip"
 import { defaultCategories } from "@/lib/domain/accounts"
-import { demoEntries } from "@/lib/domain/demo"
+import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { createIdFactory } from "@/lib/domain/id"
 import { NBSP } from "@/lib/domain/money"
 import { filterPeriod } from "@/lib/domain/period"
@@ -19,19 +19,19 @@ import type { Lang } from "@/lib/domain/types"
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
-  usePathname: () => "/app/kirjanpito",
+  usePathname: () => "/app/ledger",
 }))
 
 function mount(ui: React.ReactElement, lang: Lang = "fi") {
   return render(<LangProvider lang={lang}>{ui}</LangProvider>)
 }
 
-/** Load the demo data straight into the store, as "Kokeile esimerkillä" does. */
-function loadDemoIntoStore() {
+/** Load the §10 sample entries straight into the store. */
+function loadSampleIntoStore() {
   useBookStore.setState({
     open: true,
     hydrated: true,
-    entries: demoEntries(createIdFactory("d")),
+    entries: sampleEntries(createIdFactory("d")),
     cats: defaultCategories(),
     year: 2026,
     month: 0,
@@ -40,7 +40,7 @@ function loadDemoIntoStore() {
     ledgerQuery: "",
     ledgerType: "all",
     ledgerCat: "all",
-    ledgerSort: { key: "pvm", dir: 1 },
+    ledgerSort: { key: "date", dir: 1 },
     ledgerPage: 1,
     ledgerSize: 10,
   })
@@ -76,7 +76,7 @@ beforeEach(() => {
 describe("TotalsStrip", () => {
   it("shows the §10 year figures", () => {
     const cats = indexCategories(defaultCategories())
-    const totals = ledgerTotals(demoEntries(createIdFactory()), cats)
+    const totals = ledgerTotals(sampleEntries(createIdFactory()), cats)
     mount(<TotalsStrip totals={totals} />)
 
     expect(screen.getByText("Tulot, veroton")).toBeInTheDocument()
@@ -92,13 +92,13 @@ describe("TotalsStrip", () => {
       [
         {
           id: "e1",
-          pvm: "2026-01-01",
-          selite: "Osto",
-          tyyppi: "kulu",
+          date: "2026-01-01",
+          description: "Osto",
+          type: "expense",
           catId: "333",
-          summa: 12550,
-          alv: 25.5,
-          syotto: "brutto",
+          amount: 12550,
+          vatRate: 25.5,
+          amountMode: "gross",
         },
       ],
       cats
@@ -109,8 +109,8 @@ describe("TotalsStrip", () => {
   })
 })
 
-describe("LedgerView with the demo data", () => {
-  beforeEach(loadDemoIntoStore)
+describe("LedgerView with the sample data", () => {
+  beforeEach(loadSampleIntoStore)
 
   it("renders the header, period and entry count", () => {
     mount(<LedgerView />)
@@ -208,7 +208,7 @@ describe("LedgerView with the demo data", () => {
 })
 
 describe("LedgerView in English", () => {
-  beforeEach(loadDemoIntoStore)
+  beforeEach(loadSampleIntoStore)
 
   it("translates the chrome but keeps Finnish currency (§9)", () => {
     mount(<LedgerView />, "en")
@@ -252,7 +252,7 @@ describe("LedgerView with an empty book", () => {
 })
 
 describe("the period slice drives the totals, not the filters", () => {
-  beforeEach(loadDemoIntoStore)
+  beforeEach(loadSampleIntoStore)
 
   // §8.4: the strip answers "what does this month come to", so a search
   // must not change it even though the entry count does.

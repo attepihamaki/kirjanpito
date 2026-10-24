@@ -91,7 +91,7 @@ describe("translate", () => {
   })
 
   it("binds a language with createAppT", () => {
-    expect(createAppT("en")("v_kirjanpito")).toBe("Bookkeeping")
+    expect(createAppT("en")("v_ledger")).toBe("Bookkeeping")
   })
 })
 
@@ -182,7 +182,7 @@ describe("createFormatters", () => {
   })
 
   it("exposes a bound t()", () => {
-    expect(fi.t("v_kirjanpito")).toBe("Kirjanpito")
+    expect(fi.t("v_ledger")).toBe("Kirjanpito")
     expect(en.t("nEntries", { n: 3 })).toBe("3 entries")
   })
 })

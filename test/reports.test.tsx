@@ -8,14 +8,14 @@ import { LangProvider } from "@/components/lang-provider"
 import { StatementView } from "@/components/statement/statement-view"
 import { VatView } from "@/components/vat/vat-view"
 import { defaultCategories } from "@/lib/domain/accounts"
-import { demoEntries } from "@/lib/domain/demo"
+import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { createIdFactory } from "@/lib/domain/id"
 import { useBookStore } from "@/stores/book-store"
 import type { Lang } from "@/lib/domain/types"
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
-  usePathname: () => "/app/alv",
+  usePathname: () => "/app/vat",
 }))
 
 const flattenSpaces = (text: string) =>
@@ -43,10 +43,10 @@ beforeEach(() => {
   useBookStore.setState({
     open: true,
     hydrated: true,
-    entries: demoEntries(createIdFactory("d")),
+    entries: sampleEntries(createIdFactory("d")),
     cats: defaultCategories(),
     year: 2026,
-    vatMode: "kk",
+    vatMode: "month",
     vatIndex: 10,
   })
 })
@@ -139,7 +139,7 @@ describe("StatementView", () => {
 
   it("renders every line, with a dash for the empty ones", () => {
     mount(<StatementView />)
-    // All 29 lines render; the demo touches eight, so 21 show a dash.
+    // All 29 lines render; the sample touches eight, so 21 show a dash.
     expect(screen.getAllByText("–")).toHaveLength(21)
     expect(screen.getByText("Saadut osingot")).toBeInTheDocument()
     expect(
@@ -163,23 +163,23 @@ describe("StatementView", () => {
       entries: [
         {
           id: "a",
-          pvm: "2026-01-01",
-          selite: "Myynti",
-          tyyppi: "tulo",
-          catId: "300-suomi",
-          summa: 100000,
-          alv: 0,
-          syotto: "netto",
+          date: "2026-01-01",
+          description: "Myynti",
+          type: "income",
+          catId: "300-domestic",
+          amount: 100000,
+          vatRate: 0,
+          amountMode: "net",
         },
         {
           id: "b",
-          pvm: "2026-01-02",
-          selite: "Osto",
-          tyyppi: "kulu",
+          date: "2026-01-02",
+          description: "Osto",
+          type: "expense",
           catId: "333",
-          summa: 150000,
-          alv: 0,
-          syotto: "netto",
+          amount: 150000,
+          vatRate: 0,
+          amountMode: "net",
         },
       ],
     })

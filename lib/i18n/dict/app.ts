@@ -12,10 +12,10 @@ export const APP_DICT = {
   fiscal: ["Tilikausi", "Financial year"],
   home: ["Etusivu", "Home"],
 
-  v_kirjanpito: ["Kirjanpito", "Bookkeeping"],
-  v_tulos: ["Tuloslaskelma", "Income statement"],
-  v_yhteenveto: ["Yhteenveto", "Summary"],
-  v_asetukset: ["Asetukset", "Settings"],
+  v_ledger: ["Kirjanpito", "Bookkeeping"],
+  v_statement: ["Tuloslaskelma", "Income statement"],
+  v_summary: ["Yhteenveto", "Summary"],
+  v_settings: ["Asetukset", "Settings"],
 
   noFile: ["Ei avattua tiedostoa", "No file open"],
   clean: ["Kaikki muutokset viety", "All changes exported"],
@@ -89,8 +89,8 @@ export const APP_DICT = {
   ],
   noEntriesFor: ["Ei kirjauksia: {p}.", "No entries: {p}."],
   clearFilters: ["Tyhjennä suodattimet", "Clear filters"],
-  tulot: ["Tulot", "Income"],
-  kulut: ["Kulut", "Expenses"],
+  incomePlural: ["Tulot", "Income"],
+  expensePlural: ["Kulut", "Expenses"],
   catAll: ["Kaikki luokat", "All categories"],
   typeFilter: ["Tyyppi", "Type"],
   rowsPerPage: ["Rivejä sivulla", "Rows per page"],
@@ -106,8 +106,8 @@ export const APP_DICT = {
   // --- Entry dialog ---
   f_date: ["Päivämäärä", "Date"],
   f_type: ["Tyyppi", "Type"],
-  tulo: ["Tulo", "Income"],
-  kulu: ["Kulu", "Expense"],
+  income: ["Tulo", "Income"],
+  expense: ["Kulu", "Expense"],
   f_desc: ["Tapahtuman selite", "Description"],
   f_descPh: ["Esim. Lasku 1006 – Asiakas Oy", "E.g. Invoice 1006 – Client Ltd"],
   f_cat: ["Luokka", "Category"],
@@ -205,19 +205,22 @@ export const APP_DICT = {
   s_fi: ["Suomi {r}", "Finland {r}"],
   s_eu: ["EU", "EU"],
   s_other: ["Muut maat", "Other countries"],
-  b_ostot: [
+  b_purchases: [
     "Ostot ja ulkopuoliset palvelut",
     "Purchases and external services",
   ],
-  b_henk: ["Henkilöstökulut", "Personnel expenses"],
-  b_poist: [
+  b_personnel: ["Henkilöstökulut", "Personnel expenses"],
+  b_depreciation: [
     "Poistot, edustuskulut ja vuokrat",
     "Depreciation, entertainment and rent",
   ],
-  b_muut: ["Muut vähennyskelpoiset kulut", "Other deductible expenses"],
-  b_rah: ["Rahoituskulut", "Financial expenses"],
-  b_var: ["Varausten muutokset", "Changes in provisions"],
-  b_vk: ["Vähennyskelvottomat kulut", "Non-deductible expenses"],
+  b_otherDeductible: [
+    "Muut vähennyskelpoiset kulut",
+    "Other deductible expenses",
+  ],
+  b_financial: ["Rahoituskulut", "Financial expenses"],
+  b_provisions: ["Varausten muutokset", "Changes in provisions"],
+  b_nondeductible: ["Vähennyskelvottomat kulut", "Non-deductible expenses"],
 
   // --- Settings ---
   setSub: [
@@ -296,7 +299,6 @@ export const APP_DICT = {
     "Tiedoston tallennus ei onnistunut tässä näkymässä.",
     "Couldn’t save the file in this view.",
   ],
-  demoLoaded: ["Esimerkkiaineisto ladattu.", "Sample data loaded."],
   dropHere: [
     "Pudota CSV- tai ZIP-tiedosto avataksesi sen",
     "Drop a CSV or ZIP file to open it",

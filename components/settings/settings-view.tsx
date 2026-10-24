@@ -48,7 +48,7 @@ export function SettingsView() {
 
   return (
     <>
-      <PageHeader title={f.t("v_asetukset")} subtitle={f.t("setSub")} />
+      <PageHeader title={f.t("v_settings")} subtitle={f.t("setSub")} />
       <div className="flex flex-col gap-6">
         <AddCategoryForm />
         <CategoryTable />
@@ -64,7 +64,7 @@ function AddCategoryForm() {
   const name = useBookStore((s) => s.catFormName)
   const setName = useBookStore((s) => s.setCatFormName)
 
-  const [side, setSide] = React.useState<EntryType>("kulu")
+  const [side, setSide] = React.useState<EntryType>("expense")
   const [lineChoice, setLine] = React.useState<string | null>(null)
   const [rate, setRate] = React.useState("")
   const [error, setError] = React.useState<string | null>(null)
@@ -94,14 +94,14 @@ function AddCategoryForm() {
     const category: Category = {
       id: `c-${uid()}`,
       line,
-      nimi: name.trim(),
-      alv: parsed,
-      ...(side === "tulo" ? { kind: "kotimaa" as const } : {}),
-      on: true,
+      name: name.trim(),
+      vatRate: parsed,
+      ...(side === "income" ? { kind: "domestic" as const } : {}),
+      enabled: true,
       custom: true,
     }
     upsertCategory(category)
-    toast.add({ title: f.t("catAdded", { c: category.nimi }) })
+    toast.add({ title: f.t("catAdded", { c: category.name }) })
     setName("")
     setRate("")
     setError(null)
@@ -121,8 +121,8 @@ function AddCategoryForm() {
               if (next) setSide(next)
             }}
           >
-            <ToggleGroupItem value="kulu">{f.t("kulu")}</ToggleGroupItem>
-            <ToggleGroupItem value="tulo">{f.t("tulo")}</ToggleGroupItem>
+            <ToggleGroupItem value="expense">{f.t("expense")}</ToggleGroupItem>
+            <ToggleGroupItem value="income">{f.t("income")}</ToggleGroupItem>
           </ToggleGroup>
         </Field>
 
@@ -130,7 +130,7 @@ function AddCategoryForm() {
           <FieldLabel>{f.t("line")}</FieldLabel>
           <Select
             items={Object.fromEntries(
-              lineOptions.map((l) => [l.key, l.tili + " " + f.lineName(l)])
+              lineOptions.map((l) => [l.key, l.account + " " + f.lineName(l)])
             )}
             value={line}
             onValueChange={(value) => value && setLine(value)}
@@ -142,7 +142,7 @@ function AddCategoryForm() {
               <SelectGroup>
                 {lineOptions.map((l) => (
                   <SelectItem key={l.key} value={l.key}>
-                    {l.tili} {f.lineName(l)}
+                    {l.account} {f.lineName(l)}
                   </SelectItem>
                 ))}
               </SelectGroup>
@@ -223,14 +223,14 @@ function CategoryTable() {
 
     const value = (c: Category): string | number => {
       switch (sort.key) {
-        case "on":
-          return c.on ? 0 : 1
+        case "enabled":
+          return c.enabled ? 0 : 1
         case "side":
-          return categorySide(c) === "tulo" ? 0 : 1
-        case "tili":
+          return categorySide(c) === "income" ? 0 : 1
+        case "account":
           return categoryAccount(c)
-        case "alv":
-          return c.alv
+        case "vatRate":
+          return c.vatRate
         default:
           return categoryName(c, f.lang)
       }
@@ -292,8 +292,12 @@ function CategoryTable() {
           }}
         >
           <ToggleGroupItem value="all">{f.t("all")}</ToggleGroupItem>
-          <ToggleGroupItem value="tulo">{f.t("tulot")}</ToggleGroupItem>
-          <ToggleGroupItem value="kulu">{f.t("kulut")}</ToggleGroupItem>
+          <ToggleGroupItem value="income">
+            {f.t("incomePlural")}
+          </ToggleGroupItem>
+          <ToggleGroupItem value="expense">
+            {f.t("expensePlural")}
+          </ToggleGroupItem>
         </ToggleGroup>
         <span className="text-sm text-muted-foreground">
           {f.t("nCats", { n: view.total })}
@@ -304,26 +308,26 @@ function CategoryTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              {header("on", f.t("inUse"))}
+              {header("enabled", f.t("inUse"))}
               {header("side", f.t("f_type"))}
-              {header("tili", f.t("account"))}
-              {header("nimi", f.t("name"))}
-              {header("alv", f.t("defVat"), "right")}
+              {header("account", f.t("account"))}
+              {header("name", f.t("name"))}
+              {header("vatRate", f.t("defVat"), "right")}
               <TableHead className="w-px" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {view.rows.map((cat) => {
-              const income = categorySide(cat) === "tulo"
+              const income = categorySide(cat) === "income"
               const deletable = cat.custom && !usedIds.has(cat.id)
               return (
                 <TableRow key={cat.id}>
                   <TableCell>
                     <Checkbox
-                      checked={cat.on}
+                      checked={cat.enabled}
                       aria-label={f.t("isActive", { c: f.catName(cat) })}
                       onCheckedChange={(checked) =>
-                        upsertCategory({ ...cat, on: checked === true })
+                        upsertCategory({ ...cat, enabled: checked === true })
                       }
                     />
                   </TableCell>
@@ -336,7 +340,7 @@ function CategoryTable() {
                           : "bg-expense-subtle text-expense"
                       )}
                     >
-                      {income ? f.t("tulo") : f.t("kulu")}
+                      {income ? f.t("income") : f.t("expense")}
                     </span>
                   </TableCell>
                   <TableCell className="tabular text-muted-foreground">
@@ -344,7 +348,7 @@ function CategoryTable() {
                   </TableCell>
                   <TableCell>{f.catName(cat)}</TableCell>
                   <TableCell className="text-right">
-                    <RateInput key={cat.alv} cat={cat} />
+                    <RateInput key={cat.vatRate} cat={cat} />
                   </TableCell>
                   <TableCell>
                     {deletable ? (
@@ -387,17 +391,17 @@ function RateInput({ cat }: { cat: Category }) {
   // §9: a Finnish UI writes the rate with a comma. parseRate takes either.
   const asText = (rate: number) =>
     f.lang === "fi" ? String(rate).replace(".", ",") : String(rate)
-  const [draft, setDraft] = React.useState(() => asText(cat.alv))
+  const [draft, setDraft] = React.useState(() => asText(cat.vatRate))
 
   const commit = () => {
     const parsed = parseRate(draft)
     if (parsed == null || parsed < 0 || parsed >= 100) {
-      setDraft(asText(cat.alv))
+      setDraft(asText(cat.vatRate))
       toast.add({ title: f.t("vatInvalid") })
       return
     }
-    if (parsed === cat.alv) return
-    upsertCategory({ ...cat, alv: parsed })
+    if (parsed === cat.vatRate) return
+    upsertCategory({ ...cat, vatRate: parsed })
     toast.add({
       title: f.t("vatUpdated", { c: f.catName(cat), r: f.rate(parsed) }),
     })
@@ -412,7 +416,7 @@ function RateInput({ cat }: { cat: Category }) {
       onBlur={commit}
       onKeyDown={(e) => {
         if (e.key === "Enter") e.currentTarget.blur()
-        if (e.key === "Escape") setDraft(asText(cat.alv))
+        if (e.key === "Escape") setDraft(asText(cat.vatRate))
       }}
     />
   )

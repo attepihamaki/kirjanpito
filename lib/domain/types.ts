@@ -5,17 +5,23 @@
 
 export type Lang = "fi" | "en"
 
-/** Income | expense. */
-export type EntryType = "tulo" | "kulu"
+export type EntryType = "income" | "expense"
 
-/** Whether `Entry.summa` includes VAT (brutto) or excludes it (netto). */
-export type AmountMode = "brutto" | "netto"
+/** Whether `Entry.amount` includes VAT (gross) or excludes it (net). */
+export type AmountMode = "gross" | "net"
 
 /** Classification of an income category for the VAT return (§6.1). */
-export type SalesKind = "kotimaa" | "eu" | "muutmaat" | "kaanteinen"
+export type SalesKind = "domestic" | "eu" | "nonEu" | "reverse"
 
 /** Expense summary buckets, the Yhteenveto columns (§5). */
-export type Bucket = "ostot" | "henk" | "poist" | "muut" | "rah" | "var" | "vk"
+export type Bucket =
+  | "purchases"
+  | "personnel"
+  | "depreciation"
+  | "otherDeductible"
+  | "financial"
+  | "provisions"
+  | "nondeductible"
 
 /**
  * Integer cents. Never a float, never a string.
@@ -43,38 +49,43 @@ export interface Attachment {
   path?: string
 }
 
-/** A bookkeeping entry (kirjaus). */
+/**
+ * A bookkeeping entry (kirjaus).
+ *
+ * This shape is what localStorage holds, so its field names are English even
+ * though the CSV columns they serialize to are Finnish (§7.1). `lib/domain/csv`
+ * owns that translation and is the only place the Finnish names appear.
+ */
 export interface Entry {
   id: string
   /** ISO date, "YYYY-MM-DD". */
-  pvm: string
-  /** Description. */
-  selite: string
-  tyyppi: EntryType
+  date: string
+  description: string
+  type: EntryType
   /** `Category.id`. */
   catId: string
-  /** Integer cents, as entered — gross or net depending on `syotto`. */
-  summa: Cents
+  /** Integer cents, as entered — gross or net depending on `amountMode`. */
+  amount: Cents
   /** VAT rate in percent, e.g. 25.5. */
-  alv: number
-  syotto: AmountMode
+  vatRate: number
+  amountMode: AmountMode
   atts?: Attachment[]
 }
 
 /** A category (luokka) the user books entries to. */
 export interface Category {
-  /** e.g. "300-suomi", "333", "344-matka", or "c-<uid>" for custom ones. */
+  /** e.g. "300-domestic", "333", "344-travel", or "c-<uid>" for custom ones. */
   id: string
   /** Key of the income statement line it belongs to (§5). */
   line: string
   /** Finnish name. Custom categories use the user's own name. */
-  nimi: string
+  name: string
   /** Default VAT %, used to pre-fill the entry dialog. */
-  alv: number
+  vatRate: number
   /** Set on income categories; drives the §6.1 VAT treatment. */
   kind?: SalesKind
-  /** Enabled — shown in the entry dialog's dropdown. */
-  on: boolean
+  /** Shown in the entry dialog's dropdown. */
+  enabled: boolean
   /** User-created. */
   custom: boolean
 }

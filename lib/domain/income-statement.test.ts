@@ -1,57 +1,57 @@
 import { describe, expect, it } from "vitest"
 
 import { LINE_KEYS, defaultCategories } from "@/lib/domain/accounts"
-import { demoEntries } from "@/lib/domain/demo"
+import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { createIdFactory } from "@/lib/domain/id"
 import { incomeStatement, netByLine } from "@/lib/domain/income-statement"
 import { indexCategories, type Entry } from "@/lib/domain/types"
 
 const cats = indexCategories(defaultCategories())
-const demo = demoEntries(createIdFactory())
+const sample = sampleEntries(createIdFactory())
 
 function entry(over: Partial<Entry>): Entry {
   return {
     id: "e1",
-    pvm: "2026-05-05",
-    selite: "Testi",
-    tyyppi: "kulu",
+    date: "2026-05-05",
+    description: "Testi",
+    type: "expense",
     catId: "333",
-    summa: 10000,
-    alv: 0,
-    syotto: "netto",
+    amount: 10000,
+    vatRate: 0,
+    amountMode: "net",
     ...over,
   }
 }
 
 describe("netByLine", () => {
-  it("aggregates the demo year onto eight lines", () => {
-    expect(Object.fromEntries(netByLine(demo, cats))).toEqual({
+  it("aggregates the sample year onto eight lines", () => {
+    expect(Object.fromEntries(netByLine(sample, cats))).toEqual({
       "300": 1250000,
       "333": 22821,
       "343": 107571,
       "336": 31000,
       "349": 850,
-      "344-muut": 11864,
-      "344-ajo": 7359,
-      "344-kokous": 4282,
+      "344-other": 11864,
+      "344-vehicle": 7359,
+      "344-meeting": 4282,
     })
   })
 
-  it("books an unknown category to 301 or 344-muut", () => {
+  it("books an unknown category to 301 or 344-other", () => {
     const m = netByLine(
       [
-        entry({ id: "a", tyyppi: "tulo", catId: "nope", summa: 500 }),
-        entry({ id: "b", tyyppi: "kulu", catId: "nope", summa: 300 }),
+        entry({ id: "a", type: "income", catId: "nope", amount: 500 }),
+        entry({ id: "b", type: "expense", catId: "nope", amount: 300 }),
       ],
       cats
     )
     expect(m.get("301")).toBe(500)
-    expect(m.get("344-muut")).toBe(300)
+    expect(m.get("344-other")).toBe(300)
   })
 })
 
-describe("incomeStatement — demo 2026", () => {
-  const s = incomeStatement(demo, cats, 2026)
+describe("incomeStatement — sample 2026", () => {
+  const s = incomeStatement(sample, cats, 2026)
 
   it("totals revenue at 1 250 000", () => {
     expect(s.revenueTotal).toBe(1250000)
@@ -81,8 +81,8 @@ describe("incomeStatement — §6.3 rules", () => {
   it("includes 353 and 354 in deductible expenses", () => {
     const s = incomeStatement(
       [
-        entry({ id: "a", catId: "353", summa: 1000 }),
-        entry({ id: "b", catId: "354", summa: 2000 }),
+        entry({ id: "a", catId: "353", amount: 1000 }),
+        entry({ id: "b", catId: "354", amount: 2000 }),
       ],
       cats,
       2026
@@ -94,10 +94,15 @@ describe("incomeStatement — §6.3 rules", () => {
   it("lists 365–367 but does not deduct them", () => {
     const s = incomeStatement(
       [
-        entry({ id: "a", tyyppi: "tulo", catId: "300-suomi", summa: 100000 }),
-        entry({ id: "b", catId: "365", summa: 5000 }),
-        entry({ id: "c", catId: "366", summa: 1000 }),
-        entry({ id: "d", catId: "367", summa: 500 }),
+        entry({
+          id: "a",
+          type: "income",
+          catId: "300-domestic",
+          amount: 100000,
+        }),
+        entry({ id: "b", catId: "365", amount: 5000 }),
+        entry({ id: "c", catId: "366", amount: 1000 }),
+        entry({ id: "d", catId: "367", amount: 500 }),
       ],
       cats,
       2026
@@ -113,8 +118,13 @@ describe("incomeStatement — §6.3 rules", () => {
   it("reports a loss on 359 as a positive magnitude", () => {
     const s = incomeStatement(
       [
-        entry({ id: "a", tyyppi: "tulo", catId: "300-suomi", summa: 100000 }),
-        entry({ id: "b", catId: "333", summa: 150000 }),
+        entry({
+          id: "a",
+          type: "income",
+          catId: "300-domestic",
+          amount: 100000,
+        }),
+        entry({ id: "b", catId: "333", amount: 150000 }),
       ],
       cats,
       2026
@@ -132,7 +142,7 @@ describe("incomeStatement — §6.3 rules", () => {
 
   it("excludes entries from other years", () => {
     const s = incomeStatement(
-      [entry({ pvm: "2025-12-31", summa: 99999 })],
+      [entry({ date: "2025-12-31", amount: 99999 })],
       cats,
       2026
     )

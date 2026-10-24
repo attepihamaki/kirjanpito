@@ -10,13 +10,13 @@ import type {
 export interface AccountLine {
   key: string
   /** Account number (tili). Several lines may share one, e.g. the four 344s. */
-  tili: number
+  account: number
   side: EntryType
   name: Readonly<Record<Lang, string>>
   /** Group heading this line sits under, if any. */
   group: Readonly<Record<Lang, string>> | null
   /** Default VAT % for categories on this line. */
-  alv: number
+  vatRate: number
   /** Expense summary bucket. Null on income lines. */
   bucket: Bucket | null
   /** Lines 365–367: listed on the statement but not deducted (§6.3). */
@@ -62,12 +62,12 @@ const GROUP = {
  * the table order is the display order.
  */
 export const LINES: readonly AccountLine[] = [
-  l("300", 300, "tulo", "Tuotot ammatista", "Business revenue", null, 25.5),
-  l("301", 301, "tulo", "Muut tuotot", "Other revenue", null, 0),
+  l("300", 300, "income", "Tuotot ammatista", "Business revenue", null, 25.5),
+  l("301", 301, "income", "Muut tuotot", "Other revenue", null, 0),
   l(
     "312",
     312,
-    "tulo",
+    "income",
     "Varausten vähennys",
     "Decrease in provisions",
     GROUP.varVah,
@@ -76,7 +76,7 @@ export const LINES: readonly AccountLine[] = [
   l(
     "313",
     313,
-    "tulo",
+    "income",
     "Auton yksityiskäyttö",
     "Private use of car",
     GROUP.yksityis,
@@ -85,7 +85,7 @@ export const LINES: readonly AccountLine[] = [
   l(
     "314",
     314,
-    "tulo",
+    "income",
     "Tavaroiden yksityiskäyttö",
     "Private use of goods",
     GROUP.yksityis,
@@ -94,7 +94,7 @@ export const LINES: readonly AccountLine[] = [
   l(
     "315",
     315,
-    "tulo",
+    "income",
     "Muu yksityiskäyttö",
     "Other private use",
     GROUP.yksityis,
@@ -103,7 +103,7 @@ export const LINES: readonly AccountLine[] = [
   l(
     "317",
     317,
-    "tulo",
+    "income",
     "Tuloslaskelman verovapaat tuotot",
     "Tax-exempt income",
     GROUP.muutTuotot,
@@ -112,7 +112,7 @@ export const LINES: readonly AccountLine[] = [
   l(
     "318",
     318,
-    "tulo",
+    "income",
     "Saadut avustukset ja tuet",
     "Grants and subsidies received",
     GROUP.muutTuotot,
@@ -121,7 +121,7 @@ export const LINES: readonly AccountLine[] = [
   l(
     "319",
     319,
-    "tulo",
+    "income",
     "Saadut osingot",
     "Dividends received",
     GROUP.muutTuotot,
@@ -130,7 +130,7 @@ export const LINES: readonly AccountLine[] = [
   l(
     "323",
     323,
-    "tulo",
+    "income",
     "Korkotuotot ja muut rahoitustuotot",
     "Interest and other financial income",
     GROUP.muutTuotot,
@@ -139,7 +139,7 @@ export const LINES: readonly AccountLine[] = [
   l(
     "324",
     324,
-    "tulo",
+    "income",
     "Muut veronalaiset tuotot",
     "Other taxable income",
     GROUP.muutTuotot,
@@ -148,188 +148,206 @@ export const LINES: readonly AccountLine[] = [
   l(
     "333",
     333,
-    "kulu",
+    "expense",
     "Ostot ja varastojen muutokset",
     "Purchases and change in inventory",
     null,
     25.5,
-    "ostot"
+    "purchases"
   ),
   l(
     "334",
     334,
-    "kulu",
+    "expense",
     "Ulkopuoliset palvelut",
     "External services",
     null,
     25.5,
-    "ostot"
+    "purchases"
   ),
   l(
     "335",
     335,
-    "kulu",
+    "expense",
     "Palkat ja palkkiot",
     "Wages and fees",
     GROUP.henkilosto,
     0,
-    "henk"
+    "personnel"
   ),
   l(
     "336",
     336,
-    "kulu",
+    "expense",
     "Eläke- ja henkilösivukulut",
     "Pension and other personnel costs",
     GROUP.henkilosto,
     0,
-    "henk"
+    "personnel"
   ),
-  l("337", 337, "kulu", "Poistot", "Depreciation", GROUP.poistot, 0, "poist"),
+  l(
+    "337",
+    337,
+    "expense",
+    "Poistot",
+    "Depreciation",
+    GROUP.poistot,
+    0,
+    "depreciation"
+  ),
   l(
     "341",
     341,
-    "kulu",
+    "expense",
     "Edustuskulut",
     "Entertainment expenses",
     GROUP.poistot,
     0,
-    "poist"
+    "depreciation"
   ),
-  l("343", 343, "kulu", "Vuokrat", "Rent", GROUP.poistot, 25.5, "poist"),
   l(
-    "344-matka",
+    "343",
+    343,
+    "expense",
+    "Vuokrat",
+    "Rent",
+    GROUP.poistot,
+    25.5,
+    "depreciation"
+  ),
+  l(
+    "344-travel",
     344,
-    "kulu",
+    "expense",
     "Matkakulut",
     "Travel expenses",
     GROUP.muutVah,
     25.5,
-    "muut"
+    "otherDeductible"
   ),
   l(
-    "344-ajo",
+    "344-vehicle",
     344,
-    "kulu",
+    "expense",
     "Ajoneuvokulut",
     "Vehicle expenses",
     GROUP.muutVah,
     25.5,
-    "muut"
+    "otherDeductible"
   ),
   l(
-    "344-kokous",
+    "344-meeting",
     344,
-    "kulu",
+    "expense",
     "Kokous- ja neuvottelukulut",
     "Meeting expenses",
     GROUP.muutVah,
     25.5,
-    "muut"
+    "otherDeductible"
   ),
   l(
-    "344-muut",
+    "344-other",
     344,
-    "kulu",
+    "expense",
     "Muut vähennyskelpoiset kulut",
     "Other deductible expenses",
     GROUP.muutVah,
     25.5,
-    "muut"
+    "otherDeductible"
   ),
   l(
     "354",
     354,
-    "kulu",
+    "expense",
     "Kirjanpidon ulkopuoliset vähennyskelpoiset kulut",
     "Deductible expenses outside bookkeeping",
     GROUP.muutVah,
     0,
-    "muut"
+    "otherDeductible"
   ),
   l(
     "346",
     346,
-    "kulu",
+    "expense",
     "Korkokulut",
     "Interest expenses",
     GROUP.rahoitus,
     0,
-    "rah"
+    "financial"
   ),
   l(
     "349",
     349,
-    "kulu",
+    "expense",
     "Muut rahoituskulut",
     "Other financial expenses",
     GROUP.rahoitus,
     0,
-    "rah"
+    "financial"
   ),
   l(
     "353",
     353,
-    "kulu",
+    "expense",
     "Varausten lisäykset",
     "Increase in provisions",
     GROUP.varMuutos,
     0,
-    "var"
+    "provisions"
   ),
   l(
     "365",
     365,
-    "kulu",
+    "expense",
     "Välittömät verot",
     "Direct taxes",
     GROUP.vahKelvoton,
     0,
-    "vk",
+    "nondeductible",
     true
   ),
   l(
     "366",
     366,
-    "kulu",
+    "expense",
     "Sakot ja muut rangaistusmaksut",
     "Fines and penalties",
     GROUP.vahKelvoton,
     0,
-    "vk",
+    "nondeductible",
     true
   ),
   l(
     "367",
     367,
-    "kulu",
+    "expense",
     "Muut vähennyskelvottomat kulut",
     "Other non-deductible expenses",
     GROUP.vahKelvoton,
     0,
-    "vk",
+    "nondeductible",
     true
   ),
 ]
 
 function l(
   key: string,
-  tili: number,
+  account: number,
   side: EntryType,
   fi: string,
   en: string,
   group: Readonly<Record<Lang, string>> | null,
-  alv: number,
+  vatRate: number,
   bucket: Bucket | null = null,
   nondeductible = false
 ): AccountLine {
   return {
     key,
-    tili,
+    account,
     side,
     name: { fi, en },
     group,
-    alv,
+    vatRate,
     bucket,
     nondeductible,
   }
@@ -344,46 +362,46 @@ export const LINE_BY_KEY: ReadonlyMap<string, AccountLine> = new Map(
 
 /** Expense summary buckets, in Yhteenveto column order. */
 export const BUCKETS: readonly Bucket[] = [
-  "ostot",
-  "henk",
-  "poist",
-  "muut",
-  "rah",
-  "var",
-  "vk",
+  "purchases",
+  "personnel",
+  "depreciation",
+  "otherDeductible",
+  "financial",
+  "provisions",
+  "nondeductible",
 ]
 
 export interface SalesCategoryDef {
   id: string
-  nimi: string
+  fi: string
   en: string
-  alv: number
+  vatRate: number
   kind: SalesKind
 }
 
 /** The four sales categories on line 300 (§5). */
 export const SALES: readonly SalesCategoryDef[] = [
   {
-    id: "300-suomi",
-    nimi: "Myynti – Suomi",
+    id: "300-domestic",
+    fi: "Myynti – Suomi",
     en: "Sales – Finland",
-    alv: 25.5,
-    kind: "kotimaa",
+    vatRate: 25.5,
+    kind: "domestic",
   },
-  { id: "300-eu", nimi: "Myynti – EU", en: "Sales – EU", alv: 0, kind: "eu" },
+  { id: "300-eu", fi: "Myynti – EU", en: "Sales – EU", vatRate: 0, kind: "eu" },
   {
-    id: "300-muut",
-    nimi: "Myynti – muut maat",
+    id: "300-other",
+    fi: "Myynti – muut maat",
     en: "Sales – other countries",
-    alv: 0,
-    kind: "muutmaat",
+    vatRate: 0,
+    kind: "nonEu",
   },
   {
-    id: "300-kaant",
-    nimi: "Myynti – käänteinen verotus",
+    id: "300-reverse",
+    fi: "Myynti – käänteinen verotus",
     en: "Sales – reverse charge",
-    alv: 0,
-    kind: "kaanteinen",
+    vatRate: 0,
+    kind: "reverse",
   },
 ]
 
@@ -405,8 +423,8 @@ export const DEFAULT_EN_NAMES: Readonly<Record<string, string>> =
  * surprising choice. Only accounts with several categories need an entry here.
  */
 export const DEFAULT_CATEGORY_FOR_ACCOUNT: Readonly<Record<number, string>> = {
-  300: "300-suomi",
-  344: "344-muut",
+  300: "300-domestic",
+  344: "344-other",
 }
 
 /** The 32 built-in categories: four sales plus one per remaining line. */
@@ -414,19 +432,19 @@ export function defaultCategories(): Category[] {
   const sales: Category[] = SALES.map((s) => ({
     id: s.id,
     line: "300",
-    nimi: s.nimi,
-    alv: s.alv,
+    name: s.fi,
+    vatRate: s.vatRate,
     kind: s.kind,
-    on: true,
+    enabled: true,
     custom: false,
   }))
   const rest: Category[] = LINES.filter((x) => x.key !== "300").map((x) => ({
     id: x.key,
     line: x.key,
-    nimi: x.name.fi,
-    alv: x.alv,
-    ...(x.side === "tulo" ? { kind: "kotimaa" as const } : {}),
-    on: true,
+    name: x.name.fi,
+    vatRate: x.vatRate,
+    ...(x.side === "income" ? { kind: "domestic" as const } : {}),
+    enabled: true,
     custom: false,
   }))
   return [...sales, ...rest]
@@ -450,7 +468,7 @@ export function categoryName(cat: Category, lang: Lang): string {
     const en = DEFAULT_EN_NAMES[cat.id]
     if (en) return en
   }
-  return cat.nimi
+  return cat.name
 }
 
 /** "333 Ostot ja varastojen muutokset". */
@@ -458,6 +476,6 @@ export function categoryLabel(cat: Category | undefined, lang: Lang): string {
   if (!cat) return ""
   const line = lineOf(cat)
   return line
-    ? `${line.tili} ${categoryName(cat, lang)}`
+    ? `${line.account} ${categoryName(cat, lang)}`
     : categoryName(cat, lang)
 }

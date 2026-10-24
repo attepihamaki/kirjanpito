@@ -131,7 +131,7 @@ export function LedgerView() {
   if (entries.length === 0) {
     return (
       <>
-        <PageHeader title={f.t("v_kirjanpito")} subtitle={periodLabel} />
+        <PageHeader title={f.t("v_ledger")} subtitle={periodLabel} />
         <Empty>
           <EmptyHeader>
             <EmptyTitle>{f.t("emptyTitle")}</EmptyTitle>
@@ -151,7 +151,7 @@ export function LedgerView() {
   return (
     <>
       <PageHeader
-        title={f.t("v_kirjanpito")}
+        title={f.t("v_ledger")}
         subtitle={periodLabel}
         actions={
           <Button onClick={() => openDialog({ kind: "entry", mode: "new" })}>
@@ -189,8 +189,12 @@ export function LedgerView() {
             }}
           >
             <ToggleGroupItem value="all">{f.t("all")}</ToggleGroupItem>
-            <ToggleGroupItem value="tulo">{f.t("tulot")}</ToggleGroupItem>
-            <ToggleGroupItem value="kulu">{f.t("kulut")}</ToggleGroupItem>
+            <ToggleGroupItem value="income">
+              {f.t("incomePlural")}
+            </ToggleGroupItem>
+            <ToggleGroupItem value="expense">
+              {f.t("expensePlural")}
+            </ToggleGroupItem>
           </ToggleGroup>
 
           <Select

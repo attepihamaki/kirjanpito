@@ -47,13 +47,13 @@ import type {
 import { useBookStore } from "@/stores/book-store"
 
 interface FormState {
-  pvm: string
-  selite: string
-  tyyppi: EntryType
+  date: string
+  description: string
+  type: EntryType
   catId: string
-  summa: string
-  alv: number
-  syotto: AmountMode
+  amount: string
+  vatRate: number
+  amountMode: AmountMode
   atts: Attachment[]
 }
 
@@ -97,28 +97,28 @@ function initialForm({
 }): FormState {
   if (!editing || mode === "new") {
     return {
-      pvm: defaultDate(year, month),
-      selite: "",
-      tyyppi: lastType,
+      date: defaultDate(year, month),
+      description: "",
+      type: lastType,
       catId: "",
-      summa: "",
-      alv: 0,
-      syotto: lastMode,
+      amount: "",
+      vatRate: 0,
+      amountMode: lastMode,
       atts: [],
     }
   }
   const today = todayIso()
   return {
-    pvm:
-      mode === "copy" && yearOf(today) === yearOf(editing.pvm)
+    date:
+      mode === "copy" && yearOf(today) === yearOf(editing.date)
         ? today
-        : editing.pvm,
-    selite: editing.selite,
-    tyyppi: editing.tyyppi,
+        : editing.date,
+    description: editing.description,
+    type: editing.type,
     catId: editing.catId,
-    summa: formatMoneyPlain(editing.summa),
-    alv: editing.alv,
-    syotto: editing.syotto,
+    amount: formatMoneyPlain(editing.amount),
+    vatRate: editing.vatRate,
+    amountMode: editing.amountMode,
     // §8.5: a copy takes every field except the receipts.
     atts: mode === "copy" ? [] : [...(editing.atts ?? [])],
   }
@@ -232,20 +232,22 @@ function EntryDialogForm({
   const typeCats = React.useMemo(() => {
     return cats
       .filter((c) => {
-        if (categorySide(c) !== form.tyyppi) return false
+        if (categorySide(c) !== form.type) return false
         // The entry's own category stays listed even when disabled (§8.5).
-        return c.on || c.id === form.catId
+        return c.enabled || c.id === form.catId
       })
       .sort((a, b) =>
         f.collator.compare(categoryName(a, f.lang), categoryName(b, f.lang))
       )
-  }, [cats, form.tyyppi, form.catId, f.collator, f.lang])
+  }, [cats, form.type, form.catId, f.collator, f.lang])
 
   const catItems = Object.fromEntries(
     typeCats.map((c) => [c.id, f.catLabel(c)])
   )
   const selectedCat = cats.find((c) => c.id === form.catId)
-  const rateOptions = RATES.includes(form.alv) ? RATES : [...RATES, form.alv]
+  const rateOptions = RATES.includes(form.vatRate)
+    ? RATES
+    : [...RATES, form.vatRate]
   const dirty = snapshot(form) !== baseline
 
   const update = (patch: Partial<FormState>) =>
@@ -268,18 +270,18 @@ function EntryDialogForm({
 
   const validate = (): Entry | null => {
     if (
-      !form.pvm ||
+      !form.date ||
       !isoDate(
-        yearOf(form.pvm),
-        monthOf(form.pvm),
-        Number(form.pvm.slice(8, 10))
+        yearOf(form.date),
+        monthOf(form.date),
+        Number(form.date.slice(8, 10))
       )
     ) {
       setError(f.t("e_date"))
       return null
     }
-    const summa = parseAmount(form.summa)
-    if (summa == null || summa === 0) {
+    const amount = parseAmount(form.amount)
+    if (amount == null || amount === 0) {
       setError(f.t("e_sum"))
       return null
     }
@@ -290,13 +292,13 @@ function EntryDialogForm({
     setError(null)
     return {
       id: editing && mode === "edit" ? editing.id : uid(),
-      pvm: form.pvm,
-      selite: form.selite.trim(),
-      tyyppi: form.tyyppi,
+      date: form.date,
+      description: form.description.trim(),
+      type: form.type,
       catId: form.catId,
-      summa,
-      alv: form.alv,
-      syotto: form.syotto,
+      amount,
+      vatRate: form.vatRate,
+      amountMode: form.amountMode,
       ...(form.atts.length ? { atts: form.atts } : {}),
     }
   }
@@ -306,19 +308,19 @@ function EntryDialogForm({
     if (!entry) return
 
     upsertEntry(entry)
-    setLastDefaults({ mode: form.syotto, type: form.tyyppi })
+    setLastDefaults({ mode: form.amountMode, type: form.type })
     // §8.5: saving an entry from another year switches the selected year.
-    if (yearOf(entry.pvm) !== year) setYear(yearOf(entry.pvm))
+    if (yearOf(entry.date) !== year) setYear(yearOf(entry.date))
     toast.add({ title: mode === "edit" ? f.t("changesSaved") : f.t("saved") })
 
     if (andNew) {
       // Keep the date, reset the rest.
       const next: FormState = {
         ...form,
-        selite: "",
-        summa: "",
+        description: "",
+        amount: "",
         catId: "",
-        alv: 0,
+        vatRate: 0,
         atts: [],
       }
       setForm(next)
@@ -367,9 +369,9 @@ function EntryDialogForm({
               <Input
                 id="entry-date"
                 type="date"
-                value={form.pvm}
+                value={form.date}
                 autoFocus={mode === "copy"}
-                onChange={(e) => update({ pvm: e.target.value })}
+                onChange={(e) => update({ date: e.target.value })}
               />
             </Field>
 
@@ -377,25 +379,25 @@ function EntryDialogForm({
               <FieldLabel>{f.t("f_type")}</FieldLabel>
               <ToggleGroup
                 aria-label={f.t("f_type")}
-                value={[form.tyyppi]}
+                value={[form.type]}
                 onValueChange={(value) => {
                   const next = value[0] as EntryType | undefined
-                  if (!next || next === form.tyyppi) return
+                  if (!next || next === form.type) return
                   // The old category belongs to the other side.
-                  update({ tyyppi: next, catId: "" })
+                  update({ type: next, catId: "" })
                 }}
               >
                 <ToggleGroupItem
-                  value="tulo"
+                  value="income"
                   className="data-pressed:bg-income-subtle data-pressed:text-income"
                 >
-                  {f.t("tulo")}
+                  {f.t("income")}
                 </ToggleGroupItem>
                 <ToggleGroupItem
-                  value="kulu"
+                  value="expense"
                   className="data-pressed:bg-expense-subtle data-pressed:text-expense"
                 >
-                  {f.t("kulu")}
+                  {f.t("expense")}
                 </ToggleGroupItem>
               </ToggleGroup>
             </Field>
@@ -404,9 +406,9 @@ function EntryDialogForm({
               <FieldLabel htmlFor="entry-desc">{f.t("f_desc")}</FieldLabel>
               <Input
                 id="entry-desc"
-                value={form.selite}
+                value={form.description}
                 placeholder={f.t("f_descPh")}
-                onChange={(e) => update({ selite: e.target.value })}
+                onChange={(e) => update({ description: e.target.value })}
               />
             </Field>
 
@@ -419,7 +421,10 @@ function EntryDialogForm({
                   if (!value) return
                   const cat = cats.find((c) => c.id === value)
                   // Picking a category pre-fills its default rate (§8.5).
-                  update({ catId: value, alv: cat ? cat.alv : form.alv })
+                  update({
+                    catId: value,
+                    vatRate: cat ? cat.vatRate : form.vatRate,
+                  })
                 }}
               >
                 <SelectTrigger aria-label={f.t("f_cat")}>
@@ -442,8 +447,8 @@ function EntryDialogForm({
               <Input
                 id="entry-sum"
                 inputMode="decimal"
-                value={form.summa}
-                onChange={(e) => update({ summa: e.target.value })}
+                value={form.amount}
+                onChange={(e) => update({ amount: e.target.value })}
                 className="tabular text-right"
               />
             </Field>
@@ -454,9 +459,9 @@ function EntryDialogForm({
                 items={Object.fromEntries(
                   rateOptions.map((rate) => [String(rate), f.rate(rate)])
                 )}
-                value={String(form.alv)}
+                value={String(form.vatRate)}
                 onValueChange={(value) =>
-                  value && update({ alv: Number(value) })
+                  value && update({ vatRate: Number(value) })
                 }
               >
                 <SelectTrigger aria-label={f.t("f_vat")}>
@@ -478,14 +483,14 @@ function EntryDialogForm({
               <FieldLabel>{f.t("f_mode")}</FieldLabel>
               <ToggleGroup
                 aria-label={f.t("f_mode")}
-                value={[form.syotto]}
+                value={[form.amountMode]}
                 onValueChange={(value) => {
                   const next = value[0] as AmountMode | undefined
-                  if (next) update({ syotto: next })
+                  if (next) update({ amountMode: next })
                 }}
               >
-                <ToggleGroupItem value="brutto">{f.t("gross")}</ToggleGroupItem>
-                <ToggleGroupItem value="netto">{f.t("net")}</ToggleGroupItem>
+                <ToggleGroupItem value="gross">{f.t("gross")}</ToggleGroupItem>
+                <ToggleGroupItem value="net">{f.t("net")}</ToggleGroupItem>
               </ToggleGroup>
             </Field>
 
@@ -496,15 +501,18 @@ function EntryDialogForm({
             ) : null}
           </FieldGroup>
 
-          <div className="flex flex-col gap-4">
+          {/* The prototype's `.receipt-wrap`: the paper sits on a sunken
+              surface, which is what tells it apart now that it carries no
+              border of its own. */}
+          <div className="flex flex-col gap-4 rounded-lg bg-muted/60 p-4">
             <ReceiptPreview
-              pvm={form.pvm}
-              selite={form.selite}
-              tyyppi={form.tyyppi}
+              date={form.date}
+              description={form.description}
+              type={form.type}
               cat={selectedCat}
-              summa={parseAmount(form.summa) ?? 0}
-              alv={form.alv}
-              syotto={form.syotto}
+              amount={parseAmount(form.amount) ?? 0}
+              vatRate={form.vatRate}
+              amountMode={form.amountMode}
             />
             <AttachmentGrid
               attachments={form.atts}

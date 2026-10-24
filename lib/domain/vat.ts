@@ -17,8 +17,8 @@ export interface VatSide {
 
 export interface OtherSales {
   eu: Cents
-  muutmaat: Cents
-  kaanteinen: Cents
+  nonEu: Cents
+  reverse: Cents
 }
 
 /**
@@ -76,7 +76,7 @@ function finish(side: MutableSide): VatSide {
  * before calling — this function aggregates whatever it is given.
  *
  * VAT is rounded per entry and then summed, matching the prototype and the
- * check figures in §10. Rounding the period net instead would shift the demo
+ * check figures in §10. Rounding the period net instead would shift the sample
  * year's purchase VAT from 38 728 to 38 729 and the payable from 760,22 € to
  * 760,21 €.
  */
@@ -86,19 +86,19 @@ export function vatReport(
 ): VatReport {
   const sales = emptySide()
   const purchases = emptySide()
-  const otherSales: OtherSales = { eu: 0, muutmaat: 0, kaanteinen: 0 }
+  const otherSales: OtherSales = { eu: 0, nonEu: 0, reverse: 0 }
   const anomalies: VatAnomaly[] = []
 
   for (const e of entries) {
     const cat = cats.get(e.catId)
     const { net, vat } = calcEntry(e)
-    const rate = Number(e.alv) || 0
+    const rate = Number(e.vatRate) || 0
 
-    if (e.tyyppi === "tulo") {
+    if (e.type === "income") {
       // EU, non-EU and reverse-charge sales are reported separately and carry
       // no Finnish sales VAT, whatever rate the entry happens to have.
       const kind = cat?.kind
-      if (kind === "eu" || kind === "muutmaat" || kind === "kaanteinen") {
+      if (kind === "eu" || kind === "nonEu" || kind === "reverse") {
         otherSales[kind] += net
         if (vat !== 0) {
           anomalies.push({
@@ -148,7 +148,7 @@ export function ledgerTotals(
   let expenseNet = 0
   for (const e of entries) {
     const { net } = calcEntry(e)
-    if (e.tyyppi === "tulo") incomeNet += net
+    if (e.type === "income") incomeNet += net
     else expenseNet += net
   }
   return { incomeNet, expenseNet, due: vatReport(entries, cats).due }

@@ -7,10 +7,10 @@ export type Period =
   | { kind: "month"; year: number; month: number }
   | { kind: "quarter"; year: number; quarter: 1 | 2 | 3 | 4 }
 
-export function inPeriod(e: Pick<Entry, "pvm">, p: Period): boolean {
-  if (yearOf(e.pvm) !== p.year) return false
+export function inPeriod(e: Pick<Entry, "date">, p: Period): boolean {
+  if (yearOf(e.date) !== p.year) return false
   if (p.kind === "year") return true
-  const m = monthOf(e.pvm)
+  const m = monthOf(e.date)
   if (p.kind === "month") return m === p.month
   const [from, to] = quarterMonths(p.quarter)
   return m >= from && m <= to

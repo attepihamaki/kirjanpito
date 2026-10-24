@@ -19,13 +19,13 @@ function att(over: Partial<Attachment> = {}): Attachment {
 function entry(over: Partial<Entry> = {}): Entry {
   return {
     id: "e1",
-    pvm: "2026-10-28",
-    selite: "Lasku 1005 – Mäkinen Rakennus Oy",
-    tyyppi: "tulo",
-    catId: "300-suomi",
-    summa: 188250,
-    alv: 25.5,
-    syotto: "brutto",
+    date: "2026-10-28",
+    description: "Lasku 1005 – Mäkinen Rakennus Oy",
+    type: "income",
+    catId: "300-domestic",
+    amount: 188250,
+    vatRate: 25.5,
+    amountMode: "gross",
     ...over,
   }
 }
@@ -111,8 +111,8 @@ describe("buildReceiptPaths", () => {
   it("adds 1-based suffixes when an entry has several", () => {
     const e = entry({
       id: "e2",
-      pvm: "2026-01-15",
-      selite: "Osto – K-Rauta – tarvikkeet",
+      date: "2026-01-15",
+      description: "Osto – K-Rauta – tarvikkeet",
       atts: [att({ name: "a.jpg" }), att({ name: "b.pdf" })],
     })
     const paths = buildReceiptPaths([e])
@@ -126,7 +126,7 @@ describe("buildReceiptPaths", () => {
 
   it("appends -2 then -3 on collisions", () => {
     const mk = (id: string) =>
-      entry({ id, pvm: "2026-01-15", selite: "Osto", atts: [att()] })
+      entry({ id, date: "2026-01-15", description: "Osto", atts: [att()] })
     const paths = buildReceiptPaths([mk("a"), mk("b"), mk("c")])
     expect(paths.get(attachmentKey("a", 0))).toBe(
       "tositteet/2026/01/2026-01-15_osto.jpg"
@@ -141,8 +141,18 @@ describe("buildReceiptPaths", () => {
 
   it("detects collisions case-insensitively", () => {
     const paths = buildReceiptPaths([
-      entry({ id: "a", pvm: "2026-01-15", selite: "Osto", atts: [att()] }),
-      entry({ id: "b", pvm: "2026-01-15", selite: "osto", atts: [att()] }),
+      entry({
+        id: "a",
+        date: "2026-01-15",
+        description: "Osto",
+        atts: [att()],
+      }),
+      entry({
+        id: "b",
+        date: "2026-01-15",
+        description: "osto",
+        atts: [att()],
+      }),
     ])
     expect(paths.get(attachmentKey("b", 0))).toBe(
       "tositteet/2026/01/2026-01-15_osto-2.jpg"
@@ -161,8 +171,8 @@ describe("buildReceiptPaths", () => {
   it("reserves a missing path, pushing a colliding real receipt to -2", () => {
     const missing = entry({
       id: "a",
-      pvm: "2026-01-15",
-      selite: "Osto",
+      date: "2026-01-15",
+      description: "Osto",
       atts: [
         att({
           id: null,
@@ -173,8 +183,8 @@ describe("buildReceiptPaths", () => {
     })
     const real = entry({
       id: "b",
-      pvm: "2026-01-15",
-      selite: "Osto",
+      date: "2026-01-15",
+      description: "Osto",
       atts: [att()],
     })
     // Order the real entry first: reserving missing paths up front means the
@@ -186,7 +196,7 @@ describe("buildReceiptPaths", () => {
   })
 
   it("zero-pads the month folder", () => {
-    const e = entry({ pvm: "2026-01-05", atts: [att()] })
+    const e = entry({ date: "2026-01-05", atts: [att()] })
     expect(buildReceiptPaths([e]).get(attachmentKey("e1", 0))).toContain(
       "tositteet/2026/01/"
     )
@@ -194,9 +204,24 @@ describe("buildReceiptPaths", () => {
 
   it("is stable under input shuffling", () => {
     const entries = [
-      entry({ id: "a", pvm: "2026-03-01", selite: "Yksi", atts: [att()] }),
-      entry({ id: "b", pvm: "2026-01-01", selite: "Kaksi", atts: [att()] }),
-      entry({ id: "c", pvm: "2026-02-01", selite: "Kolme", atts: [att()] }),
+      entry({
+        id: "a",
+        date: "2026-03-01",
+        description: "Yksi",
+        atts: [att()],
+      }),
+      entry({
+        id: "b",
+        date: "2026-01-01",
+        description: "Kaksi",
+        atts: [att()],
+      }),
+      entry({
+        id: "c",
+        date: "2026-02-01",
+        description: "Kolme",
+        atts: [att()],
+      }),
     ]
     const a = buildReceiptPaths(entries)
     const b = buildReceiptPaths([...entries].reverse())

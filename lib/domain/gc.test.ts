@@ -6,13 +6,13 @@ import type { Attachment, Entry } from "@/lib/domain/types"
 function entry(id: string, atts: Attachment[]): Entry {
   return {
     id,
-    pvm: "2026-01-15",
-    selite: "Testi",
-    tyyppi: "kulu",
+    date: "2026-01-15",
+    description: "Testi",
+    type: "expense",
     catId: "333",
-    summa: 1000,
-    alv: 25.5,
-    syotto: "brutto",
+    amount: 1000,
+    vatRate: 25.5,
+    amountMode: "gross",
     atts,
   }
 }

@@ -21,9 +21,9 @@ import type { Lang } from "@/lib/domain/types"
 // Spelled out rather than imported from lib/domain/csv: that module pulls in
 // papaparse, which has no business in the landing page bundle.
 const CSV_COLUMNS = "pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite"
-import { loadDemo, startNewBook } from "@/lib/commands/book-commands"
+import { startNewBook } from "@/lib/commands/book-commands"
 import { APP_ROUTES, LANDING_ROUTES } from "@/lib/site"
-import { useBookStore } from "@/stores/book-store"
+import { BOOK_STORAGE_KEY, useBookStore } from "@/stores/book-store"
 import { cn } from "@/lib/utils"
 
 /**
@@ -55,7 +55,7 @@ function LandingBody({ lang }: { lang: Lang }) {
     if (!hydrated || seeded.current) return
     seeded.current = true
     try {
-      if (!localStorage.getItem("kirjanpito.v1")) setLang(lang)
+      if (!localStorage.getItem(BOOK_STORAGE_KEY)) setLang(lang)
     } catch {
       // No storage: the app falls back to its default language.
     }
@@ -333,11 +333,6 @@ function HeroCta({
           <UploadIcon data-icon="inline-start" />
           {f.t("lp_open")}
         </Button>
-        {!openState ? (
-          <Button size="lg" variant="ghost" onClick={() => void loadDemo(ctx)}>
-            {f.t("lp_demo")}
-          </Button>
-        ) : null}
       </div>
 
       {openState ? (

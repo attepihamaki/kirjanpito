@@ -108,7 +108,7 @@ export function buildReceiptPaths(
 ): ReadonlyMap<string, string> {
   const paths = new Map<string, string>()
   const used = new Set<string>()
-  const sorted = [...entries].sort((a, b) => a.pvm.localeCompare(b.pvm))
+  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date))
 
   // Reserve every missing attachment's path first, so ordering between a
   // missing and a real attachment cannot change which one keeps the plain name.
@@ -125,9 +125,9 @@ export function buildReceiptPaths(
     const atts = e.atts ?? []
     for (const [i, a] of atts.entries()) {
       if (a.missing) continue
-      const [y, mo] = e.pvm.split("-")
+      const [y, mo] = e.date.split("-")
       const suffix = atts.length > 1 ? `_${i + 1}` : ""
-      const base = `tositteet/${y}/${mo}/${e.pvm}_${slug(e.selite)}${suffix}`
+      const base = `tositteet/${y}/${mo}/${e.date}_${slug(e.description)}${suffix}`
       const ext = extensionFor(a)
       let path = `${base}.${ext}`
       let n = 2

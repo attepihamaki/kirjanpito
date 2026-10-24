@@ -1,8 +1,6 @@
 import { toast } from "@/components/ui/toast"
 
 import { releaseAllObjectUrls } from "@/lib/browser/object-urls"
-import { defaultCategories } from "@/lib/domain/accounts"
-import { demoEntries } from "@/lib/domain/demo"
 import type { Entry } from "@/lib/domain/types"
 import { landingFor, APP_ROUTES } from "@/lib/site"
 import { confirm } from "@/lib/ui/confirm"
@@ -12,9 +10,9 @@ import { useBookStore } from "@/stores/book-store"
 /**
  * Commands that never touch a file format.
  *
- * Kept apart from io-commands so the landing page — which needs "start",
- * "try the sample" and the §8.11 guards — does not drag jszip and papaparse
- * into the statically rendered, SEO-critical bundle.
+ * Kept apart from io-commands so the landing page — which needs "start" and
+ * the §8.11 guards — does not drag jszip and papaparse into the statically
+ * rendered, SEO-critical bundle.
  */
 
 /** Ask before discarding unexported changes (§8.11). False aborts. */
@@ -48,25 +46,10 @@ export async function closeBook(ctx: Ctx): Promise<void> {
   ctx.navigate(landingFor(lang))
 }
 
-export async function loadDemo(ctx: Ctx): Promise<void> {
-  if (!(await guardDirty(ctx, true))) return
-  releaseAllObjectUrls()
-  useBookStore.getState().replaceBook({
-    entries: demoEntries(),
-    cats: defaultCategories(),
-    fileName: null,
-    year: 2026,
-    // §10: the demo starts dirty, so the user is nudged to export.
-    dirty: true,
-  })
-  toast.add({ title: ctx.t("demoLoaded") })
-  ctx.navigate(APP_ROUTES.ledger)
-}
-
 export async function deleteEntry(ctx: Ctx, entry: Entry): Promise<boolean> {
   const confirmed = await confirm({
     title: ctx.t("delT"),
-    message: ctx.t("delMsg", { x: entry.selite || ctx.t("noDesc") }),
+    message: ctx.t("delMsg", { x: entry.description || ctx.t("noDesc") }),
     confirmLabel: ctx.t("del"),
     cancelLabel: ctx.t("cancel"),
   })

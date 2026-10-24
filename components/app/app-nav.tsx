@@ -16,11 +16,11 @@ import { cn } from "@/lib/utils"
 import type { MessageKey } from "@/lib/i18n/messages"
 
 export const NAV_ITEMS = [
-  { href: APP_ROUTES.ledger, key: "v_kirjanpito", icon: BookOpenIcon },
-  { href: APP_ROUTES.vat, key: "v_alv", icon: CalculatorIcon },
-  { href: APP_ROUTES.statement, key: "v_tulos", icon: FileTextIcon },
-  { href: APP_ROUTES.summary, key: "v_yhteenveto", icon: BarChart3Icon },
-  { href: APP_ROUTES.settings, key: "v_asetukset", icon: SettingsIcon },
+  { href: APP_ROUTES.ledger, key: "v_ledger", icon: BookOpenIcon },
+  { href: APP_ROUTES.vat, key: "v_vat", icon: CalculatorIcon },
+  { href: APP_ROUTES.statement, key: "v_statement", icon: FileTextIcon },
+  { href: APP_ROUTES.summary, key: "v_summary", icon: BarChart3Icon },
+  { href: APP_ROUTES.settings, key: "v_settings", icon: SettingsIcon },
 ] as const satisfies ReadonlyArray<{
   href: string
   key: MessageKey
