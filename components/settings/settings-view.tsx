@@ -129,6 +129,9 @@ function AddCategoryForm() {
         <Field>
           <FieldLabel>{f.t("line")}</FieldLabel>
           <Select
+            items={Object.fromEntries(
+              lineOptions.map((l) => [l.key, l.tili + " " + f.lineName(l)])
+            )}
             value={line}
             onValueChange={(value) => value && setLine(value)}
           >
@@ -374,12 +377,15 @@ function RateInput({ cat }: { cat: Category }) {
   // remounts this with the right draft rather than syncing it in an effect.
   const f = useFormatters()
   const upsertCategory = useBookStore((s) => s.upsertCategory)
-  const [draft, setDraft] = React.useState(String(cat.alv))
+  // §9: a Finnish UI writes the rate with a comma. parseRate takes either.
+  const asText = (rate: number) =>
+    f.lang === "fi" ? String(rate).replace(".", ",") : String(rate)
+  const [draft, setDraft] = React.useState(() => asText(cat.alv))
 
   const commit = () => {
     const parsed = parseRate(draft)
     if (parsed == null || parsed < 0 || parsed >= 100) {
-      setDraft(String(cat.alv))
+      setDraft(asText(cat.alv))
       toast.add({ title: f.t("vatInvalid") })
       return
     }
@@ -399,7 +405,7 @@ function RateInput({ cat }: { cat: Category }) {
       onBlur={commit}
       onKeyDown={(e) => {
         if (e.key === "Enter") e.currentTarget.blur()
-        if (e.key === "Escape") setDraft(String(cat.alv))
+        if (e.key === "Escape") setDraft(asText(cat.alv))
       }}
     />
   )

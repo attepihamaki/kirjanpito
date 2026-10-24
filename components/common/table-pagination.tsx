@@ -46,6 +46,7 @@ export function TablePagination({
           {t("rowsPerPage")}
         </span>
         <Select
+          items={Object.fromEntries(SIZES.map((s) => [String(s), String(s)]))}
           value={String(size)}
           onValueChange={(value) =>
             value && onSizeChange(Number(value) as PageSize)

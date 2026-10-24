@@ -14,10 +14,10 @@ export function LandingReceipts() {
   return (
     <div
       aria-hidden="true"
-      className="relative hidden min-h-[22rem] items-center justify-center rounded-xl bg-accent/40 p-6 sm:flex"
+      className="relative hidden min-h-[26rem] rounded-xl bg-accent p-6 sm:block dark:bg-accent/60"
     >
       {/* Expense receipt: hidden on small screens, per §8.3. */}
-      <Receipt className="absolute left-6 hidden -rotate-6 md:block">
+      <Receipt className="absolute top-6 left-6 hidden -rotate-6 lg:block">
         <Head
           label={f.t("r_kulu")}
           date={f.date("2026-10-10")}
@@ -33,7 +33,7 @@ export function LandingReceipts() {
       </Receipt>
 
       {/* VAT receipt */}
-      <Receipt className="relative z-10 rotate-3 md:translate-x-10">
+      <Receipt className="absolute right-6 bottom-6 z-10 rotate-3 max-lg:top-1/2 max-lg:left-1/2 max-lg:-translate-x-1/2 max-lg:-translate-y-1/2">
         <p className="font-heading text-[0.7rem] font-semibold tracking-wide text-paper-foreground/70">
           {f.t("v_alv").toUpperCase()}
         </p>
@@ -61,7 +61,7 @@ function Receipt({
   children: React.ReactNode
 }) {
   return (
-    <div className={cn("w-56", className)}>
+    <div className={cn("w-52", className)}>
       <div className="rounded-t-md border border-b-0 border-paper-edge bg-paper px-4 pt-4 pb-5 text-paper-foreground shadow-md">
         {children}
       </div>

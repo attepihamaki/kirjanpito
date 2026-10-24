@@ -111,6 +111,15 @@ export function LedgerView() {
     }
   }, [catFilter, usedCats, setCat])
 
+  // Base UI needs this to render the trigger's label rather than the id.
+  const catFilterItems = React.useMemo(
+    () => ({
+      all: f.t("catAll"),
+      ...Object.fromEntries(usedCats.map((c) => [c.id, f.catName(c)])),
+    }),
+    [usedCats, f]
+  )
+
   const view = paginate(filtered, page, size)
   const hasFilters =
     query.trim() !== "" || typeFilter !== "all" || catFilter !== "all"
@@ -187,6 +196,7 @@ export function LedgerView() {
           <Select
             value={catFilter}
             onValueChange={(value) => setCat(value ?? "all")}
+            items={catFilterItems}
           >
             <SelectTrigger className="w-[13rem]" aria-label={f.t("c_cat")}>
               <SelectValue />

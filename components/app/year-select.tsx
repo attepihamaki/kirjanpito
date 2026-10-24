@@ -28,6 +28,7 @@ export function YearSelect({ className }: { className?: string }) {
 
   return (
     <Select
+      items={Object.fromEntries(years.map((y) => [String(y), String(y)]))}
       value={String(year)}
       onValueChange={(value) => value && setYear(Number(value))}
     >

@@ -241,6 +241,9 @@ function EntryDialogForm({
       )
   }, [cats, form.tyyppi, form.catId, f.collator, f.lang])
 
+  const catItems = Object.fromEntries(
+    typeCats.map((c) => [c.id, f.catLabel(c)])
+  )
   const selectedCat = cats.find((c) => c.id === form.catId)
   const rateOptions = RATES.includes(form.alv) ? RATES : [...RATES, form.alv]
   const dirty = snapshot(form) !== baseline
@@ -410,6 +413,7 @@ function EntryDialogForm({
             <Field>
               <FieldLabel>{f.t("f_cat")}</FieldLabel>
               <Select
+                items={catItems}
                 value={form.catId}
                 onValueChange={(value) => {
                   if (!value) return
@@ -447,6 +451,9 @@ function EntryDialogForm({
             <Field>
               <FieldLabel>{f.t("f_vat")}</FieldLabel>
               <Select
+                items={Object.fromEntries(
+                  rateOptions.map((rate) => [String(rate), f.rate(rate)])
+                )}
                 value={String(form.alv)}
                 onValueChange={(value) =>
                   value && update({ alv: Number(value) })

@@ -146,9 +146,10 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
           <Link href={landingFor(lang)} aria-label={t("home")}>
             <BrandMark />
           </Link>
-          <span className="min-w-0 flex-1 truncate text-sm font-medium">
+          <span className="hidden min-w-0 flex-1 truncate text-sm font-medium sm:block">
             {fileName ? `${fileName}.csv` : t("newBook")}
           </span>
+          <span className="flex-1 sm:hidden" />
           <YearSelect className="w-24" />
           <LangToggle />
           <ThemeToggle />

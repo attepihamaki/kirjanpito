@@ -60,6 +60,24 @@ export function VatView() {
     [entries, period, catMap]
   )
 
+  // Month names or quarter labels, so the trigger shows a name not an index.
+  const periodItems = React.useMemo(() => {
+    if (mode === "kk") {
+      return Object.fromEntries(
+        Array.from({ length: 12 }, (_, i) => [String(i + 1), f.month(i)])
+      )
+    }
+    return Object.fromEntries(
+      ([1, 2, 3, 4] as const).map((q) => {
+        const [a, b] = quarterMonths(q)
+        return [
+          String(q),
+          f.t("qOpt", { q, a: f.month(a - 1, true), b: f.month(b - 1, true) }),
+        ]
+      })
+    )
+  }, [mode, f])
+
   const refund = report.due < 0
   const periodLabel =
     mode === "v"
@@ -89,6 +107,7 @@ export function VatView() {
 
           {mode !== "v" ? (
             <Select
+              items={periodItems}
               value={String(index)}
               onValueChange={(value) => value && setIndex(Number(value))}
             >
