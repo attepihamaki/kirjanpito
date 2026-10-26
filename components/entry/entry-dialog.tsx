@@ -398,26 +398,36 @@ function EntryDialogForm({
 
         <div className="grid gap-6 md:grid-cols-[1fr_17rem]">
           <FieldGroup>
-            <Field data-invalid={invalid("date")}>
-              <FieldLabel htmlFor="entry-date">{f.t("entry.date")}</FieldLabel>
-              <Input
-                id="entry-date"
-                type="date"
-                value={form.date}
-                autoFocus={mode === "copy"}
-                aria-invalid={invalid("date")}
-                onChange={(e) => update({ date: e.target.value })}
-              />
-            </Field>
+            {/*
+             * Date and type share a row: both are narrow, and pairing them
+             * keeps the form short enough that the receipt preview beside it
+             * does not stand alone. One column below the compact breakpoint,
+             * where a date input with its picker no longer fits half a dialog.
+             */}
+            <div className="grid gap-5 min-[560px]:grid-cols-2">
+              <Field data-invalid={invalid("date")}>
+                <FieldLabel htmlFor="entry-date">
+                  {f.t("entry.date")}
+                </FieldLabel>
+                <Input
+                  id="entry-date"
+                  type="date"
+                  value={form.date}
+                  autoFocus={mode === "copy"}
+                  aria-invalid={invalid("date")}
+                  onChange={(e) => update({ date: e.target.value })}
+                />
+              </Field>
 
-            <Field>
-              <FieldLabel>{f.t("common.type")}</FieldLabel>
-              <EntryTypeToggle
-                value={form.type}
-                // The old category belongs to the other side.
-                onChange={(type) => update({ type, catId: "" })}
-              />
-            </Field>
+              <Field>
+                <FieldLabel>{f.t("common.type")}</FieldLabel>
+                <EntryTypeToggle
+                  value={form.type}
+                  // The old category belongs to the other side.
+                  onChange={(type) => update({ type, catId: "" })}
+                />
+              </Field>
+            </div>
 
             <Field>
               <FieldLabel htmlFor="entry-desc">
@@ -450,30 +460,35 @@ function EntryDialogForm({
               />
             </Field>
 
-            <Field data-invalid={invalid("amount")}>
-              <FieldLabel htmlFor="entry-sum">{f.t("entry.amount")}</FieldLabel>
-              <Input
-                id="entry-sum"
-                inputMode="decimal"
-                value={form.amount}
-                aria-invalid={invalid("amount")}
-                onChange={(e) => update({ amount: e.target.value })}
-                className="tabular text-right"
-              />
-            </Field>
+            {/* Paired for the same reason as date and type above. */}
+            <div className="grid gap-5 min-[560px]:grid-cols-2">
+              <Field data-invalid={invalid("amount")}>
+                <FieldLabel htmlFor="entry-sum">
+                  {f.t("entry.amount")}
+                </FieldLabel>
+                <Input
+                  id="entry-sum"
+                  inputMode="decimal"
+                  value={form.amount}
+                  aria-invalid={invalid("amount")}
+                  onChange={(e) => update({ amount: e.target.value })}
+                  className="tabular text-right"
+                />
+              </Field>
 
-            <Field>
-              <FieldLabel>{f.t("entry.vatRate")}</FieldLabel>
-              <OptionSelect
-                options={rateOptions.map((rate) => ({
-                  value: String(rate),
-                  label: f.rate(rate),
-                }))}
-                value={String(form.vatRate)}
-                onChange={(value) => update({ vatRate: Number(value) })}
-                label={f.t("entry.vatRate")}
-              />
-            </Field>
+              <Field>
+                <FieldLabel>{f.t("entry.vatRate")}</FieldLabel>
+                <OptionSelect
+                  options={rateOptions.map((rate) => ({
+                    value: String(rate),
+                    label: f.rate(rate),
+                  }))}
+                  value={String(form.vatRate)}
+                  onChange={(value) => update({ vatRate: Number(value) })}
+                  label={f.t("entry.vatRate")}
+                />
+              </Field>
+            </div>
 
             <Field>
               <FieldLabel>{f.t("entry.amountMode")}</FieldLabel>

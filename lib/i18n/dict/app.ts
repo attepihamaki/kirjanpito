@@ -144,14 +144,14 @@ export const APP_DICT = {
   "ledger.noEntriesFor": ["Ei kirjauksia: {p}.", "No entries: {p}."],
   "ledger.clearFilters": ["Tyhjennä suodattimet", "Clear filters"],
   "ledger.allCategories": ["Kaikki luokat", "All categories"],
-  "ledger.copyAsNew": ["Kopioi uudeksi", "Copy as new"],
+  "ledger.copyAsNew": ["Kopioi", "Copy"],
   "ledger.deleteEntry": ["Poista kirjaus", "Delete entry"],
 
   // --- Entry dialog (§8.5) ---
   "entry.editTitle": ["Muokkaa kirjausta", "Edit entry"],
   "entry.copyTitle": ["Kopio kirjaus", "Copied entry"],
   "entry.date": ["Päivämäärä", "Date"],
-  "entry.description": ["Tapahtuman selite", "Description"],
+  "entry.description": ["Selite", "Description"],
   "entry.descriptionPlaceholder": [
     "Esim. Lasku 1006 – Asiakas Oy",
     "E.g. Invoice 1006 – Client Ltd",

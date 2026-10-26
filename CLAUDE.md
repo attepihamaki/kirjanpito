@@ -430,7 +430,7 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
 
 A two-column modal. On mobile the columns stack.
 
-- **Left column:**
+- **Left column.** Date and type share a row, and so do the amount and the VAT %; both pairs fall back to one column below 560 px, where a date input and its picker no longer fit half a dialog.
   - Date.
   - Type as a segmented control (`EntryTypeToggle`: Tulo / Kulu, coloured green and red when selected).
   - Description (placeholder "Esim. Lasku 1006 – Asiakas Oy").
@@ -440,7 +440,7 @@ A two-column modal. On mobile the columns stack.
   - "Summa on" segmented control (Verollinen / Veroton).
   - An inline error line.
 - **Footer:**
-  - Edit mode: Poista, Kopioi uudeksi, Peruuta, Tallenna.
+  - Edit mode: Poista, Kopioi, Peruuta, Tallenna.
   - New and copy modes: Peruuta, Tallenna ja uusi, Tallenna.
 - **Right column:**
   - A **live receipt preview**, the signature visual element. It looks like a paper receipt with a perforated bottom edge and shows: type, date, description, category, net, VAT with rate, a bold total, and a badge ("Kasvattaa myynnin veroa" / "Vähennetään ostojen verona" / "Ei arvonlisäveroa").
