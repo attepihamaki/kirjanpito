@@ -4,7 +4,7 @@ import * as React from "react"
 
 import type { Lang } from "@/lib/domain/types"
 import { createFormatters, type Formatters } from "@/lib/i18n/create-formatters"
-import { useBookStore } from "@/stores/book-store"
+import { useLangStore } from "@/stores/lang-store"
 
 const LangContext = React.createContext<Formatters>(createFormatters("fi"))
 
@@ -29,9 +29,9 @@ export function LangProvider({
   )
 }
 
-/** The app's provider: language comes from the store. */
+/** The app's provider: language comes from the stored preference. */
 export function AppLangProvider({ children }: { children: React.ReactNode }) {
-  const lang = useBookStore((s) => s.lang)
+  const lang = useLangStore((s) => s.lang)
   return <LangProvider lang={lang}>{children}</LangProvider>
 }
 
@@ -52,8 +52,8 @@ export function useT() {
  * This is how next-themes manages `class` on the same element.
  */
 export function LangHtmlAttr() {
-  const lang = useBookStore((s) => s.lang)
-  const hydrated = useBookStore((s) => s.hydrated)
+  const lang = useLangStore((s) => s.lang)
+  const hydrated = useLangStore((s) => s.hydrated)
 
   React.useEffect(() => {
     if (hydrated) document.documentElement.lang = lang

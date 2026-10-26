@@ -26,7 +26,7 @@ export function SiteHeader({
     <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 py-4">
       <Link href={home} className="flex items-center gap-2.5">
         <BrandMark />
-        <span className="font-heading font-semibold">{t("appName")}</span>
+        <span className="font-heading font-semibold">{t("app.name")}</span>
       </Link>
       <div className="flex items-center gap-1">{children}</div>
     </header>
@@ -39,8 +39,8 @@ export function SiteFooter() {
   return (
     <footer className="border-t">
       <div className="mx-auto flex w-full max-w-5xl flex-wrap justify-between gap-2 px-4 py-6 text-sm text-muted-foreground">
-        <span>{t("appName")}</span>
-        <span>{t("lp_foot")}</span>
+        <span>{t("app.name")}</span>
+        <span>{t("landing.footer")}</span>
       </div>
     </footer>
   )

@@ -3,16 +3,24 @@
 import * as React from "react"
 
 import { useBookStore } from "@/stores/book-store"
+import { useLangStore } from "@/stores/lang-store"
 
 /**
- * Rehydrates the store from localStorage after mount.
+ * Rehydrates the stores from localStorage after mount.
  *
- * The store is created with `skipHydration`, so prerender and the first
- * client render both see the defaults and match byte for byte. Everything
- * that depends on real state waits behind `hydrated`.
+ * Both are created without automatic hydration, so prerender and the first
+ * client render see the defaults — Finnish, no bookkeeping — and match byte
+ * for byte. Everything that depends on real state waits behind `hydrated`.
+ *
+ * The language is its own key and its own store (§12), so the landing page
+ * gets its preference without the `bookkeeping` key being read for it. The
+ * book is still rehydrated here, for the landing page's open-file line; the
+ * storage adapter is what keeps that read from creating the key.
  */
 export function StoreHydrator() {
   React.useEffect(() => {
+    useLangStore.getState().hydrate()
+
     let available = true
     try {
       void useBookStore.persist.rehydrate()

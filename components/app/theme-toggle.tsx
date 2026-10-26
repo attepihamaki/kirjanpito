@@ -2,97 +2,51 @@
 
 import * as React from "react"
 import { useTheme } from "next-themes"
-import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react"
+import { MoonIcon, SunIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { useT } from "@/components/lang-provider"
 import { cn } from "@/lib/utils"
 
-const THEMES = [
-  { value: "system", icon: MonitorIcon, key: "th_system" },
-  { value: "light", icon: SunIcon, key: "th_light" },
-  { value: "dark", icon: MoonIcon, key: "th_dark" },
-] as const
-
-type ThemeName = (typeof THEMES)[number]["value"]
-
 /**
- * System / light / dark as three icon buttons (§8.2), matching the
- * prototype. A single cycling button hides which mode is active.
+ * One ghost button that flips light ↔ dark (§8.2).
+ *
+ * "System" stays the default — next-themes is configured with
+ * `defaultTheme="system"`, so an untouched browser follows the OS — it just
+ * has no control of its own, which is how FormBox's header does it.
+ *
+ * Both icons are always in the markup and CSS picks one off the `.dark` class
+ * that next-themes sets before first paint. That keeps the icon right in the
+ * prerendered HTML, where `resolvedTheme` is still unknown.
  */
-export function ThemeToggle({
-  className,
-  compact,
-}: {
-  className?: string
-  /** One cycling button instead of three, for the mobile top bar (§8.2). */
-  compact?: boolean
-}) {
+export function ThemeToggle({ className }: { className?: string }) {
   const t = useT()
-  const { theme, setTheme } = useTheme()
+  const { resolvedTheme, setTheme } = useTheme()
 
-  // next-themes only knows the resolved theme on the client, so nothing may
-  // be marked active until after hydration. useSyncExternalStore is the
-  // idiomatic "am I on the client yet" read; setting state in an effect
-  // would cause a cascading render.
+  // The label, unlike the icon, cannot come from CSS, and the server does not
+  // know the theme. useSyncExternalStore is the idiomatic "am I on the client
+  // yet" read; setting state in an effect would cascade a render.
   const mounted = React.useSyncExternalStore(
     () => () => {},
     () => true,
     () => false
   )
-
-  const current: ThemeName =
-    mounted && THEMES.some((x) => x.value === theme)
-      ? (theme as ThemeName)
-      : "system"
-
-  if (compact) {
-    const index = THEMES.findIndex((x) => x.value === current)
-    const next = THEMES[(index + 1) % THEMES.length]
-    const Icon = THEMES[index].icon
-    return (
-      <Button
-        variant="ghost"
-        size="icon"
-        className={className}
-        aria-label={`${t("theme")}: ${t(THEMES[index].key)}`}
-        title={t(THEMES[index].key)}
-        onClick={() => setTheme(next.value)}
-      >
-        <Icon />
-      </Button>
-    )
-  }
+  const dark = resolvedTheme === "dark"
+  const label = mounted
+    ? t(dark ? "app.themeLight" : "app.themeDark")
+    : t("app.theme")
 
   return (
-    <div
-      role="group"
-      aria-label={t("theme")}
-      className={cn(
-        "flex items-center gap-0.5 rounded-full border p-0.5",
-        className
-      )}
+    <Button
+      variant="ghost"
+      size="icon"
+      className={cn("relative", className)}
+      aria-label={label}
+      title={label}
+      onClick={() => setTheme(dark ? "light" : "dark")}
     >
-      {THEMES.map(({ value, icon: Icon, key }) => {
-        const active = mounted && current === value
-        return (
-          <Button
-            key={value}
-            variant="ghost"
-            size="icon-xs"
-            aria-pressed={active}
-            aria-label={t(key)}
-            title={t(key)}
-            onClick={() => setTheme(value)}
-            className={cn(
-              "rounded-full",
-              active && "bg-accent text-accent-foreground"
-            )}
-          >
-            <Icon />
-          </Button>
-        )
-      })}
-    </div>
+      <SunIcon className="scale-100 dark:scale-0" />
+      <MoonIcon className="absolute scale-0 dark:scale-100" />
+    </Button>
   )
 }

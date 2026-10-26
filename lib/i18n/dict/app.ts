@@ -3,324 +3,421 @@ import { pl, type Dict } from "@/lib/i18n/t"
 /**
  * Strings used inside the bookkeeping app. Keys the landing page also needs
  * live in `dict/landing.ts` instead — see the note there.
+ *
+ * Keys are `namespace.name`. The namespace says which part of the app the
+ * string belongs to, so a call site reads as what it is — `t("io.zipNoCsv")`
+ * rather than `t("zipNoCsv")` — and the dictionary can be scanned a section
+ * at a time. `common.*` is for the handful of words several views share;
+ * anything used in one place belongs to that place's namespace, even when
+ * the word is short.
+ *
+ * **The namespace is not the module.** Which of the two dictionary files a
+ * key lives in is a bundling decision (see `dict/landing.ts`), so a few
+ * namespaces are split across both — `nav.vat` is in the landing module
+ * because the landing hero names the VAT return. `messages.test.ts` enforces
+ * the shape of the names and that the two modules stay disjoint.
  */
 export const APP_DICT = {
-  appSub: [
-    "Toiminimen yhdenkertainen kirjanpito",
-    "Single-entry bookkeeping for sole traders",
-  ],
-  fiscal: ["Tilikausi", "Financial year"],
-  home: ["Etusivu", "Home"],
+  // --- Shell ---
+  // Short enough to fit the sidebar's brand button on one line.
+  "app.tagline": ["Yhdenkertainen kirjanpito", "Single-entry bookkeeping"],
+  "app.fiscalYear": ["Tilikausi", "Financial year"],
+  "app.toggleNav": ["Näytä tai piilota valikko", "Show or hide the menu"],
 
-  v_ledger: ["Kirjanpito", "Bookkeeping"],
-  v_statement: ["Tuloslaskelma", "Income statement"],
-  v_summary: ["Yhteenveto", "Summary"],
-  v_settings: ["Asetukset", "Settings"],
+  "nav.ledger": ["Kirjanpito", "Bookkeeping"],
+  "nav.statement": ["Tuloslaskelma", "Income statement"],
+  "nav.summary": ["Yhteenveto", "Summary"],
+  "nav.settings": ["Asetukset", "Settings"],
+  "nav.help": ["Ohje", "Help"],
 
-  noFile: ["Ei avattua tiedostoa", "No file open"],
-  clean: ["Kaikki muutokset viety", "All changes exported"],
-  exportCsv: ["Vie tiedosto", "Export file"],
-  importShort: ["Avaa", "Open"],
-  exportShort: ["Vie", "Export"],
-  closeShort: ["Sulje", "Close"],
-  closeFile: ["Sulje tiedosto", "Close file"],
-  closed: ["Tiedosto suljettu.", "File closed."],
+  // --- The open file (§8.2) ---
+  "file.clean": ["Kaikki muutokset viety", "All changes exported"],
+  "file.export": ["Vie tiedosto", "Export file"],
+  "file.openShort": ["Avaa", "Open"],
+  "file.close": ["Sulje tiedosto", "Close file"],
+  "file.closed": ["Tiedosto suljettu.", "File closed."],
+  // The file box's own buttons. Short on purpose: three of them share one
+  // sidebar row, and the box above them already says which file it is.
+  "file.importBtn": ["Tuo", "Import"],
+  "file.exportBtn": ["Vie", "Export"],
+  "file.closeBtn": ["Sulje", "Close"],
 
   // --- Confirmations (§8.11) ---
-  closeT: ["Suljetaanko tiedosto?", "Close the file?"],
-  closeMsg: [
+  "confirm.closeTitle": ["Suljetaanko tiedosto?", "Close the file?"],
+  "confirm.closeMessage": [
     "Kirjanpidossa on muutoksia, joita ei ole viety CSV-tiedostoon. Jos suljet tiedoston, ne menetetään.",
     "There are changes that haven’t been exported to CSV. If you close the file, they’ll be lost.",
   ],
-  closeAnyway: ["Sulje viemättä", "Close without exporting"],
-  delT: ["Poistetaanko kirjaus?", "Delete this entry?"],
-  delMsg: ["Kirjaus ”{x}” poistetaan.", "The entry “{x}” will be deleted."],
-  replaceT: ["Korvataanko avoin kirjanpito?", "Replace the open bookkeeping?"],
-  replaceMsg: [
+  "confirm.closeConfirm": ["Sulje viemättä", "Close without exporting"],
+  "confirm.deleteTitle": ["Poistetaanko kirjaus?", "Delete this entry?"],
+  "confirm.deleteMessage": [
+    "Kirjaus ”{x}” poistetaan.",
+    "The entry “{x}” will be deleted.",
+  ],
+  "confirm.replaceTitle": [
+    "Korvataanko avoin kirjanpito?",
+    "Replace the open bookkeeping?",
+  ],
+  "confirm.replaceMessage": [
     "Avoimessa kirjanpidossa on muutoksia, joita ei ole viety. Tuotava tiedosto korvaa ne.",
     "The open bookkeeping has changes that haven’t been exported. The imported file will replace them.",
   ],
-  replaceYes: ["Korvaa", "Replace"],
-  clearT: ["Tyhjennetäänkö kirjaukset?", "Clear all entries?"],
-  clearMsg: [
+  "confirm.replaceConfirm": ["Korvaa", "Replace"],
+  "confirm.clearTitle": ["Tyhjennetäänkö kirjaukset?", "Clear all entries?"],
+  "confirm.clearMessage": [
     "Kaikki kirjaukset poistetaan tästä selaimesta. Vie ne ensin CSV-tiedostoksi, jos haluat säilyttää ne.",
     "All entries will be removed from this browser. Export them to CSV first if you want to keep them.",
   ],
-  clearYes: ["Tyhjennä", "Clear"],
-  discardT: ["Hylätäänkö muutokset?", "Discard changes?"],
-  discardYes: ["Hylkää muutokset", "Discard changes"],
-  keepEditing: ["Jatka muokkausta", "Keep editing"],
-  discardEntry: [
+  "confirm.clearConfirm": ["Tyhjennä", "Clear"],
+  "confirm.discardTitle": ["Hylätäänkö muutokset?", "Discard changes?"],
+  "confirm.discardConfirm": ["Hylkää muutokset", "Discard changes"],
+  "confirm.keepEditing": ["Jatka muokkausta", "Keep editing"],
+  "confirm.discardEntry": [
     "Kirjauksessa on tallentamattomia muutoksia. Jos suljet ikkunan, ne menetetään.",
     "This entry has unsaved changes. If you close the dialog, they’ll be lost.",
   ],
-  discardCat: [
+  "confirm.discardCategory": [
     "Olet täyttänyt uuden luokan tiedot, mutta luokkaa ei ole lisätty. Jos poistut sivulta, tiedot menetetään.",
     "You’ve filled in a new category but haven’t added it. If you leave this page, it will be lost.",
   ],
 
-  // --- Ledger ---
-  emptyTitle: ["Ei vielä kirjauksia", "No entries yet"],
-  emptyBody: [
+  // --- Shared by several views ---
+  "common.all": ["Kaikki", "All"],
+  "common.actions": ["Toiminnot", "Actions"],
+  "common.type": ["Tyyppi", "Type"],
+  "common.typeFilter": ["Tyyppi", "Type"],
+  "common.income": ["Tulo", "Income"],
+  "common.expense": ["Kulu", "Expense"],
+  "common.incomePlural": ["Tulot", "Income"],
+  "common.expensePlural": ["Kulut", "Expenses"],
+  "common.gross": ["Verollinen", "Incl. VAT"],
+  "common.net": ["Veroton", "Excl. VAT"],
+  "common.rate": ["Verokanta", "Rate"],
+  "common.vat": ["Vero", "VAT"],
+  "common.total": ["Yhteensä", "Total"],
+  "common.name": ["Nimi", "Name"],
+  "common.account": ["Tili", "Account"],
+  "common.add": ["Lisää", "Add"],
+  "common.save": ["Tallenna", "Save"],
+  "common.cancel": ["Peruuta", "Cancel"],
+  "common.delete": ["Poista", "Delete"],
+  "common.close": ["Sulje", "Close"],
+
+  // --- Table chrome (§8.4) ---
+  "table.rowsPerPage": ["Rivejä sivulla", "Rows per page"],
+  "table.pageOf": ["Sivu {p} / {n}", "Page {p} of {n}"],
+  "table.firstPage": ["Ensimmäinen sivu", "First page"],
+  "table.prevPage": ["Edellinen sivu", "Previous page"],
+  "table.nextPage": ["Seuraava sivu", "Next page"],
+  "table.lastPage": ["Viimeinen sivu", "Last page"],
+
+  // --- Ledger (§8.4) ---
+  "ledger.emptyTitle": ["Ei vielä kirjauksia", "No entries yet"],
+  "ledger.emptyBody": [
     "Lisää ensimmäinen tosite tai tuo aiemmat kirjaukset CSV-tiedostosta.",
     "Add your first receipt or import earlier entries from a CSV file.",
   ],
-  startEmpty: ["Aloita tyhjästä", "Start from scratch"],
-  newEntry: ["Uusi kirjaus", "New entry"],
-  editEntry: ["Muokkaa kirjausta", "Edit entry"],
-  copyEntry: ["Kopio kirjaus", "Copied entry"],
-  wholeYear: ["Koko vuosi", "Whole year"],
-  all: ["Kaikki", "All"],
-  incomeNet: ["Tulot, veroton", "Income, excl. VAT"],
-  expNet: ["Kulut, veroton", "Expenses, excl. VAT"],
-  vatPay: ["Maksettava ALV", "VAT payable"],
-  vatRef: ["Palautettava ALV", "VAT refundable"],
-  search: ["Hae selitteestä tai luokasta", "Search description or category"],
-  c_date: ["Päivämäärä", "Date"],
-  c_desc: ["Selite", "Description"],
-  c_cat: ["Luokka", "Category"],
-  c_net: ["Veroton", "Net"],
-  c_gross: ["Verollinen", "Gross"],
-  actions: ["Toiminnot", "Actions"],
-  noDesc: ["Ei selitettä", "No description"],
-  noMatch: [
+  "ledger.startEmpty": ["Aloita tyhjästä", "Start from scratch"],
+  "ledger.newEntry": ["Uusi kirjaus", "New entry"],
+  "ledger.wholeYear": ["Koko vuosi", "Whole year"],
+  "ledger.incomeNet": ["Tulot, veroton", "Income, excl. VAT"],
+  "ledger.expenseNet": ["Kulut, veroton", "Expenses, excl. VAT"],
+  "ledger.vatPayable": ["Maksettava ALV", "VAT payable"],
+  "ledger.vatRefundable": ["Palautettava ALV", "VAT refundable"],
+  "ledger.search": [
+    "Hae selitteestä tai luokasta",
+    "Search description or category",
+  ],
+  "ledger.colDate": ["Päivämäärä", "Date"],
+  "ledger.colDescription": ["Selite", "Description"],
+  "ledger.colCategory": ["Luokka", "Category"],
+  "ledger.colNet": ["Veroton", "Net"],
+  "ledger.colGross": ["Verollinen", "Gross"],
+  "ledger.noDescription": ["Ei selitettä", "No description"],
+  "ledger.noMatch": [
     "Ei kirjauksia valituilla suodattimilla.",
     "No entries match the filters.",
   ],
-  noEntriesFor: ["Ei kirjauksia: {p}.", "No entries: {p}."],
-  clearFilters: ["Tyhjennä suodattimet", "Clear filters"],
-  incomePlural: ["Tulot", "Income"],
-  expensePlural: ["Kulut", "Expenses"],
-  catAll: ["Kaikki luokat", "All categories"],
-  typeFilter: ["Tyyppi", "Type"],
-  rowsPerPage: ["Rivejä sivulla", "Rows per page"],
-  pageOf: ["Sivu {p} / {n}", "Page {p} of {n}"],
-  first: ["Ensimmäinen sivu", "First page"],
-  prev: ["Edellinen sivu", "Previous page"],
-  next: ["Seuraava sivu", "Next page"],
-  last: ["Viimeinen sivu", "Last page"],
-  copyAsNew: ["Kopioi uudeksi", "Copy as new"],
-  del: ["Poista", "Delete"],
-  delEntry: ["Poista kirjaus", "Delete entry"],
+  "ledger.noEntriesFor": ["Ei kirjauksia: {p}.", "No entries: {p}."],
+  "ledger.clearFilters": ["Tyhjennä suodattimet", "Clear filters"],
+  "ledger.allCategories": ["Kaikki luokat", "All categories"],
+  "ledger.copyAsNew": ["Kopioi uudeksi", "Copy as new"],
+  "ledger.deleteEntry": ["Poista kirjaus", "Delete entry"],
 
-  // --- Entry dialog ---
-  f_date: ["Päivämäärä", "Date"],
-  f_type: ["Tyyppi", "Type"],
-  income: ["Tulo", "Income"],
-  expense: ["Kulu", "Expense"],
-  f_desc: ["Tapahtuman selite", "Description"],
-  f_descPh: ["Esim. Lasku 1006 – Asiakas Oy", "E.g. Invoice 1006 – Client Ltd"],
-  f_cat: ["Luokka", "Category"],
-  f_sum: ["Summa (€)", "Amount (€)"],
-  f_vat: ["ALV %", "VAT %"],
-  f_mode: ["Summa on", "Amount is"],
-  gross: ["Verollinen", "Incl. VAT"],
-  net: ["Veroton", "Excl. VAT"],
-  cancel: ["Peruuta", "Cancel"],
-  saveNew: ["Tallenna ja uusi", "Save and add another"],
-  save: ["Tallenna", "Save"],
-  r_desc: ["Selite", "Description"],
-  r_deduct: ["Vähennetään ostojen verona", "Deducted as VAT on purchases"],
-  r_noVat: ["Ei arvonlisäveroa", "No VAT"],
-  e_date: ["Anna päivämäärä.", "Enter a date."],
-  e_sum: ["Anna summa, esim. 124,50.", "Enter an amount, e.g. 124.50."],
-  e_cat: ["Valitse luokka.", "Choose a category."],
-  saved: ["Kirjaus tallennettu.", "Entry saved."],
-  changesSaved: ["Muutokset tallennettu.", "Changes saved."],
-  deleted: ["Kirjaus poistettu.", "Entry deleted."],
-  unknownCat: ["Tuntematon luokka", "Unknown category"],
+  // --- Entry dialog (§8.5) ---
+  "entry.editTitle": ["Muokkaa kirjausta", "Edit entry"],
+  "entry.copyTitle": ["Kopio kirjaus", "Copied entry"],
+  "entry.date": ["Päivämäärä", "Date"],
+  "entry.description": ["Tapahtuman selite", "Description"],
+  "entry.descriptionPlaceholder": [
+    "Esim. Lasku 1006 – Asiakas Oy",
+    "E.g. Invoice 1006 – Client Ltd",
+  ],
+  "entry.category": ["Luokka", "Category"],
+  "entry.amount": ["Summa (€)", "Amount (€)"],
+  "entry.vatRate": ["ALV %", "VAT %"],
+  "entry.amountMode": ["Summa on", "Amount is"],
+  "entry.saveAndNew": ["Tallenna ja uusi", "Save and add another"],
+  "entry.errDate": ["Anna päivämäärä.", "Enter a date."],
+  "entry.errAmount": [
+    "Anna summa, esim. 124,50.",
+    "Enter an amount, e.g. 124.50.",
+  ],
+  "entry.errCategory": ["Valitse luokka.", "Choose a category."],
+  "entry.saved": ["Kirjaus tallennettu.", "Entry saved."],
+  "entry.changesSaved": ["Muutokset tallennettu.", "Changes saved."],
+  "entry.deleted": ["Kirjaus poistettu.", "Entry deleted."],
+  "entry.unknownCategory": ["Tuntematon luokka", "Unknown category"],
 
-  // --- VAT return ---
-  periodMonth: ["Kuukausi", "Month"],
-  periodQ: ["Neljännesvuosi", "Quarter"],
-  periodY: ["Vuosi", "Year"],
-  period: ["Kausi", "Period"],
-  yearN: ["Vuosi {y}", "Year {y}"],
-  qN: ["{q}. neljännes {y}", "Q{q} {y}"],
-  qOpt: ["{q}. neljännes ({a}–{b})", "Q{q} ({a}–{b})"],
-  payTitle: ["Maksettava arvonlisävero", "VAT payable"],
-  refTitle: ["Palautettava arvonlisävero", "VAT refundable"],
-  vatCalc: [
+  // --- Receipts: the paper preview's labels (§8.5) and the files (§7.4) ---
+  "receipt.description": ["Selite", "Description"],
+  "receipt.purchaseBadge": [
+    "Vähennetään ostojen verona",
+    "Deducted as VAT on purchases",
+  ],
+  "receipt.noVatBadge": ["Ei arvonlisäveroa", "No VAT"],
+  "receipt.sectionTitle": ["Tositteet", "Receipts"],
+  "receipt.add": ["Lisää tosite", "Add receipt"],
+  "receipt.hint": [
+    "Kuva tai PDF. Voit myös raahata tiedoston tähän.",
+    "Image or PDF. You can also drag a file here.",
+  ],
+  "receipt.remove": ["Poista tosite", "Remove receipt"],
+  "receipt.open": ["Avaa tosite", "Open receipt"],
+  "receipt.missing": ["Tiedosto puuttuu", "File missing"],
+  "receipt.count": [
+    pl("1 tosite", "{n} tositetta"),
+    pl("1 receipt", "{n} receipts"),
+  ],
+  "receipt.badType": [
+    "Vain kuvia ja PDF-tiedostoja voi liittää.",
+    "Only images and PDF files can be attached.",
+  ],
+  "receipt.noStorage": [
+    "Tositteiden tallennus ei ole käytettävissä tässä selaimessa.",
+    "Saving receipts isn’t available in this browser.",
+  ],
+  "receipt.dropHint": [
+    "Avaa kirjaus, jos haluat liittää siihen tositteen.",
+    "Open an entry to attach a receipt to it.",
+  ],
+  "receipt.drop": [
+    "Pudota tosite liittääksesi sen kirjaukseen",
+    "Drop a receipt to attach it to the entry",
+  ],
+
+  // --- VAT return (§8.7) ---
+  "vat.month": ["Kuukausi", "Month"],
+  "vat.quarter": ["Neljännesvuosi", "Quarter"],
+  "vat.year": ["Vuosi", "Year"],
+  "vat.period": ["Kausi", "Period"],
+  "vat.yearN": ["Vuosi {y}", "Year {y}"],
+  "vat.quarterN": ["{q}. neljännes {y}", "Q{q} {y}"],
+  "vat.quarterOption": ["{q}. neljännes ({a}–{b})", "Q{q} ({a}–{b})"],
+  "vat.payableTitle": ["Maksettava arvonlisävero", "VAT payable"],
+  "vat.refundableTitle": ["Palautettava arvonlisävero", "VAT refundable"],
+  "vat.formula": [
     "Myynnin vero {a} − ostojen vähennettävä vero {b}",
     "VAT on sales {a} − deductible VAT on purchases {b}",
   ],
-  salesVat: ["Myynnin arvonlisävero", "VAT on sales"],
-  buyVat: ["Ostojen vähennettävä vero", "Deductible VAT on purchases"],
-  rate: ["Verokanta", "Rate"],
-  tax: ["Vero", "VAT"],
-  total: ["Yhteensä", "Total"],
-  otherRates: ["Muut verokannat", "Other rates"],
-  otherSales: ["Muut ilmoitettavat myynnit", "Other sales to report"],
-  euSales: [
+  "vat.salesTable": ["Myynnin arvonlisävero", "VAT on sales"],
+  "vat.purchaseTable": [
+    "Ostojen vähennettävä vero",
+    "Deductible VAT on purchases",
+  ],
+  "vat.otherRates": ["Muut verokannat", "Other rates"],
+  "vat.otherSales": ["Muut ilmoitettavat myynnit", "Other sales to report"],
+  "vat.euSales": [
     "Tavaroiden ja palveluiden myynti muihin EU-maihin",
     "Sales of goods and services to other EU countries",
   ],
-  nonEu: ["Myynti EU:n ulkopuolelle", "Sales outside the EU"],
-  rcSales: [
+  "vat.nonEuSales": ["Myynti EU:n ulkopuolelle", "Sales outside the EU"],
+  "vat.reverseChargeSales": [
     "Rakentamispalveluiden ja metalliromun myynti (käänteinen verotus)",
     "Construction services and scrap metal sales (reverse charge)",
   ],
-  vatNote: [
+  "vat.note": [
     "Ostojen 0 %:n kirjaukset (esim. palkat, YEL, pankkikulut) eivät vaikuta arvonlisäveroon, joten niitä ei näytetä vähennyksissä. Tarkista luvut ennen ilmoittamista OmaVerossa.",
     "Purchases at 0% (e.g. wages, YEL, bank fees) don’t affect VAT, so they aren’t shown as deductions. Check the figures before filing in OmaVero.",
   ],
   // An EU, non-EU or reverse-charge sale that carries a VAT rate: the rate is
   // ignored, which the prototype did silently.
-  vatOnExemptSale: [
+  "vat.exemptSaleWarning": [
     "Kirjauksessa ”{x}” on verokanta, mutta luokka raportoidaan ilman myynnin veroa. Vero jätetään huomiotta.",
     "The entry “{x}” has a VAT rate, but its category is reported without VAT on sales. The VAT is ignored.",
   ],
 
-  // --- Income statement ---
-  isSub: [
+  // --- Income statement (§8.8) ---
+  "statement.subtitle": [
     "Elinkeinotoiminnan veroilmoitusta (lomake 5) varten",
     "For the business tax return (form 5)",
   ],
-  print: ["Tulosta", "Print"],
-  revenue: ["Tuotot", "Revenue"],
-  bizExp: ["Elinkeinotoiminnan kulut", "Business expenses"],
-  profitLoss: ["Voitto tai tappio", "Profit or loss"],
-  revTotal: ["Tuotot yhteensä", "Total revenue"],
-  dedTotal: ["Vähennyskelpoiset kulut yhteensä", "Total deductible expenses"],
-  loss: ["359 Elinkeinotoiminnan tappio", "359 Business loss"],
-  isNote: [
+  "statement.print": ["Tulosta", "Print"],
+  "statement.revenue": ["Tuotot", "Revenue"],
+  "statement.expenses": ["Elinkeinotoiminnan kulut", "Business expenses"],
+  "statement.profitOrLoss": ["Voitto tai tappio", "Profit or loss"],
+  "statement.revenueTotal": ["Tuotot yhteensä", "Total revenue"],
+  "statement.deductibleTotal": [
+    "Vähennyskelpoiset kulut yhteensä",
+    "Total deductible expenses",
+  ],
+  "statement.loss": ["359 Elinkeinotoiminnan tappio", "359 Business loss"],
+  "statement.note": [
     "Vähennyskelvottomat kulut (365–367, yhteensä {a}) näytetään, mutta niitä ei vähennetä tuloksesta. Summat ovat verottomia.",
     "Non-deductible expenses (365–367, total {a}) are shown but not deducted from the result. Amounts exclude VAT.",
   ],
 
-  // --- Summary ---
-  sumSub: [
+  // --- Summary (§8.9) ---
+  "summary.subtitle": [
     "Verottomat summat kuukausittain, {y}",
     "Amounts excl. VAT by month, {y}",
   ],
-  incExp: ["Tulot ja kulut", "Income and expenses"],
-  sales: ["Myynti", "Sales"],
-  expenses: ["Kulut", "Expenses"],
-  chartLabel: ["Tulot ja kulut kuukausittain", "Income and expenses by month"],
-  mo: ["Kk", "Month"],
-  salesTot: ["Myynti yht.", "Sales total"],
-  otherInc: ["Muut tulot", "Other income"],
-  expTot: ["Kulut yht.", "Expenses total"],
-  tot: ["Yht.", "Total"],
-  s_fi: ["Suomi {r}", "Finland {r}"],
-  s_eu: ["EU", "EU"],
-  s_other: ["Muut maat", "Other countries"],
-  b_purchases: [
+  "summary.incomeAndExpenses": ["Tulot ja kulut", "Income and expenses"],
+  "summary.sales": ["Myynti", "Sales"],
+  "summary.expenses": ["Kulut", "Expenses"],
+  "summary.chartLabel": [
+    "Tulot ja kulut kuukausittain",
+    "Income and expenses by month",
+  ],
+  "summary.month": ["Kk", "Month"],
+  "summary.salesTotal": ["Myynti yht.", "Sales total"],
+  "summary.otherIncome": ["Muut tulot", "Other income"],
+  "summary.expenseTotal": ["Kulut yht.", "Expenses total"],
+  "summary.total": ["Yht.", "Total"],
+  "summary.finland": ["Suomi {r}", "Finland {r}"],
+  "summary.eu": ["EU", "EU"],
+  "summary.otherCountries": ["Muut maat", "Other countries"],
+  "summary.bucketPurchases": [
     "Ostot ja ulkopuoliset palvelut",
     "Purchases and external services",
   ],
-  b_personnel: ["Henkilöstökulut", "Personnel expenses"],
-  b_depreciation: [
+  "summary.bucketPersonnel": ["Henkilöstökulut", "Personnel expenses"],
+  "summary.bucketDepreciation": [
     "Poistot, edustuskulut ja vuokrat",
     "Depreciation, entertainment and rent",
   ],
-  b_otherDeductible: [
+  "summary.bucketOtherDeductible": [
     "Muut vähennyskelpoiset kulut",
     "Other deductible expenses",
   ],
-  b_financial: ["Rahoituskulut", "Financial expenses"],
-  b_provisions: ["Varausten muutokset", "Changes in provisions"],
-  b_nondeductible: ["Vähennyskelvottomat kulut", "Non-deductible expenses"],
+  "summary.bucketFinancial": ["Rahoituskulut", "Financial expenses"],
+  "summary.bucketProvisions": ["Varausten muutokset", "Changes in provisions"],
+  "summary.bucketNondeductible": [
+    "Vähennyskelvottomat kulut",
+    "Non-deductible expenses",
+  ],
 
-  // --- Settings ---
-  setSub: [
+  // --- Settings (§8.10) ---
+  "settings.subtitle": [
     "Luokat ja oletusverokannat. Asetukset tallentuvat tähän selaimeen.",
     "Categories and default VAT rates. Settings are saved in this browser.",
   ],
-  addCat: ["Lisää oma luokka", "Add a category"],
-  line: ["Tuloslaskelman rivi", "Income statement line"],
-  name: ["Nimi", "Name"],
-  namePh: ["Esim. Työkalut", "E.g. Tools"],
-  defVat: ["Oletus ALV %", "Default VAT %"],
-  add: ["Lisää", "Add"],
-  categories: ["Luokat", "Categories"],
-  inUse: ["Käytössä", "Active"],
-  account: ["Tili", "Account"],
-  catSearch: ["Hae luokkia", "Search categories"],
-  nCats: [pl("1 luokka", "{n} luokkaa"), pl("1 category", "{n} categories")],
-  delCat: ["Poista luokka", "Delete category"],
-  isActive: ["{c} käytössä", "{c} active"],
-  data: ["Tiedot", "Data"],
-  resetCats: ["Palauta oletusluokat", "Restore default categories"],
-  clearAll: ["Tyhjennä kirjaukset", "Clear all entries"],
-  clearHint: [
-    "Vie kirjaukset CSV-tiedostoksi ennen tyhjentämistä.",
-    "Export your entries to CSV before clearing them.",
+  "settings.addCategory": ["Lisää oma luokka", "Add a category"],
+  "settings.line": ["Tuloslaskelman rivi", "Income statement line"],
+  "settings.namePlaceholder": ["Esim. Työkalut", "E.g. Tools"],
+  "settings.defaultVat": ["Oletus ALV %", "Default VAT %"],
+  "settings.categories": ["Luokat", "Categories"],
+  "settings.inUse": ["Käytössä", "Active"],
+  "settings.searchCategories": ["Hae luokkia", "Search categories"],
+  "settings.categoryCount": [
+    pl("1 luokka", "{n} luokkaa"),
+    pl("1 category", "{n} categories"),
   ],
-  cleared: ["Kirjaukset tyhjennetty.", "Entries cleared."],
-  catsReset: ["Oletusluokat palautettu.", "Default categories restored."],
-  vatUpdated: [
-    "Oletus-ALV päivitetty: {c} {r}.",
-    "Default VAT updated: {c} {r}.",
-  ],
-  vatInvalid: [
+  "settings.deleteCategory": ["Poista luokka", "Delete category"],
+  "settings.isActive": ["{c} käytössä", "{c} active"],
+  "settings.categoryAdded": ["Luokka lisätty: {c}.", "Category added: {c}."],
+  "settings.nameRequired": ["Anna luokalle nimi.", "Give the category a name."],
+  "settings.vatInvalid": [
     "Anna verokanta numerona, esim. 25,5.",
     "Enter the rate as a number, e.g. 25.5.",
   ],
-  nameReq: ["Anna luokalle nimi.", "Give the category a name."],
-  catAdded: ["Luokka lisätty: {c}.", "Category added: {c}."],
+  "settings.vatUpdated": [
+    "Oletus-ALV päivitetty: {c} {r}.",
+    "Default VAT updated: {c} {r}.",
+  ],
+  "settings.data": ["Tiedot", "Data"],
+  "settings.resetCategories": [
+    "Palauta oletusluokat",
+    "Restore default categories",
+  ],
+  "settings.resetHint": [
+    "Palauttaa oletusluokat ja niiden verokannat. Omat luokat, joita kirjaukset käyttävät, säilyvät.",
+    "Restores the default categories and their VAT rates. Custom categories your entries use are kept.",
+  ],
+  "settings.categoriesReset": [
+    "Oletusluokat palautettu.",
+    "Default categories restored.",
+  ],
+  "settings.clearEntries": ["Tyhjennä kirjaukset", "Clear all entries"],
+  "settings.clearHint": [
+    "Poistaa kaikki kirjaukset tästä selaimesta. Vie ne ensin CSV-tiedostoksi, jos haluat säilyttää ne.",
+    "Removes every entry from this browser. Export them to CSV first if you want to keep them.",
+  ],
+  "settings.cleared": ["Kirjaukset tyhjennetty.", "Entries cleared."],
 
-  // --- Import and export ---
-  fileEmpty: ["Tiedosto on tyhjä.", "The file is empty."],
-  missingCol: [
+  // --- Import and export (§7) ---
+  "io.opening": ["Avataan tiedostoa…", "Opening the file…"],
+  "io.fileEmpty": ["Tiedosto on tyhjä.", "The file is empty."],
+  "io.missingColumn": [
     "Tiedostosta puuttuu sarake: {c}. Odotettu otsikkorivi: {h}",
     "The file is missing a column: {c}. Expected header row: {h}",
   ],
-  noRows: ["Yhtään riviä ei voitu lukea. {e}", "No rows could be read. {e}"],
-  imported: [
+  "io.noRows": [
+    "Yhtään riviä ei voitu lukea. {e}",
+    "No rows could be read. {e}",
+  ],
+  "io.imported": [
     pl("Tuotiin 1 kirjaus.", "Tuotiin {n} kirjausta."),
     pl("Imported 1 entry.", "Imported {n} entries."),
   ],
-  newCats: [" Uusia luokkia: {n}.", " New categories: {n}."],
-  skipped: [
+  "io.newCategories": [" Uusia luokkia: {n}.", " New categories: {n}."],
+  "io.skipped": [
     " Ohitettu tai korjattu: {n} ({e}).",
     " Skipped or corrected: {n} ({e}).",
   ],
-  rowErr: ["rivi {n}: {f}", "row {n}: {f}"],
-  l_date: ["päivämäärä", "date"],
-  l_type: ["tyyppi", "type"],
-  l_sum: ["summa", "amount"],
-  unknownRow: [
+  "io.rowError": ["rivi {n}: {f}", "row {n}: {f}"],
+  "io.fieldDate": ["päivämäärä", "date"],
+  "io.fieldType": ["tyyppi", "type"],
+  "io.fieldAmount": ["summa", "amount"],
+  "io.unknownCategoryRow": [
     "rivi {n}: tuntematon luokka ”{c}”, kirjattu luokkaan {d}",
     "row {n}: unknown category “{c}”, booked to {d}",
   ],
-  newCatRow: [
+  "io.newCategoryRow": [
     "rivi {n}: uusi luokka ”{c}” luotiin",
     "row {n}: created the new category “{c}”",
   ],
-  readFail: ["Tiedoston lukeminen epäonnistui.", "Couldn’t read the file."],
-  nothingExport: [
-    "Ei vietävää. Lisää ensin kirjauksia.",
-    "Nothing to export. Add some entries first.",
+  "io.readFailed": [
+    "Tiedoston lukeminen epäonnistui.",
+    "Couldn’t read the file.",
   ],
-  exported: ["Viety tiedostoon {f}.", "Exported to {f}."],
-  expCancel: ["Vienti peruttiin.", "Export cancelled."],
-  expFail: [
-    "Tiedoston tallennus ei onnistunut tässä näkymässä.",
-    "Couldn’t save the file in this view.",
+  "io.receiptsImported": [" Tositteita: {n}.", " Receipts: {n}."],
+  "io.receiptsMissing": [
+    " Puuttuvia tositteita: {n}.",
+    " Missing receipts: {n}.",
   ],
-  dropHere: [
+  "io.dropHere": [
     "Pudota CSV- tai ZIP-tiedosto avataksesi sen",
     "Drop a CSV or ZIP file to open it",
   ],
-  exportTitle: ["Vie kirjanpito", "Export bookkeeping"],
-  fileName: ["Tiedoston nimi", "File name"],
-  exportHint: [
+  "io.exportTitle": ["Vie kirjanpito", "Export bookkeeping"],
+  "io.fileNameLabel": ["Tiedoston nimi", "File name"],
+  "io.exportHint": [
     "Tiedosto sisältää kaikkien tilikausien kirjaukset.",
     "The file includes the entries of all financial years.",
   ],
-  exportBtn: ["Vie tiedosto", "Export file"],
-  expCsvOnly: [
+  "io.exportAction": ["Vie tiedosto", "Export file"],
+  "io.csvOnly": [
     "Vie vain CSV-tiedosto ilman tositteita",
     "Export only the CSV file, without receipts",
   ],
   // The paths are written either way, so a re-import still knows the
   // receipts existed — it just marks them missing.
-  expCsvOnlyHint: [
+  "io.csvOnlyHint": [
     "Tositteiden polut säilyvät CSV-tiedostossa, joten ne voi yhdistää myöhemmin uudelleen.",
     "Receipt paths are kept in the CSV, so they can be reconnected later.",
   ],
-  expHintZip: [
+  "io.zipHint": [
     pl(
       "ZIP-tiedosto sisältää kirjanpidon CSV-tiedoston ja 1 tositteen kansiossa vuoden ja kuukauden mukaan.",
       "ZIP-tiedosto sisältää kirjanpidon CSV-tiedoston ja {n} tositetta kansioissa vuoden ja kuukauden mukaan."
@@ -330,64 +427,46 @@ export const APP_DICT = {
       "The ZIP file contains the bookkeeping CSV and {n} receipts in folders by year and month."
     ),
   ],
-  zipFail: ["ZIP-tiedostoa ei voitu lukea.", "Couldn’t read the ZIP file."],
-  zipNoCsv: [
+  "io.nothingToExport": [
+    "Ei vietävää. Lisää ensin kirjauksia.",
+    "Nothing to export. Add some entries first.",
+  ],
+  "io.exporting": ["Pakataan tositteita…", "Packing receipts…"],
+  "io.exported": ["Viety tiedostoon {f}.", "Exported to {f}."],
+  "io.exportCancelled": ["Vienti peruttiin.", "Export cancelled."],
+  "io.exportFailed": [
+    "Tiedoston tallennus ei onnistunut tässä näkymässä.",
+    "Couldn’t save the file in this view.",
+  ],
+  "io.zipFailed": [
+    "ZIP-tiedostoa ei voitu lukea.",
+    "Couldn’t read the ZIP file.",
+  ],
+  "io.zipNoCsv": [
     "ZIP-tiedostosta ei löytynyt CSV-tiedostoa.",
     "No CSV file was found in the ZIP file.",
   ],
-  attsImported: [" Tositteita: {n}.", " Receipts: {n}."],
-  attsMissing: [" Puuttuvia tositteita: {n}.", " Missing receipts: {n}."],
-  exporting: ["Pakataan tositteita…", "Packing receipts…"],
 
-  // --- Receipts ---
-  att_t: ["Tositteet", "Receipts"],
-  att_add: ["Lisää tosite", "Add receipt"],
-  att_hint: [
-    "Kuva tai PDF. Voit myös raahata tiedoston tähän.",
-    "Image or PDF. You can also drag a file here.",
-  ],
-  att_rm: ["Poista tosite", "Remove receipt"],
-  att_open: ["Avaa tosite", "Open receipt"],
-  att_missing: ["Tiedosto puuttuu", "File missing"],
-  att_n: [pl("1 tosite", "{n} tositetta"), pl("1 receipt", "{n} receipts")],
-  att_bad: [
-    "Vain kuvia ja PDF-tiedostoja voi liittää.",
-    "Only images and PDF files can be attached.",
-  ],
-  att_noDb: [
-    "Tositteiden tallennus ei ole käytettävissä tässä selaimessa.",
-    "Saving receipts isn’t available in this browser.",
-  ],
-  att_dropHint: [
-    "Avaa kirjaus, jos haluat liittää siihen tositteen.",
-    "Open an entry to attach a receipt to it.",
-  ],
-  att_drop: [
-    "Pudota tosite liittääksesi sen kirjaukseen",
-    "Drop a receipt to attach it to the entry",
-  ],
-
-  // --- Receipt viewer ---
-  v_prev: ["Edellinen tosite", "Previous receipt"],
-  v_next: ["Seuraava tosite", "Next receipt"],
-  v_pp: ["Edellinen sivu", "Previous page"],
-  v_pn: ["Seuraava sivu", "Next page"],
-  v_page: ["Sivu {p} / {n}", "Page {p} of {n}"],
-  v_zi: ["Suurenna", "Zoom in"],
-  v_zo: ["Pienennä", "Zoom out"],
-  v_fit: ["Sovita näkymään", "Fit to view"],
-  v_rot: ["Käännä", "Rotate"],
-  v_dl: ["Tallenna alkuperäinen", "Save original"],
-  v_close: ["Sulje", "Close"],
-  v_loading: ["Ladataan…", "Loading…"],
-  v_noPreview: [
+  // --- Receipt viewer (§8.6) ---
+  "viewer.prevReceipt": ["Edellinen tosite", "Previous receipt"],
+  "viewer.nextReceipt": ["Seuraava tosite", "Next receipt"],
+  "viewer.prevPage": ["Edellinen sivu", "Previous page"],
+  "viewer.nextPage": ["Seuraava sivu", "Next page"],
+  "viewer.pageOf": ["Sivu {p} / {n}", "Page {p} of {n}"],
+  "viewer.zoomIn": ["Suurenna", "Zoom in"],
+  "viewer.zoomOut": ["Pienennä", "Zoom out"],
+  "viewer.fit": ["Sovita näkymään", "Fit to view"],
+  "viewer.rotate": ["Käännä", "Rotate"],
+  "viewer.saveOriginal": ["Tallenna alkuperäinen", "Save original"],
+  "viewer.loading": ["Ladataan…", "Loading…"],
+  "viewer.noPreview": [
     "Tätä tiedostoa ei voi esikatsella tässä selaimessa. Voit tallentaa alkuperäisen tiedoston.",
     "This file can’t be previewed in this browser. You can save the original file.",
   ],
-  v_pdfFail: [
+  "viewer.pdfFailed": [
     "PDF-tiedoston avaaminen epäonnistui.",
     "Couldn’t open the PDF file.",
   ],
-  v_nOf: ["Tosite {i} / {n}", "Receipt {i} of {n}"],
-  saved_f: ["Tallennettu: {f}", "Saved: {f}"],
+  "viewer.receiptOf": ["Tosite {i} / {n}", "Receipt {i} of {n}"],
+  "viewer.saved": ["Tallennettu: {f}", "Saved: {f}"],
 } as const satisfies Dict

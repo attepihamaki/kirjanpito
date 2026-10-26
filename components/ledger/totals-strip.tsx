@@ -16,14 +16,14 @@ export function TotalsStrip({ totals }: { totals: LedgerTotals }) {
   const refund = totals.due < 0
 
   return (
-    <div className="grid grid-cols-1 divide-y rounded-lg border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-      <Cell label={t("incomeNet")}>
+    <div className="grid grid-cols-1 divide-y rounded-lg border bg-card sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+      <Cell label={t("ledger.incomeNet")}>
         <Money cents={totals.incomeNet} tone="income" />
       </Cell>
-      <Cell label={t("expNet")}>
+      <Cell label={t("ledger.expenseNet")}>
         <Money cents={totals.expenseNet} tone="expense" />
       </Cell>
-      <Cell label={refund ? t("vatRef") : t("vatPay")}>
+      <Cell label={refund ? t("ledger.vatRefundable") : t("ledger.vatPayable")}>
         <Money
           cents={Math.abs(totals.due)}
           tone={refund ? "income" : undefined}

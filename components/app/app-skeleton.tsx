@@ -12,30 +12,36 @@ import { Skeleton } from "@/components/ui/skeleton"
 export function AppSkeleton() {
   return (
     <div className="flex min-h-svh">
-      <div className="hidden w-72 shrink-0 flex-col gap-6 border-r p-4 min-[900px]:flex">
-        <div className="flex items-center gap-2">
+      {/* 16rem is shadcn's --sidebar-width, so nothing shifts on rehydrate. */}
+      <div className="hidden w-64 shrink-0 flex-col gap-4 border-r bg-sidebar p-2 min-[900px]:flex">
+        <div className="flex items-center gap-2.5 p-2">
           <BrandMark />
           <Skeleton className="h-4 w-28" />
         </div>
-        <Skeleton className="h-8 w-full" />
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3 px-2">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-[7.5rem] w-full" />
+        </div>
+        <div className="flex flex-col gap-1.5 px-2 pt-2">
           {Array.from({ length: 5 }, (_, i) => (
             <Skeleton key={i} className="h-8 w-full" />
           ))}
         </div>
-        <div className="mt-auto flex flex-col gap-2">
-          <Skeleton className="h-24 w-full" />
-        </div>
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 md:p-6">
-        <div className="flex items-center gap-2 min-[900px]:hidden">
-          <BrandMark />
-          <Skeleton className="h-4 w-28" />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex h-14 shrink-0 items-center gap-2 px-4 lg:px-6">
+          <Skeleton className="size-8" />
+          <div className="ml-auto flex items-center gap-2">
+            <Skeleton className="size-8" />
+            <Skeleton className="size-8" />
+          </div>
         </div>
-        <Skeleton className="h-9 w-56" />
-        <Skeleton className="h-16 w-full" />
-        <Skeleton className="h-64 w-full" />
+        <div className="flex flex-col gap-4 px-4 py-5 lg:px-6 lg:py-6">
+          <Skeleton className="h-9 w-56" />
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
       </div>
     </div>
   )

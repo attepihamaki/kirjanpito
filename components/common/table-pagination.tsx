@@ -37,13 +37,13 @@ export function TablePagination({
     <div className="flex flex-wrap items-center justify-between gap-3 pt-3">
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">
-          {t("rowsPerPage")}
+          {t("table.rowsPerPage")}
         </span>
         <OptionSelect
           options={SIZE_OPTIONS}
           value={String(size)}
           onChange={(value) => onSizeChange(Number(value) as PageSize)}
-          label={t("rowsPerPage")}
+          label={t("table.rowsPerPage")}
           size="sm"
           className="w-[4.5rem]"
         />
@@ -51,14 +51,14 @@ export function TablePagination({
 
       <div className="flex items-center gap-2">
         <span className="tabular text-sm text-muted-foreground">
-          {t("pageOf", { p: page, n: pages })}
+          {t("table.pageOf", { p: page, n: pages })}
         </span>
         <div className="flex gap-1">
           <Button
             variant="outline"
             size="icon-sm"
             disabled={first}
-            aria-label={t("first")}
+            aria-label={t("table.firstPage")}
             onClick={() => onPageChange(1)}
           >
             <ChevronsLeftIcon />
@@ -67,7 +67,7 @@ export function TablePagination({
             variant="outline"
             size="icon-sm"
             disabled={first}
-            aria-label={t("prev")}
+            aria-label={t("table.prevPage")}
             onClick={() => onPageChange(page - 1)}
           >
             <ChevronLeftIcon />
@@ -76,7 +76,7 @@ export function TablePagination({
             variant="outline"
             size="icon-sm"
             disabled={last}
-            aria-label={t("next")}
+            aria-label={t("table.nextPage")}
             onClick={() => onPageChange(page + 1)}
           >
             <ChevronRightIcon />
@@ -85,7 +85,7 @@ export function TablePagination({
             variant="outline"
             size="icon-sm"
             disabled={last}
-            aria-label={t("last")}
+            aria-label={t("table.lastPage")}
             onClick={() => onPageChange(pages)}
           >
             <ChevronsRightIcon />

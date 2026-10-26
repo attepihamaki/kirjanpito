@@ -286,10 +286,13 @@ tositteet/
 - The extension comes from the file name (`jpeg` → `jpg`), otherwise from the MIME type.
 - Receipt files are stored without compression (STORE); the CSV is DEFLATE-compressed.
 - **Import:** the user picks a ZIP. Use the shallowest `.csv` in it (ignoring `__MACOSX`). Paths in `tosite` are resolved relative to the CSV's folder, falling back to the ZIP root. Files found are stored in IndexedDB. Listed files that aren't found become `missing` attachments that keep their path, so re-exporting doesn't lose the reference. Importing a plain CSV that has `tosite` paths marks those receipts as missing in the same way.
+- Unpacking, decoding and writing every receipt to IndexedDB takes seconds for a real ZIP, so the import raises `importing` in the store and the UI shows progress once it passes 400 ms — see §8.2.
 
 ### 7.3 File naming on export
 
 An export dialog lets the user edit the base name, with a fixed extension shown beside the field (`.csv` or `.zip`). The default is `kirjanpito_{YYYY-MM-DD}` in Finnish or `accounting_{YYYY-MM-DD}` in English, using **today's date**. Characters `\ / : * ? " < > |` and control characters are stripped, and a trailing `.csv` is removed. An empty name falls back to the default. The last opened or exported name is shown in the sidebar, but it is **not** used as the default.
+
+`fileName` in the store holds that name **with its extension** (`kirjanpito_2026-10-24.zip`), for display only, and is set by both import and export. Opening a file and finding the box still reading "Uusi kirjanpito" is the bug this format fixes: the first port hard-coded `fileName: null` on import, and the display site appended a literal `.csv`, which was wrong for a ZIP. `lib/commands/io-commands.test.ts` covers it.
 
 ### 7.4 Receipt files
 
@@ -309,20 +312,37 @@ An export dialog lets the user edit the base name, with a fixed extension shown 
 - When **no bookkeeping is open**, every route shows the **landing page**.
 - Views: landing, ledger, VAT return, income statement, summary, settings. The prototype used Finnish hash routes (`etusivu`, `kirjanpito`, `alv`, `tulos`, `yhteenveto`, `asetukset`); the real app uses **English** Next.js routes — see §11b. Only the visible labels are translated.
 - The app logo / brand links to the landing page.
-- Persisted UI preferences: language, theme, selected year, last amount mode and type used in the entry dialog, and rows per page for each table.
+- Persisted UI preferences: language, theme, selected year, last amount mode and type used in the entry dialog, rows per page for each table, and whether the sidebar is collapsed. Language and theme each have their own localStorage key; the rest live with the bookkeeping (§12).
 
-### 8.2 Shell (desktop sidebar, mobile top bar)
+### 8.2 Shell (sidebar + top bar)
 
-- **Sidebar (≥ 900 px wide), top to bottom:**
-  - Brand: a "K" mark, "Kirjanpito", and the subtitle "Toiminimen yhdenkertainen kirjanpito".
-  - A financial year selector, offering the years found in the data plus the current year and the selected year.
+The layout follows the sibling project FormBox (`../formbox`): a sidebar that
+holds the brand, the file and the navigation, and a top bar across the content
+area for the view's context and the user's preferences. **The top bar is the
+same at every width**, so no control exists twice; below 900 px the sidebar
+becomes a sheet instead of the app growing a second header. The earlier split
+— a desktop sidebar plus a separate mobile top bar with its own copies of
+everything and a row of nav tabs — is gone.
+
+- **Sidebar** (`components/app/app-sidebar.tsx`, shadcn `Sidebar`,
+  `collapsible="icon"`), top to bottom:
+  - Brand: a "K" mark, "Kirjanpito", and the subtitle "Yhdenkertainen kirjanpito" — shortened from the prototype's "Toiminimen yhdenkertainen kirjanpito", which could not fit the button without truncating. The two lines need `leading-tight`: at the default leading they are 36 px and the `size="lg"` button's content box is 32. Links to the landing page.
+  - **`components/app/file-box.tsx`** — the financial year and the open file, which belong together because the year is read out of the file:
+    - "Tilikausi" and a year selector, offering the years found in the data plus the current year and the selected year.
+    - A recessed panel (`border`, `bg-background` on the `--sidebar` surface, as the prototype's `.filebox`): the file name (or "Uusi kirjanpito") with a "✕ Sulje" button on its right, a status dot with text (amber "Muutoksia, joita ei ole viety" / green "Kaikki muutokset viety"), and side-by-side "Tuo" and "Vie" buttons. **"Vie" is `variant="default"` while there are unexported changes** and `outline` otherwise. The three labels are deliberately one word each: they share one narrow column, and the panel above them already names the file.
   - Navigation with icons: Kirjanpito, ALV-laskelma, Tuloslaskelma, Yhteenveto, Asetukset.
-  - At the bottom: a FI | EN toggle and a theme toggle (system / light / dark, as icons), then the **file box**. The file box shows the file name (or "Uusi kirjanpito"), a **"Sulje" (close file)** button, a status dot with text (yellow "Muutoksia, joita ei ole viety" / green "Kaikki muutokset viety"), and "Avaa" / "Vie" buttons. The "Vie" button is highlighted while there are unexported changes.
-- **Mobile top bar (< 900 px):** the logo (links home), the name (truncates first), the year selector, a language toggle button (shows the other language), a theme cycle button, open, close (only when a file is open) and export. Below these, horizontally scrollable navigation tabs.
+  - **A secondary group pinned to the bottom with `mt-auto`**, as in FormBox's sidebar: an "Ohje" row linking to the landing page's FAQ (`LANDING_FAQ`, the `#faq` anchor on that section), and the §1 disclaimer "Laskelmat eivät ole vero- tai kirjanpitoneuvontaa." as plain text under it. The app is reachable without ever passing the landing page — a bookmark goes straight to `/app/ledger` — so the explanation of what this is needed a route back, and the disclaimer appeared only on the landing and in the report notes, never where the figures are entered. The rail keeps the link and drops the text, the same rule the file box follows.
+  - ≥ 900 px it collapses to a 3 rem icon rail; below 900 px it is a sheet, and tapping a link closes it. Navigation rows are `SidebarMenuButton`s and collapse on their own. **The file box cannot** — neither a select nor a bordered panel fits a rail — so it renders twice: the box, and an icon menu (Avaa tiedosto / Vie tiedosto / Sulje tiedosto) that takes over in icon mode. Both must offer the same three actions; collapsing is allowed to lose the name, the status line and the year, nothing else.
+  - The expanded / collapsed state is `sidebarOpen` in the store (§12), **not** shadcn's `sidebar_state` cookie: nothing is server-rendered, so a cookie could never be read back.
+- **Top bar** (`components/app/app-topbar.tsx`), laid out like FormBox's `AppHeader`: `h-14`, `gap-2`, `px-4 lg:px-6`, sticky, and **no rule below it** — the sidebar's border already separates the chrome from the page, and a second line only boxed the content in. It holds only what is the same on every view — a panel icon on the left that collapses the sidebar (≥ 900 px) or opens it as a sheet (< 900 px), and, pushed right, the theme toggle and the language picker. The icon is hand-rolled rather than shadcn's `SidebarTrigger`, which hard-codes an English screen-reader label.
+  - **Every control in the bar is 32 px tall** — `size="icon"` buttons and the default `Select` trigger — so the row reads as one line rather than three sizes. Match that when adding anything.
+- **Theme toggle:** one ghost button with a sun / moon icon that flips light ↔ dark, as in FormBox. There is no "system" control — next-themes still has `defaultTheme="system"`, so an untouched browser follows the OS; it simply cannot be chosen back. Both icons are always in the markup and CSS picks one off the `.dark` class, so the prerendered HTML is already right.
+- **Language picker:** a globe button opening a checked list of Suomi / English (endonyms, so each option reads the same either way). Language stays a stored preference, never a route (§11b).
 - **Drag and drop anywhere:**
   - Dropping a CSV or ZIP opens it. A full-screen overlay says "Pudota CSV- tai ZIP-tiedosto avataksesi sen".
   - While the entry dialog is open, dropped images and PDFs are attached to it instead, and the dialog gets a dashed outline.
   - Dropping media while no dialog is open shows a hint to open an entry first.
+- **Reading a file shows progress, but only once it is slow** (§7.2). `importing` in the store is raised for the whole of `openFile`, and `hooks/use-delayed-flag.ts` turns it into a visible state **after `BUSY_DELAY_MS` (400 ms)**: the sidebar's "Tuo" button becomes a spinner, "Vie" is disabled, and `components/app/import-overlay.tsx` covers the page with "Avataan tiedostoa…". A plain CSV opens in a few milliseconds and never reaches the delay, so nothing flickers; a ZIP of receipts does, and used to leave the UI silent for seconds. The overlay is **blocking**, unlike the drop overlay — the import is about to replace the whole bookkeeping. Both the app and the landing page render it, because a file can be picked from either and the drop overlay vanishes the instant the file lands. `importing` also guards re-entry: a second file dropped mid-import is ignored rather than interleaving two `replaceBook` calls.
 
 ### 8.3 Landing page
 
@@ -382,7 +402,7 @@ A two-column modal. On mobile the columns stack.
   - A **live receipt preview**, the signature visual element. It looks like a paper receipt with a perforated bottom edge and shows: type, date, description, category, net, VAT with rate, a bold total, and a badge ("Kasvattaa myynnin veroa" / "Vähennetään ostojen verona" / "Ei arvonlisäveroa").
   - Below it, the **"Tositteet" section:** a two-column grid (three on tablets) of 3:4 thumbnails. Images are shown cropped to the top; PDFs show their first page with a "PDF" badge. Each has a remove ✕. An "+ Lisää tosite" tile and the hint "Kuva tai PDF. Voit myös raahata tiedoston tähän." follow. Clicking a thumbnail opens the viewer on that receipt.
 - **Defaults for a new entry:** if a month is selected, its date (today's day, capped at 28). Otherwise today if the year matches, else 1.1. of the selected year. The type and amount mode are the last ones used.
-- **Validation:** a valid date, a non-zero amount and a chosen category are required. Error texts: "Anna päivämäärä.", "Anna summa, esim. 124,50.", "Valitse luokka."
+- **Validation:** a valid date, a non-zero amount and a chosen category are required. Error texts: "Anna päivämäärä.", "Anna summa, esim. 124,50.", "Valitse luokka." The error is held as `{ field, message }` where `field` is the `FormState` key: one `FieldError` line shows the message, and the field it names carries `aria-invalid` (the category select takes it through `OptionSelect`'s `invalid` prop). Editing that field clears the error, rather than leaving a complaint under a corrected value until the next save.
 - **Tallenna ja uusi** saves, keeps the date, and resets the rest for the next entry.
 - **Copy as new** (from a row or from the edit dialog): opens a new entry with every field copied **except receipts**. The date becomes today if the year matches, and the date field gets focus. The title is "Kopio kirjaus".
 - Saving an entry from another year switches the selected year to that year.
@@ -411,7 +431,7 @@ A near full-screen modal.
 
 ### 8.8 Income statement (Tuloslaskelma)
 
-Presented as a printable **paper sheet**: warm paper background, a thin border, and a soft shadow. It has the title, the period, sections with totals, greyed group headings, lines with muted account numbers, and a double-ruled result line. A "Tulosta" button calls `window.print()`, and the print styles hide the chrome.
+Presented as a printable **sheet**: the `--sheet` surface (warm paper in light, the card tone in dark — see §11), a thin border, and a soft shadow. It has the title, the period, sections with totals, greyed group headings, lines with muted account numbers, and a double-ruled result line. A "Tulosta" button calls `window.print()`, and the print styles hide the chrome.
 
 ### 8.9 Summary (Yhteenveto)
 
@@ -419,22 +439,25 @@ See §6.4. Wide tables scroll horizontally with a sticky first column.
 
 ### 8.10 Settings (Asetukset)
 
+Every section on this page is a `Panel` (§11).
+
 - **"Lisää oma luokka" form:**
   - Type (Kulu / Tulo).
   - Income statement line, filtered by type.
   - Name (required).
   - Default VAT % (validated as 0 ≤ x < 100).
-  - "Lisää" button.
+  - **"Lisää" sits on the panel's footer strip**, not in the grid. It used to share the fourth cell with the VAT input, which cramped both.
   - New income categories get `kind: "domestic"`.
+  - One error line (`FieldError`) under the grid, and **the field it is about carries `aria-invalid`** — the error is stored as `{ field, message }`. A bad VAT rate used to light up the name input, because the message was a bare string with nowhere to point. Typing in the offending field clears it.
   - The typed values survive re-renders. Leaving the page with a typed but unadded name asks first.
 - **Categories table:**
   - Search, a type filter, and a count.
   - Sortable columns: Käytössä (checkbox), Tyyppi (badge), Tili, Nimi, and Oletus ALV % (an inline input that commits on change and shows a toast).
   - Delete is only offered for custom categories that no entry uses.
   - Pagination with a default of 25 rows.
-- **Data:**
-  - "Palauta oletusluokat" restores the defaults and keeps custom categories that are in use.
-  - "Tyhjennä kirjaukset" deletes all entries (with a confirmation) and leaves the bookkeeping open but empty.
+- **Two data panels, not one.** Restoring categories is reversible and routine; clearing the entries erases the bookkeeping from this browser. One shared section gave them the same visual weight, which is exactly wrong for the second.
+  - "Tiedot" — a description of what restoring does, and "Palauta oletusluokat" (`outline`) on the footer. It restores the defaults and keeps custom categories that are in use.
+  - A `variant="destructive"` panel titled "Tyhjennä kirjaukset", with "Tyhjennä" (`destructive`) on the footer. It deletes all entries (with a confirmation) and leaves the bookkeeping open but empty.
 
 ### 8.11 Confirmations and unsaved-change rules (apply everywhere)
 
@@ -460,6 +483,8 @@ Closing a file clears entries, the file name and filters, sets the bookkeeping t
 ## 9. Internationalisation and formatting
 
 - Two languages: **Finnish (default)** and **English**. The choice is persisted. Update `<html lang>` and the document title when it changes. Every UI string is in a dictionary keyed by id, with `[fi, en]` values and `{param}` interpolation. Plural forms are functions (e.g. "1 kirjaus" / "{n} kirjausta"). The artifact's `L` object holds every string and is the source to port. A typed dictionary is enough; no locale routing is needed.
+- **Keys are `namespace.name`** — `t("io.zipNoCsv")`, `t("confirm.clearTitle")`, `t("settings.defaultVat")`. The namespaces are app, common, confirm, entry, file, io, landing, ledger, nav, notFound, receipt, settings, statement, summary, table, vat, viewer. `common.*` is only for words several views share; anything used in one place belongs to that place's namespace even when it is short. The keys were once flat and abbreviated (`setSub`, `f_type`, `nCats`, `delT`, `fb_import`) with four inconsistent prefix styles — unreadable at the call site, and with no room for a second settings subtitle. `messages.test.ts` enforces the shape and the list of namespaces, which is what stops the next key being added the old way.
+- **The namespace is not the module.** Which of `dict/app.ts` and `dict/landing.ts` a key lives in is a bundling decision (the landing bundle must not ship all ~300 keys in both languages), so a namespace may be split across both: `nav.vat`, `receipt.*` and `statement.profit` sit in the landing module because the hero's decorative receipt and mini statement need them. Keys stay disjoint between the two; a test checks it.
 - **Currency always uses Finnish formatting in both languages:** `1 234,56 €` (`Intl.NumberFormat("fi-FI", { style: "currency", currency: "EUR" })`). The amount input also shows the Finnish format.
 - **Dates:**
   - Finnish UI: `8.1.2026`.
@@ -511,85 +536,105 @@ The user also provided two real receipts for testing (a Motonet till receipt as 
 
 ## 11. Design system
 
-The aim is a calm, Nordic, functional tool. The one bold element is the **paper receipt motif**: the live preview in the entry dialog, the landing hero, and the printed income statement. Everything around it stays quiet. Avoid generic SaaS-card layouts, gradients, all-caps labels and decorative motion.
+The aim is a calm, Nordic, functional tool. The one bold element is the **paper receipt motif**: the live preview in the entry dialog and the landing hero. Everything around it stays quiet. Avoid generic SaaS-card layouts, gradients, all-caps labels and decorative motion.
 
-> **The project's shadcn theme is the source of truth for colours and typography.**
-> `app/globals.css` — style `base-nova` on Base UI, neutral greys with an emerald
-> `--primary`, `--radius: 0.625rem`, Geist via `next/font/google` — wins over the
-> hex table below, which is kept only as a record of the prototype's palette.
-> Use the theme's semantic variables (`background`, `card`, `muted`, `primary`,
-> `destructive`, `border`, `ring`, `sidebar-*`) and the standard component
-> variants. Never hard-code a hex value and never write a manual `dark:` override.
+> **`app/globals.css` is the source of truth for colours, and it is the
+> prototype's palette.** Every value is the matching `docs/prototype/kirjanpito.html`
+> hex converted to oklch, with the hex kept beside it in a comment so the two
+> can be diffed. The prototype's variable names map onto the theme's as:
 >
-> **Seven variables were added** on `:root` and `.dark`, because the theme has no
+> | prototype     | theme                                |
+> | ------------- | ------------------------------------ |
+> | `bg`          | `background`                         |
+> | `surface`     | `card`, `popover`, `sidebar`         |
+> | `sunken`      | `muted`, `secondary`, `accent`       |
+> | `ink`         | `foreground`                         |
+> | `muted`       | `muted-foreground`                   |
+> | `rule`        | `border`                             |
+> | `rule-strong` | `input`                              |
+> | `accent`      | `primary`, `ring`, `sidebar-primary` |
+> | `accent-ink`  | `primary-foreground`                 |
+> | `out`         | `destructive`                        |
+>
+> The rest of the shadcn theme still holds: style `base-nova` on Base UI,
+> `--radius: 0.625rem`, Geist via `next/font/google`. Use the semantic
+> variables and the standard component variants. **Never hard-code a hex value
+> and never write a manual `dark:` override.** A `bg-card` panel over the
+> `--background` canvas is how the prototype's `.panel` sits on `--bg`; a
+> bordered panel with no fill would vanish into the page.
+>
+> `--accent-soft` has no theme equivalent — shadcn's `--accent` is the neutral
+> hover grey, not a tint of the brand colour. The landing hero panel uses
+> `bg-primary/10` instead, which gives both themes what the prototype spells
+> out as two hex values.
+>
+> **Nine variables were added** on `:root` and `.dark`, because the theme has no
 > equivalent and its nearest colours already mean something else — `--primary` is
 > the call-to-action fill and `--destructive` means "error", not "expense":
 >
-> | variable                                          | use                                                                                                        |
-> | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-> | `--income` / `--income-subtle`                    | income amounts, the Tulo segment, row edge, income bars. Hue 148, kept clear of the emerald primary at 165 |
-> | `--expense` / `--expense-subtle`                  | expense amounts, the Kulu segment, row edge, expense bars. Less saturated than `--destructive`             |
-> | `--paper` / `--paper-foreground` / `--paper-edge` | the receipt motif: the entry dialog preview, the landing hero, the printed income statement                |
-> | `--warning`                                       | the amber "Muutoksia, joita ei ole viety" status dot                                                       |
+> | variable                                          | use                                                              |
+> | ------------------------------------------------- | ---------------------------------------------------------------- |
+> | `--income` / `--income-subtle`                    | income amounts, the Tulo segment, row edge, income bars          |
+> | `--expense` / `--expense-subtle`                  | expense amounts, the Kulu segment, row edge, expense bars        |
+> | `--paper` / `--paper-foreground` / `--paper-edge` | the receipt motif: the entry dialog preview and the landing hero |
+> | `--sheet` / `--sheet-edge`                        | the income statement and the landing's CSV sample                |
+> | `--warning`                                       | the amber "Muutoksia, joita ei ole viety" status dot             |
 >
 > They are exposed through `@theme inline` as `--color-income`, `--color-expense`
 > and so on, so they work as `bg-income`, `text-expense`, `bg-paper`.
-> A `.tabular` utility and the `@media print` rules also live in `globals.css`.
+> A `.tabular` utility, `.paper-surface` and the `@media print` rules also live
+> in `globals.css`.
 
-### Colour tokens (historical — the prototype's palette, superseded by the theme)
+### Paper and sheet are two different surfaces
 
-| token                  | light                 | dark                  | use                                                     |
-| ---------------------- | --------------------- | --------------------- | ------------------------------------------------------- |
-| bg                     | `#F3F5F4`             | `#101513`             | page background                                         |
-| surface                | `#FFFFFF`             | `#171D1A`             | panels, sidebar, dialogs                                |
-| sunken                 | `#EAEEEC`             | `#1F2724`             | segmented controls, chips, viewer stage, receipt column |
-| ink                    | `#17201D`             | `#E5EBE8`             | text                                                    |
-| muted                  | `#5E6B66`             | `#9AA7A1`             | secondary text                                          |
-| faint                  | `#8A9590`             | `#6F7C76`             | tertiary, zero values                                   |
-| rule                   | `#D9DFDC`             | `#2A3330`             | borders                                                 |
-| rule-strong            | `#B9C2BE`             | `#3B4642`             | input borders                                           |
-| accent                 | `#1D4F91`             | `#7FA9E3`             | primary buttons, active nav, focus ring                 |
-| accent-ink             | `#FFFFFF`             | `#0E1A2B`             | text on accent                                          |
-| accent-soft            | `#E3ECF7`             | `#1B2A3F`             | active nav background, landing hero panel               |
-| in / in-soft           | `#24704A` / `#E1F0E7` | `#6FC296` / `#17301F` | income, positive                                        |
-| out / out-soft         | `#A63A32` / `#F6E4E2` | `#E8877F` / `#3A1E1B` | expenses, destructive                                   |
-| paper / paper-edge     | `#FFFDF8` / `#E7E1D4` | `#1E2320` / `#323A36` | receipts, income statement sheet                        |
-| unexported-changes dot | `#C58A1A`             | same                  | file status                                             |
+The prototype split them, and the app follows:
+
+- **`--paper`** is the receipt motif — a printed slip, so it stays warm paper
+  with dark ink **in both themes**. `.dark` deliberately does not override it.
+  Because of that, whatever is printed on it has to stay light too: the
+  `.paper-surface` class on `ReceiptPaper` pins `--income` / `--expense` and
+  their subtle fills back to their light values, exactly as the prototype's
+  `.receipt` redeclares the same variables. Dark mode's pale mint badge on warm
+  paper is unreadable and its near-black fills read as ink blots.
+- **`--sheet`** is the income statement (§8.8) and the landing's CSV sample — a
+  document on screen rather than an object, so it follows the theme, goes dark
+  with it, and carries the ordinary `foreground` / `muted-foreground` text.
+  Only in light mode is it the same warm tone as `--paper`.
 
 - **Type:** Geist (400–700) for everything, with tabular figures for numbers. Page titles are 26 px / 600 / −0.02 em. The landing headline is `clamp(38px, 5.4vw, 64px)` with tight leading (1.03) and −0.035 em tracking.
 - **Radii:** 6 px for inputs and buttons, 10 px for panels, 14 px for dialogs and large cards. Segmented controls and chips are pills.
-- **Theme:** a system / light / dark switch, defaulting to system.
-- **Responsive breakpoints:** 900 px (sidebar becomes the top bar; dialogs stack) and 560 px (compact table and totals).
+- **Theme:** light ↔ dark from the top bar, defaulting to the system theme (§8.2).
+- **Responsive breakpoints:** 900 px (the sidebar becomes a sheet; dialogs stack) and 560 px (compact table and totals). 900 is also `MOBILE_BREAKPOINT` in `hooks/use-mobile.ts`, and the `min-[900px]:` that replaced shadcn's hard-coded `md:` inside `components/ui/sidebar.tsx` — the CSS and the JS have to flip on the same pixel.
 - **Accessibility:** visible focus rings, `aria-sort` on sortable headers, `aria-pressed` on toggles, `aria-label` on icon buttons, `prefers-reduced-motion` respected. The only motion is a short pop-in on dialogs.
 
 ### Suggested shadcn/ui mapping
 
-Sidebar → hand-written in `AppShell`; shadcn's `Sidebar` was removed, since its collapsible/mobile machinery bought nothing here. Buttons → `Button` (variants default, outline, ghost, destructive). Segmented controls → `ToggleGroup`. Selects → `Select`. Entry, export and viewer dialogs → `Dialog`. Confirmations → `AlertDialog`. Tables → `Table`, hand-composed (see §2). Pagination → `components/common/table-pagination.tsx` ("Rows per page", "Page 1 of 2", «‹›»). Toasts → `components/ui/toast.tsx` (see §2). FAQ → `Accordion`. Checkboxes → `Checkbox`. Inputs → `Input`. Chart → Recharts, used directly in `summary-view.tsx`; shadcn's `Chart` wrapper was removed. Use the shadcn/ui skill for component usage.
+Sidebar → shadcn's `Sidebar` (with `Sheet`, `Tooltip` and `hooks/use-mobile.ts`), in `components/app/app-sidebar.tsx`. It was hand-written and the shadcn one deleted while the sidebar was a static panel; §8.2's collapse-to-icons and mobile sheet are exactly the machinery it provides, so it came back — the one local edit is the 900 px breakpoint. Language picker → `DropdownMenu`. Buttons → `Button` (variants default, outline, ghost, destructive). Segmented controls → `ToggleGroup`. Selects → `Select`. Entry, export and viewer dialogs → `Dialog`. Confirmations → `AlertDialog`. Tables → `Table`, hand-composed (see §2). Pagination → `components/common/table-pagination.tsx` ("Rows per page", "Page 1 of 2", «‹›»). Sections → `components/common/panel.tsx`: a `--card` panel with a ruled heading, optional `description`, an `actions` slot on the heading row, and an optional `footer` strip (`bg-muted/30`) for buttons that act on its contents — the shape FormBox's `DataItemCard` uses. `variant="destructive"` draws the border and the footer in the destructive tone, and is for actions that cannot be undone; shadcn's `Card` is not used (it was deleted, §11). Field errors → `FieldError` from `components/ui/field.tsx` — never a hand-rolled `<p className="text-sm text-destructive">`, and never without `aria-invalid` on the field the message is about. Toasts → `components/ui/toast.tsx` (see §2). FAQ → `Accordion`. Checkboxes → `Checkbox`. Inputs → `Input`. Chart → Recharts, used directly in `summary-view.tsx`; shadcn's `Chart` wrapper was removed. Use the shadcn/ui skill for component usage.
 
-**Only the components actually in use are kept.** `components/ui/` holds 18 files; `avatar`, `badge`, `breadcrumb`, `card`, `chart`, `drawer`, `dropdown-menu`, `scroll-area`, `sheet`, `sidebar`, `sonner`, `tabs` and `tooltip` were generated by the shadcn CLI, never imported, and deleted. Re-add any of them with `npx shadcn add <name>` if a use appears — do not keep unused ones around on spec.
+**Only the components actually in use are kept.** `components/ui/` holds 22 files; `avatar`, `badge`, `breadcrumb`, `card`, `chart`, `drawer`, `scroll-area`, `sonner` and `tabs` were generated by the shadcn CLI, never imported, and deleted. (`dropdown-menu`, `sheet`, `sidebar` and `tooltip` were deleted too, then re-added for §8.2's shell.) Re-add any of them with `npx shadcn add <name>` if a use appears — do not keep unused ones around on spec.
 
 ---
 
 ## 11b. SEO and the route structure
 
-The landing pages are public, indexed documents; the bookkeeping app is not.
+The landing page is a public, indexed document; the bookkeeping app is not.
+
+**Only Finnish is indexed.** English remains a first-class UI language (§9), but
+it is a stored preference, not a URL. That single decision is what keeps the
+route tree flat — see "One root layout" below for what the alternative cost.
 
 ```
 app/
   robots.ts                      → /robots.txt      (disallows /app/)
-  sitemap.ts                     → /sitemap.xml     (/ and /en, with alternates)
-  global-not-found.tsx           → /404.html        noindex, renders its own <html>
-
-  (fi)/                          ROOT LAYOUT — <html lang="fi">
-    page.tsx                     /                  landing FI, indexed
-    opengraph-image.tsx          1200×630 via next/og
-    app/
-      layout.tsx                 AppShell + metadata.robots = noindex, nofollow
-      ledger/  vat/  statement/  summary/  settings/
-
-  (en)/                          ROOT LAYOUT — <html lang="en">
-    en/page.tsx                  /en                landing EN, indexed
-    en/opengraph-image.tsx
+  sitemap.ts                     → /sitemap.xml     (/ only, no alternates)
+  not-found.tsx                  → /404.html        noindex, title only
+  layout.tsx                     ROOT LAYOUT — <html lang="fi">
+  page.tsx                       /                  landing, indexed
+  og/[file]/route.tsx            /og/opengraph-image.png  1200×630 via next/og
+  app/
+    layout.tsx                   AppShell + metadata.robots = noindex, nofollow
+    page.tsx                     /app → /app/ledger
+    ledger/  vat/  statement/  summary/  settings/
 ```
 
 - **The app routes are English** (`/app/ledger`, `/app/vat`, `/app/statement`,
@@ -598,33 +643,53 @@ app/
   Nothing under `/app` is indexed, so there is no SEO reason to localise the
   paths, and a single set of URLs keeps language switching a pure state change
   rather than a navigation.
-- **Two root layouts**, because only a root layout renders `<html lang>` and each
-  indexed document must ship the right one in its static HTML. `/` and `/app/*`
-  share the `(fi)` layout, so entering the app is a soft navigation; switching
-  landing language is a full reload, which is correct for a document-language
-  change.
-- **The 404 is `app/global-not-found.tsx`**, behind `experimental.globalNotFound`
-  in `next.config.ts`. The plain `not-found.tsx` convention wants a single root
-  layout to wrap it in; here both root layouts sit inside route groups, so Next
-  wraps the 404 in a bare default layout and `out/404.html` comes out with two
-  `<html>` elements. The global convention lets the file render its own document
-  through `HtmlShell`, exactly as a root layout does. Next already adds the
-  `noindex` meta, so the file only sets a title. The page is plain text and
-  buttons — no receipt motif: it is a dead end, not a document. Its language
-  cannot come from
-  the route — one document serves every unmatched URL — so it follows the stored
-  preference like the app: Finnish in the prerendered HTML (the store's default,
-  so the first client render still matches) and the preference after rehydration.
+- **`/app` itself redirects to `/app/ledger`** (`components/app/app-index-redirect.tsx`).
+  It is a guessable, bookmarkable URL, and without a page here the export has no
+  `out/app/index.html` and it would 404. Static export rules out a server-side
+  redirect, which costs nothing: the app is client-only and AppShell already
+  holds every route back until the store has rehydrated. Only the open case is
+  handled — AppShell already sends a closed bookkeeping to the landing (§8.1).
+- **One root layout.** An earlier version had two, inside `(fi)` and `(en)` route
+  groups, because only a root layout renders `<html lang>` and each indexed
+  document must ship the right one in its static HTML. Dropping the indexed `/en`
+  removed that requirement and with it the route groups, the `hreflang`
+  alternates, the sitemap alternates, the first-visit language seeding, and the
+  full page load that a landing-language switch used to be. **Do not reintroduce
+  a per-language URL without reinstating all of it.**
+- **The 404 is the ordinary `app/not-found.tsx`**, wrapped by the root layout
+  like any other page; `experimental.globalNotFound` is gone from
+  `next.config.ts` along with the second root layout that forced it. Next already
+  adds the `noindex` meta, so the file only sets a title. The page is plain text
+  and buttons — no receipt motif: it is a dead end, not a document.
 - **`output: "export"`** with `trailingSlash: true` and `images.unoptimized`.
-  `robots.ts`, `sitemap.ts` and both `opengraph-image.tsx` are Route Handlers and
+  `robots.ts`, `sitemap.ts` and `og/[file]/route.tsx` are Route Handlers and
   need `export const dynamic = "force-static"` — without it the build fails.
   `ImageResponse` does emit PNGs under static export; verified in `out/`.
-- **Language**: the _document_ language is fixed by the route and baked at build
-  time; the _UI_ language inside the app is the persisted preference. The landing
-  never redirects on a stored preference — that would be cloaking-adjacent and
-  would break the back button. On a first visit only, the route seeds the
-  preference. This is how §9's "no locale routing is needed" coexists with having
-  two indexed URLs.
+- **The OG card is a route handler, not the `opengraph-image.tsx` convention.**
+  The convention emits an extensionless `out/opengraph-image` and tags it as
+  `/opengraph-image`, relying on the route's `contentType` export — which only
+  a host that serves the route can honour. GitHub Pages serves plain files and
+  types each response from its extension, so that file would go out as
+  `application/octet-stream` and link-preview crawlers would reject it
+  (vercel/next.js#82177). A dynamic segment with one literal value makes the
+  export write a real `out/og/opengraph-image.png` instead. `OG_FILE` /
+  `OG_PATH` in `components/landing/og-image.tsx` are the single source of that
+  name, and `app/page.tsx` declares `openGraph.images` and `twitter.images`
+  from them by hand — the file convention silently overrides explicit metadata,
+  so the two cannot coexist.
+- **Language**: `HtmlShell` bakes `lang="fi"` into every document. It is the
+  store's default, so the prerendered HTML and the first client render match
+  byte for byte; `LangHtmlAttr` then follows the stored preference, the way
+  next-themes manages `class` on the same element. The landing, the 404 and the
+  app all work this way — the landing switches to English in place once
+  rehydration lands. A crawler only ever receives the Finnish document, and
+  there is no alternate URL to redirect to, so nothing here is
+  cloaking-adjacent. This is §9's "no locale routing is needed", now true
+  without qualification.
+  **Known cost, accepted:** a first-time English-speaking visitor lands on
+  Finnish and has to find the FI|EN toggle in the header. Seeding from
+  `navigator.language` on a first visit would fix it and is safe now that no
+  alternate URL exists — deliberately not done, to keep first paint predictable.
 - **The landing bundle must not contain `pdfjs-dist`, `jszip`, `papaparse` or
   `recharts`.** Commands are split into `lib/commands/book-commands.ts` (safe to
   import statically) and `lib/commands/io-commands.ts` (pulled in with
@@ -634,6 +699,34 @@ app/
 - `SITE_URL` comes from `NEXT_PUBLIC_SITE_URL` in `lib/site.ts`, which also holds
   the route constants.
 
+### Hosting: GitHub Pages
+
+The export is published to **GitHub Pages** by `.github/workflows/deploy.yml`
+on every push to `main` — `npm run check`, then `npm run build`, then the `out/`
+directory as a Pages artifact. Nothing about the app is host-specific: it is
+static files, so any static host would do.
+
+- **The custom domain is what keeps the route tree flat.** The repository is a
+  project repo (`attepihamaki.github.io/kirjanpito`), which would normally serve
+  the site under a `/kirjanpito` path prefix. `public/CNAME` points it at
+  `kirjanpito.attepihamaki.fi`, which serves from the root of its own host, so
+  there is **no `basePath` and no `assetPrefix`**. The CNAME file must stay in
+  `public/` — a deploy that did not carry it would clear the repository setting
+  and the site would fall back to the prefixed URL.
+- **If the custom domain is ever dropped**, `basePath` and `assetPrefix` become
+  necessary, and with them one real code change:
+  `lib/browser/pdf.ts` sets `workerSrc = "/pdf.worker.min.mjs"`, the only
+  hard-coded absolute path in the codebase and the only one Next does not
+  prefix. Everything else routes through `next/navigation` or `next/link`,
+  which are `basePath`-aware. A missed prefix there would break the receipt
+  viewer in production only.
+- **Jekyll never runs**, because Pages is deployed from the Actions artifact
+  rather than from a branch. That is what makes `_next/` serve; a branch-based
+  deploy would need a `.nojekyll` file.
+- **The 404 needs no configuration.** The export emits `out/404.html` and Pages
+  serves it for unmatched paths, which is also why `trailingSlash: true` matters:
+  every route is a real `index.html` and no rewrite rules are involved.
+
 ## 12. Persistence keys
 
 **Storage names and the field names inside them are English**, so what a
@@ -641,22 +734,43 @@ browser holds is legible without Finnish. The CSV and the ZIP's `tositteet/`
 folder are the file format and stay Finnish (§7.1, §7.2) — the two vocabularies
 meet only in `lib/domain/csv.ts`.
 
+**The two app-level preferences each own a key**, outside the bookkeeping
+blob, and each holds a bare value rather than JSON. They belong to the
+browser, not to a bookkeeping: the landing page and the 404 need the language
+before any file is open, and must not read or write `bookkeeping` to get it.
+
 - localStorage `bookkeeping` — exported as `BOOK_STORAGE_KEY` from
   `stores/book-store.ts`, so nothing hard-codes the string twice:
-  `{ entries, cats, year, dirty, fileName, lastMode, lastType, lang, open, ledgerSize, ctSize }`.
+  `{ entries, cats, year, dirty, fileName, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen }`.
   **The key carries no version suffix.** Zustand's `persist` already writes its
   `version` into the stored value and owns the `migrate` hook, which can
   transform old data; a version in the key could only orphan it, and two version
   numbers would eventually disagree. A future break not worth migrating renames
   the key to `bookkeeping.v2` at that point.
-  **`theme` is no longer in this blob.** next-themes owns it under its own key,
-  because its pre-paint inline script reads that key before any of our JS runs;
-  two sources of truth would drift. A `persist.migrate` step seeds next-themes
-  from a prototype-era blob and drops the field.
+  **Only a bookkeeping creates the key.** `bookStorage`, the store's own
+  `PersistStorage`, skips the write while there is no bookkeeping (`open` false
+  and no entries) and the key does not already exist. Rehydration is itself a
+  state change, so without that rule a visitor who only ever read the landing
+  page came away with the whole default blob — every category — stored under
+  their name. Once the key exists it is kept up to date as usual, closed file
+  included, so `ledgerSize`, `ctSize` and `sidebarOpen` survive a close.
+- localStorage `lang` — `fi` | `en`, owned by `stores/lang-store.ts`
+  (`LANG_STORAGE_KEY`). A plain Zustand store, not `persist`: the value is the
+  string itself, as next-themes writes `theme`, and `StoreHydrator` reads it
+  after mount so the prerendered Finnish HTML and the first client render still
+  match (§11b). Reading never creates the key — only the picker writes it.
 - localStorage `theme` — owned by next-themes: `system` | `light` | `dark`.
+  Its pre-paint inline script reads that key before any of our JS runs, so a
+  second source of truth would drift.
+- Both preferences used to live in the `bookkeeping` blob. `persist.migrate`
+  (now at `version: 2`) moves each into its own key and drops the field,
+  seeding only a key that is still empty — the separate key is the newer truth.
 - IndexedDB `bookkeeping-receipts`, store `files`: receipt Blobs keyed by
   attachment id.
 - **sessionStorage is not used.**
+
+`stores/storage.test.ts` covers all of this: the landing-page visit that
+stores nothing, the close that keeps the page sizes, and both migrations.
 
 **No migration from the prototype-era names** (`kirjanpito.v1`,
 `kirjanpito-tositteet`). A browser still holding them starts empty and the old

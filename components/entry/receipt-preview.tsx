@@ -37,37 +37,39 @@ export function ReceiptPreview({
   const income = type === "income"
 
   const badge = !vatRate
-    ? f.t("r_noVat")
+    ? f.t("receipt.noVatBadge")
     : income
-      ? f.t("r_salesTax")
-      : f.t("r_deduct")
+      ? f.t("receipt.salesBadge")
+      : f.t("receipt.purchaseBadge")
 
   return (
     <ReceiptPaper>
       <ReceiptHead
-        label={income ? f.t("r_income") : f.t("r_expense")}
+        label={income ? f.t("receipt.income") : f.t("receipt.expense")}
         date={date ? f.date(date) : "—"}
         tone={income ? "income" : "expense"}
       />
 
       <p className="mt-3 text-sm font-medium break-words">
         {description.trim() || (
-          <span className="text-paper-foreground/50">{f.t("noDesc")}</span>
+          <span className="text-paper-foreground/50">
+            {f.t("ledger.noDescription")}
+          </span>
         )}
       </p>
       <p className="text-xs text-paper-foreground/70">
-        {cat ? f.catLabel(cat) : f.t("unknownCat")}
+        {cat ? f.catLabel(cat) : f.t("entry.unknownCategory")}
       </p>
 
       <ReceiptRule className="mt-4 mb-3" />
       <div className="flex flex-col gap-1">
-        <ReceiptRow label={f.t("r_net")} value={f.money(net)} />
+        <ReceiptRow label={f.t("receipt.net")} value={f.money(net)} />
         <ReceiptRow
-          label={`${f.t("c_vat")} ${vatRate ? f.rate(vatRate) : ""}`.trim()}
+          label={`${f.t("ledger.colVat")} ${vatRate ? f.rate(vatRate) : ""}`.trim()}
           value={f.money(vat)}
         />
         <div className="mt-1 border-t border-paper-edge pt-2">
-          <ReceiptTotal label={f.t("r_total")} value={f.money(gross)} />
+          <ReceiptTotal label={f.t("receipt.total")} value={f.money(gross)} />
         </div>
       </div>
 

@@ -14,7 +14,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { toast } from "@/components/ui/toast"
@@ -49,6 +54,11 @@ interface FormState {
   amountMode: AmountMode
   atts: Attachment[]
 }
+
+/** The three fields §8.5 validates, named as they are in `FormState`. */
+type ErrorField = "date" | "amount" | "catId"
+
+type FieldErrorState = { field: ErrorField; message: string } | null
 
 const snapshot = (form: FormState) =>
   JSON.stringify({
@@ -171,7 +181,10 @@ function EntryDialogForm({
 
   const [form, setForm] = React.useState<FormState>(initial)
   const [baseline, setBaseline] = React.useState(() => snapshot(initial))
-  const [error, setError] = React.useState<string | null>(null)
+  // The message and the field it belongs to: §8.5 shows one inline error
+  // line, but the field it is about has to say so too, or a screen reader
+  // reads a complaint with nothing attached to it.
+  const [error, setError] = React.useState<FieldErrorState>(null)
   const [busy, setBusy] = React.useState(false)
   const fileRef = React.useRef<HTMLInputElement>(null)
 
@@ -183,7 +196,7 @@ function EntryDialogForm({
   const addFiles = React.useCallback(
     async (files: File[]) => {
       if (!isReceiptStorageSupported()) {
-        toast.add({ title: f.t("att_noDb") })
+        toast.add({ title: f.t("receipt.noStorage") })
         return
       }
       setBusy(true)
@@ -202,7 +215,7 @@ function EntryDialogForm({
             })
           } catch {
             // Never record an attachment we failed to store.
-            toast.add({ title: f.t("att_noDb") })
+            toast.add({ title: f.t("receipt.noStorage") })
           }
         }
         if (added.length) {
@@ -244,8 +257,16 @@ function EntryDialogForm({
     : [...RATES, form.vatRate]
   const dirty = snapshot(form) !== baseline
 
-  const update = (patch: Partial<FormState>) =>
+  /** `true` when this field is the one the error line is complaining about. */
+  const invalid = (field: ErrorField) =>
+    error?.field === field ? true : undefined
+
+  const update = (patch: Partial<FormState>) => {
     setForm((prev) => ({ ...prev, ...patch }))
+    // Clear the complaint as soon as the field it is about is touched,
+    // rather than leaving it under a corrected value until the next save.
+    setError((prev) => (prev && prev.field in patch ? null : prev))
+  }
 
   const requestClose = async () => {
     if (!dirty) {
@@ -254,10 +275,10 @@ function EntryDialogForm({
     }
     const { confirm } = await import("@/lib/ui/confirm")
     const discard = await confirm({
-      title: f.t("discardT"),
-      message: f.t("discardEntry"),
-      confirmLabel: f.t("discardYes"),
-      cancelLabel: f.t("keepEditing"),
+      title: f.t("confirm.discardTitle"),
+      message: f.t("confirm.discardEntry"),
+      confirmLabel: f.t("confirm.discardConfirm"),
+      cancelLabel: f.t("confirm.keepEditing"),
     })
     if (discard) closeDialog()
   }
@@ -271,16 +292,16 @@ function EntryDialogForm({
         Number(form.date.slice(8, 10))
       )
     ) {
-      setError(f.t("e_date"))
+      setError({ field: "date", message: f.t("entry.errDate") })
       return null
     }
     const amount = parseAmount(form.amount)
     if (amount == null || amount === 0) {
-      setError(f.t("e_sum"))
+      setError({ field: "amount", message: f.t("entry.errAmount") })
       return null
     }
     if (!form.catId) {
-      setError(f.t("e_cat"))
+      setError({ field: "catId", message: f.t("entry.errCategory") })
       return null
     }
     setError(null)
@@ -305,7 +326,9 @@ function EntryDialogForm({
     setLastDefaults({ mode: form.amountMode, type: form.type })
     // §8.5: saving an entry from another year switches the selected year.
     if (yearOf(entry.date) !== year) setYear(yearOf(entry.date))
-    toast.add({ title: mode === "edit" ? f.t("changesSaved") : f.t("saved") })
+    toast.add({
+      title: mode === "edit" ? f.t("entry.changesSaved") : f.t("entry.saved"),
+    })
 
     if (andNew) {
       // Keep the date, reset the rest.
@@ -326,10 +349,10 @@ function EntryDialogForm({
 
   const title =
     mode === "edit"
-      ? f.t("editEntry")
+      ? f.t("entry.editTitle")
       : mode === "copy"
-        ? f.t("copyEntry")
-        : f.t("newEntry")
+        ? f.t("entry.copyTitle")
+        : f.t("ledger.newEntry")
 
   return (
     <Dialog
@@ -358,21 +381,22 @@ function EntryDialogForm({
 
         <div className="grid gap-6 md:grid-cols-[1fr_17rem]">
           <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="entry-date">{f.t("f_date")}</FieldLabel>
+            <Field data-invalid={invalid("date")}>
+              <FieldLabel htmlFor="entry-date">{f.t("entry.date")}</FieldLabel>
               <Input
                 id="entry-date"
                 type="date"
                 value={form.date}
                 autoFocus={mode === "copy"}
+                aria-invalid={invalid("date")}
                 onChange={(e) => update({ date: e.target.value })}
               />
             </Field>
 
             <Field>
-              <FieldLabel>{f.t("f_type")}</FieldLabel>
+              <FieldLabel>{f.t("common.type")}</FieldLabel>
               <ToggleGroup
-                aria-label={f.t("f_type")}
+                aria-label={f.t("common.type")}
                 value={[form.type]}
                 onValueChange={(value) => {
                   const next = value[0] as EntryType | undefined
@@ -385,30 +409,33 @@ function EntryDialogForm({
                   value="income"
                   className="data-pressed:bg-income-subtle data-pressed:text-income"
                 >
-                  {f.t("income")}
+                  {f.t("common.income")}
                 </ToggleGroupItem>
                 <ToggleGroupItem
                   value="expense"
                   className="data-pressed:bg-expense-subtle data-pressed:text-expense"
                 >
-                  {f.t("expense")}
+                  {f.t("common.expense")}
                 </ToggleGroupItem>
               </ToggleGroup>
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="entry-desc">{f.t("f_desc")}</FieldLabel>
+              <FieldLabel htmlFor="entry-desc">
+                {f.t("entry.description")}
+              </FieldLabel>
               <Input
                 id="entry-desc"
                 value={form.description}
-                placeholder={f.t("f_descPh")}
+                placeholder={f.t("entry.descriptionPlaceholder")}
                 onChange={(e) => update({ description: e.target.value })}
               />
             </Field>
 
-            <Field>
-              <FieldLabel>{f.t("f_cat")}</FieldLabel>
+            <Field data-invalid={invalid("catId")}>
+              <FieldLabel>{f.t("entry.category")}</FieldLabel>
               <OptionSelect
+                invalid={invalid("catId")}
                 options={catOptions}
                 value={form.catId}
                 onChange={(value) => {
@@ -419,24 +446,25 @@ function EntryDialogForm({
                     vatRate: cat ? cat.vatRate : form.vatRate,
                   })
                 }}
-                placeholder={f.t("e_cat")}
-                label={f.t("f_cat")}
+                placeholder={f.t("entry.errCategory")}
+                label={f.t("entry.category")}
               />
             </Field>
 
-            <Field>
-              <FieldLabel htmlFor="entry-sum">{f.t("f_sum")}</FieldLabel>
+            <Field data-invalid={invalid("amount")}>
+              <FieldLabel htmlFor="entry-sum">{f.t("entry.amount")}</FieldLabel>
               <Input
                 id="entry-sum"
                 inputMode="decimal"
                 value={form.amount}
+                aria-invalid={invalid("amount")}
                 onChange={(e) => update({ amount: e.target.value })}
                 className="tabular text-right"
               />
             </Field>
 
             <Field>
-              <FieldLabel>{f.t("f_vat")}</FieldLabel>
+              <FieldLabel>{f.t("entry.vatRate")}</FieldLabel>
               <OptionSelect
                 options={rateOptions.map((rate) => ({
                   value: String(rate),
@@ -444,30 +472,30 @@ function EntryDialogForm({
                 }))}
                 value={String(form.vatRate)}
                 onChange={(value) => update({ vatRate: Number(value) })}
-                label={f.t("f_vat")}
+                label={f.t("entry.vatRate")}
               />
             </Field>
 
             <Field>
-              <FieldLabel>{f.t("f_mode")}</FieldLabel>
+              <FieldLabel>{f.t("entry.amountMode")}</FieldLabel>
               <ToggleGroup
-                aria-label={f.t("f_mode")}
+                aria-label={f.t("entry.amountMode")}
                 value={[form.amountMode]}
                 onValueChange={(value) => {
                   const next = value[0] as AmountMode | undefined
                   if (next) update({ amountMode: next })
                 }}
               >
-                <ToggleGroupItem value="gross">{f.t("gross")}</ToggleGroupItem>
-                <ToggleGroupItem value="net">{f.t("net")}</ToggleGroupItem>
+                <ToggleGroupItem value="gross">
+                  {f.t("common.gross")}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="net">
+                  {f.t("common.net")}
+                </ToggleGroupItem>
               </ToggleGroup>
             </Field>
 
-            {error ? (
-              <p role="alert" className="text-sm text-destructive">
-                {error}
-              </p>
-            ) : null}
+            <FieldError>{error?.message}</FieldError>
           </FieldGroup>
 
           {/* The prototype's `.receipt-wrap`: the paper sits on a sunken
@@ -509,7 +537,7 @@ function EntryDialogForm({
                 }}
               >
                 <Trash2Icon data-icon="inline-start" />
-                {f.t("del")}
+                {f.t("common.delete")}
               </Button>
               <Button
                 variant="outline"
@@ -522,21 +550,21 @@ function EntryDialogForm({
                 }
               >
                 <CopyIcon data-icon="inline-start" />
-                {f.t("copyAsNew")}
+                {f.t("ledger.copyAsNew")}
               </Button>
             </>
           ) : null}
 
           <div className="ml-auto flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => void requestClose()}>
-              {f.t("cancel")}
+              {f.t("common.cancel")}
             </Button>
             {mode !== "edit" ? (
               <Button variant="secondary" onClick={() => save(true)}>
-                {f.t("saveNew")}
+                {f.t("entry.saveAndNew")}
               </Button>
             ) : null}
-            <Button onClick={() => save(false)}>{f.t("save")}</Button>
+            <Button onClick={() => save(false)}>{f.t("common.save")}</Button>
           </div>
         </DialogFooter>
       </DialogContent>

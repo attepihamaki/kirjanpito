@@ -28,7 +28,7 @@ export function YearSelect({ className }: { className?: string }) {
       options={options}
       value={String(year)}
       onChange={(value) => setYear(Number(value))}
-      label={t("fiscal")}
+      label={t("app.fiscalYear")}
       className={className}
     />
   )

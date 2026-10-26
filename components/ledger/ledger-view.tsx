@@ -109,7 +109,7 @@ export function LedgerView() {
 
   const catFilterOptions = React.useMemo(
     () => [
-      { value: "all", label: f.t("catAll") },
+      { value: "all", label: f.t("ledger.allCategories") },
       ...usedCats.map((c) => ({ value: c.id, label: f.catName(c) })),
     ],
     [usedCats, f]
@@ -120,22 +120,22 @@ export function LedgerView() {
     query.trim() !== "" || typeFilter !== "all" || catFilter !== "all"
   const periodLabel =
     month === 0
-      ? `${f.t("wholeYear")} ${year}`
+      ? `${f.t("ledger.wholeYear")} ${year}`
       : `${f.month(month - 1)} ${year}`
 
   if (entries.length === 0) {
     return (
       <>
-        <PageHeader title={f.t("v_ledger")} subtitle={periodLabel} />
+        <PageHeader title={f.t("nav.ledger")} subtitle={periodLabel} />
         <Empty>
           <EmptyHeader>
-            <EmptyTitle>{f.t("emptyTitle")}</EmptyTitle>
-            <EmptyDescription>{f.t("emptyBody")}</EmptyDescription>
+            <EmptyTitle>{f.t("ledger.emptyTitle")}</EmptyTitle>
+            <EmptyDescription>{f.t("ledger.emptyBody")}</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
             <Button onClick={() => openDialog({ kind: "entry", mode: "new" })}>
               <PlusIcon data-icon="inline-start" />
-              {f.t("newEntry")}
+              {f.t("ledger.newEntry")}
             </Button>
           </EmptyContent>
         </Empty>
@@ -146,12 +146,12 @@ export function LedgerView() {
   return (
     <>
       <PageHeader
-        title={f.t("v_ledger")}
+        title={f.t("nav.ledger")}
         subtitle={periodLabel}
         actions={
           <Button onClick={() => openDialog({ kind: "entry", mode: "new" })}>
             <PlusIcon data-icon="inline-start" />
-            {f.t("newEntry")}
+            {f.t("ledger.newEntry")}
           </Button>
         }
       />
@@ -164,7 +164,7 @@ export function LedgerView() {
           <SearchInput
             value={query}
             onChange={setQuery}
-            placeholder={f.t("search")}
+            placeholder={f.t("ledger.search")}
             className="min-w-[14rem]"
           />
 
@@ -174,31 +174,31 @@ export function LedgerView() {
             options={catFilterOptions}
             value={catFilter}
             onChange={setCat}
-            label={f.t("c_cat")}
+            label={f.t("ledger.colCategory")}
             className="w-[13rem]"
           />
 
           {hasFilters ? (
             <Button variant="ghost" size="sm" onClick={clearFilters}>
               <XIcon data-icon="inline-start" />
-              {f.t("clearFilters")}
+              {f.t("ledger.clearFilters")}
             </Button>
           ) : null}
 
           <span className="ml-auto text-sm text-muted-foreground">
-            {f.t("nEntries", { n: view.total })}
+            {f.t("ledger.entryCount", { n: view.total })}
           </span>
         </div>
 
         {view.total === 0 ? (
           <Empty>
             <EmptyHeader>
-              <EmptyTitle>{f.t("noMatch")}</EmptyTitle>
+              <EmptyTitle>{f.t("ledger.noMatch")}</EmptyTitle>
             </EmptyHeader>
             {hasFilters ? (
               <EmptyContent>
                 <Button variant="outline" onClick={clearFilters}>
-                  {f.t("clearFilters")}
+                  {f.t("ledger.clearFilters")}
                 </Button>
               </EmptyContent>
             ) : null}

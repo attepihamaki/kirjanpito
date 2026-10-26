@@ -54,16 +54,20 @@ export function TypeFilterToggle({
 
   return (
     <ToggleGroup
-      aria-label={t("typeFilter")}
+      aria-label={t("common.typeFilter")}
       value={[value]}
       onValueChange={(next) => {
         const picked = next[0]
         if (picked) onChange(picked as TypeFilter)
       }}
     >
-      <ToggleGroupItem value="all">{t("all")}</ToggleGroupItem>
-      <ToggleGroupItem value="income">{t("incomePlural")}</ToggleGroupItem>
-      <ToggleGroupItem value="expense">{t("expensePlural")}</ToggleGroupItem>
+      <ToggleGroupItem value="all">{t("common.all")}</ToggleGroupItem>
+      <ToggleGroupItem value="income">
+        {t("common.incomePlural")}
+      </ToggleGroupItem>
+      <ToggleGroupItem value="expense">
+        {t("common.expensePlural")}
+      </ToggleGroupItem>
     </ToggleGroup>
   )
 }

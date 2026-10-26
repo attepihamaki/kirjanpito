@@ -65,12 +65,14 @@ function ExportDialogForm({ onClose }: { onClose: () => void }) {
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{f.t("exportTitle")}</DialogTitle>
+          <DialogTitle>{f.t("io.exportTitle")}</DialogTitle>
         </DialogHeader>
 
         <FieldGroup>
           <Field>
-            <FieldLabel htmlFor="export-name">{f.t("fileName")}</FieldLabel>
+            <FieldLabel htmlFor="export-name">
+              {f.t("io.fileNameLabel")}
+            </FieldLabel>
             <div className="flex items-center gap-2">
               <Input
                 id="export-name"
@@ -94,7 +96,7 @@ function ExportDialogForm({ onClose }: { onClose: () => void }) {
                 onCheckedChange={(checked) => setCsvOnly(checked === true)}
               />
               <FieldLabel htmlFor="export-csv-only" className="font-normal">
-                {f.t("expCsvOnly")}
+                {f.t("io.csvOnly")}
               </FieldLabel>
             </Field>
           ) : null}
@@ -102,14 +104,14 @@ function ExportDialogForm({ onClose }: { onClose: () => void }) {
 
         <p className="text-xs text-muted-foreground">
           {withReceipts
-            ? f.t("expHintZip", { n: receiptCount })
-            : f.t("exportHint")}
-          {receiptCount > 0 && csvOnly ? ` ${f.t("expCsvOnlyHint")}` : ""}
+            ? f.t("io.zipHint", { n: receiptCount })
+            : f.t("io.exportHint")}
+          {receiptCount > 0 && csvOnly ? ` ${f.t("io.csvOnlyHint")}` : ""}
         </p>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            {f.t("cancel")}
+            {f.t("common.cancel")}
           </Button>
           <Button disabled={busy} onClick={() => void run()}>
             {busy ? (
@@ -117,7 +119,7 @@ function ExportDialogForm({ onClose }: { onClose: () => void }) {
             ) : (
               <DownloadIcon data-icon="inline-start" />
             )}
-            {busy ? f.t("exporting") : f.t("exportBtn")}
+            {busy ? f.t("io.exporting") : f.t("io.exportAction")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -8,20 +8,20 @@ import { SITE_URL } from "@/lib/site"
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Bookkeeping – single-entry books for Finnish sole traders",
-    template: "%s – Bookkeeping",
+    default: "Kirjanpito – toiminimen yhdenkertainen kirjanpito",
+    template: "%s – Kirjanpito",
   },
   description:
-    "Single-entry bookkeeping for Finnish sole traders, running entirely in your browser. Works out your VAT return and income statement. No account, no database — your data stays on your own computer.",
+    "Selaimessa toimiva yhdenkertainen kirjanpito toiminimelle. Laskee arvonlisäveron ja tuloslaskelman veroilmoitusta varten. Ei tiliä, ei tietokantaa – tiedot pysyvät omalla koneellasi.",
 }
 
-export default function EnRootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   return (
-    <HtmlShell lang="en">
+    <HtmlShell>
       <StoreHydrator />
       {children}
     </HtmlShell>

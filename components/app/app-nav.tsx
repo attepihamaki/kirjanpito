@@ -10,90 +10,69 @@ import {
   SettingsIcon,
 } from "lucide-react"
 
+import {
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/components/ui/sidebar"
 import { useT } from "@/components/lang-provider"
 import { APP_ROUTES } from "@/lib/site"
-import { cn } from "@/lib/utils"
 import type { MessageKey } from "@/lib/i18n/messages"
 
 export const NAV_ITEMS = [
-  { href: APP_ROUTES.ledger, key: "v_ledger", icon: BookOpenIcon },
-  { href: APP_ROUTES.vat, key: "v_vat", icon: CalculatorIcon },
-  { href: APP_ROUTES.statement, key: "v_statement", icon: FileTextIcon },
-  { href: APP_ROUTES.summary, key: "v_summary", icon: BarChart3Icon },
-  { href: APP_ROUTES.settings, key: "v_settings", icon: SettingsIcon },
+  { href: APP_ROUTES.ledger, key: "nav.ledger", icon: BookOpenIcon },
+  { href: APP_ROUTES.vat, key: "nav.vat", icon: CalculatorIcon },
+  { href: APP_ROUTES.statement, key: "nav.statement", icon: FileTextIcon },
+  { href: APP_ROUTES.summary, key: "nav.summary", icon: BarChart3Icon },
+  { href: APP_ROUTES.settings, key: "nav.settings", icon: SettingsIcon },
 ] as const satisfies ReadonlyArray<{
   href: string
   key: MessageKey
   icon: React.ComponentType<{ className?: string }>
 }>
 
-function useIsActive() {
-  const pathname = usePathname()
-  // trailingSlash is on, so compare without it.
-  const current = pathname.replace(/\/$/, "")
-  return (href: string) => current === href.replace(/\/$/, "")
-}
-
-/** Vertical nav for the desktop sidebar (§8.2). */
+/**
+ * The sidebar's navigation (§8.2). It is the only nav in the app now: below
+ * 900 px the sidebar is a sheet rather than a row of tabs, so there is one
+ * list of links instead of two.
+ */
 export function AppNav() {
   const t = useT()
-  const isActive = useIsActive()
+  const { isMobile, setOpenMobile } = useSidebar()
+  // trailingSlash is on, so compare without it.
+  const current = usePathname().replace(/\/$/, "")
 
   return (
-    <nav className="flex flex-col gap-0.5" aria-label={t("appName")}>
-      {NAV_ITEMS.map(({ href, key, icon: Icon }) => {
-        const active = isActive(href)
-        return (
-          <Link
-            key={href}
-            href={href}
-            aria-current={active ? "page" : undefined}
-            className={cn(
-              "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors",
-              "focus-ring",
-              active
-                ? "bg-accent font-medium text-accent-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-          >
-            <Icon className="size-4 shrink-0" />
-            {t(key)}
-          </Link>
-        )
-      })}
-    </nav>
-  )
-}
-
-/** Horizontally scrollable tabs for the mobile top bar (§8.2). */
-export function AppNavTabs() {
-  const t = useT()
-  const isActive = useIsActive()
-
-  return (
-    <nav
-      aria-label={t("appName")}
-      className="scroll-strip -mx-4 gap-1 px-4 pb-2"
-    >
-      {NAV_ITEMS.map(({ href, key }) => {
-        const active = isActive(href)
-        return (
-          <Link
-            key={href}
-            href={href}
-            aria-current={active ? "page" : undefined}
-            className={cn(
-              "shrink-0 rounded-full px-3 py-1.5 text-sm whitespace-nowrap transition-colors",
-              "focus-ring",
-              active
-                ? "bg-primary font-medium text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-          >
-            {t(key)}
-          </Link>
-        )
-      })}
-    </nav>
+    <SidebarGroup>
+      <SidebarGroupContent>
+        <SidebarMenu className="gap-0.5">
+          {NAV_ITEMS.map(({ href, key, icon: Icon }) => {
+            const active = current === href.replace(/\/$/, "")
+            const label = t(key)
+            return (
+              <SidebarMenuItem key={href}>
+                <SidebarMenuButton
+                  isActive={active}
+                  tooltip={label}
+                  render={
+                    <Link
+                      href={href}
+                      aria-current={active ? "page" : undefined}
+                      onClick={() => isMobile && setOpenMobile(false)}
+                    />
+                  }
+                >
+                  <Icon />
+                  <span>{label}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )
+          })}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
   )
 }

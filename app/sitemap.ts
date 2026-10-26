@@ -7,27 +7,17 @@ import { SITE_URL } from "@/lib/site"
 export const dynamic = "force-static"
 
 /**
- * Only the two landing pages are indexable; everything under /app is the
- * bookkeeping app itself and carries `noindex`.
+ * Only the landing page is indexable; everything under /app is the
+ * bookkeeping app itself and carries `noindex`. The app is also offered in
+ * English, but that is a stored preference rather than a URL, so there is
+ * nothing to declare here beyond the one document.
  */
 export default function sitemap(): MetadataRoute.Sitemap {
-  const languages = {
-    fi: `${SITE_URL}/`,
-    en: `${SITE_URL}/en/`,
-  }
-
   return [
     {
       url: `${SITE_URL}/`,
       changeFrequency: "monthly",
       priority: 1,
-      alternates: { languages },
-    },
-    {
-      url: `${SITE_URL}/en/`,
-      changeFrequency: "monthly",
-      priority: 0.8,
-      alternates: { languages },
     },
   ]
 }

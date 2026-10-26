@@ -21,7 +21,7 @@ export function MonthChips() {
   )
 
   const chips = [
-    { value: 0, label: f.t("all"), count: counts[0] },
+    { value: 0, label: f.t("common.all"), count: counts[0] },
     ...Array.from({ length: 12 }, (_, i) => ({
       value: i + 1,
       label: f.month(i, true),
@@ -33,7 +33,7 @@ export function MonthChips() {
     <div
       className="scroll-strip -mx-1 gap-1.5 px-1 pb-1"
       role="group"
-      aria-label={f.t("period")}
+      aria-label={f.t("vat.period")}
     >
       {chips.map((chip) => {
         const selected = month === chip.value

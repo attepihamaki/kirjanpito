@@ -20,7 +20,7 @@ export function ReceiptPaper({
     <div className={cn("drop-shadow-sm", className)} {...props}>
       <div
         className={cn(
-          "rounded-t-md bg-paper px-4 pt-4 pb-6 text-paper-foreground",
+          "paper-surface rounded-t-md bg-paper px-4 pt-4 pb-6 text-paper-foreground",
           "[mask-image:radial-gradient(circle_5px_at_50%_100%,transparent_98%,black)]",
           "[mask-size:12px_100%] [mask-repeat:repeat-x]"
         )}

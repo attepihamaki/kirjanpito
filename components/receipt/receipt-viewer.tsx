@@ -253,7 +253,7 @@ function ViewerBody({
         <DialogHeader className="pr-8">
           <DialogTitle className="truncate">{att.name}</DialogTitle>
           <p className="text-xs text-muted-foreground">
-            {f.t("v_nOf", { i: index + 1, n: count })}
+            {f.t("viewer.receiptOf", { i: index + 1, n: count })}
             {att.size ? ` · ${f.size(att.size)}` : ""}
           </p>
         </DialogHeader>
@@ -264,7 +264,7 @@ function ViewerBody({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                aria-label={f.t("v_prev")}
+                aria-label={f.t("viewer.prevReceipt")}
                 disabled={index === 0}
                 onClick={() => go(-1)}
               >
@@ -273,7 +273,7 @@ function ViewerBody({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                aria-label={f.t("v_next")}
+                aria-label={f.t("viewer.nextReceipt")}
                 disabled={index === count - 1}
                 onClick={() => go(1)}
               >
@@ -287,19 +287,19 @@ function ViewerBody({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                aria-label={f.t("v_pp")}
+                aria-label={f.t("viewer.prevPage")}
                 disabled={page <= 1}
                 onClick={() => setPage((p) => p - 1)}
               >
                 <ChevronLeftIcon />
               </Button>
               <span className="tabular text-xs text-muted-foreground">
-                {f.t("v_page", { p: page, n: status.pages })}
+                {f.t("viewer.pageOf", { p: page, n: status.pages })}
               </span>
               <Button
                 variant="ghost"
                 size="icon-sm"
-                aria-label={f.t("v_pn")}
+                aria-label={f.t("viewer.nextPage")}
                 disabled={page >= status.pages}
                 onClick={() => setPage((p) => p + 1)}
               >
@@ -312,7 +312,7 @@ function ViewerBody({
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label={f.t("v_zo")}
+              aria-label={f.t("viewer.zoomOut")}
               disabled={zoom <= MIN_ZOOM}
               onClick={() => setZoom((z) => Math.max(MIN_ZOOM, z / ZOOM_STEP))}
             >
@@ -324,7 +324,7 @@ function ViewerBody({
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label={f.t("v_zi")}
+              aria-label={f.t("viewer.zoomIn")}
               disabled={zoom >= MAX_ZOOM}
               onClick={() => setZoom((z) => Math.min(MAX_ZOOM, z * ZOOM_STEP))}
             >
@@ -333,7 +333,7 @@ function ViewerBody({
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label={f.t("v_fit")}
+              aria-label={f.t("viewer.fit")}
               onClick={() => {
                 setZoom(1)
                 setRotation(0)
@@ -344,7 +344,7 @@ function ViewerBody({
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label={f.t("v_rot")}
+              aria-label={f.t("viewer.rotate")}
               onClick={() => setRotation((r) => (r + 90) % 360)}
             >
               <RotateCwIcon />
@@ -353,7 +353,7 @@ function ViewerBody({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                aria-label={f.t("v_dl")}
+                aria-label={f.t("viewer.saveOriginal")}
                 onClick={() => saveBlob(blob, att.name)}
               >
                 <DownloadIcon />
@@ -362,7 +362,7 @@ function ViewerBody({
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label={f.t("v_close")}
+              aria-label={f.t("common.close")}
               onClick={onClose}
             >
               <XIcon />
@@ -377,11 +377,11 @@ function ViewerBody({
           {status.kind === "loading" ? (
             <span className="flex items-center gap-2 text-sm text-muted-foreground">
               <Spinner />
-              {f.t("v_loading")}
+              {f.t("viewer.loading")}
             </span>
           ) : status.kind === "missing" ? (
             <div className="text-center">
-              <p className="font-medium">{f.t("att_missing")}</p>
+              <p className="font-medium">{f.t("receipt.missing")}</p>
               {status.path ? (
                 <p className="mt-1 text-xs break-all text-muted-foreground">
                   {status.path}
@@ -390,7 +390,7 @@ function ViewerBody({
             </div>
           ) : status.kind === "error" ? (
             <div className="max-w-sm text-center">
-              <p className="text-sm">{f.t("v_noPreview")}</p>
+              <p className="text-sm">{f.t("viewer.noPreview")}</p>
             </div>
           ) : (
             <canvas ref={canvasRef} className="max-w-none" />

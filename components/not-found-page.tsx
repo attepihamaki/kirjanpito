@@ -12,7 +12,7 @@ import {
   useFormatters,
 } from "@/components/lang-provider"
 import { Button } from "@/components/ui/button"
-import { APP_ROUTES, landingFor } from "@/lib/site"
+import { APP_ROUTES, LANDING } from "@/lib/site"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -37,31 +37,30 @@ function NotFoundBody() {
   const f = useFormatters()
   const hydrated = useBookStore((s) => s.hydrated)
   const open = useBookStore((s) => s.open)
-  const lang = useBookStore((s) => s.lang)
 
   return (
     <div className="flex min-h-svh flex-col">
-      <SiteHeader home={landingFor(lang)}>
-        <LangToggle />
+      <SiteHeader home={LANDING}>
         <ThemeToggle />
+        <LangToggle />
       </SiteHeader>
 
       <main className="mx-auto flex w-full max-w-5xl flex-1 items-center px-4 py-10">
         <div className="flex w-full flex-col">
           <p className="tabular font-heading text-sm font-semibold tracking-wide text-muted-foreground">
-            {f.t("nf_badge")} 404
+            {f.t("notFound.badge")} 404
           </p>
           <h1 className="mt-2 font-heading text-[clamp(2rem,4.5vw,3rem)] leading-[1.08] font-semibold tracking-[-0.03em] text-balance">
-            {f.t("nf_title")}
+            {f.t("notFound.title")}
           </h1>
           <p className="mt-5 max-w-prose text-lg text-pretty text-muted-foreground">
-            {f.t("nf_lead")}
+            {f.t("notFound.lead")}
           </p>
 
           <div className="mt-7 flex flex-wrap gap-2">
-            <Button size="lg" render={<Link href={landingFor(lang)} />}>
+            <Button size="lg" render={<Link href={LANDING} />}>
               <ArrowLeftIcon data-icon="inline-start" />
-              {f.t("nf_home")}
+              {f.t("notFound.home")}
             </Button>
             {hydrated && open ? (
               <Button
@@ -69,7 +68,7 @@ function NotFoundBody() {
                 variant="outline"
                 render={<Link href={APP_ROUTES.ledger} />}
               >
-                {f.t("lp_continue")}
+                {f.t("landing.continue")}
               </Button>
             ) : null}
           </div>

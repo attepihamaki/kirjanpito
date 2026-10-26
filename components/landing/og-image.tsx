@@ -2,6 +2,22 @@ import type { Lang } from "@/lib/domain/types"
 
 export const OG_SIZE = { width: 1200, height: 630 }
 
+export const OG_ALT =
+  "Kirjanpito – toiminimen yhdenkertainen kirjanpito, ALV-laskelma lokakuulta 2026"
+
+/**
+ * The social card's file name and URL.
+ *
+ * It is served by the route handler at app/og/[file], not by Next's
+ * `opengraph-image` file convention, because that convention emits an
+ * extensionless file and GitHub Pages types a response from its extension —
+ * see the note in that route. The `.png` here is what makes the deployed file
+ * serve as image/png, so the name and the metadata must stay in step; both
+ * read it from here.
+ */
+export const OG_FILE = "opengraph-image.png"
+export const OG_PATH = `/og/${OG_FILE}`
+
 const COPY = {
   fi: {
     title: "Toiminimen kirjanpito, joka mahtuu yhteen tiedostoon.",
@@ -39,7 +55,7 @@ export function OgImage({ lang }: { lang: Lang }) {
         width: "100%",
         height: "100%",
         display: "flex",
-        background: "#f4f5f4",
+        background: "#f5f7fa",
         fontFamily: "sans-serif",
       }}
     >
@@ -61,7 +77,7 @@ export function OgImage({ lang }: { lang: Lang }) {
               width: "44px",
               height: "44px",
               borderRadius: "10px",
-              background: "#2f7d63",
+              background: "#1d4f91",
               color: "#ffffff",
               fontSize: "24px",
               fontWeight: 600,
@@ -69,7 +85,7 @@ export function OgImage({ lang }: { lang: Lang }) {
           >
             K
           </div>
-          <div style={{ fontSize: "26px", fontWeight: 600, color: "#1a211e" }}>
+          <div style={{ fontSize: "26px", fontWeight: 600, color: "#142033" }}>
             Kirjanpito
           </div>
         </div>
@@ -81,7 +97,7 @@ export function OgImage({ lang }: { lang: Lang }) {
             fontWeight: 600,
             lineHeight: 1.1,
             letterSpacing: "-0.03em",
-            color: "#121714",
+            color: "#142033",
             marginTop: "36px",
           }}
         >
@@ -92,7 +108,7 @@ export function OgImage({ lang }: { lang: Lang }) {
           style={{
             display: "flex",
             fontSize: "24px",
-            color: "#596560",
+            color: "#5a6678",
             marginTop: "22px",
           }}
         >
@@ -106,7 +122,7 @@ export function OgImage({ lang }: { lang: Lang }) {
           flex: 1,
           alignItems: "center",
           justifyContent: "center",
-          background: "#e7eeea",
+          background: "#ecf0f5",
         }}
       >
         <div
@@ -115,7 +131,7 @@ export function OgImage({ lang }: { lang: Lang }) {
             flexDirection: "column",
             width: "320px",
             background: "#fffdf8",
-            border: "1px solid #e6e0d3",
+            border: "1px solid #e9e3d6",
             borderRadius: "10px",
             padding: "28px",
             transform: "rotate(3deg)",
@@ -128,7 +144,7 @@ export function OgImage({ lang }: { lang: Lang }) {
               fontSize: "15px",
               fontWeight: 600,
               letterSpacing: "0.06em",
-              color: "#6c7872",
+              color: "#5a6678",
             }}
           >
             {copy.vat}
@@ -137,7 +153,7 @@ export function OgImage({ lang }: { lang: Lang }) {
             style={{
               display: "flex",
               fontSize: "16px",
-              color: "#6c7872",
+              color: "#5a6678",
               marginTop: "4px",
             }}
           >
@@ -147,7 +163,7 @@ export function OgImage({ lang }: { lang: Lang }) {
           <div
             style={{
               display: "flex",
-              borderTop: "1px dashed #e6e0d3",
+              borderTop: "1px dashed #e9e3d6",
               marginTop: "18px",
               paddingTop: "16px",
               flexDirection: "column",
@@ -163,7 +179,7 @@ export function OgImage({ lang }: { lang: Lang }) {
               display: "flex",
               justifyContent: "space-between",
               alignItems: "baseline",
-              borderTop: "1px solid #e6e0d3",
+              borderTop: "1px solid #e9e3d6",
               marginTop: "16px",
               paddingTop: "14px",
             }}
@@ -173,7 +189,7 @@ export function OgImage({ lang }: { lang: Lang }) {
                 display: "flex",
                 fontSize: "18px",
                 fontWeight: 600,
-                color: "#242b27",
+                color: "#142033",
               }}
             >
               {copy.due}
@@ -183,7 +199,7 @@ export function OgImage({ lang }: { lang: Lang }) {
                 display: "flex",
                 fontSize: "30px",
                 fontWeight: 700,
-                color: "#121714",
+                color: "#142033",
               }}
             >
               617,18 €
@@ -204,8 +220,8 @@ function Row({ label, value }: { label: string; value: string }) {
         fontSize: "18px",
       }}
     >
-      <div style={{ display: "flex", color: "#6c7872" }}>{label}</div>
-      <div style={{ display: "flex", color: "#242b27" }}>{value}</div>
+      <div style={{ display: "flex", color: "#5a6678" }}>{label}</div>
+      <div style={{ display: "flex", color: "#142033" }}>{value}</div>
     </div>
   )
 }

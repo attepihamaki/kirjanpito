@@ -1,16 +1,11 @@
 "use client"
 
 import { create } from "zustand"
-import { persist } from "zustand/middleware"
+import { persist, type PersistStorage } from "zustand/middleware"
 
 import { defaultCategories } from "@/lib/domain/accounts"
-import type {
-  AmountMode,
-  Category,
-  Entry,
-  EntryType,
-  Lang,
-} from "@/lib/domain/types"
+import type { AmountMode, Category, Entry, EntryType } from "@/lib/domain/types"
+import { LANG_STORAGE_KEY, writeLang } from "@/stores/lang-store"
 
 /**
  * The localStorage key holding the persisted slice below.
@@ -54,16 +49,31 @@ export interface BookState {
   cats: Category[]
   year: number
   dirty: boolean
+  /**
+   * The file this bookkeeping was last opened from or exported to, **with
+   * its extension** (`kirjanpito_2026-10-24.zip`), for display only (§7.3).
+   * Null until there has been one. The export dialog deliberately does not
+   * seed its default from this.
+   */
   fileName: string | null
   lastMode: AmountMode
   lastType: EntryType
-  lang: Lang
   ledgerSize: PageSize
   ctSize: PageSize
+  /** Desktop sidebar expanded or collapsed to icons (§8.2). */
+  sidebarOpen: boolean
 
   // ---- ephemeral ----
   hydrated: boolean
   storageAvailable: boolean
+  /**
+   * A file is being read. Opening a plain CSV is over in milliseconds, but a
+   * ZIP has to be unpacked, decoded and written to IndexedDB receipt by
+   * receipt — seconds, during which the UI used to say nothing at all. The
+   * flag also guards re-entry: two files dropped in quick succession would
+   * otherwise interleave two `replaceBook` calls.
+   */
+  importing: boolean
   month: MonthFilter
   ledgerQuery: string
   ledgerType: TypeFilter
@@ -102,7 +112,8 @@ export interface BookActions {
   setYear(year: number): void
   setFileName(name: string | null): void
   markExported(fileName: string | null): void
-  setLang(lang: Lang): void
+  setSidebarOpen(open: boolean): void
+  setImporting(importing: boolean): void
   setLastEntryDefaults(next: { mode: AmountMode; type: EntryType }): void
 
   upsertCategory(category: Category): void
@@ -149,12 +160,13 @@ function initialState(): BookState {
     fileName: null,
     lastMode: "gross",
     lastType: "expense",
-    lang: "fi",
     ledgerSize: 10,
     ctSize: 25,
+    sidebarOpen: true,
 
     hydrated: false,
     storageAvailable: true,
+    importing: false,
     month: 0,
     ledgerQuery: "",
     ledgerType: "all",
@@ -172,6 +184,62 @@ function initialState(): BookState {
     gcTick: 0,
     catFormName: "",
   }
+}
+
+/** The slice written to `BOOK_STORAGE_KEY` (§12). */
+type PersistedBook = Pick<
+  BookState,
+  | "entries"
+  | "cats"
+  | "year"
+  | "dirty"
+  | "fileName"
+  | "lastMode"
+  | "lastType"
+  | "open"
+  | "ledgerSize"
+  | "ctSize"
+  | "sidebarOpen"
+>
+
+/**
+ * localStorage, with one rule: **only a bookkeeping creates the key.**
+ *
+ * The landing page and the 404 rehydrate this store to read the open file's
+ * name and status, and rehydration is itself a state change, so the plain
+ * adapter wrote the whole default blob — categories and all — for a visitor
+ * who had never recorded anything. Nothing is written until there is a
+ * bookkeeping to write; once the key exists it is kept up to date as usual,
+ * including after the file is closed, so the page sizes and the sidebar
+ * state survive a close.
+ *
+ * Every access is wrapped: storage can be absent, full or blocked (§12).
+ */
+const bookStorage: PersistStorage<PersistedBook> = {
+  getItem: (name) => {
+    try {
+      const raw = localStorage.getItem(name)
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  },
+  setItem: (name, value) => {
+    try {
+      const hasBook = value.state.open || value.state.entries.length > 0
+      if (!hasBook && localStorage.getItem(name) === null) return
+      localStorage.setItem(name, JSON.stringify(value))
+    } catch {
+      // Storage unavailable or full; the session keeps working in memory.
+    }
+  },
+  removeItem: (name) => {
+    try {
+      localStorage.removeItem(name)
+    } catch {
+      // Nothing to do: there is no copy to remove.
+    }
+  },
 }
 
 /** Reset the filters that would otherwise survive a file switch (§8.11). */
@@ -254,7 +322,8 @@ export const useBookStore = create<BookStore>()(
       setYear: (year) => set({ year, ledgerPage: 1 }),
       setFileName: (fileName) => set({ fileName }),
       markExported: (fileName) => set({ dirty: false, fileName }),
-      setLang: (lang) => set({ lang }),
+      setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
+      setImporting: (importing) => set({ importing }),
       setLastEntryDefaults: ({ mode, type }) =>
         set({ lastMode: mode, lastType: type }),
 
@@ -348,11 +417,12 @@ export const useBookStore = create<BookStore>()(
     }),
     {
       name: BOOK_STORAGE_KEY,
-      version: 1,
+      version: 2,
+      storage: bookStorage,
       // Prerender must not touch localStorage; StoreHydrator rehydrates
       // after mount so the first client render matches the server HTML.
       skipHydration: true,
-      partialize: (s) => ({
+      partialize: (s): PersistedBook => ({
         entries: s.entries,
         cats: s.cats,
         year: s.year,
@@ -360,16 +430,20 @@ export const useBookStore = create<BookStore>()(
         fileName: s.fileName,
         lastMode: s.lastMode,
         lastType: s.lastType,
-        lang: s.lang,
         open: s.open,
         ledgerSize: s.ledgerSize,
         ctSize: s.ctSize,
+        sidebarOpen: s.sidebarOpen,
       }),
       migrate: (persisted) => {
         const blob = (persisted ?? {}) as Record<string, unknown>
-        // The prototype kept `theme` in this blob. next-themes owns it now —
-        // its pre-paint script reads its own key before any of our JS runs,
-        // and two sources of truth would drift.
+        // Both preferences used to live in this blob. They are app-level, not
+        // part of a bookkeeping, and the landing page needs them without
+        // reading the book — so each owns a key of its own now. Seed it only
+        // if empty: the key that exists is the newer truth.
+        //
+        // `theme` is next-themes': its pre-paint script reads that key before
+        // any of our JS runs, and two sources would drift.
         if (typeof blob.theme === "string") {
           try {
             if (!localStorage.getItem("theme")) {
@@ -380,7 +454,15 @@ export const useBookStore = create<BookStore>()(
           }
           delete blob.theme
         }
-        return blob
+        if (blob.lang === "fi" || blob.lang === "en") {
+          try {
+            if (!localStorage.getItem(LANG_STORAGE_KEY)) writeLang(blob.lang)
+          } catch {
+            // Storage unavailable; the language falls back to Finnish.
+          }
+          delete blob.lang
+        }
+        return blob as unknown as PersistedBook
       },
     }
   )

@@ -26,6 +26,7 @@ import {
   type Entry,
 } from "@/lib/domain/types"
 import { dirOf, packZip, resolveReceipt, unpackZip } from "@/lib/domain/zip"
+import { SKIP_CODE_KEYS } from "@/lib/i18n/messages"
 import { APP_ROUTES } from "@/lib/site"
 import type { Ctx } from "@/lib/commands/ctx"
 import { availableReceiptCount, guardDirty } from "@/lib/commands/book-commands"
@@ -51,46 +52,55 @@ function importSummary(
     missing: number
   }
 ): string {
-  let text = ctx.t("imported", { n: result.entries.length })
+  let text = ctx.t("io.imported", { n: result.entries.length })
   if (result.newCategoryCount) {
-    text += ctx.t("newCats", { n: result.newCategoryCount })
+    text += ctx.t("io.newCategories", { n: result.newCategoryCount })
   }
-  if (receipts.imported) text += ctx.t("attsImported", { n: receipts.imported })
-  if (receipts.missing) text += ctx.t("attsMissing", { n: receipts.missing })
+  if (receipts.imported) {
+    text += ctx.t("io.receiptsImported", { n: receipts.imported })
+  }
+  if (receipts.missing) {
+    text += ctx.t("io.receiptsMissing", { n: receipts.missing })
+  }
   if (result.skipped.length) {
     const first = result.skipped
       .slice(0, 3)
       .map((s) =>
-        ctx.t("rowErr", {
+        ctx.t("io.rowError", {
           n: s.line,
-          f: ctx.t(
-            s.code === "bad-date"
-              ? "l_date"
-              : s.code === "bad-type"
-                ? "l_type"
-                : "l_sum"
-          ),
+          // SKIP_CODE_KEYS is the map a test walks to prove every domain code
+          // can be shown; spelling the three out again here was a second
+          // copy that could fall out of step with it.
+          f: ctx.t(SKIP_CODE_KEYS[s.code]),
         })
       )
       .join(", ")
-    text += ctx.t("skipped", { n: result.skipped.length, e: first })
+    text += ctx.t("io.skipped", { n: result.skipped.length, e: first })
   }
   return text
 }
 
 /** Open a CSV or ZIP the user picked or dropped. */
 export async function openFile(ctx: Ctx, file: File): Promise<void> {
+  // A second file dropped while the first is still being unpacked would
+  // interleave two `replaceBook` calls and leave a mixed bookkeeping.
+  if (useBookStore.getState().importing) return
   if (!(await guardDirty(ctx, true))) return
 
   const isZip =
     file.name.toLowerCase().endsWith(".zip") || file.type === ZIP_MIME
 
+  // The UI shows nothing for the first few hundred milliseconds (see
+  // `useDelayedFlag`), so a CSV still opens without a flicker.
+  useBookStore.getState().setImporting(true)
   try {
     if (isZip) await importZip(ctx, file)
     else await importCsv(ctx, file)
   } catch (error) {
     console.error(error)
-    toast.add({ title: ctx.t("readFail") })
+    toast.add({ title: ctx.t("io.readFailed") })
+  } finally {
+    useBookStore.getState().setImporting(false)
   }
 }
 
@@ -113,13 +123,13 @@ async function importCsv(ctx: Ctx, file: File): Promise<void> {
     }
   })
 
-  applyImport(ctx, result, entries, { imported: 0, missing })
+  applyImport(ctx, file.name, result, entries, { imported: 0, missing })
 }
 
 async function importZip(ctx: Ctx, file: File): Promise<void> {
   const unpacked = await unpackZip(await fileToUint8Array(file))
   if (!unpacked) {
-    toast.add({ title: ctx.t("zipNoCsv") })
+    toast.add({ title: ctx.t("io.zipNoCsv") })
     return
   }
 
@@ -161,7 +171,7 @@ async function importZip(ctx: Ctx, file: File): Promise<void> {
     entries.push({ ...entry, ...(atts.length ? { atts } : {}) })
   }
 
-  applyImport(ctx, result, entries, { imported, missing })
+  applyImport(ctx, file.name, result, entries, { imported, missing })
 }
 
 function missingAttachment(path: string): Attachment {
@@ -179,18 +189,20 @@ function failureMessage(
   ctx: Ctx,
   result: Extract<ReturnType<typeof parseCsv>, { ok: false }>
 ): string {
-  if (result.code === "empty-file") return ctx.t("fileEmpty")
+  if (result.code === "empty-file") return ctx.t("io.fileEmpty")
   if (result.code === "missing-columns") {
-    return ctx.t("missingCol", {
+    return ctx.t("io.missingColumn", {
       c: result.missing.join(", "),
       h: CSV_HEADER_LINE,
     })
   }
-  return ctx.t("noRows", { e: String(result.skipped.length) })
+  return ctx.t("io.noRows", { e: String(result.skipped.length) })
 }
 
 function applyImport(
   ctx: Ctx,
+  /** The picked file's name, extension included (§7.3). */
+  fileName: string,
   result: ImportSuccess,
   entries: Entry[],
   receipts: { imported: number; missing: number }
@@ -199,7 +211,7 @@ function applyImport(
   useBookStore.getState().replaceBook({
     entries,
     cats: result.categories,
-    fileName: null,
+    fileName: fileName || null,
     // §7.1: after import the selected year is the latest year in the file.
     year: result.latestYear ?? new Date().getFullYear(),
     // A freshly imported file is, by definition, already exported.
@@ -220,7 +232,7 @@ export async function exportBook(
 ): Promise<void> {
   const { entries, cats } = useBookStore.getState()
   if (!entries.length) {
-    toast.add({ title: ctx.t("nothingExport") })
+    toast.add({ title: ctx.t("io.nothingToExport") })
     return
   }
 
@@ -230,10 +242,11 @@ export async function exportBook(
   // receipts existed (§7.1).
   const csvText = serializeCsv(entries, indexCategories(cats), paths)
   const withReceipts = !csvOnly && availableReceiptCount(entries) > 0
+  const savedAs = `${name}.${withReceipts ? "zip" : "csv"}`
 
   try {
     if (!withReceipts) {
-      saveText(csvText, `${name}.csv`, CSV_MIME)
+      saveText(csvText, savedAs, CSV_MIME)
     } else {
       const attachmentIds = new Map<string, string>()
       for (const e of entries) {
@@ -251,17 +264,13 @@ export async function exportBook(
           return blob ? new Uint8Array(await blob.arrayBuffer()) : null
         },
       })
-      saveBlob(new Blob([bytes as BlobPart], { type: ZIP_MIME }), `${name}.zip`)
+      saveBlob(new Blob([bytes as BlobPart], { type: ZIP_MIME }), savedAs)
     }
 
-    useBookStore.getState().markExported(name)
-    toast.add({
-      title: ctx.t("exported", {
-        f: `${name}.${withReceipts ? "zip" : "csv"}`,
-      }),
-    })
+    useBookStore.getState().markExported(savedAs)
+    toast.add({ title: ctx.t("io.exported", { f: savedAs }) })
   } catch (error) {
     console.error(error)
-    toast.add({ title: ctx.t("expFail") })
+    toast.add({ title: ctx.t("io.exportFailed") })
   }
 }

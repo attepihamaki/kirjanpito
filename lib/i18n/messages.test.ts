@@ -34,6 +34,38 @@ describe("dictionary integrity", () => {
     )
   })
 
+  /**
+   * The keys were once flat and abbreviated — `setSub`, `f_type`, `nCats`,
+   * `delT` — which read as nothing at the call site and left no room for a
+   * second settings subtitle. `namespace.name` is the rule now, and this is
+   * what keeps the next key from being added the old way.
+   */
+  it("names every key namespace.name, from a known namespace", () => {
+    const NAMESPACES = [
+      "app",
+      "common",
+      "confirm",
+      "entry",
+      "file",
+      "io",
+      "landing",
+      "ledger",
+      "nav",
+      "notFound",
+      "receipt",
+      "settings",
+      "statement",
+      "summary",
+      "table",
+      "vat",
+      "viewer",
+    ]
+    for (const key of Object.keys(MESSAGES)) {
+      expect(key, key).toMatch(/^[a-z][A-Za-z]*\.[a-z][A-Za-z0-9]*$/)
+      expect(NAMESPACES, key).toContain(key.split(".")[0])
+    }
+  })
+
   it("uses the same {param} placeholders in both languages", () => {
     const names = (v: string) =>
       [...v.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()
@@ -47,19 +79,19 @@ describe("dictionary integrity", () => {
 
 describe("translate", () => {
   it("returns the value for the chosen language", () => {
-    expect(t("appName", "fi")).toBe("Kirjanpito")
-    expect(t("appName", "en")).toBe("Bookkeeping")
+    expect(t("app.name", "fi")).toBe("Kirjanpito")
+    expect(t("app.name", "en")).toBe("Bookkeeping")
   })
 
   it("interpolates params", () => {
-    expect(t("delMsg", "fi", { x: "Lasku 1005" })).toBe(
+    expect(t("confirm.deleteMessage", "fi", { x: "Lasku 1005" })).toBe(
       "Kirjaus ”Lasku 1005” poistetaan."
     )
-    expect(t("pageOf", "en", { p: 1, n: 2 })).toBe("Page 1 of 2")
+    expect(t("table.pageOf", "en", { p: 1, n: 2 })).toBe("Page 1 of 2")
   })
 
   it("leaves an unknown placeholder untouched", () => {
-    expect(t("pageOf", "en", { p: 1 })).toBe("Page 1 of {n}")
+    expect(t("table.pageOf", "en", { p: 1 })).toBe("Page 1 of {n}")
   })
 
   it("returns the key itself when it is missing", () => {
@@ -70,12 +102,12 @@ describe("translate", () => {
   })
 
   it("picks singular at n = 1 and plural otherwise, in both languages", () => {
-    expect(t("nEntries", "fi", { n: 1 })).toBe("1 kirjaus")
-    expect(t("nEntries", "fi", { n: 16 })).toBe("16 kirjausta")
-    expect(t("nEntries", "en", { n: 1 })).toBe("1 entry")
-    expect(t("nEntries", "en", { n: 16 })).toBe("16 entries")
-    expect(t("att_n", "fi", { n: 2 })).toBe("2 tositetta")
-    expect(t("nCats", "en", { n: 32 })).toBe("32 categories")
+    expect(t("ledger.entryCount", "fi", { n: 1 })).toBe("1 kirjaus")
+    expect(t("ledger.entryCount", "fi", { n: 16 })).toBe("16 kirjausta")
+    expect(t("ledger.entryCount", "en", { n: 1 })).toBe("1 entry")
+    expect(t("ledger.entryCount", "en", { n: 16 })).toBe("16 entries")
+    expect(t("receipt.count", "fi", { n: 2 })).toBe("2 tositetta")
+    expect(t("settings.categoryCount", "en", { n: 32 })).toBe("32 categories")
   })
 
   it("builds plural messages from pl()", () => {
@@ -84,14 +116,8 @@ describe("translate", () => {
     expect(fn({ n: 2 })).toBe("{n} monta")
   })
 
-  it("offers the other language on the switch button", () => {
-    // Intentionally inverted: a Finnish UI offers English, and vice versa.
-    expect(t("switchLang", "fi")).toBe("Switch to English")
-    expect(t("switchLang", "en")).toBe("Vaihda suomeksi")
-  })
-
   it("binds a language with createAppT", () => {
-    expect(createAppT("en")("v_ledger")).toBe("Bookkeeping")
+    expect(createAppT("en")("nav.ledger")).toBe("Bookkeeping")
   })
 })
 
@@ -182,7 +208,7 @@ describe("createFormatters", () => {
   })
 
   it("exposes a bound t()", () => {
-    expect(fi.t("v_ledger")).toBe("Kirjanpito")
-    expect(en.t("nEntries", { n: 3 })).toBe("3 entries")
+    expect(fi.t("nav.ledger")).toBe("Kirjanpito")
+    expect(en.t("ledger.entryCount", { n: 3 })).toBe("3 entries")
   })
 })

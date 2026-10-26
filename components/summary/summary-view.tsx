@@ -33,21 +33,21 @@ import { useBookStore } from "@/stores/book-store"
 
 const BUCKET_KEYS: Record<
   Bucket,
-  | "b_purchases"
-  | "b_personnel"
-  | "b_depreciation"
-  | "b_otherDeductible"
-  | "b_financial"
-  | "b_provisions"
-  | "b_nondeductible"
+  | "summary.bucketPurchases"
+  | "summary.bucketPersonnel"
+  | "summary.bucketDepreciation"
+  | "summary.bucketOtherDeductible"
+  | "summary.bucketFinancial"
+  | "summary.bucketProvisions"
+  | "summary.bucketNondeductible"
 > = {
-  purchases: "b_purchases",
-  personnel: "b_personnel",
-  depreciation: "b_depreciation",
-  otherDeductible: "b_otherDeductible",
-  financial: "b_financial",
-  provisions: "b_provisions",
-  nondeductible: "b_nondeductible",
+  purchases: "summary.bucketPurchases",
+  personnel: "summary.bucketPersonnel",
+  depreciation: "summary.bucketDepreciation",
+  otherDeductible: "summary.bucketOtherDeductible",
+  financial: "summary.bucketFinancial",
+  provisions: "summary.bucketProvisions",
+  nondeductible: "summary.bucketNondeductible",
 }
 
 export function SummaryView() {
@@ -70,13 +70,13 @@ export function SummaryView() {
   return (
     <>
       <PageHeader
-        title={f.t("v_summary")}
-        subtitle={f.t("sumSub", { y: year })}
+        title={f.t("nav.summary")}
+        subtitle={f.t("summary.subtitle", { y: year })}
       />
 
       <div className="flex flex-col gap-6">
-        <section className="rounded-lg border p-4">
-          <h2 className="mb-3 font-medium">{f.t("chartLabel")}</h2>
+        <section className="rounded-lg border bg-card p-4">
+          <h2 className="mb-3 font-medium">{f.t("summary.chartLabel")}</h2>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ left: 8, right: 8 }}>
@@ -108,15 +108,15 @@ export function SummaryView() {
                   formatter={(value, name) => [
                     f.money(Math.round(Number(value) * 100)),
                     name === "income"
-                      ? f.t("incomePlural")
-                      : f.t("expensePlural"),
+                      ? f.t("common.incomePlural")
+                      : f.t("common.expensePlural"),
                   ]}
                 />
                 <Legend
                   formatter={(value) =>
                     value === "income"
-                      ? `${f.t("incomePlural")} · ${f.money(data.totals.incomeNet)}`
-                      : `${f.t("expensePlural")} · ${f.money(data.totals.expenseNet)}`
+                      ? `${f.t("common.incomePlural")} · ${f.money(data.totals.incomeNet)}`
+                      : `${f.t("common.expensePlural")} · ${f.money(data.totals.expenseNet)}`
                   }
                   wrapperStyle={{ fontSize: 12 }}
                 />
@@ -136,28 +136,28 @@ export function SummaryView() {
         </section>
 
         <WideTable
-          title={f.t("sales")}
+          title={f.t("summary.sales")}
           columns={[
-            { key: "total", label: f.t("salesTot"), get: salesTotal },
+            { key: "total", label: f.t("summary.salesTotal"), get: salesTotal },
             ...data.rateColumns.map((rate) => ({
               key: `r${rate}`,
-              label: f.t("s_fi", { r: f.rate(rate) }),
+              label: f.t("summary.finland", { r: f.rate(rate) }),
               get: (row: MonthRow) => row.salesByRate.get(rate) ?? 0,
             })),
-            { key: "eu", label: f.t("s_eu"), get: (r: MonthRow) => r.eu },
+            { key: "eu", label: f.t("summary.eu"), get: (r: MonthRow) => r.eu },
             {
               key: "other",
-              label: f.t("s_other"),
+              label: f.t("summary.otherCountries"),
               get: (r: MonthRow) => r.nonEu,
             },
             {
               key: "rc",
-              label: f.t("s_rc"),
+              label: f.t("summary.reverseCharge"),
               get: (r: MonthRow) => r.reverse,
             },
             {
               key: "otherInc",
-              label: f.t("otherInc"),
+              label: f.t("summary.otherIncome"),
               get: (r: MonthRow) => r.otherIncome,
             },
           ]}
@@ -166,11 +166,11 @@ export function SummaryView() {
         />
 
         <WideTable
-          title={f.t("expenses")}
+          title={f.t("summary.expenses")}
           columns={[
             {
               key: "total",
-              label: f.t("expTot"),
+              label: f.t("summary.expenseTotal"),
               get: (r: MonthRow) => r.expenseNet,
             },
             ...BUCKETS.map((bucket) => ({
@@ -215,7 +215,7 @@ function WideTable({
         <TableHeader>
           <TableRow>
             <TableHead className={cn(sticky, "min-w-20")}>
-              {f.t("mo")}
+              {f.t("summary.month")}
             </TableHead>
             {columns.map((c) => (
               <TableHead key={c.key} className="text-right whitespace-nowrap">
@@ -241,7 +241,7 @@ function WideTable({
         <TableFooter>
           <TableRow>
             <TableCell className={cn(sticky, "font-medium")}>
-              {f.t("tot")}
+              {f.t("summary.total")}
             </TableCell>
             {columns.map((c) => (
               <TableCell key={c.key} className="text-right font-medium">

@@ -4,7 +4,9 @@ import * as React from "react"
 import Link from "next/link"
 import { PlusIcon, UploadIcon } from "lucide-react"
 
+import { ImportOverlay } from "@/components/app/import-overlay"
 import { LandingReceipts } from "@/components/landing/landing-receipts"
+import { LangToggle } from "@/components/app/lang-toggle"
 import { ThemeToggle } from "@/components/app/theme-toggle"
 import { SiteFooter, SiteHeader } from "@/components/common/site-chrome"
 import {
@@ -14,51 +16,45 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
-import { LangProvider, useFormatters } from "@/components/lang-provider"
+import { Spinner } from "@/components/ui/spinner"
+import {
+  AppLangProvider,
+  LangHtmlAttr,
+  useFormatters,
+} from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
-import type { Lang } from "@/lib/domain/types"
+import { useDelayedFlag } from "@/hooks/use-delayed-flag"
 // From csv-header, not csv: that module pulls in papaparse, which has no
 // business in the landing page bundle. csv-header has no dependencies.
 import { CSV_HEADER_LINE } from "@/lib/domain/csv-header"
 import { startNewBook } from "@/lib/commands/book-commands"
-import { APP_ROUTES, LANDING_ROUTES } from "@/lib/site"
-import { BOOK_STORAGE_KEY, useBookStore } from "@/stores/book-store"
+import { APP_ROUTES, LANDING, LANDING_FAQ_ID } from "@/lib/site"
+import { useBookStore } from "@/stores/book-store"
 import { cn } from "@/lib/utils"
 
 /**
- * The landing page (§8.3). Rendered twice — statically at `/` in Finnish and
- * at `/en` in English — from one component, with the language fixed by the
- * route rather than read from storage.
+ * The landing page (§8.3). The one indexed document, and the only page that
+ * renders real content before the store has rehydrated.
+ *
+ * Language follows the stored preference, as it does in the app: Finnish is
+ * the store's default, so the prerendered HTML and the first client render
+ * match byte for byte, and a visitor who has chosen English sees the page
+ * switch once rehydration lands. Only Finnish is indexed, so a crawler always
+ * receives the Finnish document — there is no alternate URL to redirect to.
  */
-export function LandingPage({ lang }: { lang: Lang }) {
+export function LandingPage() {
   return (
-    <LangProvider lang={lang}>
-      <LandingBody lang={lang} />
-    </LangProvider>
+    <AppLangProvider>
+      <LangHtmlAttr />
+      <LandingBody />
+    </AppLangProvider>
   )
 }
 
-function LandingBody({ lang }: { lang: Lang }) {
+function LandingBody() {
   const f = useFormatters()
   const ctx = useCommandCtx()
-  const hydrated = useBookStore((s) => s.hydrated)
-  const setLang = useBookStore((s) => s.setLang)
   const inputRef = React.useRef<HTMLInputElement>(null)
-
-  // First visit only: adopt the language of the URL the visitor arrived at.
-  // A returning user's stored preference is never silently overwritten, and
-  // the page never redirects based on it — that would be cloaking-adjacent
-  // and would break the back button.
-  const seeded = React.useRef(false)
-  React.useEffect(() => {
-    if (!hydrated || seeded.current) return
-    seeded.current = true
-    try {
-      if (!localStorage.getItem(BOOK_STORAGE_KEY)) setLang(lang)
-    } catch {
-      // No storage: the app falls back to its default language.
-    }
-  }, [hydrated, lang, setLang])
 
   return (
     <div className="flex min-h-svh flex-col">
@@ -79,9 +75,9 @@ function LandingBody({ lang }: { lang: Lang }) {
         }}
       />
 
-      <SiteHeader home={LANDING_ROUTES[lang]}>
-        <LandingLangLinks lang={lang} />
+      <SiteHeader home={LANDING}>
         <ThemeToggle />
+        <LangToggle />
         <OpenOrContinue onPick={() => inputRef.current?.click()} compact />
       </SiteHeader>
 
@@ -90,10 +86,10 @@ function LandingBody({ lang }: { lang: Lang }) {
         <section className="mx-auto grid w-full max-w-5xl gap-10 px-4 py-10 md:grid-cols-[1.1fr_1fr] md:py-16">
           <div className="flex flex-col justify-center">
             <h1 className="font-heading text-[clamp(2.25rem,5.4vw,3.75rem)] leading-[1.05] font-semibold tracking-[-0.035em] text-balance">
-              {f.t("lp_title")}
+              {f.t("landing.title")}
             </h1>
             <p className="mt-5 max-w-prose text-lg text-pretty text-muted-foreground">
-              {f.t("lp_lead")}
+              {f.t("landing.lead")}
             </p>
             <HeroCta onPick={() => inputRef.current?.click()} />
           </div>
@@ -101,16 +97,18 @@ function LandingBody({ lang }: { lang: Lang }) {
         </section>
 
         {/* Four steps */}
-        <Section title={f.t("lp_howT")}>
+        <Section title={f.t("landing.howTitle")}>
           <ol className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {([1, 2, 3, 4] as const).map((i) => (
               <li key={i} className="flex flex-col gap-2">
                 <span className="tabular flex size-7 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
                   {i}
                 </span>
-                <h3 className="font-medium">{f.t(`lp_s${i}t` as const)}</h3>
+                <h3 className="font-medium">
+                  {f.t(`landing.step${i}Title` as const)}
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  {f.t(`lp_s${i}` as const)}
+                  {f.t(`landing.step${i}` as const)}
                 </p>
               </li>
             ))}
@@ -118,9 +116,12 @@ function LandingBody({ lang }: { lang: Lang }) {
         </Section>
 
         {/* What it works out */}
-        <Section title={f.t("lp_featT")}>
+        <Section title={f.t("landing.featTitle")}>
           <div className="grid gap-5 md:grid-cols-3">
-            <FeatureCard title={f.t("lp_f1t")} body={f.t("lp_f1")}>
+            <FeatureCard
+              title={f.t("landing.feat1Title")}
+              body={f.t("landing.feat1")}
+            >
               <div className="flex flex-wrap gap-1.5">
                 {[25.5, 13.5, 10, 0].map((rate) => (
                   <span
@@ -134,12 +135,15 @@ function LandingBody({ lang }: { lang: Lang }) {
                   EU
                 </span>
                 <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                  {f.t("s_rc")}
+                  {f.t("summary.reverseCharge")}
                 </span>
               </div>
             </FeatureCard>
 
-            <FeatureCard title={f.t("lp_f2t")} body={f.t("lp_f2")}>
+            <FeatureCard
+              title={f.t("landing.feat2Title")}
+              body={f.t("landing.feat2")}
+            >
               <dl className="flex flex-col gap-1 text-xs">
                 <MiniRow label="300" value={f.money(1250000)} />
                 <MiniRow label="333" value={`−${f.money(22821)}`} />
@@ -150,7 +154,10 @@ function LandingBody({ lang }: { lang: Lang }) {
               </dl>
             </FeatureCard>
 
-            <FeatureCard title={f.t("lp_f3t")} body={f.t("lp_f3")}>
+            <FeatureCard
+              title={f.t("landing.feat3Title")}
+              body={f.t("landing.feat3")}
+            >
               <svg
                 viewBox="0 0 304 58"
                 preserveAspectRatio="none"
@@ -185,13 +192,13 @@ function LandingBody({ lang }: { lang: Lang }) {
         </Section>
 
         {/* Privacy */}
-        <Section title={f.t("lp_privT")}>
+        <Section title={f.t("landing.privacyTitle")}>
           <div className="grid gap-6 md:grid-cols-2">
             <div className="flex flex-col gap-3 text-muted-foreground">
-              <p>{f.t("lp_priv1")}</p>
-              <p>{f.t("lp_priv2")}</p>
+              <p>{f.t("landing.privacy1")}</p>
+              <p>{f.t("landing.privacy2")}</p>
             </div>
-            <pre className="overflow-x-auto rounded-lg border bg-muted/50 p-3 text-[0.7rem] leading-relaxed">
+            <pre className="overflow-x-auto rounded-lg border border-sheet-edge bg-sheet p-3 text-[0.7rem] leading-relaxed">
               <code>
                 <b>{CSV_HEADER_LINE}</b>
                 {"\n"}
@@ -208,13 +215,17 @@ function LandingBody({ lang }: { lang: Lang }) {
           </div>
         </Section>
 
-        {/* FAQ */}
-        <Section title={f.t("lp_faqT")}>
+        {/* FAQ. The id is what the app's sidebar links back to. */}
+        <Section id={LANDING_FAQ_ID} title={f.t("landing.faqTitle")}>
           <Accordion className="max-w-3xl">
             {([1, 2, 3, 4] as const).map((i) => (
               <AccordionItem key={i} value={`q${i}`}>
-                <AccordionTrigger>{f.t(`lp_q${i}` as const)}</AccordionTrigger>
-                <AccordionContent>{f.t(`lp_a${i}` as const)}</AccordionContent>
+                <AccordionTrigger>
+                  {f.t(`landing.q${i}` as const)}
+                </AccordionTrigger>
+                <AccordionContent>
+                  {f.t(`landing.a${i}` as const)}
+                </AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
@@ -222,9 +233,9 @@ function LandingBody({ lang }: { lang: Lang }) {
 
         {/* Closing CTA */}
         <section className="mx-auto w-full max-w-5xl px-4 pb-16">
-          <div className="rounded-xl border bg-accent/40 px-6 py-10 text-center">
+          <div className="rounded-xl border bg-card px-6 py-10 text-center">
             <h2 className="font-heading text-2xl font-semibold tracking-tight">
-              {f.t("lp_endT")}
+              {f.t("landing.endTitle")}
             </h2>
             <HeroCta
               onPick={() => inputRef.current?.click()}
@@ -235,43 +246,7 @@ function LandingBody({ lang }: { lang: Lang }) {
       </main>
 
       <SiteFooter />
-    </div>
-  )
-}
-
-/**
- * FI | EN as links, not a toggle: each landing page is its own indexed
- * document, so switching language is a navigation. It also records the
- * preference, so entering the app keeps the language the visitor chose.
- */
-function LandingLangLinks({ lang }: { lang: Lang }) {
-  const f = useFormatters()
-  const setLang = useBookStore((s) => s.setLang)
-
-  return (
-    <div
-      className="flex items-center rounded-full border p-0.5"
-      role="group"
-      aria-label={f.t("language")}
-    >
-      {(["fi", "en"] as const).map((code) => (
-        <Link
-          key={code}
-          href={LANDING_ROUTES[code]}
-          hrefLang={code}
-          lang={code}
-          aria-current={code === lang ? "true" : undefined}
-          onClick={() => setLang(code)}
-          className={cn(
-            "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
-            code === lang
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          {code.toUpperCase()}
-        </Link>
-      ))}
+      <ImportOverlay />
     </div>
   )
 }
@@ -291,6 +266,7 @@ function HeroCta({
   const entries = useBookStore((s) => s.entries)
   const fileName = useBookStore((s) => s.fileName)
   const dirty = useBookStore((s) => s.dirty)
+  const busy = useDelayedFlag(useBookStore((s) => s.importing))
 
   const openState = hydrated && open
 
@@ -299,37 +275,42 @@ function HeroCta({
       <div className={cn("flex flex-wrap gap-2", className)}>
         {openState ? (
           <Button size="lg" render={<Link href={APP_ROUTES.ledger} />}>
-            {f.t("lp_continue")}
+            {f.t("landing.continue")}
           </Button>
         ) : (
           <Button size="lg" onClick={() => void startNewBook(ctx)}>
             <PlusIcon data-icon="inline-start" />
-            {f.t("lp_start")}
+            {f.t("landing.start")}
           </Button>
         )}
-        <Button size="lg" variant="outline" onClick={onPick}>
-          <UploadIcon data-icon="inline-start" />
-          {f.t("lp_open")}
+        <Button size="lg" variant="outline" disabled={busy} onClick={onPick}>
+          {busy ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
+            <UploadIcon data-icon="inline-start" />
+          )}
+          {busy ? f.t("io.opening") : f.t("landing.open")}
         </Button>
       </div>
 
       {openState ? (
         <p className="text-sm text-muted-foreground">
-          {fileName ? `${fileName}.csv` : f.t("newBook")},{" "}
-          {f.t("nEntries", { n: entries.length })}
-          {dirty && entries.length ? `. ${f.t("dirty")}.` : ""}
+          {fileName ?? f.t("file.untitled")},{" "}
+          {f.t("ledger.entryCount", { n: entries.length })}
+          {dirty && entries.length ? `. ${f.t("file.dirty")}.` : ""}
         </p>
       ) : (
         <button
           type="button"
+          disabled={busy}
           onClick={onPick}
-          className="focus-ring flex items-center gap-3 rounded-lg border border-dashed px-4 py-3 text-left transition-colors hover:border-primary"
+          className="focus-ring flex items-center gap-3 rounded-lg border border-dashed px-4 py-3 text-left transition-colors hover:border-primary disabled:opacity-50"
         >
           <UploadIcon className="size-5 shrink-0 text-muted-foreground" />
           <span className="flex flex-col">
-            <span className="text-sm font-medium">{f.t("lp_drop")}</span>
+            <span className="text-sm font-medium">{f.t("landing.drop")}</span>
             <span className="text-xs text-muted-foreground">
-              {f.t("lp_dropSub")}
+              {f.t("landing.dropSub")}
             </span>
           </span>
         </button>
@@ -348,31 +329,39 @@ function OpenOrContinue({
   const f = useFormatters()
   const hydrated = useBookStore((s) => s.hydrated)
   const open = useBookStore((s) => s.open)
+  const busy = useDelayedFlag(useBookStore((s) => s.importing))
 
   if (hydrated && open) {
     return (
       <Button size="sm" render={<Link href={APP_ROUTES.ledger} />}>
-        {f.t("lp_toApp")}
+        {f.t("landing.toApp")}
       </Button>
     )
   }
   return (
-    <Button size="sm" variant="outline" onClick={onPick}>
-      <UploadIcon data-icon="inline-start" />
-      {compact ? f.t("importShort") : f.t("importCsv")}
+    <Button size="sm" variant="outline" disabled={busy} onClick={onPick}>
+      {busy ? (
+        <Spinner data-icon="inline-start" />
+      ) : (
+        <UploadIcon data-icon="inline-start" />
+      )}
+      {compact ? f.t("file.openShort") : f.t("file.open")}
     </Button>
   )
 }
 
 function Section({
+  id,
   title,
   children,
 }: {
+  /** Set only on sections something links to by anchor. */
+  id?: string
   title: string
   children: React.ReactNode
 }) {
   return (
-    <section className="mx-auto w-full max-w-5xl px-4 py-10 md:py-14">
+    <section id={id} className="mx-auto w-full max-w-5xl px-4 py-10 md:py-14">
       <h2 className="mb-6 font-heading text-2xl font-semibold tracking-tight">
         {title}
       </h2>
@@ -391,7 +380,7 @@ function FeatureCard({
   children: React.ReactNode
 }) {
   return (
-    <article className="flex flex-col gap-3 rounded-lg border p-5">
+    <article className="flex flex-col gap-3 rounded-lg border bg-card p-5">
       <h3 className="font-medium">{title}</h3>
       <p className="text-sm text-muted-foreground">{body}</p>
       <div className="mt-auto rounded-md bg-muted/40 p-3">{children}</div>

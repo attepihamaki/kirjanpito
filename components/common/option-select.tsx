@@ -29,6 +29,7 @@ export function OptionSelect({
   onChange,
   placeholder,
   label,
+  invalid,
   className,
   size,
 }: {
@@ -39,6 +40,8 @@ export function OptionSelect({
   placeholder?: string
   /** Accessible name for the trigger. */
   label?: string
+  /** Marks the trigger as the field an error line is about. */
+  invalid?: boolean
   className?: string
   size?: "sm" | "default"
 }) {
@@ -48,7 +51,12 @@ export function OptionSelect({
       value={value}
       onValueChange={(next) => next && onChange(next)}
     >
-      <SelectTrigger className={className} aria-label={label} size={size}>
+      <SelectTrigger
+        className={className}
+        aria-label={label}
+        aria-invalid={invalid}
+        size={size}
+      >
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

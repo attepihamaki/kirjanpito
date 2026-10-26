@@ -14,7 +14,12 @@ import { SortableHeader } from "@/components/common/sortable-header"
 import { TablePagination } from "@/components/common/table-pagination"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import {
   Table,
@@ -47,7 +52,10 @@ export function SettingsView() {
 
   return (
     <>
-      <PageHeader title={f.t("v_settings")} subtitle={f.t("setSub")} />
+      <PageHeader
+        title={f.t("nav.settings")}
+        subtitle={f.t("settings.subtitle")}
+      />
       <div className="flex flex-col gap-6">
         <AddCategoryForm />
         <CategoryTable />
@@ -66,7 +74,15 @@ function AddCategoryForm() {
   const [side, setSide] = React.useState<EntryType>("expense")
   const [lineChoice, setLine] = React.useState<string | null>(null)
   const [rate, setRate] = React.useState("")
-  const [error, setError] = React.useState<string | null>(null)
+  // Which field the message is about: a bad VAT rate used to light up the
+  // name input, because the error was a bare string with nowhere to point.
+  const [error, setError] = React.useState<{
+    field: "name" | "rate"
+    message: string
+  } | null>(null)
+
+  const invalid = (field: "name" | "rate") =>
+    error?.field === field ? true : undefined
 
   const lineOptions = React.useMemo(
     () => LINES.filter((l) => l.side === side),
@@ -82,12 +98,12 @@ function AddCategoryForm() {
 
   const submit = () => {
     if (!name.trim()) {
-      setError(f.t("nameReq"))
+      setError({ field: "name", message: f.t("settings.nameRequired") })
       return
     }
     const parsed = rate.trim() === "" ? 0 : parseRate(rate)
     if (parsed == null || parsed < 0 || parsed >= 100) {
-      setError(f.t("vatInvalid"))
+      setError({ field: "rate", message: f.t("settings.vatInvalid") })
       return
     }
     const category: Category = {
@@ -100,33 +116,47 @@ function AddCategoryForm() {
       custom: true,
     }
     upsertCategory(category)
-    toast.add({ title: f.t("catAdded", { c: category.name }) })
+    toast.add({ title: f.t("settings.categoryAdded", { c: category.name }) })
     setName("")
     setRate("")
     setError(null)
   }
 
   return (
-    <section className="rounded-lg border p-4">
-      <h2 className="mb-4 font-medium">{f.t("addCat")}</h2>
+    <Panel
+      title={f.t("settings.addCategory")}
+      bodyClassName="p-4"
+      // The submit sits on the footer strip rather than wedged beside the
+      // VAT input, where it shared a grid cell and cramped both.
+      footer={
+        <Button onClick={submit}>
+          <PlusIcon data-icon="inline-start" />
+          {f.t("common.add")}
+        </Button>
+      }
+    >
       <FieldGroup className="sm:grid sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         <Field>
-          <FieldLabel>{f.t("f_type")}</FieldLabel>
+          <FieldLabel>{f.t("common.type")}</FieldLabel>
           <ToggleGroup
-            aria-label={f.t("f_type")}
+            aria-label={f.t("common.type")}
             value={[side]}
             onValueChange={(value) => {
               const next = value[0] as EntryType | undefined
               if (next) setSide(next)
             }}
           >
-            <ToggleGroupItem value="expense">{f.t("expense")}</ToggleGroupItem>
-            <ToggleGroupItem value="income">{f.t("income")}</ToggleGroupItem>
+            <ToggleGroupItem value="expense">
+              {f.t("common.expense")}
+            </ToggleGroupItem>
+            <ToggleGroupItem value="income">
+              {f.t("common.income")}
+            </ToggleGroupItem>
           </ToggleGroup>
         </Field>
 
         <Field>
-          <FieldLabel>{f.t("line")}</FieldLabel>
+          <FieldLabel>{f.t("settings.line")}</FieldLabel>
           <OptionSelect
             options={lineOptions.map((l) => ({
               value: l.key,
@@ -134,48 +164,47 @@ function AddCategoryForm() {
             }))}
             value={line}
             onChange={setLine}
-            label={f.t("line")}
+            label={f.t("settings.line")}
           />
         </Field>
 
-        <Field data-invalid={error ? true : undefined}>
-          <FieldLabel htmlFor="cat-name">{f.t("name")}</FieldLabel>
+        <Field data-invalid={invalid("name")}>
+          <FieldLabel htmlFor="cat-name">{f.t("common.name")}</FieldLabel>
           <Input
             id="cat-name"
             value={name}
-            placeholder={f.t("namePh")}
-            aria-invalid={error ? true : undefined}
-            onChange={(e) => setName(e.target.value)}
+            placeholder={f.t("settings.namePlaceholder")}
+            aria-invalid={invalid("name")}
+            onChange={(e) => {
+              setName(e.target.value)
+              setError(null)
+            }}
             onKeyDown={(e) => e.key === "Enter" && submit()}
           />
         </Field>
 
-        <Field>
-          <FieldLabel htmlFor="cat-rate">{f.t("defVat")}</FieldLabel>
-          <div className="flex gap-2">
-            <Input
-              id="cat-rate"
-              inputMode="decimal"
-              value={rate}
-              placeholder="0"
-              className="tabular"
-              onChange={(e) => setRate(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && submit()}
-            />
-            <Button onClick={submit}>
-              <PlusIcon data-icon="inline-start" />
-              {f.t("add")}
-            </Button>
-          </div>
+        <Field data-invalid={invalid("rate")}>
+          <FieldLabel htmlFor="cat-rate">
+            {f.t("settings.defaultVat")}
+          </FieldLabel>
+          <Input
+            id="cat-rate"
+            inputMode="decimal"
+            value={rate}
+            placeholder="0"
+            className="tabular"
+            aria-invalid={invalid("rate")}
+            onChange={(e) => {
+              setRate(e.target.value)
+              setError(null)
+            }}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+          />
         </Field>
       </FieldGroup>
 
-      {error ? (
-        <p role="alert" className="mt-3 text-sm text-destructive">
-          {error}
-        </p>
-      ) : null}
-    </section>
+      <FieldError className="mt-3">{error?.message}</FieldError>
+    </Panel>
   )
 }
 
@@ -253,17 +282,17 @@ function CategoryTable() {
 
   return (
     <Panel
-      title={f.t("categories")}
+      title={f.t("settings.categories")}
       actions={
         <>
           <SearchInput
             value={query}
             onChange={setQuery}
-            placeholder={f.t("catSearch")}
+            placeholder={f.t("settings.searchCategories")}
           />
           <TypeFilterToggle value={typeFilter} onChange={setType} />
           <span className="text-sm text-muted-foreground">
-            {f.t("nCats", { n: view.total })}
+            {f.t("settings.categoryCount", { n: view.total })}
           </span>
         </>
       }
@@ -272,11 +301,11 @@ function CategoryTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              {header("enabled", f.t("inUse"))}
-              {header("side", f.t("f_type"))}
-              {header("account", f.t("account"))}
-              {header("name", f.t("name"))}
-              {header("vatRate", f.t("defVat"), "right")}
+              {header("enabled", f.t("settings.inUse"))}
+              {header("side", f.t("common.type"))}
+              {header("account", f.t("common.account"))}
+              {header("name", f.t("common.name"))}
+              {header("vatRate", f.t("settings.defaultVat"), "right")}
               <TableHead className="w-px" />
             </TableRow>
           </TableHeader>
@@ -289,7 +318,9 @@ function CategoryTable() {
                   <TableCell>
                     <Checkbox
                       checked={cat.enabled}
-                      aria-label={f.t("isActive", { c: f.catName(cat) })}
+                      aria-label={f.t("settings.isActive", {
+                        c: f.catName(cat),
+                      })}
                       onCheckedChange={(checked) =>
                         upsertCategory({ ...cat, enabled: checked === true })
                       }
@@ -304,7 +335,7 @@ function CategoryTable() {
                           : "bg-expense-subtle text-expense"
                       )}
                     >
-                      {income ? f.t("income") : f.t("expense")}
+                      {income ? f.t("common.income") : f.t("common.expense")}
                     </span>
                   </TableCell>
                   <TableCell className="tabular text-muted-foreground">
@@ -319,7 +350,7 @@ function CategoryTable() {
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        aria-label={f.t("delCat")}
+                        aria-label={f.t("settings.deleteCategory")}
                         onClick={() => removeCategory(cat.id)}
                       >
                         <Trash2Icon />
@@ -361,20 +392,23 @@ function RateInput({ cat }: { cat: Category }) {
     const parsed = parseRate(draft)
     if (parsed == null || parsed < 0 || parsed >= 100) {
       setDraft(asText(cat.vatRate))
-      toast.add({ title: f.t("vatInvalid") })
+      toast.add({ title: f.t("settings.vatInvalid") })
       return
     }
     if (parsed === cat.vatRate) return
     upsertCategory({ ...cat, vatRate: parsed })
     toast.add({
-      title: f.t("vatUpdated", { c: f.catName(cat), r: f.rate(parsed) }),
+      title: f.t("settings.vatUpdated", {
+        c: f.catName(cat),
+        r: f.rate(parsed),
+      }),
     })
   }
 
   return (
     <Input
       value={draft}
-      aria-label={`${f.t("defVat")} – ${f.catName(cat)}`}
+      aria-label={`${f.t("settings.defaultVat")} – ${f.catName(cat)}`}
       className="tabular ml-auto h-7 w-20 text-right"
       onChange={(e) => setDraft(e.target.value)}
       onBlur={commit}
@@ -386,22 +420,43 @@ function RateInput({ cat }: { cat: Category }) {
   )
 }
 
+/**
+ * The two data actions, in two panels rather than one.
+ *
+ * Restoring the default categories is reversible and routine; clearing the
+ * entries erases the bookkeeping from this browser. Sharing a panel gave
+ * them the same visual weight, which is exactly wrong for the second one.
+ */
 function DataActions() {
   const f = useFormatters()
   const ctx = useCommandCtx()
 
   return (
-    <section className="rounded-lg border p-4">
-      <h2 className="mb-1 font-medium">{f.t("data")}</h2>
-      <p className="mb-4 text-sm text-muted-foreground">{f.t("clearHint")}</p>
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" onClick={() => resetCategories(ctx)}>
-          {f.t("resetCats")}
-        </Button>
-        <Button variant="destructive" onClick={() => void clearAllEntries(ctx)}>
-          {f.t("clearAll")}
-        </Button>
-      </div>
-    </section>
+    <>
+      <Panel
+        title={f.t("settings.data")}
+        description={f.t("settings.resetHint")}
+        footer={
+          <Button variant="outline" onClick={() => resetCategories(ctx)}>
+            {f.t("settings.resetCategories")}
+          </Button>
+        }
+      />
+
+      <Panel
+        variant="destructive"
+        title={f.t("settings.clearEntries")}
+        description={f.t("settings.clearHint")}
+        footer={
+          <Button
+            variant="destructive"
+            onClick={() => void clearAllEntries(ctx)}
+          >
+            <Trash2Icon data-icon="inline-start" />
+            {f.t("confirm.clearConfirm")}
+          </Button>
+        }
+      />
+    </>
   )
 }

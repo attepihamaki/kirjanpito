@@ -24,16 +24,16 @@ export function createAppT(lang: Lang): AppT {
  * guaranteeing every code can be shown to the user — a test walks them.
  */
 export const SKIP_CODE_KEYS: Readonly<Record<SkipCode, MessageKey>> = {
-  "bad-date": "l_date",
-  "bad-type": "l_type",
-  "bad-amount": "l_sum",
+  "bad-date": "io.fieldDate",
+  "bad-type": "io.fieldType",
+  "bad-amount": "io.fieldAmount",
 }
 
 export const WARNING_CODE_KEYS = {
-  "unknown-account": "unknownRow",
-  "new-category": "newCatRow",
+  "unknown-account": "io.unknownCategoryRow",
+  "new-category": "io.newCategoryRow",
 } as const satisfies Readonly<Record<string, MessageKey>>
 
 export const ANOMALY_CODE_KEYS = {
-  "vat-on-exempt-sale": "vatOnExemptSale",
+  "vat-on-exempt-sale": "vat.exemptSaleWarning",
 } as const satisfies Readonly<Record<string, MessageKey>>

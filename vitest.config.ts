@@ -14,7 +14,7 @@ export default defineConfig({
     // opt in per file with `// @vitest-environment jsdom`.
     environment: "node",
     globals: false,
-    include: ["lib/**/*.test.ts", "test/**/*.test.tsx"],
+    include: ["lib/**/*.test.ts", "stores/**/*.test.ts", "test/**/*.test.tsx"],
     setupFiles: ["test/setup.ts"],
     // Pins the clock so date tests behave the same here and on CI.
     env: { TZ: "Europe/Helsinki" },

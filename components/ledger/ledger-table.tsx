@@ -63,33 +63,33 @@ export function LedgerTable({
   return (
     // Row density matched to the prototype: the default p-2 cells read as
     // cramped in a ledger you scan down a single column of.
-    <div className="overflow-x-auto rounded-lg border [&_td]:px-3 [&_td]:py-3.5 [&_th]:px-3">
+    <div className="overflow-x-auto rounded-lg border bg-card [&_td]:px-3 [&_td]:py-3.5 [&_th]:px-3">
       <Table>
         <TableHeader>
           <TableRow>
-            {header("date", f.t("c_date"))}
-            {header("description", f.t("c_desc"))}
+            {header("date", f.t("ledger.colDate"))}
+            {header("description", f.t("ledger.colDescription"))}
             {header(
               "category",
-              f.t("c_cat"),
+              f.t("ledger.colCategory"),
               "left",
               "hidden min-[1240px]:table-cell"
             )}
             {header(
               "net",
-              f.t("c_net"),
+              f.t("ledger.colNet"),
               "right",
               "hidden min-[560px]:table-cell"
             )}
             {header(
               "vat",
-              f.t("c_vat"),
+              f.t("ledger.colVat"),
               "right",
               "hidden min-[560px]:table-cell"
             )}
-            {header("gross", f.t("c_gross"), "right")}
+            {header("gross", f.t("ledger.colGross"), "right")}
             <TableHead className="hidden w-px min-[560px]:table-cell">
-              <span className="sr-only">{f.t("actions")}</span>
+              <span className="sr-only">{f.t("common.actions")}</span>
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -169,14 +169,14 @@ function LedgerRow({
               !entry.description && "text-muted-foreground"
             )}
           >
-            {entry.description || f.t("noDesc")}
+            {entry.description || f.t("ledger.noDescription")}
           </span>
           {attachments.length ? (
             <Button
               variant="ghost"
               size="icon-xs"
-              aria-label={f.t("att_n", { n: attachments.length })}
-              title={f.t("att_n", { n: attachments.length })}
+              aria-label={f.t("receipt.count", { n: attachments.length })}
+              title={f.t("receipt.count", { n: attachments.length })}
               onClick={(e) => {
                 e.stopPropagation()
                 onViewReceipt(0)
@@ -195,7 +195,7 @@ function LedgerRow({
 
       <TableCell className="hidden max-w-[16rem] min-[1240px]:table-cell">
         <span className="block truncate text-muted-foreground">
-          {cat ? f.catLabel(cat) : f.t("unknownCat")}
+          {cat ? f.catLabel(cat) : f.t("entry.unknownCategory")}
         </span>
       </TableCell>
 
@@ -225,7 +225,7 @@ function LedgerRow({
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label={f.t("editEntry")}
+            aria-label={f.t("entry.editTitle")}
             onClick={(e) => {
               e.stopPropagation()
               onEdit()
@@ -236,7 +236,7 @@ function LedgerRow({
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label={f.t("copyAsNew")}
+            aria-label={f.t("ledger.copyAsNew")}
             onClick={(e) => {
               e.stopPropagation()
               onCopy()
@@ -247,7 +247,7 @@ function LedgerRow({
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label={f.t("delEntry")}
+            aria-label={f.t("ledger.deleteEntry")}
             onClick={(e) => {
               e.stopPropagation()
               onDelete()

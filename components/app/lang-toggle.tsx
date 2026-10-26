@@ -1,56 +1,64 @@
 "use client"
 
+import { GlobeIcon } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useT } from "@/components/lang-provider"
-import { useBookStore } from "@/stores/book-store"
+import { useLangStore } from "@/stores/lang-store"
+import type { Lang } from "@/lib/domain/types"
 
-/** FI | EN inside the app, where language is a stored preference (§8.2). */
-export function LangToggle({
-  className,
-  compact,
-}: {
-  className?: string
-  /** One button naming the other language, for the mobile top bar (§8.2). */
-  compact?: boolean
-}) {
+/** Endonyms, so each option reads the same whichever language is active. */
+const LANGS: ReadonlyArray<{ code: Lang; label: string }> = [
+  { code: "fi", label: "Suomi" },
+  { code: "en", label: "English" },
+]
+
+/**
+ * The language picker (§8.2): a globe button opening a checked list, the way
+ * FormBox's header does it. Language is a stored preference, never a route
+ * (§11b), so choosing one is a pure state change.
+ */
+export function LangToggle({ className }: { className?: string }) {
   const t = useT()
-  const lang = useBookStore((s) => s.lang)
-  const setLang = useBookStore((s) => s.setLang)
-
-  if (compact) {
-    const other = lang === "fi" ? "en" : "fi"
-    return (
-      <Button
-        variant="ghost"
-        size="icon"
-        className={className}
-        lang={other}
-        aria-label={t("switchLang")}
-        title={t("switchLang")}
-        onClick={() => setLang(other)}
-      >
-        <span className="text-xs font-semibold">{other.toUpperCase()}</span>
-      </Button>
-    )
-  }
+  const lang = useLangStore((s) => s.lang)
+  const setLang = useLangStore((s) => s.setLang)
 
   return (
-    <ToggleGroup
-      className={className}
-      aria-label={t("language")}
-      value={[lang]}
-      onValueChange={(value) => {
-        const next = value[0]
-        if (next === "fi" || next === "en") setLang(next)
-      }}
-    >
-      <ToggleGroupItem value="fi" lang="fi" aria-label="Suomi">
-        FI
-      </ToggleGroupItem>
-      <ToggleGroupItem value="en" lang="en" aria-label="English">
-        EN
-      </ToggleGroupItem>
-    </ToggleGroup>
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon"
+            className={className}
+            aria-label={t("app.language")}
+            title={t("app.language")}
+          />
+        }
+      >
+        <GlobeIcon />
+      </DropdownMenuTrigger>
+      {/* The default content width tracks the trigger, which here is a 32px
+          icon button. */}
+      <DropdownMenuContent align="end" className="w-auto min-w-36">
+        <DropdownMenuRadioGroup
+          value={lang}
+          onValueChange={(value) => setLang(value as Lang)}
+        >
+          {LANGS.map(({ code, label }) => (
+            <DropdownMenuRadioItem key={code} value={code} lang={code}>
+              {label}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

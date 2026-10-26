@@ -56,14 +56,14 @@ function Thumb({
       <button
         type="button"
         onClick={onOpen}
-        aria-label={f.t("att_open")}
+        aria-label={f.t("receipt.open")}
         className="focus-ring size-full"
       >
         {att.missing ? (
           <span className="flex size-full flex-col items-center justify-center gap-1 p-2 text-center">
             <FileTextIcon className="size-5 text-muted-foreground" />
             <span className="text-[0.65rem] text-muted-foreground">
-              {f.t("att_missing")}
+              {f.t("receipt.missing")}
             </span>
           </span>
         ) : pdf ? (
@@ -94,7 +94,7 @@ function Thumb({
       <Button
         variant="secondary"
         size="icon-xs"
-        aria-label={f.t("att_rm")}
+        aria-label={f.t("receipt.remove")}
         onClick={onRemove}
         className="absolute top-1 right-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
       >
@@ -123,7 +123,7 @@ export function AttachmentGrid({
 
   return (
     <div className={cn("flex flex-col gap-2", className)}>
-      <h3 className="text-sm font-medium">{f.t("att_t")}</h3>
+      <h3 className="text-sm font-medium">{f.t("receipt.sectionTitle")}</h3>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {attachments.map((att, i) => (
           <Thumb
@@ -146,11 +146,11 @@ export function AttachmentGrid({
         >
           {busy ? <Spinner /> : <PlusIcon className="size-5" />}
           <span className="px-1 text-center text-[0.7rem]">
-            {f.t("att_add")}
+            {f.t("receipt.add")}
           </span>
         </button>
       </div>
-      <p className="text-xs text-muted-foreground">{f.t("att_hint")}</p>
+      <p className="text-xs text-muted-foreground">{f.t("receipt.hint")}</p>
     </div>
   )
 }

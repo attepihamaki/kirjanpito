@@ -54,115 +54,162 @@
   --color-paper: var(--paper);
   --color-paper-foreground: var(--paper-foreground);
   --color-paper-edge: var(--paper-edge);
+  --color-sheet: var(--sheet);
+  --color-sheet-edge: var(--sheet-edge);
   --color-warning: var(--warning);
 }
 
+/*
+ * The palette is the prototype's (docs/prototype/kirjanpito.html), converted
+ * from its hex variables to oklch; each value keeps its source hex in a
+ * comment so the two can be diffed. The prototype's names map onto the theme's
+ * as: bg → background, surface → card/popover/sidebar, sunken →
+ * muted/secondary/accent, ink → foreground, muted → muted-foreground, rule →
+ * border, rule-strong → input, accent → primary/ring.
+ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  /* #F5F7FA */
+  --background: oklch(0.975 0.005 258);
+  /* #142033 */
+  --foreground: oklch(0.243 0.04 259);
+  /* #FFFFFF */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.243 0.04 259);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.508 0.118 165.612);
-  --primary-foreground: oklch(0.979 0.021 166.113);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.845 0.143 164.978);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.596 0.145 163.225);
-  --chart-4: oklch(0.508 0.118 165.612);
-  --chart-5: oklch(0.432 0.095 166.913);
+  --popover-foreground: oklch(0.243 0.04 259);
+  /* #1D4F91 */
+  --primary: oklch(0.431 0.121 257);
+  /* #FFFFFF */
+  --primary-foreground: oklch(1 0 0);
+  /* #ECF0F5 */
+  --secondary: oklch(0.954 0.008 254);
+  --secondary-foreground: oklch(0.243 0.04 259);
+  --muted: oklch(0.954 0.008 254);
+  /* #5A6678 */
+  --muted-foreground: oklch(0.507 0.032 258);
+  --accent: oklch(0.954 0.008 254);
+  --accent-foreground: oklch(0.243 0.04 259);
+  /* #B03A2E */
+  --destructive: oklch(0.518 0.156 29);
+  /* #DCE3EC */
+  --border: oklch(0.913 0.014 255);
+  /* #C3CDD9 */
+  --input: oklch(0.844 0.02 253);
+  --ring: oklch(0.431 0.121 257);
+  /* A ramp around the accent, through --sheet-blue #3D72C4 at chart-3. */
+  --chart-1: oklch(0.8 0.075 256);
+  --chart-2: oklch(0.69 0.105 257);
+  --chart-3: oklch(0.557 0.14 259);
+  --chart-4: oklch(0.431 0.121 257);
+  --chart-5: oklch(0.345 0.098 257);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.596 0.145 163.225);
-  --sidebar-primary-foreground: oklch(0.979 0.021 166.113);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.243 0.04 259);
+  --sidebar-primary: oklch(0.431 0.121 257);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.954 0.008 254);
+  --sidebar-accent-foreground: oklch(0.243 0.04 259);
+  --sidebar-border: oklch(0.913 0.014 255);
+  --sidebar-ring: oklch(0.431 0.121 257);
 
   /*
      * Kirjanpito additions (CLAUDE.md §11). The theme has no income/expense
      * pair, no warm paper tone and no amber, and the two colours it does have
      * already mean something else: --primary is the call-to-action fill and
-     * --destructive means "error", not "expense". Income sits at hue 148 so it
-     * stays distinguishable from the emerald primary at 165.
+     * --destructive means "error", not "expense".
      */
-  /* #24704A */
-  --income: oklch(0.475 0.093 157);
-  /* #E1F0E7 */
-  --income-subtle: oklch(0.941 0.027 155);
-  /* #A63A32 */
-  --expense: oklch(0.473 0.129 27);
-  /* #F6E4E2 */
-  --expense-subtle: oklch(0.934 0.021 24);
+  /* #1F7A4D */
+  --income: oklch(0.515 0.11 157);
+  /* #E2F2E8 */
+  --income-subtle: oklch(0.946 0.021 159);
+  /* #B03A2E */
+  --expense: oklch(0.518 0.156 29);
+  /* #F8E5E2 */
+  --expense-subtle: oklch(0.936 0.021 28);
+  /* #9A6516 */
+  --warning: oklch(0.551 0.111 71);
+
+  /*
+   * Two warm surfaces, which the prototype separated in this update:
+   *
+   * --paper is the receipt motif (the entry dialog's live preview, the landing
+   * hero). It is a printed slip, so it stays warm paper with dark ink in both
+   * themes — hence no .dark override below, and .paper-surface for what is
+   * printed on it.
+   *
+   * --sheet is the income statement and the landing's CSV sample: a document
+   * on screen rather than an object, so it follows the theme and carries the
+   * ordinary foreground/muted-foreground text.
+   */
   /* #FFFDF8 */
-  --paper: oklch(0.995 0.007 95);
-  --paper-foreground: oklch(0.205 0.012 90);
-  /* #E7E1D4 */
-  --paper-edge: oklch(0.906 0.018 90);
-  /* #C58A1A */
-  --warning: oklch(0.655 0.118 77);
+  --paper: oklch(0.994 0.007 89);
+  /* #142033 */
+  --paper-foreground: oklch(0.243 0.04 259);
+  /* #E9E3D6 */
+  --paper-edge: oklch(0.917 0.019 86);
+  --sheet: oklch(0.994 0.007 89);
+  --sheet-edge: oklch(0.917 0.019 86);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.432 0.095 166.913);
-  --primary-foreground: oklch(0.979 0.021 166.113);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.845 0.143 164.978);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.596 0.145 163.225);
-  --chart-4: oklch(0.508 0.118 165.612);
-  --chart-5: oklch(0.432 0.095 166.913);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.696 0.17 162.48);
-  --sidebar-primary-foreground: oklch(0.262 0.051 172.552);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* #0E1420 */
+  --background: oklch(0.192 0.026 264);
+  /* #E6ECF4 */
+  --foreground: oklch(0.941 0.013 256);
+  /* #151C29 */
+  --card: oklch(0.226 0.028 263);
+  --card-foreground: oklch(0.941 0.013 256);
+  --popover: oklch(0.226 0.028 263);
+  --popover-foreground: oklch(0.941 0.013 256);
+  /* #7FA9E3 */
+  --primary: oklch(0.727 0.096 257);
+  /* #0E1A2B */
+  --primary-foreground: oklch(0.216 0.038 257);
+  /* #1C2534 */
+  --secondary: oklch(0.263 0.031 260);
+  --secondary-foreground: oklch(0.941 0.013 256);
+  --muted: oklch(0.263 0.031 260);
+  /* #9AA6B8 */
+  --muted-foreground: oklch(0.722 0.03 258);
+  --accent: oklch(0.263 0.031 260);
+  --accent-foreground: oklch(0.941 0.013 256);
+  /* #EE8B80 */
+  --destructive: oklch(0.739 0.123 27);
+  /* #273246 */
+  --border: oklch(0.316 0.039 262);
+  /* #364258 */
+  --input: oklch(0.378 0.041 262);
+  --ring: oklch(0.727 0.096 257);
+  --chart-1: oklch(0.8 0.075 256);
+  --chart-2: oklch(0.69 0.105 257);
+  --chart-3: oklch(0.557 0.14 259);
+  --chart-4: oklch(0.431 0.121 257);
+  --chart-5: oklch(0.345 0.098 257);
+  --sidebar: oklch(0.226 0.028 263);
+  --sidebar-foreground: oklch(0.941 0.013 256);
+  --sidebar-primary: oklch(0.727 0.096 257);
+  --sidebar-primary-foreground: oklch(0.216 0.038 257);
+  --sidebar-accent: oklch(0.263 0.031 260);
+  --sidebar-accent-foreground: oklch(0.941 0.013 256);
+  --sidebar-border: oklch(0.316 0.039 262);
+  --sidebar-ring: oklch(0.727 0.096 257);
 
-  /* Kirjanpito additions, dark. */
+  /* Kirjanpito additions, dark. --paper and its pair are deliberately absent:
+     a paper receipt is the same slip whichever theme surrounds it. */
   /* #6FC296 */
-  --income: oklch(0.752 0.105 155);
-  /* #17301F */
-  --income-subtle: oklch(0.268 0.039 156);
-  /* #E8877F */
-  --expense: oklch(0.719 0.108 25);
+  --income: oklch(0.749 0.104 159);
+  /* #16301F */
+  --income-subtle: oklch(0.283 0.045 154);
+  /* #EE8B80 */
+  --expense: oklch(0.739 0.123 27);
   /* #3A1E1B */
-  --expense-subtle: oklch(0.273 0.035 26);
-  /* #1E2320 */
-  --paper: oklch(0.236 0.007 152);
-  --paper-foreground: oklch(0.912 0.009 150);
-  /* #323A36 */
-  --paper-edge: oklch(0.333 0.009 155);
-  --warning: oklch(0.755 0.123 77);
+  --expense-subtle: oklch(0.272 0.044 27);
+  /* #E3B25C */
+  --warning: oklch(0.791 0.118 80);
+  /* #151C29 */
+  --sheet: oklch(0.226 0.028 263);
+  /* #273246 */
+  --sheet-edge: oklch(0.316 0.039 262);
 }
 
 @layer base {
@@ -189,6 +236,22 @@
   }
 
   /*
+   * Inside the receipt motif. --paper keeps its warm tone and dark ink in both
+   * themes, so the income/expense pair has to be pinned to its light values
+   * here too: dark mode's pale mint on warm paper is unreadable, and its
+   * near-black "subtle" fills would be ink blots. The prototype's `.receipt`
+   * redeclares the same variables for the same reason.
+   */
+  .paper-surface {
+    /* #1F7A4D on #E2F2E8 */
+    --income: oklch(0.515 0.11 157);
+    --income-subtle: oklch(0.946 0.021 159);
+    /* #B03A2E on #F8E5E2 */
+    --expense: oklch(0.518 0.156 29);
+    --expense-subtle: oklch(0.936 0.021 28);
+  }
+
+  /*
    * The visible focus ring (§11), for the hand-rolled interactive elements —
    * month chips, nav links, sortable headers, thumbnails, table rows. shadcn's
    * own components carry their own; this is for everything else, which was
@@ -199,7 +262,7 @@
   }
 
   /* A horizontally scrolling strip with no visible scrollbar: the month
-     chips and the mobile nav tabs (§8.2, §8.4). */
+     chips (§8.4). */
   .scroll-strip {
     @apply flex [scrollbar-width:none] overflow-x-auto;
   }

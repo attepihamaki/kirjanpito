@@ -66,7 +66,7 @@ export function VatView() {
       const [a, b] = quarterMonths(q)
       return {
         value: String(q),
-        label: f.t("qOpt", {
+        label: f.t("vat.quarterOption", {
           q,
           a: f.month(a - 1, true),
           b: f.month(b - 1, true),
@@ -78,30 +78,30 @@ export function VatView() {
   const refund = report.due < 0
   const periodLabel =
     mode === "year"
-      ? f.t("yearN", { y: year })
+      ? f.t("vat.yearN", { y: year })
       : mode === "quarter"
-        ? f.t("qN", { q: index, y: year })
+        ? f.t("vat.quarterN", { q: index, y: year })
         : `${f.month(index - 1)} ${year}`
 
   return (
     <>
-      <PageHeader title={f.t("v_vat")} subtitle={periodLabel} />
+      <PageHeader title={f.t("nav.vat")} subtitle={periodLabel} />
 
       <div className="flex flex-col gap-5">
         <div className="flex flex-wrap items-center gap-2">
           <ToggleGroup
-            aria-label={f.t("period")}
+            aria-label={f.t("vat.period")}
             value={[mode]}
             onValueChange={(value) => {
               const next = value[0] as VatMode | undefined
               if (next) setMode(next)
             }}
           >
-            <ToggleGroupItem value="month">
-              {f.t("periodMonth")}
+            <ToggleGroupItem value="month">{f.t("vat.month")}</ToggleGroupItem>
+            <ToggleGroupItem value="quarter">
+              {f.t("vat.quarter")}
             </ToggleGroupItem>
-            <ToggleGroupItem value="quarter">{f.t("periodQ")}</ToggleGroupItem>
-            <ToggleGroupItem value="year">{f.t("periodY")}</ToggleGroupItem>
+            <ToggleGroupItem value="year">{f.t("vat.year")}</ToggleGroupItem>
           </ToggleGroup>
 
           {mode !== "year" ? (
@@ -109,7 +109,7 @@ export function VatView() {
               options={periodOptions}
               value={String(index)}
               onChange={(value) => setIndex(Number(value))}
-              label={f.t("period")}
+              label={f.t("vat.period")}
               className="w-[15rem]"
             />
           ) : null}
@@ -118,7 +118,7 @@ export function VatView() {
         {/* Result banner */}
         <div className="rounded-lg border bg-card p-5">
           <p className="text-sm text-muted-foreground">
-            {refund ? f.t("refTitle") : f.t("payTitle")}
+            {refund ? f.t("vat.refundableTitle") : f.t("vat.payableTitle")}
           </p>
           <p
             className={cn(
@@ -129,7 +129,7 @@ export function VatView() {
             {f.money(Math.abs(report.due))}
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            {f.t("vatCalc", {
+            {f.t("vat.formula", {
               a: f.money(report.sales.total.vat),
               b: f.money(report.purchases.total.vat),
             })}
@@ -139,37 +139,40 @@ export function VatView() {
         {report.anomalies.length ? (
           <Alert>
             <AlertDescription>
-              {f.t("vatOnExemptSale", {
+              {f.t("vat.exemptSaleWarning", {
                 x:
                   entries.find((e) => e.id === report.anomalies[0].entryId)
-                    ?.description || f.t("noDesc"),
+                    ?.description || f.t("ledger.noDescription"),
               })}
             </AlertDescription>
           </Alert>
         ) : null}
 
         <div className="grid gap-5 lg:grid-cols-2">
-          <RateTable title={f.t("salesVat")} side={report.sales} />
+          <RateTable title={f.t("vat.salesTable")} side={report.sales} />
           <RateTable
-            title={f.t("buyVat")}
+            title={f.t("vat.purchaseTable")}
             side={report.purchases}
             // §6.1: 0% purchases are not deductible, so the row is hidden.
             skipZero
           />
         </div>
 
-        <Panel title={f.t("otherSales")}>
+        <Panel title={f.t("vat.otherSales")}>
           <dl className="divide-y">
-            <OtherRow label={f.t("euSales")} cents={report.otherSales.eu} />
-            <OtherRow label={f.t("nonEu")} cents={report.otherSales.nonEu} />
+            <OtherRow label={f.t("vat.euSales")} cents={report.otherSales.eu} />
             <OtherRow
-              label={f.t("rcSales")}
+              label={f.t("vat.nonEuSales")}
+              cents={report.otherSales.nonEu}
+            />
+            <OtherRow
+              label={f.t("vat.reverseChargeSales")}
               cents={report.otherSales.reverse}
             />
           </dl>
         </Panel>
 
-        <p className="text-xs text-muted-foreground">{f.t("vatNote")}</p>
+        <p className="text-xs text-muted-foreground">{f.t("vat.note")}</p>
       </div>
     </>
   )
@@ -195,9 +198,9 @@ function RateTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{f.t("rate")}</TableHead>
-            <TableHead className="text-right">{f.t("c_net")}</TableHead>
-            <TableHead className="text-right">{f.t("tax")}</TableHead>
+            <TableHead>{f.t("common.rate")}</TableHead>
+            <TableHead className="text-right">{f.t("ledger.colNet")}</TableHead>
+            <TableHead className="text-right">{f.t("common.vat")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -214,7 +217,7 @@ function RateTable({
           ))}
           {side.other.net !== 0 || side.other.vat !== 0 ? (
             <TableRow>
-              <TableCell>{f.t("otherRates")}</TableCell>
+              <TableCell>{f.t("vat.otherRates")}</TableCell>
               <TableCell className="text-right">
                 <Money cents={side.other.net} />
               </TableCell>
@@ -226,7 +229,7 @@ function RateTable({
         </TableBody>
         <TableFooter>
           <TableRow>
-            <TableCell className="font-medium">{f.t("total")}</TableCell>
+            <TableCell className="font-medium">{f.t("common.total")}</TableCell>
             <TableCell className="text-right font-medium">
               <Money cents={side.total.net} />
             </TableCell>
