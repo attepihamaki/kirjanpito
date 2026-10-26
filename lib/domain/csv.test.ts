@@ -141,6 +141,26 @@ describe("serializeCsv", () => {
     const text = serializeCsv([entry({ atts: [att()] })], cats)
     expect(text).toContain("tositteet/2026/10/2026-10-28_lasku-1005.pdf")
   })
+
+  it("writes no path for an attachment that is not an image or a PDF", () => {
+    const text = serializeCsv(
+      [
+        entry({
+          atts: [
+            att({ name: "muistiinpanot.txt", type: "text/plain" }),
+            att({
+              id: null,
+              name: "vanha.txt",
+              missing: true,
+              path: "vanha/polku.txt",
+            }),
+          ],
+        }),
+      ],
+      cats
+    )
+    expect(text).not.toContain(".txt")
+  })
 })
 
 describe("detectDelimiter", () => {
@@ -606,6 +626,16 @@ describe("CSV round trip", () => {
         path: "tositteet/2026/10/2026-10-28_lasku-1005_2.pdf",
       },
     ])
+  })
+
+  it("drops a listed path that is not an image or a PDF, and counts it", () => {
+    const text = csvText([
+      HEADER,
+      "2026-10-28;Lasku;tulo;300;Myynti – Suomi;100,00;25,5;brutto;a.jpg|notes.txt",
+    ])
+    const result = ok(parseCsv(text, baseCats, createIdFactory("x")))
+    expect(result.entries[0].paths).toEqual(["a.jpg"])
+    expect(result.rejectedReceiptCount).toBe(1)
   })
 
   /*

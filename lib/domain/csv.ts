@@ -11,7 +11,11 @@ import { CSV_HEADER, CSV_HEADER_LINE } from "@/lib/domain/csv-header"
 import { parseCsvDate, yearOf } from "@/lib/domain/dates"
 import { uid } from "@/lib/domain/id"
 import { formatAmountForCsv, parseAmount, parseRate } from "@/lib/domain/money"
-import { attachmentKey, buildReceiptPaths } from "@/lib/domain/receipt-path"
+import {
+  attachmentKey,
+  buildReceiptPaths,
+  isReceiptFile,
+} from "@/lib/domain/receipt-path"
 import {
   type AmountMode,
   type Category,
@@ -73,9 +77,14 @@ export function serializeCsv(
   for (const e of sorted) {
     const cat = cats.get(e.catId)
     const line = cat ? LINE_BY_KEY.get(cat.line) : undefined
+    /*
+     * Only an image or a PDF is a receipt, so only one of those is written.
+     * The path itself is what the rule is applied to: `buildReceiptPaths`
+     * already drops the rest, but a caller-supplied map is not bound by it.
+     */
     const tosite = (e.atts ?? [])
       .map((a, i) => paths.get(attachmentKey(e.id, i)) ?? a.path ?? "")
-      .filter(Boolean)
+      .filter((p) => p && isReceiptFile({ name: p, type: "" }))
       .join("|")
 
     lines.push(
@@ -174,6 +183,8 @@ export interface ImportSuccess {
   /** The supplied categories plus any created during the import. */
   categories: Category[]
   newCategoryCount: number
+  /** Paths in `tosite` that named neither an image nor a PDF, and were dropped. */
+  rejectedReceiptCount: number
   skipped: readonly SkippedRow[]
   warnings: readonly ImportWarning[]
   latestYear: number | null
@@ -250,6 +261,7 @@ export function parseCsv(
   const skipped: SkippedRow[] = []
   const warnings: ImportWarning[] = []
   let newCategoryCount = 0
+  let rejectedReceiptCount = 0
   let latestYear: number | null = null
 
   for (const { line, cells } of rows) {
@@ -303,10 +315,17 @@ export function parseCsv(
     const amountMode: AmountMode =
       modeRaw === "netto" || modeRaw === "veroton" ? "net" : "gross"
 
-    const paths = get("tosite")
+    const listed = get("tosite")
       .split("|")
       .map((p) => p.trim())
       .filter(Boolean)
+    /*
+     * A path naming anything but an image or a PDF is not a receipt and is
+     * dropped rather than carried along as a missing attachment, which would
+     * put it back in the next export.
+     */
+    const paths = listed.filter((p) => isReceiptFile({ name: p, type: "" }))
+    rejectedReceiptCount += listed.length - paths.length
 
     entries.push({
       id: makeId(),
@@ -331,6 +350,7 @@ export function parseCsv(
     entries,
     categories: working,
     newCategoryCount,
+    rejectedReceiptCount,
     skipped,
     warnings,
     latestYear,

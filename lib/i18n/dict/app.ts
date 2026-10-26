@@ -398,6 +398,10 @@ export const APP_DICT = {
     " Puuttuvia tositteita: {n}.",
     " Missing receipts: {n}.",
   ],
+  "io.receiptsRejected": [
+    " Ohitettu {n}: vain kuvia ja PDF-tiedostoja voi liittää.",
+    " Skipped {n}: only images and PDF files can be attached.",
+  ],
   "io.dropHere": [
     "Pudota CSV- tai ZIP-tiedosto avataksesi sen",
     "Drop a CSV or ZIP file to open it",

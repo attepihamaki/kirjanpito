@@ -2,15 +2,13 @@
 
 import * as React from "react"
 
+import { isReceiptFile } from "@/lib/domain/receipt-path"
+
 export type DropKind = "book" | "media" | null
 
-const MEDIA = /^(image\/|application\/pdf)/
-
+/** A file that may be attached to an entry, by the one rule in the domain. */
 export function isMediaFile(file: File): boolean {
-  return (
-    MEDIA.test(file.type) ||
-    /\.(jpe?g|png|webp|gif|heic|heif|pdf)$/i.test(file.name)
-  )
+  return isReceiptFile({ name: file.name, type: file.type })
 }
 
 export function isBookFile(file: File): boolean {

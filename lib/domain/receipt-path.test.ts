@@ -7,6 +7,7 @@ import {
   defaultFileBaseName,
   extensionFor,
   isPdf,
+  isReceiptFile,
   mimeForName,
   slug,
 } from "@/lib/domain/receipt-path"
@@ -102,6 +103,36 @@ describe("mimeForName / extensionFor / isPdf", () => {
   })
 })
 
+describe("isReceiptFile", () => {
+  it.each([
+    ["kuitti.jpg", ""],
+    ["kuitti.JPEG", ""],
+    ["kuitti.png", ""],
+    ["kuitti.webp", ""],
+    ["kuitti.gif", ""],
+    ["kuitti.heic", ""],
+    ["kuitti.heif", ""],
+    ["lasku.pdf", ""],
+    ["scan", "image/tiff"],
+    ["scan", "application/pdf"],
+  ])("accepts an image or a PDF: %j %j", (name, type) => {
+    expect(isReceiptFile({ name, type })).toBe(true)
+  })
+
+  it.each([
+    ["muistiinpanot.txt", "text/plain"],
+    ["kirjanpito.csv", "text/csv"],
+    ["arkisto.zip", "application/zip"],
+    ["asennus.exe", ""],
+    ["kuitti", ""],
+    ["kuitti", "application/octet-stream"],
+    /* A prototype property is not an extension the table knows. */
+    ["x.constructor", ""],
+  ])("rejects anything else: %j %j", (name, type) => {
+    expect(isReceiptFile({ name, type })).toBe(false)
+  })
+})
+
 describe("buildReceiptPaths", () => {
   it("omits the index suffix for a single receipt", () => {
     const e = entry({ atts: [att({ name: "lasku.pdf" })] })
@@ -168,6 +199,18 @@ describe("buildReceiptPaths", () => {
     expect(buildReceiptPaths([e]).get(attachmentKey("e1", 0))).toBe(
       "vanha/polku.jpg"
     )
+  })
+
+  it("gives no path to an attachment that is not an image or a PDF", () => {
+    const e = entry({
+      atts: [
+        att({ name: "muistiinpanot.txt", type: "text/plain" }),
+        att({ id: null, missing: true, path: "vanha/polku.txt" }),
+      ],
+    })
+    const paths = buildReceiptPaths([e])
+    expect(paths.has(attachmentKey("e1", 0))).toBe(false)
+    expect(paths.has(attachmentKey("e1", 1))).toBe(false)
   })
 
   it("reserves a missing path, pushing a colliding real receipt to -2", () => {

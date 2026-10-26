@@ -19,6 +19,7 @@ import {
   attachmentKey,
   buildReceiptPaths,
   cleanFileName,
+  mimeForName,
 } from "@/lib/domain/receipt-path"
 import {
   indexCategories,
@@ -52,6 +53,7 @@ function importSummary(
     missing: number
   }
 ): string {
+  const rejected = result.rejectedReceiptCount
   let text = ctx.t("io.imported", { n: result.entries.length })
   if (result.newCategoryCount) {
     text += ctx.t("io.newCategories", { n: result.newCategoryCount })
@@ -61,6 +63,9 @@ function importSummary(
   }
   if (receipts.missing) {
     text += ctx.t("io.receiptsMissing", { n: receipts.missing })
+  }
+  if (rejected) {
+    text += ctx.t("io.receiptsRejected", { n: rejected })
   }
   if (result.skipped.length) {
     const first = result.skipped
@@ -165,10 +170,15 @@ async function importZip(ctx: Ctx, file: File): Promise<void> {
       }
       const id = `a-${uid()}`
       const name = path.split("/").pop() ?? path
-      const blob = new Blob([bytes as BlobPart])
+      /*
+       * A ZIP entry carries no MIME type, so it is derived from the name —
+       * one of the image or PDF types, since `parseCsv` admits no other path.
+       */
+      const type = mimeForName(name)
+      const blob = new Blob([bytes as BlobPart], { type })
       try {
         await putReceipt(id, blob)
-        atts.push({ id, name, type: blob.type, size: blob.size })
+        atts.push({ id, name, type, size: blob.size })
         imported += 1
       } catch {
         missing += 1

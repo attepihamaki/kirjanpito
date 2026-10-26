@@ -86,6 +86,24 @@ export function isPdf(a: Pick<Attachment, "name" | "type">): boolean {
 }
 
 /**
+ * Whether a file may be a receipt: an image or a PDF, nothing else (§7.4).
+ *
+ * The single gate for both directions. Every way an attachment can enter a
+ * bookkeeping goes through it — the picker, drag and drop, and the paths a
+ * CSV or ZIP lists — and so does every way one can leave, so a file outside
+ * the rule can neither be stored nor written back out.
+ *
+ * Name and type are both consulted because each can be absent on its own: a
+ * ZIP entry arrives with no MIME type, and a camera upload can arrive with no
+ * extension.
+ */
+export function isReceiptFile(a: Pick<Attachment, "name" | "type">): boolean {
+  if (a.type.startsWith("image/") || a.type === "application/pdf") return true
+  const ext = extFromName(a.name)
+  return !!ext && Object.hasOwn(MIME_BY_EXT, ext)
+}
+
+/**
  * Stable identity of an attachment within an entry, used to key the path map.
  * Object identity would not survive serialization or a structured clone.
  */
@@ -101,6 +119,9 @@ export function attachmentKey(entryId: string, index: number): string {
  *
  * Missing attachments keep their stored path and reserve it, so a real
  * attachment colliding with one gets the suffix instead.
+ *
+ * Anything that is not an image or a PDF gets no path at all, which is what
+ * keeps it out of both the ZIP and the CSV's `tosite` column.
  */
 export function buildReceiptPaths(
   entries: readonly Entry[]
@@ -116,7 +137,11 @@ export function buildReceiptPaths(
    */
   for (const e of sorted) {
     for (const [i, a] of (e.atts ?? []).entries()) {
-      if (a.missing && a.path) {
+      /*
+       * Judged by the path alone: it is what would be written, and a missing
+       * attachment has no file behind it whose type could be trusted.
+       */
+      if (a.missing && a.path && isReceiptFile({ name: a.path, type: "" })) {
         used.add(a.path.toLowerCase())
         paths.set(attachmentKey(e.id, i), a.path)
       }
@@ -126,7 +151,7 @@ export function buildReceiptPaths(
   for (const e of sorted) {
     const atts = e.atts ?? []
     for (const [i, a] of atts.entries()) {
-      if (a.missing) continue
+      if (a.missing || !isReceiptFile(a)) continue
       const [y, mo] = e.date.split("-")
       const suffix = atts.length > 1 ? `_${i + 1}` : ""
       const base = `tositteet/${y}/${mo}/${e.date}_${slug(e.description)}${suffix}`

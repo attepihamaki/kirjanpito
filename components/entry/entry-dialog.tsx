@@ -26,6 +26,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { toast } from "@/components/ui/toast"
 import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
+import { isMediaFile } from "@/hooks/use-file-drop"
 import { prepareImage } from "@/lib/browser/prep-image"
 import {
   isReceiptStorageSupported,
@@ -200,6 +201,15 @@ function EntryDialogForm({
 
   const addFiles = React.useCallback(
     async (files: File[]) => {
+      /*
+       * The picker's `accept` is only a hint — "all files" defeats it — so
+       * the rule is enforced here as well, for files from either source.
+       */
+      const accepted = files.filter(isMediaFile)
+      if (accepted.length < files.length) {
+        toast.add({ title: f.t("receipt.badType") })
+      }
+      if (!accepted.length) return
       if (!isReceiptStorageSupported()) {
         toast.add({ title: f.t("receipt.noStorage") })
         return
@@ -207,7 +217,7 @@ function EntryDialogForm({
       setBusy(true)
       try {
         const added: Attachment[] = []
-        for (const file of files) {
+        for (const file of accepted) {
           const prepared = await prepareImage(file)
           const id = `a-${uid()}`
           try {
