@@ -18,8 +18,10 @@ export const LANDING_DICT = {
   "app.name": ["Kirjanpito", "Bookkeeping"],
   "app.language": ["Kieli", "Language"],
   "app.theme": ["Teema", "Theme"],
-  // The theme button names the mode it switches *to*. There is no "system"
-  // control: next-themes still defaults to the system theme (§11).
+  /*
+   * The theme button names the mode it switches *to*. There is no "system"
+   * control: next-themes still defaults to the system theme (§11).
+   */
   "app.themeLight": ["Vaalea teema", "Light theme"],
   "app.themeDark": ["Tumma teema", "Dark theme"],
   "file.open": ["Avaa tiedosto", "Open file"],
@@ -153,8 +155,10 @@ export const LANDING_DICT = {
     "The calculations are not tax or accounting advice.",
   ],
 
-  // 404. Lives here rather than in the app dictionary: the page is served for
-  // every unmatched URL, including ones outside /app.
+  /*
+   * 404. Lives here rather than in the app dictionary, because the page is
+   * served for every unmatched URL, including ones outside /app.
+   */
   "notFound.badge": ["VIRHE", "ERROR"],
   "notFound.title": [
     "Tätä sivua ei löytynyt.",

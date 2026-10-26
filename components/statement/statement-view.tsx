@@ -135,9 +135,11 @@ export function StatementView() {
                   key={row.id}
                   className={cn(
                     "border-b border-dashed border-sheet-edge/60",
-                    // Greyed, not faded out (§6.3): --muted-foreground reads
-                    // as clearly secondary against --foreground and still
-                    // clears AA, which a further opacity step would not.
+                    /*
+                     * Greyed, not faded out (§6.3): --muted-foreground
+                     * reads as clearly secondary against --foreground and
+                     * still clears AA, which an opacity step would not.
+                     */
                     !row.net && "text-muted-foreground"
                   )}
                 >

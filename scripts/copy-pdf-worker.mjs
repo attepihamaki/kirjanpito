@@ -1,14 +1,15 @@
-// Copies pdfjs-dist's worker into public/ so it is served from a fixed,
-// predictable URL in both `next dev` and the static export.
-//
-// The alternative — new URL("pdfjs-dist/build/pdf.worker.min.mjs",
-// import.meta.url) — leaves it to Turbopack to decide whether to copy the
-// file as an asset or pull it into the module graph as a chunk, and that
-// decision differs between the dev server and `next build`. A failure there
-// shows up only in the production export, which is the worst place for it.
-//
-// Runs on predev and prebuild, and always rewrites, so the copy can never
-// drift from the installed version.
+/*
+ * Copies pdfjs-dist's worker into public/ so it is served from a fixed,
+ * predictable URL in both `next dev` and the static export.
+ *
+ * Resolving it through the bundler instead — new URL("pdfjs-dist/build/
+ * pdf.worker.min.mjs", import.meta.url) — leaves Turbopack to decide whether
+ * to copy the file as an asset or pull it into the module graph as a chunk,
+ * and that decision differs between the dev server and `next build`.
+ *
+ * Runs on predev and prebuild, and always rewrites, so the copy can never
+ * fall behind the installed version.
+ */
 
 import { copyFileSync, mkdirSync, readFileSync } from "node:fs"
 import { createRequire } from "node:module"

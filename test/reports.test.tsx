@@ -53,9 +53,8 @@ beforeEach(() => {
 
 describe("VatView", () => {
   /*
-   * CLAUDE.md §10 used to claim October showed 617,18 € payable from sales
-   * VAT of 637,50 €. Those were decorative constants in the prototype's
-   * landing hero. The only October sale is 1 882,50 € gross at 25,5 %.
+   * The only October sale is 1 882,50 € gross at 25,5 %, so sales VAT is
+   * 382,50 € and the payable 362,18 € (§10).
    */
   it("shows October's corrected figures", () => {
     mount(<VatView />)
@@ -129,8 +128,10 @@ describe("StatementView", () => {
       name: /358 Elinkeinotoiminnan tulos/,
     })
     expect(within(result).getByText(eur(1064253))).toBeInTheDocument()
-    // 12 500,00 € shows three times over: the revenue section total, line
-    // 300 itself, and the "Tuotot yhteensä" footer.
+    /*
+     * 12 500,00 € shows three times over: the revenue section total, line
+     * 300 itself, and the "Tuotot yhteensä" footer.
+     */
     expect(screen.getAllByText(eur(1250000))).toHaveLength(3)
     expect(
       screen.getByText("Vähennyskelpoiset kulut yhteensä")
@@ -188,7 +189,7 @@ describe("StatementView", () => {
     expect(
       screen.getByText("359 Elinkeinotoiminnan tappio")
     ).toBeInTheDocument()
-    // Positive, as form 5 expects — not −500,00 €.
+    // Positive, as form 5 expects (§6.3).
     expect(screen.getByText(eur(50000))).toBeInTheDocument()
   })
 

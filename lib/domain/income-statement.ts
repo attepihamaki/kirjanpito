@@ -19,10 +19,7 @@ export interface IncomeStatement {
   /** Signed: revenue − deductible. */
   result: Cents
   resultLine: "358" | "359"
-  /**
-   * The absolute value. Form 5 wants a positive figure on both 358 and 359;
-   * the prototype printed a negative number on the loss line.
-   */
+  /** The absolute value: form 5 wants a positive figure on both 358 and 359. */
   resultMagnitude: Cents
 }
 

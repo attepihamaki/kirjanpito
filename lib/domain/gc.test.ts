@@ -50,8 +50,10 @@ describe("collectLiveIds", () => {
     expect(collectLiveIds([]).size).toBe(0)
   })
 
-  // Without this, a sweep triggered elsewhere would delete receipts the user
-  // has just attached in an open dialog but not yet saved.
+  /*
+   * Without this, a sweep triggered elsewhere would delete receipts the user
+   * has just attached in an open dialog but not yet saved.
+   */
   it("keeps draft ids that belong to no saved entry", () => {
     const live = collectLiveIds(
       [entry("e1", [att("a1")])],

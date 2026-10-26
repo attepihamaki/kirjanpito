@@ -63,8 +63,10 @@ describe("vatReport — sample data, whole year 2026", () => {
     })
   })
 
-  // Rounding the period net instead would give round(187765 * 25.5 / 125.5)
-  // = 38 151 and a payable of 760,21 €, contradicting §10's 760,22 €.
+  /*
+   * Rounding the period net instead would give round(187765 * 25.5 / 125.5)
+   * = 38 151 and a payable of 760,21 €, contradicting §10's 760,22 €.
+   */
   it("rounds per entry, not per period", () => {
     expect(r.purchases.byRate.get(25.5)!.vat).toBe(38150)
   })
@@ -75,12 +77,9 @@ describe("vatReport — sample data, whole year 2026", () => {
 })
 
 /*
- * CLAUDE.md §10 claimed October shows 617,18 € payable from sales VAT
- * 637,50 € minus purchase VAT 20,32 €. Those two figures are decorative
- * constants from the prototype's landing hero (docs/prototype/kirjanpito.html
- * lines 1037 and 1039, fmt(63750) / fmt(61718)) and do not follow from the
- * sample entries: the only October sale is 1 882,50 € gross at 25,5 %, so sales
- * VAT is 382,50 € and the payable is 362,18 €. §10 has been corrected.
+ * The only October sale is 1 882,50 € gross at 25,5 %, so sales VAT is
+ * 382,50 € and, against 20,32 € of purchase VAT, the payable is 362,18 €.
+ * November and December are empty, so Q4 comes to the same figures.
  */
 describe("vatReport — sample data, October 2026", () => {
   const r = reportFor({ kind: "month", year: 2026, month: 10 })
@@ -126,8 +125,11 @@ describe("vatReport — exclusions", () => {
     expect(r.sales.total.vat).toBe(0)
   })
 
-  // The exclusion is kept (§6.1 is unconditional), but the prototype dropped
-  // the VAT in silence. Now the UI can warn about it.
+  /*
+   * §6.1's exclusion is unconditional, so the rate is ignored — but an
+   * anomaly is raised so the UI can warn about it rather than drop it in
+   * silence.
+   */
   it("still excludes an EU sale that carries a rate, and flags it", () => {
     const r = vatReport([entry({ catId: "300-eu", vatRate: 25.5 })], cats)
     expect(r.sales.total.vat).toBe(0)

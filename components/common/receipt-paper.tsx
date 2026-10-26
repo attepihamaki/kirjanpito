@@ -6,10 +6,9 @@ import { cn } from "@/lib/utils"
  * The perforations are masked out of the paper itself rather than drawn as a
  * strip underneath it, so the torn edge *is* the bottom of the sheet. That
  * rules out a border: a mask clips the element's own border and box shadow, so
- * an outlined receipt loses its outline exactly along the tear, which reads as
- * a bug. The prototype's `.receipt` has no border for the same reason; the
- * paper is told apart from its surface by its warm tone and by the shadow,
- * which has to be a `drop-shadow` filter on the wrapper to follow the notches.
+ * an outlined receipt would lose its outline exactly along the tear. The paper
+ * is told apart from its surface by its warm tone and by the shadow, which has
+ * to be a `drop-shadow` filter on the wrapper to follow the notches.
  */
 export function ReceiptPaper({
   className,
@@ -32,12 +31,9 @@ export function ReceiptPaper({
 }
 
 /**
- * The parts a receipt is printed from.
- *
- * Both receipts in the app are built from these: the live preview in the
- * entry dialog, and the pair in the landing hero. They used to be two private
- * sets of near-identical helpers, which meant a change to the paper's look
- * had to be made twice and silently drifted when it wasn't.
+ * The parts a receipt is printed from. Both receipts in the app are built
+ * from these: the live preview in the entry dialog, and the pair in the
+ * landing hero.
  */
 
 /** The type badge and date across the top of a receipt. */

@@ -15,8 +15,10 @@ import {
 } from "@/lib/domain/money"
 
 describe("Intl availability", () => {
-  // If this fails, the runtime is a small-ICU build and every format
-  // assertion below will fail for the same reason.
+  /*
+   * If this fails, the runtime is a small-ICU build and every format
+   * assertion below will fail for the same reason.
+   */
   it("has full ICU with Finnish locale data", () => {
     expect(Intl.NumberFormat.supportedLocalesOf(["fi-FI"])).toEqual(["fi-FI"])
   })
@@ -101,9 +103,7 @@ describe("parseAmount", () => {
     expect(parseAmount(input)).toBe(expected)
   })
 
-  // The prototype made this depend on the UI language, so the same file
-  // parsed differently in Finnish and English. A lone comma is now always a
-  // decimal comma — "1,234" is one euro twenty-three, never 1234.
+  // "1,234" is one euro twenty-three, never 1234.
   it("treats a lone comma as a decimal comma regardless of language", () => {
     expect(parseAmount("1,234")).toBe(123)
   })

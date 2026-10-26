@@ -7,8 +7,7 @@ import { useT } from "@/components/lang-provider"
 
 /**
  * The header and footer of the two full-width documents outside the app
- * shell: the landing pages (§8.3) and the 404. Both had their own identical
- * copy of each.
+ * shell: the landing page (§8.3) and the 404.
  */
 
 export function SiteHeader({

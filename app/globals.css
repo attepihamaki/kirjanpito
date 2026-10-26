@@ -60,12 +60,10 @@
 }
 
 /*
- * The palette is the prototype's (docs/prototype/kirjanpito.html), converted
- * from its hex variables to oklch; each value keeps its source hex in a
- * comment so the two can be diffed. The prototype's names map onto the theme's
- * as: bg → background, surface → card/popover/sidebar, sunken →
- * muted/secondary/accent, ink → foreground, muted → muted-foreground, rule →
- * border, rule-strong → input, accent → primary/ring.
+ * The palette, in oklch, with each value's source hex kept in a comment
+ * beside it so the two can be diffed. Use the semantic variables and the
+ * standard component variants: never hard-code a hex, never write a manual
+ * `dark:` override (CLAUDE.md §11).
  */
 :root {
   /* #F5F7FA */
@@ -130,7 +128,7 @@
   --warning: oklch(0.551 0.111 71);
 
   /*
-   * Two warm surfaces, which the prototype separated in this update:
+   * Two warm surfaces, which are not interchangeable:
    *
    * --paper is the receipt motif (the entry dialog's live preview, the landing
    * hero). It is a printed slip, so it stays warm paper with dark ink in both
@@ -194,7 +192,7 @@
   --sidebar-border: oklch(0.316 0.039 262);
   --sidebar-ring: oklch(0.727 0.096 257);
 
-  /* Kirjanpito additions, dark. --paper and its pair are deliberately absent:
+  /* Kirjanpito additions, dark. --paper and its pair are absent on purpose:
      a paper receipt is the same slip whichever theme surrounds it. */
   /* #6FC296 */
   --income: oklch(0.749 0.104 159);
@@ -239,8 +237,7 @@
    * Inside the receipt motif. --paper keeps its warm tone and dark ink in both
    * themes, so the income/expense pair has to be pinned to its light values
    * here too: dark mode's pale mint on warm paper is unreadable, and its
-   * near-black "subtle" fills would be ink blots. The prototype's `.receipt`
-   * redeclares the same variables for the same reason.
+   * near-black "subtle" fills would be ink blots.
    */
   .paper-surface {
     /* #1F7A4D on #E2F2E8 */
@@ -254,8 +251,8 @@
   /*
    * The visible focus ring (§11), for the hand-rolled interactive elements —
    * month chips, nav links, sortable headers, thumbnails, table rows. shadcn's
-   * own components carry their own; this is for everything else, which was
-   * repeating the same three utilities and could drift one of them.
+   * own components carry their own ring; this is for everything else, in one
+   * place rather than three utilities repeated at each site.
    */
   .focus-ring {
     @apply focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none;

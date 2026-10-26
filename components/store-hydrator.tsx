@@ -31,8 +31,10 @@ export function StoreHydrator() {
     const state = useBookStore.getState()
     useBookStore.getState().setHydrated({
       storageAvailable: available,
-      // §8.1: when the flag was never stored, a bookkeeping is open if there
-      // are entries.
+      /*
+       * §8.1: when the flag was never stored, a bookkeeping is open if there
+       * are entries.
+       */
       open: state.open || state.entries.length > 0,
     })
   }, [])

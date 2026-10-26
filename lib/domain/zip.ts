@@ -24,8 +24,10 @@ export interface PackInput {
 
 export async function packZip(input: PackInput): Promise<Uint8Array> {
   const zip = new JSZip()
-  // The CSV compresses well; receipts are already compressed formats, so
-  // deflating them costs time for nothing.
+  /*
+   * The CSV compresses well; receipts are already compressed formats, so
+   * deflating them costs time for nothing.
+   */
   zip.file(input.csvName, input.csvText, { compression: "DEFLATE" })
 
   for (const [key, path] of input.paths) {

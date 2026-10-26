@@ -61,8 +61,10 @@ export function LedgerTable({
   )
 
   return (
-    // Row density matched to the prototype: the default p-2 cells read as
-    // cramped in a ledger you scan down a single column of.
+    /*
+     * Roomier than the default p-2 cells, which read as cramped in a ledger
+     * you scan down a single column of.
+     */
     <div className="overflow-x-auto rounded-lg border bg-card [&_td]:px-3 [&_td]:py-3.5 [&_th]:px-3">
       <Table>
         <TableHeader>

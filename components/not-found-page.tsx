@@ -18,11 +18,11 @@ import { useBookStore } from "@/stores/book-store"
 /**
  * The 404 page.
  *
- * Static export emits a single `out/404.html`, so unlike the two landing
- * pages this document cannot have its language baked into the route. It
- * behaves like the app instead: Finnish in the prerendered HTML (the store's
- * default, so the first client render still matches byte for byte) and the
- * stored preference once the store has rehydrated.
+ * Static export emits a single `out/404.html`, which serves every unmatched
+ * URL. It follows the stored preference like the rest of the site: Finnish in
+ * the prerendered HTML (the store's default, so the first client render still
+ * matches byte for byte) and the stored preference once the store has
+ * rehydrated.
  */
 export function NotFoundPage() {
   return (

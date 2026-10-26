@@ -113,8 +113,7 @@ describe("incomeStatement — §6.3 rules", () => {
     expect(s.lines.find((l) => l.line.key === "365")!.net).toBe(5000)
   })
 
-  // Form 5 wants a positive figure on both 358 and 359; the prototype
-  // printed a negative number on the loss line.
+  // Form 5 wants a positive figure on both 358 and 359.
   it("reports a loss on 359 as a positive magnitude", () => {
     const s = incomeStatement(
       [

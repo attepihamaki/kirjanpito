@@ -25,8 +25,10 @@ function stripCombiningMarks(input: string): string {
  * characters, falling back to "tosite".
  */
 export function slug(input: string): string {
-  // NFD splits the remaining accents into letter + combining mark, which
-  // stripCombiningMarks then drops, leaving the bare letter.
+  /*
+   * NFD splits the remaining accents into letter + combining mark, which
+   * stripCombiningMarks then drops, leaving the bare letter.
+   */
   const folded = String(input ?? "")
     .toLowerCase()
     .replace(/[åä]/g, "a")
@@ -84,11 +86,8 @@ export function isPdf(a: Pick<Attachment, "name" | "type">): boolean {
 }
 
 /**
- * Stable identity of an attachment within an entry.
- *
- * The prototype keyed its path map by attachment object identity, which does
- * not survive serialization or a store's structured clone — and cannot be
- * asserted against a fixture.
+ * Stable identity of an attachment within an entry, used to key the path map.
+ * Object identity would not survive serialization or a structured clone.
  */
 export function attachmentKey(entryId: string, index: number): string {
   return `${entryId}#${index}`
@@ -110,8 +109,11 @@ export function buildReceiptPaths(
   const used = new Set<string>()
   const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date))
 
-  // Reserve every missing attachment's path first, so ordering between a
-  // missing and a real attachment cannot change which one keeps the plain name.
+  /*
+   * Reserve every missing attachment's path first, so ordering between a
+   * missing and a real attachment cannot change which one keeps the plain
+   * name.
+   */
   for (const e of sorted) {
     for (const [i, a] of (e.atts ?? []).entries()) {
       if (a.missing && a.path) {

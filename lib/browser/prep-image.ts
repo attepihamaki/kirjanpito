@@ -46,8 +46,10 @@ export async function prepareImage(file: File): Promise<PreparedFile> {
     const context = canvas.getContext("2d")
     if (!context) return { blob: file, name: file.name, type: file.type }
 
-    // White, not transparent: a transparent PNG flattened to JPEG would
-    // otherwise come out with a black background.
+    /*
+     * White, not transparent: a transparent PNG flattened to JPEG would
+     * otherwise come out with a black background.
+     */
     context.fillStyle = "#ffffff"
     context.fillRect(0, 0, canvas.width, canvas.height)
     context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)

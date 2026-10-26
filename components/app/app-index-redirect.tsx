@@ -25,8 +25,10 @@ export function AppIndexRedirect() {
   const router = useRouter()
 
   React.useEffect(() => {
-    // replace, not push: /app is a waypoint, and Back should leave the app
-    // rather than bounce through it.
+    /*
+     * replace, not push: /app is a waypoint, and Back should leave the app
+     * rather than bounce through it.
+     */
     if (hydrated && open) router.replace(APP_ROUTES.ledger)
   }, [hydrated, open, router])
 

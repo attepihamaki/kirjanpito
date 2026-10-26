@@ -31,7 +31,7 @@ function readLang(): Lang | null {
   }
 }
 
-/** Exported for the book store's migration off the prototype-era blob. */
+/** Exported for the book store's migration, which seeds this key. */
 export function writeLang(lang: Lang) {
   try {
     localStorage.setItem(LANG_STORAGE_KEY, lang)
@@ -57,8 +57,10 @@ export const useLangStore = create<LangStore>()((set) => ({
     set({ lang })
   },
 
-  // Prerender must not touch localStorage: the default is Finnish, which is
-  // what the prerendered HTML says, so the first client render matches byte
-  // for byte and this effect-time read is the only divergence (§11b).
+  /*
+   * Prerender must not touch localStorage: the default is Finnish, which is
+   * what the prerendered HTML says, so the first client render matches byte
+   * for byte and this effect-time read is the only divergence (§11b).
+   */
   hydrate: () => set({ lang: readLang() ?? DEFAULT_LANG, hydrated: true }),
 }))

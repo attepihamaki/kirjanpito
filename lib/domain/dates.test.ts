@@ -71,8 +71,10 @@ describe("formatDate", () => {
     expect(formatDate("2026-12-31", "en")).toBe("31 Dec 2026")
   })
 
-  // Built with a local-time Date, this renders as "31 Dec 2025" west of
-  // Greenwich. The UTC pairing in formatDate is what prevents that.
+  /*
+   * Built with a local-time Date, this would render as "31 Dec 2025" west of
+   * Greenwich. The UTC pairing in formatDate is what prevents that.
+   */
   it("never shifts across the date line", () => {
     expect(formatDate("2026-01-01", "en")).toBe("1 Jan 2026")
   })

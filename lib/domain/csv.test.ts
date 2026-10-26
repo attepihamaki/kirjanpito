@@ -137,8 +137,6 @@ describe("serializeCsv", () => {
     )
   })
 
-  // The prototype emitted an empty tosite for real attachments when no ZIP
-  // was produced, making a CSV-only export lossy.
   it("writes receipt paths even when no ZIP is produced", () => {
     const text = serializeCsv([entry({ atts: [att()] })], cats)
     expect(text).toContain("tositteet/2026/10/2026-10-28_lasku-1005.pdf")
@@ -158,7 +156,6 @@ describe("detectDelimiter", () => {
     expect(detectDelimiter(csvText([CSV_HEADER.join("\t")]))).toBe("\t")
   })
 
-  // Counting raw occurrences, as the prototype did, would pick ";" here.
   it("is not fooled by a quoted field containing another delimiter", () => {
     const header = 'pvm,selite,"a;b;c;d;e",summa,tyyppi'
     expect(detectDelimiter(csvText([header]))).toBe(",")
@@ -280,8 +277,10 @@ describe("parseCsv — leniency", () => {
     expect(r.entries.map((e) => e.amount)).toEqual([188250, 188250, -1200])
   })
 
-  // The input is the CSV's own `syotto` value and stays Finnish; the expected
-  // value is the English AmountMode the parser maps it to.
+  /*
+   * The input is the CSV's own `syotto` value and stays Finnish; the expected
+   * value is the English AmountMode the parser maps it to.
+   */
   it.each([
     ["netto", "net"],
     ["veroton", "net"],
@@ -363,8 +362,6 @@ describe("parseCsv — category matching", () => {
     expect(r.entries[0].catId).toBe("333")
   })
 
-  // The prototype took the first category on the account, which on 344 meant
-  // Matkakulut rather than Muut vähennyskelpoiset kulut.
   it("books an empty luokka on 344 to Muut vähennyskelpoiset kulut", () => {
     expect(parse(["2026-01-08;kulu;344;;1,00;"]).entries[0].catId).toBe(
       "344-other"
@@ -458,8 +455,6 @@ describe("parseCsv — skipped rows", () => {
     ])
   })
 
-  // The prototype filtered blank rows before numbering, so its line numbers
-  // did not match what the user sees in the file.
   it("reports physical line numbers when the file has blank lines", () => {
     const r = ok(
       parseCsv(
@@ -613,8 +608,10 @@ describe("CSV round trip", () => {
     ])
   })
 
-  // The strongest assertion here: if anything about the normalisation
-  // disagreed between the two sides, the second pass would differ.
+  /*
+   * If anything about the normalisation disagreed between the two sides, the
+   * second pass would differ.
+   */
   it("is idempotent — a second serialize is byte-identical", () => {
     const first = serializeCsv(sample, cats)
     const r = ok(parseCsv(first, baseCats, createIdFactory("r")))
@@ -626,8 +623,10 @@ describe("CSV round trip", () => {
   })
 
   it("round-trips through a comma-delimited file", () => {
-    // Re-emit the same cells with commas, quoting as a real comma file must:
-    // the decimal commas in `summa` force every amount to be quoted.
+    /*
+     * Re-emit the same cells with commas, quoting as a real comma file must:
+     * the decimal commas in `summa` force every amount to be quoted.
+     */
     const cells = Papa.parse<string[]>(serializeCsv(sample, cats).slice(1), {
       header: false,
       delimiter: ";",

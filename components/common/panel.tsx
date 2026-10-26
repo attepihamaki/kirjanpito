@@ -3,10 +3,9 @@ import { cn } from "@/lib/utils"
 /**
  * A bordered panel with a ruled heading — the shape the VAT tables, the
  * "other sales" list, the summary grids and the settings sections all use.
- * Each of them used to repeat the same two class strings.
  *
- * It is a --card surface over the page's --background, as the prototype's
- * `.panel` is --surface over --bg (§11).
+ * It is a --card surface over the page's --background (§11); a bordered panel
+ * with no fill would vanish into the page.
  *
  * A panel whose actions commit something puts them in `footer`, on a ruled,
  * tinted strip rather than loose among the fields — the shape FormBox's

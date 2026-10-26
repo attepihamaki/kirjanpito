@@ -77,8 +77,10 @@ describe("summary — sample 2026", () => {
 })
 
 describe("summary — column integrity", () => {
-  // Without rateColumns covering the rates actually used, a sale at an
-  // unlisted rate would raise the row total while appearing in no column.
+  /*
+   * Without rateColumns covering the rates actually used, a sale at an
+   * unlisted rate would raise the row total while appearing in no column.
+   */
   it("keeps every row's sales total equal to the sum of its visible columns", () => {
     const check = (sum: ReturnType<typeof summary>) => {
       for (const row of [...sum.months, sum.totals]) {

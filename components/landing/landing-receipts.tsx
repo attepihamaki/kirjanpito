@@ -20,10 +20,9 @@ export function LandingReceipts() {
 
   return (
     /*
-     * The panel is the prototype's soft accent block (`.lp-visual::before`,
-     * --accent-soft): a tint of --primary rather than --accent, because
-     * --accent is the neutral hover grey. Tinting gives both themes what the
-     * prototype spells out as two hex values, with no `dark:` override.
+     * A soft accent block behind the receipts: a tint of --primary rather
+     * than --accent, which is the neutral hover grey. Tinting serves both
+     * themes from one value, with no `dark:` override (§11).
      */
     <div
       aria-hidden="true"

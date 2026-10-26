@@ -31,10 +31,9 @@ describe("opening a file", () => {
     })
   })
 
-  /**
-   * §7.3: the name of the file the bookkeeping came from is what the sidebar
-   * shows. The port dropped it — import hard-coded `fileName: null`, so the
-   * box said "Uusi kirjanpito" however the book had been opened.
+  /*
+   * §7.3: the name of the file the bookkeeping came from, with its extension,
+   * is what the sidebar shows.
    */
   it("remembers the name of the file it was opened from", async () => {
     await openFile(ctx, pick("kirjanpito_2026-10-24.csv"))
@@ -58,11 +57,11 @@ describe("opening a file", () => {
   })
 })
 
-/**
- * Reading a ZIP means unpacking it and writing every receipt to IndexedDB —
- * seconds of work the UI used to spend saying nothing. The flag is what the
- * sidebar spinner and the overlay hang off; `useDelayedFlag` is what keeps
- * them from flashing for a CSV that opens in a millisecond.
+/*
+ * Reading a ZIP means unpacking it and writing every receipt to IndexedDB,
+ * which takes seconds. The flag is what the sidebar spinner and the overlay
+ * hang off; `useDelayedFlag` is what keeps them from flashing for a CSV that
+ * opens in a millisecond.
  */
 describe("the importing flag", () => {
   beforeEach(() => {
@@ -98,8 +97,10 @@ describe("the importing flag", () => {
 
     await openFile(ctx, pick("kirjanpito.csv"))
 
-    // Nothing was read, and the flag belongs to the import already running —
-    // this call must not clear it on its way out.
+    /*
+     * Nothing was read, and the flag belongs to the import already running —
+     * this call must not clear it on its way out.
+     */
     expect(useBookStore.getState().entries).toHaveLength(0)
     expect(useBookStore.getState().importing).toBe(true)
   })

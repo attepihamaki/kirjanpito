@@ -22,7 +22,7 @@ export function isBookFile(file: File): boolean {
  *
  * The depth counter is reset on `drop` and on `dragend` as well as being
  * decremented on `dragleave`: a drag that ends outside the window never fires
- * a matching leave, and the prototype's overlay could get stuck because of it.
+ * a matching leave, which would otherwise leave the overlay stuck open.
  */
 export function useFileDrop({
   onDropFiles,

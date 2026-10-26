@@ -28,12 +28,16 @@ export function ConfirmDialogHost() {
   const [pending, setPending] = React.useState<Pending | null>(null)
   const pendingRef = React.useRef<Pending | null>(null)
 
-  // useLayoutEffect so the handler is registered before any child's effect
-  // can call confirm().
+  /*
+   * useLayoutEffect so the handler is registered before any child's effect
+   * can call confirm().
+   */
   React.useLayoutEffect(() => {
     registerConfirmHandler((options) => {
-      // Stacking AlertDialogs is a focus-trap hazard and there is no
-      // legitimate case for one, so a second ask while one is open declines.
+      /*
+       * Stacking AlertDialogs is a focus-trap hazard and there is no
+       * legitimate case for one, so a second ask while one is open declines.
+       */
       if (pendingRef.current) return Promise.resolve(false)
       return new Promise<boolean>((resolve) => {
         const next = { options, resolve }

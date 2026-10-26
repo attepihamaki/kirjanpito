@@ -24,8 +24,10 @@ import {
 } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { useDelayedFlag } from "@/hooks/use-delayed-flag"
-// From csv-header, not csv: that module pulls in papaparse, which has no
-// business in the landing page bundle. csv-header has no dependencies.
+/*
+ * From csv-header, not csv: that module pulls in papaparse, which has no
+ * business in the landing page bundle. csv-header has no dependencies.
+ */
 import { CSV_HEADER_LINE } from "@/lib/domain/csv-header"
 import { startNewBook } from "@/lib/commands/book-commands"
 import { APP_ROUTES, LANDING, LANDING_FAQ_ID } from "@/lib/site"

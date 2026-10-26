@@ -53,8 +53,10 @@ export function ReceiptViewer() {
   const att = attachments[index]
   if (!entry || !att) return null
 
-  // Keyed on the attachment, so moving between receipts remounts with
-  // fresh zoom, rotation and page rather than resetting them in an effect.
+  /*
+   * Keyed on the attachment, so moving between receipts remounts with fresh
+   * zoom, rotation and page rather than resetting them in an effect.
+   */
   return (
     <ViewerBody
       key={(att.id ?? att.path ?? att.name) + ":" + index}
@@ -236,10 +238,11 @@ function ViewerBody({
         setZoom((z) => Math.max(MIN_ZOOM, z / ZOOM_STEP))
       }
     }
-    // Capture phase: Base UI's dialog consumes arrow keys for its own focus
-    // handling before they bubble to window, so ArrowLeft/Right never
-    // reached us. "+" and "-" were unaffected, which is what made it look
-    // like the listener was working.
+    /*
+     * Capture phase: Base UI's dialog consumes arrow keys for its own focus
+     * handling before they would bubble to window, so ArrowLeft/Right have
+     * to be seen on the way down.
+     */
     window.addEventListener("keydown", onKey, true)
     return () => window.removeEventListener("keydown", onKey, true)
   }, [go])

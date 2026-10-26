@@ -40,9 +40,9 @@ import { useBookStore } from "@/stores/book-store"
 const CSV_MIME = "text/csv;charset=utf-8"
 const ZIP_MIME = "application/zip"
 
-// ---------------------------------------------------------------------------
-// Import
-// ---------------------------------------------------------------------------
+/* -------------------------------------------------------------------------
+ * Import
+ * ---------------------------------------------------------------------- */
 
 function importSummary(
   ctx: Ctx,
@@ -68,9 +68,10 @@ function importSummary(
       .map((s) =>
         ctx.t("io.rowError", {
           n: s.line,
-          // SKIP_CODE_KEYS is the map a test walks to prove every domain code
-          // can be shown; spelling the three out again here was a second
-          // copy that could fall out of step with it.
+          /*
+           * SKIP_CODE_KEYS is the map a test walks to prove every domain
+           * code can be shown, so the keys are not spelled out again here.
+           */
           f: ctx.t(SKIP_CODE_KEYS[s.code]),
         })
       )
@@ -82,16 +83,20 @@ function importSummary(
 
 /** Open a CSV or ZIP the user picked or dropped. */
 export async function openFile(ctx: Ctx, file: File): Promise<void> {
-  // A second file dropped while the first is still being unpacked would
-  // interleave two `replaceBook` calls and leave a mixed bookkeeping.
+  /*
+   * A second file dropped while the first is still being unpacked would
+   * interleave two `replaceBook` calls and leave a mixed bookkeeping.
+   */
   if (useBookStore.getState().importing) return
   if (!(await guardDirty(ctx, true))) return
 
   const isZip =
     file.name.toLowerCase().endsWith(".zip") || file.type === ZIP_MIME
 
-  // The UI shows nothing for the first few hundred milliseconds (see
-  // `useDelayedFlag`), so a CSV still opens without a flicker.
+  /*
+   * The UI shows nothing for the first few hundred milliseconds (see
+   * `useDelayedFlag`), so a CSV still opens without a flicker.
+   */
   useBookStore.getState().setImporting(true)
   try {
     if (isZip) await importZip(ctx, file)
@@ -112,8 +117,10 @@ async function importCsv(ctx: Ctx, file: File): Promise<void> {
     return
   }
 
-  // §7.2: paths in a plain CSV become missing attachments that keep the path,
-  // so re-exporting does not lose the reference.
+  /*
+   * §7.2: paths in a plain CSV become missing attachments that keep the path,
+   * so re-exporting does not lose the reference.
+   */
   let missing = 0
   const entries: Entry[] = result.entries.map(({ paths, ...entry }) => {
     missing += paths.length
@@ -221,9 +228,9 @@ function applyImport(
   ctx.navigate(APP_ROUTES.ledger)
 }
 
-// ---------------------------------------------------------------------------
-// Export
-// ---------------------------------------------------------------------------
+/* -------------------------------------------------------------------------
+ * Export
+ * ---------------------------------------------------------------------- */
 
 export async function exportBook(
   ctx: Ctx,
@@ -238,8 +245,10 @@ export async function exportBook(
 
   const name = cleanFileName(baseName) || "kirjanpito"
   const paths = buildReceiptPaths(entries)
-  // Paths are always written, so a CSV-only export still records which
-  // receipts existed (§7.1).
+  /*
+   * Paths are always written, so a CSV-only export still records which
+   * receipts existed (§7.1).
+   */
   const csvText = serializeCsv(entries, indexCategories(cats), paths)
   const withReceipts = !csvOnly && availableReceiptCount(entries) > 0
   const savedAs = `${name}.${withReceipts ? "zip" : "csv"}`

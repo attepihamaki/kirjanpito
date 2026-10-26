@@ -134,8 +134,10 @@ export function EntryDialog({
 }) {
   const dialog = useBookStore((s) => s.dialog)
   if (dialog.kind !== "entry") return null
-  // Keyed on the dialog identity, so opening or switching entry remounts
-  // the form and its initial state comes from props, not an effect.
+  /*
+   * Keyed on the dialog identity, so opening or switching entry remounts the
+   * form and its initial state comes from props, not an effect.
+   */
   return (
     <EntryDialogForm
       key={dialog.mode + ":" + (dialog.entryId ?? "new")}
@@ -181,9 +183,11 @@ function EntryDialogForm({
 
   const [form, setForm] = React.useState<FormState>(initial)
   const [baseline, setBaseline] = React.useState(() => snapshot(initial))
-  // The message and the field it belongs to: §8.5 shows one inline error
-  // line, but the field it is about has to say so too, or a screen reader
-  // reads a complaint with nothing attached to it.
+  /*
+   * The message and the field it belongs to: §8.5 shows one inline error
+   * line, but the field it is about has to say so too, or a screen reader
+   * reads a complaint with nothing attached to it.
+   */
   const [error, setError] = React.useState<FieldErrorState>(null)
   const [busy, setBusy] = React.useState(false)
   const fileRef = React.useRef<HTMLInputElement>(null)
@@ -263,8 +267,10 @@ function EntryDialogForm({
 
   const update = (patch: Partial<FormState>) => {
     setForm((prev) => ({ ...prev, ...patch }))
-    // Clear the complaint as soon as the field it is about is touched,
-    // rather than leaving it under a corrected value until the next save.
+    /*
+     * Clear the complaint as soon as the field it is about is touched,
+     * rather than leaving it under a corrected value until the next save.
+     */
     setError((prev) => (prev && prev.field in patch ? null : prev))
   }
 

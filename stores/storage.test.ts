@@ -22,10 +22,10 @@ describe("persisted preferences and bookkeeping (§12)", () => {
     useLangStore.setState(LANG_INITIAL, true)
   })
 
-  /**
-   * The point of the split: the landing page rehydrates to read the open
-   * file's name, and a visitor who has never recorded anything must come
-   * away with nothing but the preferences they actually set.
+  /*
+   * The landing page rehydrates to read the open file's name, and a visitor
+   * who has never recorded anything must come away with nothing but the
+   * preferences they actually set.
    */
   it("leaves no bookkeeping key behind when there is no bookkeeping", async () => {
     await useBookStore.persist.rehydrate()
@@ -38,8 +38,10 @@ describe("persisted preferences and bookkeeping (§12)", () => {
     useBookStore.getState().newBook(2026)
     expect(storedBook()?.state.open).toBe(true)
 
-    // Page sizes and the sidebar are app preferences living in this blob:
-    // closing the file must not take them with it.
+    /*
+     * Page sizes and the sidebar are app preferences living in this blob:
+     * closing the file must not take them with it.
+     */
     useBookStore.getState().setLedgerSize(50)
     useBookStore.getState().closeBook()
 

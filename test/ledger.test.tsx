@@ -153,7 +153,7 @@ describe("LedgerView with the sample data", () => {
 
     expect(screen.getByText("Lokakuu 2026")).toBeInTheDocument()
     expect(screen.getByText("3 kirjausta")).toBeInTheDocument()
-    // §10, corrected: October's VAT payable is 362,18 €, not 617,18 €.
+    // §10: October's VAT payable is 362,18 €.
     expect(screen.getByText(eur(36218))).toBeInTheDocument()
   })
 
@@ -254,8 +254,10 @@ describe("LedgerView with an empty book", () => {
 describe("the period slice drives the totals, not the filters", () => {
   beforeEach(loadSampleIntoStore)
 
-  // §8.4: the strip answers "what does this month come to", so a search
-  // must not change it even though the entry count does.
+  /*
+   * §8.4: the strip answers "what does this month come to", so a search must
+   * not change it even though the entry count does.
+   */
   it("keeps the totals steady while a search narrows the list", async () => {
     const user = userEvent.setup()
     mount(<LedgerView />)

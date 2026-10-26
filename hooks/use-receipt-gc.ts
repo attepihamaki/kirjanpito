@@ -33,8 +33,10 @@ export function useReceiptGc() {
         const { entries, draftAttachmentIds } = useBookStore.getState()
         await gcReceipts(collectLiveIds(entries, draftAttachmentIds))
       } catch (error) {
-        // A failed sweep leaks a blob, which is harmless. It must never
-        // surface as a user-facing error.
+        /*
+         * A failed sweep leaks a blob, which is harmless. It must never
+         * surface as a user-facing error.
+         */
         console.warn("Receipt garbage collection failed", error)
       } finally {
         running.current = false

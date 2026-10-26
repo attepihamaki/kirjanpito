@@ -416,11 +416,9 @@ export const DEFAULT_EN_NAMES: Readonly<Record<string, string>> =
   ])
 
 /**
- * Which category a CSV row with no `luokka` books to, by account number.
- *
- * The prototype took the first category matching the account, which on 344
- * meant "Matkakulut" rather than "Muut vähennyskelpoiset kulut" — a silent and
- * surprising choice. Only accounts with several categories need an entry here.
+ * Which category a CSV row with no `luokka` books to, by account number. Only
+ * accounts carrying several categories need an entry here; the rest resolve to
+ * their single category.
  */
 export const DEFAULT_CATEGORY_FOR_ACCOUNT: Readonly<Record<number, string>> = {
   300: "300-domestic",

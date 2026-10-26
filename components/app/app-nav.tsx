@@ -35,9 +35,9 @@ export const NAV_ITEMS = [
 }>
 
 /**
- * The sidebar's navigation (§8.2). It is the only nav in the app now: below
- * 900 px the sidebar is a sheet rather than a row of tabs, so there is one
- * list of links instead of two.
+ * The sidebar's navigation (§8.2), and the only nav in the app: below 900 px
+ * the sidebar becomes a sheet rather than a row of tabs, so one list of links
+ * serves every width.
  */
 export function AppNav() {
   const t = useT()

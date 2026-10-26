@@ -69,8 +69,8 @@ export function formatFileSize(bytes: number, lang: Lang): string {
  * spaces, NBSP, narrow NBSP, "€" and a Unicode minus.
  *
  * When both "," and "." appear, the last one is the decimal separator. A lone
- * comma is always a decimal comma — the prototype made that depend on the UI
- * language, which meant the same CSV parsed differently in fi and en.
+ * comma is always a decimal comma, whatever the UI language, so the same file
+ * parses identically in Finnish and English.
  *
  * Returns null when the input is not a number.
  */

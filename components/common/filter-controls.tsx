@@ -10,8 +10,7 @@ import type { TypeFilter } from "@/stores/book-store"
 
 /**
  * The two filter controls the ledger toolbar (§8.4) and the categories table
- * (§8.10) both need. They were duplicated between the two views, down to the
- * magnifier's offsets.
+ * (§8.10) both need, down to the magnifier's offsets.
  */
 
 export function SearchInput({

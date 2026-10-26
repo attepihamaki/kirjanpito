@@ -27,8 +27,10 @@ export function ExportDialog() {
   const dialog = useBookStore((s) => s.dialog)
   const closeDialog = useBookStore((s) => s.closeDialog)
   if (dialog.kind !== "export") return null
-  // Keyed on nothing but its own mount: opening the dialog mounts a fresh
-  // form, so the defaults are initial state rather than an effect.
+  /*
+   * Keyed on nothing but its own mount: opening the dialog mounts a fresh
+   * form, so the defaults are initial state rather than an effect.
+   */
   return <ExportDialogForm onClose={closeDialog} />
 }
 
@@ -42,8 +44,10 @@ function ExportDialogForm({ onClose }: { onClose: () => void }) {
     [entries]
   )
 
-  // §7.3: the default always uses today’s date — the last used name is
-  // shown in the sidebar but deliberately not reused here.
+  /*
+   * §7.3: the default always uses today’s date. The last used name is shown
+   * in the sidebar but is not reused here.
+   */
   const [name, setName] = React.useState(() => defaultFileBaseName(f.lang))
   const [csvOnly, setCsvOnly] = React.useState(false)
   const [busy, setBusy] = React.useState(false)

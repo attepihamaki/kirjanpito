@@ -7,9 +7,11 @@ import { INDEXABLE, SITE_URL } from "@/lib/site"
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  // Inherited by every document, the landing included. While the site is on
-  // its github.io working URL this is the whole of "SEO off"; app/app/layout
-  // sets its own noindex regardless, because the app is never indexable.
+  /*
+   * Inherited by every document, the landing included. While INDEXABLE is
+   * off this is the whole of "SEO off"; app/app/layout sets its own noindex
+   * regardless, because the app is never indexable.
+   */
   robots: INDEXABLE
     ? { index: true, follow: true }
     : { index: false, follow: false, nocache: true },

@@ -14,8 +14,7 @@ describe("sampleEntries", () => {
     expect(entries.every((e) => e.amountMode === "gross")).toBe(true)
   })
 
-  // Spelled out rather than snapshotted: a snapshot would quietly absorb a
-  // regression on the next `-u`.
+  // Spelled out rather than snapshotted, so `-u` cannot rewrite the figures.
   it("matches the §10 table", () => {
     expect(
       entries.map((e) => [

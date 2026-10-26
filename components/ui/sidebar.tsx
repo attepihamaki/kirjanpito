@@ -69,8 +69,10 @@ function SidebarProvider({
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
 
-  // This is the internal state of the sidebar.
-  // We use openProp and setOpenProp for control from outside the component.
+  /*
+   * The internal state of the sidebar. openProp and setOpenProp take over
+   * when the sidebar is controlled from outside the component.
+   */
   const [_open, _setOpen] = React.useState(defaultOpen)
   const open = openProp ?? _open
   const setOpen = React.useCallback(
@@ -109,8 +111,7 @@ function SidebarProvider({
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [toggleSidebar])
 
-  // We add a state so that we can do data-state="expanded" or "collapsed".
-  // This makes it easier to style the sidebar with Tailwind classes.
+  // Exposed as data-state="expanded" / "collapsed" for the Tailwind classes.
   const state = open ? "expanded" : "collapsed"
 
   const contextValue = React.useMemo<SidebarContextProps>(
@@ -164,10 +165,12 @@ function Sidebar({
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
 
-  // Local change throughout this component: shadcn's desktop breakpoint is
-  // `md:` (768 px). CLAUDE.md §11 puts the layout breakpoint at 900, which is
-  // also what `useIsMobile` reads, so the CSS and the JS flip on the same
-  // pixel. Occurrences below are spelled `min-[900px]:`.
+  /*
+   * Local change throughout this component: the desktop breakpoint is
+   * CLAUDE.md §11's 900 px rather than shadcn's `md:` (768 px), so the CSS
+   * and `useIsMobile` flip on the same pixel. Occurrences below are spelled
+   * `min-[900px]:`.
+   */
   if (collapsible === "none") {
     return (
       <div

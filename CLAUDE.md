@@ -53,6 +53,48 @@ There is **no backend, no account and no database**. The user opens their bookke
 
 ---
 
+## 2b. How comments are written
+
+Comments describe the code as it stands. They are read by someone looking at
+this file today, who has no way to check a claim about anything outside it.
+
+- **Say what the code does and why it is the way it is.** Rules the code has to
+  obey, invariants, the consequence of getting it wrong, the §-reference in
+  this file that the code implements — all of that earns its place.
+- **Never mention past bugs, earlier versions, review discussions, tickets or
+  the prototype.** Not "this used to…", not "the port dropped…", not "the
+  prototype did X silently", not "X was rejected because…". If an old mistake
+  is worth guarding against, write the rule it taught, in the present tense:
+  "Paths are always written, so a CSV-only export still records which receipts
+  existed" — not "the prototype dropped them, which made CSV-only lossy."
+- **Don't restate the line below it**, and don't repeat a test's own name as a
+  comment above it. Delete rather than paraphrase.
+- Prefer a comment that would still be true after an unrelated refactor.
+
+### Syntax
+
+- **One line → `//`.** `/** … */` on a single line is fine for a short doc
+  comment on a type, field or function.
+- **More than one line → `/* … */`**, with each continuation line aligned on a
+  leading `*`. **Never a run of `//` lines.** This holds inside function
+  bodies, inside JSX and in `.mjs` scripts, not only for doc comments.
+- JSDoc (`/** … */`) is the block form for anything exported: types, fields,
+  functions, store actions.
+- A section divider inside a module is a block comment, not a row of `//`:
+
+  ```ts
+  /* -------------------------------------------------------------------------
+   * Parse
+   * ---------------------------------------------------------------------- */
+  ```
+
+- CSS has block comments only; the same "one line / several lines" rule applies
+  to how they are laid out.
+- Two adjacent one-line comments that say different things are separated by a
+  blank line, so they do not read as one run of `//`.
+
+---
+
 ## 3. The original Excel workbook (`docs/reference/kirjanpito.xlsx`)
 
 This is what the app replaces. Useful for understanding the domain and for checking calculations.

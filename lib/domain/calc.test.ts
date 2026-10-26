@@ -72,9 +72,11 @@ describe("calcEntry", () => {
     }
   })
 
-  // Documented, not fixed: the two directions round differently, so toggling
-  // the mode can shift a value by one cent. The CSV stores the amount together
-  // with its mode, so nothing is actually lost.
+  /*
+   * The two directions round differently, so toggling the mode can shift a
+   * value by one cent. The CSV stores the amount together with its mode, so
+   * nothing is lost.
+   */
   it("is deliberately not round-trip stable", () => {
     const net = calcEntry({ amount: 2, vatRate: 25.5, amountMode: "gross" }).net
     expect(net).toBe(2)

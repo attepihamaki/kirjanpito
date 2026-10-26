@@ -40,9 +40,11 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   useReceiptGc()
   useBeforeUnload()
 
-  // §8.1: with no bookkeeping open, every app route sends the user to the
-  // landing page. Done after rehydration, since the prerendered default is
-  // "closed" and would otherwise bounce everyone.
+  /*
+   * §8.1: with no bookkeeping open, every app route sends the user to the
+   * landing page. Done after rehydration, since the prerendered default is
+   * "closed" and would otherwise bounce everyone.
+   */
   React.useEffect(() => {
     if (hydrated && !open) router.replace(LANDING)
   }, [hydrated, open, router])
@@ -56,8 +58,10 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
   const ctx = useCommandCtx()
   const dialog = useBookStore((s) => s.dialog)
   const openDialog = useBookStore((s) => s.openDialog)
-  // The sidebar's expanded/collapsed state is ours, not a cookie: nothing
-  // here is server-rendered, so shadcn's cookie could never be read back.
+  /*
+   * The sidebar's expanded/collapsed state is ours, not a cookie: nothing
+   * here is server-rendered, so shadcn's cookie could never be read back.
+   */
   const sidebarOpen = useBookStore((s) => s.sidebarOpen)
   const setSidebarOpen = useBookStore((s) => s.setSidebarOpen)
   const pushDropped = React.useRef<((files: File[]) => void) | null>(null)

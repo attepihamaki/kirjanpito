@@ -23,9 +23,11 @@ export function ThemeToggle({ className }: { className?: string }) {
   const t = useT()
   const { resolvedTheme, setTheme } = useTheme()
 
-  // The label, unlike the icon, cannot come from CSS, and the server does not
-  // know the theme. useSyncExternalStore is the idiomatic "am I on the client
-  // yet" read; setting state in an effect would cascade a render.
+  /*
+   * The label, unlike the icon, cannot come from CSS, and the server does not
+   * know the theme. useSyncExternalStore is the idiomatic "am I on the client
+   * yet" read; setting state in an effect would cascade a render.
+   */
   const mounted = React.useSyncExternalStore(
     () => () => {},
     () => true,

@@ -19,6 +19,7 @@ import { pl, type Dict } from "@/lib/i18n/t"
  */
 export const APP_DICT = {
   // --- Shell ---
+
   // Short enough to fit the sidebar's brand button on one line.
   "app.tagline": ["Yhdenkertainen kirjanpito", "Single-entry bookkeeping"],
   "app.fiscalYear": ["Tilikausi", "Financial year"],
@@ -36,8 +37,10 @@ export const APP_DICT = {
   "file.openShort": ["Avaa", "Open"],
   "file.close": ["Sulje tiedosto", "Close file"],
   "file.closed": ["Tiedosto suljettu.", "File closed."],
-  // The file box's own buttons. Short on purpose: three of them share one
-  // sidebar row, and the box above them already says which file it is.
+  /*
+   * The file box's own buttons. Short on purpose: three of them share one
+   * sidebar row, and the box above them already says which file it is.
+   */
   "file.importBtn": ["Tuo", "Import"],
   "file.exportBtn": ["Vie", "Export"],
   "file.closeBtn": ["Sulje", "Close"],
@@ -240,8 +243,7 @@ export const APP_DICT = {
     "Ostojen 0 %:n kirjaukset (esim. palkat, YEL, pankkikulut) eivät vaikuta arvonlisäveroon, joten niitä ei näytetä vähennyksissä. Tarkista luvut ennen ilmoittamista OmaVerossa.",
     "Purchases at 0% (e.g. wages, YEL, bank fees) don’t affect VAT, so they aren’t shown as deductions. Check the figures before filing in OmaVero.",
   ],
-  // An EU, non-EU or reverse-charge sale that carries a VAT rate: the rate is
-  // ignored, which the prototype did silently.
+  // An EU, non-EU or reverse-charge sale that carries a VAT rate (§6.1).
   "vat.exemptSaleWarning": [
     "Kirjauksessa ”{x}” on verokanta, mutta luokka raportoidaan ilman myynnin veroa. Vero jätetään huomiotta.",
     "The entry “{x}” has a VAT rate, but its category is reported without VAT on sales. The VAT is ignored.",
@@ -411,8 +413,10 @@ export const APP_DICT = {
     "Vie vain CSV-tiedosto ilman tositteita",
     "Export only the CSV file, without receipts",
   ],
-  // The paths are written either way, so a re-import still knows the
-  // receipts existed — it just marks them missing.
+  /*
+   * The paths are written either way, so a re-import still knows the receipts
+   * existed — it just marks them missing.
+   */
   "io.csvOnlyHint": [
     "Tositteiden polut säilyvät CSV-tiedostossa, joten ne voi yhdistää myöhemmin uudelleen.",
     "Receipt paths are kept in the CSV, so they can be reconnected later.",

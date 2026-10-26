@@ -75,10 +75,9 @@ function finish(side: MutableSide): VatSide {
  * Build the VAT return for a set of entries (§6.1). Filter to the period
  * before calling — this function aggregates whatever it is given.
  *
- * VAT is rounded per entry and then summed, matching the prototype and the
- * check figures in §10. Rounding the period net instead would shift the sample
- * year's purchase VAT from 38 728 to 38 729 and the payable from 760,22 € to
- * 760,21 €.
+ * VAT is rounded per entry and then summed, which is what the check figures in
+ * §10 assume. Rounding the period's net instead would shift the sample year's
+ * purchase VAT by a cent.
  */
 export function vatReport(
   entries: readonly Entry[],
@@ -95,8 +94,10 @@ export function vatReport(
     const rate = Number(e.vatRate) || 0
 
     if (e.type === "income") {
-      // EU, non-EU and reverse-charge sales are reported separately and carry
-      // no Finnish sales VAT, whatever rate the entry happens to have.
+      /*
+       * EU, non-EU and reverse-charge sales are reported separately and carry
+       * no Finnish sales VAT, whatever rate the entry happens to have.
+       */
       const kind = cat?.kind
       if (kind === "eu" || kind === "nonEu" || kind === "reverse") {
         otherSales[kind] += net
@@ -110,8 +111,10 @@ export function vatReport(
         }
         continue
       }
-      // 0 % income only counts as a (zero-rated) sale when it is on line 300.
-      // Grants, dividends and interest are not VAT-relevant.
+      /*
+       * 0 % income only counts as a (zero-rated) sale when it is on line 300.
+       * Grants, dividends and interest are not VAT-relevant.
+       */
       if (rate === 0 && cat?.line !== "300") continue
       add(sales, rate, net, vat)
     } else {

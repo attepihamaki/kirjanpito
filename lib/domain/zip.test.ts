@@ -120,8 +120,10 @@ describe("packZip", () => {
       read: async () => random,
     })
 
-    // A STORE'd 64 KB payload plus a deflated CSV must land well under the
-    // uncompressed total; if the CSV were stored too it would be far larger.
+    /*
+     * A STORE'd 64 KB payload plus a deflated CSV must land well under the
+     * uncompressed total; if the CSV were stored too it would be far larger.
+     */
     expect(bytes.byteLength).toBeGreaterThan(random.byteLength)
     expect(bytes.byteLength).toBeLessThan(
       random.byteLength + csvText.length / 4
@@ -241,8 +243,10 @@ describe("full ZIP round trip", () => {
     ).toEqual(enc.encode("bytes-a1"))
   })
 
-  // §7.2: importing a plain CSV keeps the paths so re-exporting does not
-  // lose the reference.
+  /*
+   * §7.2: importing a plain CSV keeps the paths so re-exporting does not lose
+   * the reference.
+   */
   it("yields missing attachments that keep their paths on a plain CSV import", () => {
     const text = serializeCsv(entries, cats)
     const imported = ok(parseCsv(text, baseCats, createIdFactory("r")))

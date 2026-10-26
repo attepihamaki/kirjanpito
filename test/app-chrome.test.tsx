@@ -69,7 +69,7 @@ describe("app chrome", () => {
     expect(
       screen.getByRole("combobox", { name: "Tilikausi" })
     ).toHaveTextContent("2026")
-    // Shown with the extension it really had, not a hard-coded ".csv".
+    // Shown with the extension the file really had (§7.3).
     expect(screen.getByText("kirjanpito_2026-10-24.zip")).toBeVisible()
     expect(
       screen.getByRole("status", { name: "Muutoksia, joita ei ole viety" })

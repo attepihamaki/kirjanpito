@@ -46,9 +46,9 @@ const MODE_TO_CSV: Readonly<Record<AmountMode, string>> = {
   net: "netto",
 }
 
-// ---------------------------------------------------------------------------
-// Serialize
-// ---------------------------------------------------------------------------
+/* -------------------------------------------------------------------------
+ * Serialize
+ * ---------------------------------------------------------------------- */
 
 function quote(value: string): string {
   return /[;"\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value
@@ -58,11 +58,9 @@ function quote(value: string): string {
  * Serialize to the export format: UTF-8 BOM, ";" delimiter, CRLF endings,
  * rows sorted by date, Finnish category names, decimal commas.
  *
- * Receipt paths are always written, whether or not a ZIP is being produced.
- * The prototype emitted an empty `tosite` for real attachments on a CSV-only
- * export while keeping the path for already-missing ones, which made that
- * round trip lossy — §7.2 relies on a plain CSV carrying the paths so a
- * re-import can mark them missing.
+ * Receipt paths are always written, whether or not a ZIP is being produced:
+ * §7.2 relies on a plain CSV carrying the paths so a re-import can mark those
+ * receipts missing.
  */
 export function serializeCsv(
   entries: readonly Entry[],
@@ -100,9 +98,9 @@ export function serializeCsv(
   return "﻿" + lines.join("\r\n") + "\r\n"
 }
 
-// ---------------------------------------------------------------------------
-// Parse
-// ---------------------------------------------------------------------------
+/* -------------------------------------------------------------------------
+ * Parse
+ * ---------------------------------------------------------------------- */
 
 export type DetectedDelimiter = ";" | "\t" | ","
 
@@ -114,9 +112,9 @@ const stripBom = (text: string) => text.replace(/^﻿/, "")
  * Detect the delimiter by parsing the header row at each candidate and
  * scoring how many known column names it yields.
  *
- * Counting raw occurrences, as the prototype did, ignores quoting: a
+ * Parsing rather than counting raw occurrences is what honours quoting: a
  * comma-delimited file with a quoted header field containing semicolons would
- * be read as one column.
+ * otherwise be read as one column.
  */
 export function detectDelimiter(text: string): DetectedDelimiter {
   const sample = stripBom(text)
@@ -219,9 +217,11 @@ export function parseCsv(
   if (!source.trim()) return { ok: false, code: "empty-file" }
 
   const delimiter = detectDelimiter(source)
-  // skipEmptyLines is off so every row keeps its physical line number; blanks
-  // are dropped afterwards. Filtering first is what made the prototype's error
-  // messages point at the wrong line.
+  /*
+   * skipEmptyLines is off so every row keeps its physical line number; blanks
+   * are dropped afterwards. Filtering first would make the line numbers in
+   * `skipped` point at the wrong row of the user's file.
+   */
   const raw = Papa.parse<string[]>(source, {
     header: false,
     delimiter,
@@ -365,8 +365,10 @@ function resolveCategory(a: ResolveArgs): { cat: Category; created: boolean } {
     )
     if (match) return { cat: match, created: false }
   } else if (account != null) {
-    // No name given: use the documented default for the account rather than
-    // whichever category happens to come first.
+    /*
+     * No name given: use the documented default for the account rather than
+     * whichever category happens to come first.
+     */
     const preferredId = DEFAULT_CATEGORY_FOR_ACCOUNT[account]
     const preferred = preferredId ? a.byId.get(preferredId) : undefined
     if (preferred && sideOf(preferred) === side) {

@@ -2,9 +2,8 @@ import * as React from "react"
 
 /**
  * CLAUDE.md §11's layout breakpoint: below it the sidebar becomes a sheet
- * opened from the top bar. shadcn ships this hook at 768 px and hard-codes the
- * matching `md:` in `components/ui/sidebar.tsx`; both were moved to 900 so the
- * JS and the CSS flip on the same pixel.
+ * opened from the top bar. `components/ui/sidebar.tsx` spells the same number
+ * as `min-[900px]:`, so the JS and the CSS flip on the same pixel.
  */
 const MOBILE_BREAKPOINT = 900
 

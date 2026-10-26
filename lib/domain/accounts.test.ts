@@ -21,10 +21,12 @@ describe("LINES", () => {
     expect(LINES).toHaveLength(29)
   })
 
-  // 354 precedes 346/349/353 on purpose: it belongs under the "Muut
-  // vähennyskelpoiset kulut" heading, and sorting the list numerically would
-  // orphan it from that heading. CLAUDE.md §5's table has the same order and
-  // states the table order is the display order.
+  /*
+   * 354 precedes 346/349/353 on purpose: it belongs under the "Muut
+   * vähennyskelpoiset kulut" heading, and sorting the list numerically would
+   * orphan it from that heading. CLAUDE.md §5's table has the same order, and
+   * states that the table order is the display order.
+   */
   it("is in the documented display order", () => {
     expect(LINE_KEYS).toEqual([
       "300",

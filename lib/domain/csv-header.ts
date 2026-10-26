@@ -9,8 +9,7 @@
  * This lives apart from `csv.ts` so it can be imported without dragging in
  * papaparse. The landing page prints the header in its CSV sample and the
  * import command names it in an error, and neither should pull a parser into
- * its bundle. Those two used to spell the string out by hand, which is
- * exactly the drift this prevents.
+ * its bundle.
  */
 export const CSV_HEADER = [
   "pvm",

@@ -30,8 +30,10 @@ describe("404 page", () => {
     )
   })
 
-  // The label is translated, the destination is not: there is one landing
-  // page, and language is a stored preference rather than a URL.
+  /*
+   * The label is translated, the destination is not: there is one landing
+   * page, and language is a stored preference rather than a URL.
+   */
   it("sends the visitor home in their own language", () => {
     const { rerender } = render(<NotFoundPage />)
     expect(

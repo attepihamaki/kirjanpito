@@ -9,12 +9,9 @@ import { useLangStore } from "@/stores/lang-store"
 const LangContext = React.createContext<Formatters>(createFormatters("fi"))
 
 /**
- * Supplies the formatters and `t()` for a subtree.
- *
- * The landing pages pass a literal `lang` baked at build time, because the
- * language of an indexed document is a property of its URL. The app reads the
- * stored preference instead, which is safe only because nothing translated
- * renders before the store has hydrated.
+ * Supplies the formatters and `t()` for a subtree. `AppLangProvider` below
+ * binds it to the stored preference, which is safe only because nothing
+ * translated renders before the store has hydrated.
  */
 export function LangProvider({
   lang,

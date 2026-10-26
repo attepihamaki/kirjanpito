@@ -3,9 +3,11 @@ import type { Metadata } from "next"
 import { LandingPage } from "@/components/landing/landing-page"
 import { OG_ALT, OG_PATH, OG_SIZE } from "@/components/landing/og-image"
 
-// The card is declared here rather than left to a file convention; see the
-// note in app/og/[file]/route.tsx for why. A page's `openGraph` replaces the
-// layout's wholesale, so the images belong alongside the rest of it.
+/*
+ * The card is declared here rather than left to a file convention; see the
+ * note in app/og/[file]/route.tsx for why. A page's `openGraph` replaces the
+ * layout's wholesale, so the images belong alongside the rest of it.
+ */
 const ogImage = {
   url: OG_PATH,
   ...OG_SIZE,

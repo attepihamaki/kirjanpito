@@ -51,9 +51,11 @@ describe("slug", () => {
   })
 
   it("strips combining marks left by NFD normalisation", () => {
-    // Built from code points: "e" followed by a combining acute looks
-    // exactly like a precomposed letter, so a literal here would be
-    // invisible to anyone reading the test.
+    /*
+     * Built from code points: "e" followed by a combining acute looks exactly
+     * like a precomposed letter, so a literal here would be invisible to
+     * anyone reading the test.
+     */
     const acute = String.fromCharCode(0x301)
     const diaeresis = String.fromCharCode(0x308)
     expect(slug(`Cafe${acute}`)).toBe("cafe")
@@ -187,8 +189,10 @@ describe("buildReceiptPaths", () => {
       description: "Osto",
       atts: [att()],
     })
-    // Order the real entry first: reserving missing paths up front means the
-    // result does not depend on which one is seen first.
+    /*
+     * Order the real entry first: reserving missing paths up front means the
+     * result does not depend on which one is seen first.
+     */
     const paths = buildReceiptPaths([real, missing])
     expect(paths.get(attachmentKey("b", 0))).toBe(
       "tositteet/2026/01/2026-01-15_osto-2.jpg"

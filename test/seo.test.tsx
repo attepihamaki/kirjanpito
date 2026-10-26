@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest"
 
-// next/font only resolves inside the Next build, and app/layout.tsx loads
-// Geist at module scope. The metadata below is what this file is about.
+/*
+ * next/font only resolves inside the Next build, and app/layout.tsx loads
+ * Geist at module scope. The metadata below is what this file is about.
+ */
 vi.mock("next/font/google", () => {
   const font = () => ({ variable: "", className: "", style: {} })
   return { Geist: font, Geist_Mono: font }
@@ -13,14 +15,13 @@ import sitemap from "@/app/sitemap"
 import { BASE_PATH, INDEXABLE, SITE_URL } from "@/lib/site"
 
 /**
- * INDEXABLE (§11b) is one constant driving three files that a reader of any
- * one of them cannot see the other two from. The risk is not that the flag is
- * wrong — it is that it is flipped and one of the three is forgotten, which
- * nothing else in the build would notice.
+ * INDEXABLE (§11b) drives three files — the robots meta on every document,
+ * robots.txt and the sitemap — that a reader of any one of them cannot see
+ * the other two from.
  *
- * So these assertions are written against the flag rather than against a
- * fixed expectation: they pass either way round, and fail when the three stop
- * agreeing.
+ * These assertions are written against the flag rather than against a fixed
+ * expectation, so they pass whichever way it is set and fail when the three
+ * stop agreeing with it.
  */
 describe("SEO switch", () => {
   it("sets the robots meta on every document from the flag", () => {

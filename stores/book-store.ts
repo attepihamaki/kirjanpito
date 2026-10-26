@@ -8,16 +8,12 @@ import type { AmountMode, Category, Entry, EntryType } from "@/lib/domain/types"
 import { LANG_STORAGE_KEY, writeLang } from "@/stores/lang-store"
 
 /**
- * The localStorage key holding the persisted slice below.
+ * The localStorage key holding the persisted slice below. Exported so the
+ * landing page can test for a first visit without hard-coding the name twice.
  *
- * Exported so the landing page can test for a first visit without hard-coding
- * the name a second time. The prototype-era key was `kirjanpito.v1`; nothing
- * migrates from it, so a browser that still holds one starts empty.
- *
- * Deliberately carries no version suffix: `persist` already writes its
- * `version` into the stored value and owns `migrate` below, which can actually
- * transform old data — a version in the key could only orphan it. A future
- * break that is not worth migrating renames the key to `bookkeeping.v2` then.
+ * It carries no version suffix: `persist` writes its `version` into the stored
+ * value and owns `migrate` below, which can transform old data. A future break
+ * not worth migrating renames the key to `bookkeeping.v2`.
  */
 export const BOOK_STORAGE_KEY = "bookkeeping"
 
@@ -69,9 +65,9 @@ export interface BookState {
   /**
    * A file is being read. Opening a plain CSV is over in milliseconds, but a
    * ZIP has to be unpacked, decoded and written to IndexedDB receipt by
-   * receipt — seconds, during which the UI used to say nothing at all. The
-   * flag also guards re-entry: two files dropped in quick succession would
-   * otherwise interleave two `replaceBook` calls.
+   * receipt, which takes seconds and shows progress (§8.2). The flag also
+   * guards re-entry: a second file dropped mid-import is ignored rather than
+   * interleaving two `replaceBook` calls.
    */
   importing: boolean
   month: MonthFilter
@@ -206,12 +202,11 @@ type PersistedBook = Pick<
  * localStorage, with one rule: **only a bookkeeping creates the key.**
  *
  * The landing page and the 404 rehydrate this store to read the open file's
- * name and status, and rehydration is itself a state change, so the plain
- * adapter wrote the whole default blob — categories and all — for a visitor
- * who had never recorded anything. Nothing is written until there is a
- * bookkeeping to write; once the key exists it is kept up to date as usual,
- * including after the file is closed, so the page sizes and the sidebar
- * state survive a close.
+ * name and status, and rehydration is itself a state change, so without that
+ * rule a visitor who only read the landing page would come away with the whole
+ * default blob stored under their name. Once the key exists it is kept up to
+ * date as usual, closed file included, so the page sizes and the sidebar state
+ * survive a close.
  *
  * Every access is wrapped: storage can be absent, full or blocked (§12).
  */
@@ -327,8 +322,10 @@ export const useBookStore = create<BookStore>()(
       setLastEntryDefaults: ({ mode, type }) =>
         set({ lastMode: mode, lastType: type }),
 
-      // Category edits mark the book dirty: category names are written into
-      // the exported CSV, so an exported file would otherwise go stale.
+      /*
+       * Category edits mark the book dirty: category names are written into
+       * the exported CSV, so an exported file would otherwise go stale.
+       */
       upsertCategory: (category) => {
         const cats = [...get().cats]
         const i = cats.findIndex((c) => c.id === category.id)
@@ -393,8 +390,10 @@ export const useBookStore = create<BookStore>()(
       setVatMode: (vatMode) =>
         set({
           vatMode,
-          // Clamp when switching into quarter mode (the prototype reset this
-          // from today's date, which could land outside the selected year).
+          /*
+           * Clamp the index into the new mode's range rather than resetting
+           * it, so switching modes stays inside the selected year.
+           */
           vatIndex:
             vatMode === "quarter"
               ? Math.min(Math.max(1, Math.ceil(get().vatIndex / 3)), 4)
@@ -419,8 +418,10 @@ export const useBookStore = create<BookStore>()(
       name: BOOK_STORAGE_KEY,
       version: 2,
       storage: bookStorage,
-      // Prerender must not touch localStorage; StoreHydrator rehydrates
-      // after mount so the first client render matches the server HTML.
+      /*
+       * Prerender must not touch localStorage; StoreHydrator rehydrates after
+       * mount so the first client render matches the server HTML.
+       */
       skipHydration: true,
       partialize: (s): PersistedBook => ({
         entries: s.entries,
@@ -437,13 +438,12 @@ export const useBookStore = create<BookStore>()(
       }),
       migrate: (persisted) => {
         const blob = (persisted ?? {}) as Record<string, unknown>
-        // Both preferences used to live in this blob. They are app-level, not
-        // part of a bookkeeping, and the landing page needs them without
-        // reading the book — so each owns a key of its own now. Seed it only
-        // if empty: the key that exists is the newer truth.
-        //
-        // `theme` is next-themes': its pre-paint script reads that key before
-        // any of our JS runs, and two sources would drift.
+        /*
+         * Move the two app-level preferences out of this blob and into a key
+         * of their own, seeding only a key that is still empty — the separate
+         * key is the newer truth. `theme` belongs to next-themes, whose
+         * pre-paint script reads it before any of our JS runs.
+         */
         if (typeof blob.theme === "string") {
           try {
             if (!localStorage.getItem("theme")) {

@@ -74,8 +74,10 @@ function AddCategoryForm() {
   const [side, setSide] = React.useState<EntryType>("expense")
   const [lineChoice, setLine] = React.useState<string | null>(null)
   const [rate, setRate] = React.useState("")
-  // Which field the message is about: a bad VAT rate used to light up the
-  // name input, because the error was a bare string with nowhere to point.
+  /*
+   * The message and the field it is about, so the error line and the
+   * `aria-invalid` on the offending input always agree (§8.10).
+   */
   const [error, setError] = React.useState<{
     field: "name" | "rate"
     message: string
@@ -89,8 +91,10 @@ function AddCategoryForm() {
     [side]
   )
 
-  // Derived, not stored: switching side changes which lines are valid, and
-  // resetting the choice in an effect would render once with a stale line.
+  /*
+   * Derived, not stored: switching side changes which lines are valid, and
+   * resetting the choice in an effect would render once with a stale line.
+   */
   const line =
     lineChoice && lineOptions.some((l) => l.key === lineChoice)
       ? lineChoice
@@ -126,8 +130,7 @@ function AddCategoryForm() {
     <Panel
       title={f.t("settings.addCategory")}
       bodyClassName="p-4"
-      // The submit sits on the footer strip rather than wedged beside the
-      // VAT input, where it shared a grid cell and cramped both.
+      // The submit sits on the footer strip, not in the grid (§8.10).
       footer={
         <Button onClick={submit}>
           <PlusIcon data-icon="inline-start" />
@@ -379,8 +382,10 @@ function CategoryTable() {
 
 /** Inline default-VAT editor: commits on change, reverts on bad input. */
 function RateInput({ cat }: { cat: Category }) {
-  // Keyed on the committed rate by the caller, so a change from elsewhere
-  // remounts this with the right draft rather than syncing it in an effect.
+  /*
+   * Keyed on the committed rate by the caller, so a change from elsewhere
+   * remounts this with the right draft rather than syncing it in an effect.
+   */
   const f = useFormatters()
   const upsertCategory = useBookStore((s) => s.upsertCategory)
   // §9: a Finnish UI writes the rate with a comma. parseRate takes either.
@@ -421,11 +426,10 @@ function RateInput({ cat }: { cat: Category }) {
 }
 
 /**
- * The two data actions, in two panels rather than one.
- *
- * Restoring the default categories is reversible and routine; clearing the
- * entries erases the bookkeeping from this browser. Sharing a panel gave
- * them the same visual weight, which is exactly wrong for the second one.
+ * The two data actions, in two panels rather than one: restoring the default
+ * categories is reversible and routine, while clearing the entries erases the
+ * bookkeeping from this browser, so the second gets its own destructive panel
+ * rather than equal weight beside the first.
  */
 function DataActions() {
   const f = useFormatters()

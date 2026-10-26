@@ -1,8 +1,4 @@
-/**
- * Saving a file. The prototype used claude.ai's `window.claude.use("downloads")`
- * capability; outside that sandbox a Blob plus an `<a download>` is all it
- * needs (CLAUDE.md §2).
- */
+/** Saving a file: a Blob plus an `<a download>` link (CLAUDE.md §2). */
 export function saveBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob)
   const a = document.createElement("a")

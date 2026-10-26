@@ -56,8 +56,10 @@ export function LedgerView() {
 
   const catMap = React.useMemo(() => indexCategories(cats), [cats])
 
-  // The period slice drives the totals strip and the category filter's
-  // options; the filtered list drives the table and the count.
+  /*
+   * The period slice drives the totals strip and the category filter's
+   * options; the filtered list drives the table and the count.
+   */
   const periodEntries = React.useMemo(
     () => entriesInPeriod(entries, year, month),
     [entries, year, month]
@@ -99,8 +101,10 @@ export function LedgerView() {
       )
   }, [periodEntries, cats, f.collator, f.lang])
 
-  // A filter whose category vanished when the month changed would silently
-  // hide everything.
+  /*
+   * A filter whose category vanished when the month changed would silently
+   * hide everything.
+   */
   React.useEffect(() => {
     if (catFilter !== "all" && !usedCats.some((c) => c.id === catFilter)) {
       setCat("all")

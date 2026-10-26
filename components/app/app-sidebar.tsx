@@ -73,16 +73,11 @@ export function AppSidebar({
 
 /**
  * Pinned to the bottom with `mt-auto`, the way FormBox's sidebar holds its
- * support links.
- *
- * Two things had nowhere else to live. The app is reachable without ever
- * passing the landing page — a bookmark goes straight to /app/ledger — so
- * the explanation of what this is had no route back; and §1's disclaimer
- * appeared only on the landing and in the report notes, never where the
- * figures are actually entered.
+ * support links: a route back to the landing page's FAQ, and §1's disclaimer
+ * where the figures are actually entered.
  *
  * The disclaimer is text, not a menu row, so the rail drops it and keeps the
- * link. That is the same rule `FileBox` follows when it collapses.
+ * link — the same rule `FileBox` follows when it collapses.
  */
 function SidebarHelp() {
   const t = useT()

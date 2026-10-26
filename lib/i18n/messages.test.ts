@@ -34,11 +34,9 @@ describe("dictionary integrity", () => {
     )
   })
 
-  /**
-   * The keys were once flat and abbreviated — `setSub`, `f_type`, `nCats`,
-   * `delT` — which read as nothing at the call site and left no room for a
-   * second settings subtitle. `namespace.name` is the rule now, and this is
-   * what keeps the next key from being added the old way.
+  /*
+   * Every key is `namespace.name`, so a call site reads as what it is and the
+   * dictionary can be scanned a section at a time.
    */
   it("names every key namespace.name, from a known namespace", () => {
     const NAMESPACES = [
@@ -121,8 +119,10 @@ describe("translate", () => {
   })
 })
 
-// This is what keeps lib/domain free of user-facing text without letting a
-// code reach the UI untranslated.
+/*
+ * This is what keeps lib/domain free of user-facing text without letting a
+ * code reach the UI untranslated.
+ */
 describe("every domain code has a message", () => {
   it.each([
     ...Object.entries(SKIP_CODE_KEYS),
@@ -191,8 +191,10 @@ describe("createFormatters", () => {
     ])
   })
 
-  // The whole reason for a locale-aware collator: in the Finnish alphabet Ä
-  // follows Z, while English treats it as a variant of A.
+  /*
+   * The whole reason for a locale-aware collator: in the Finnish alphabet Ä
+   * follows Z, while English treats it as a variant of A.
+   */
   it("places Ä after Z in Finnish but with A in English", () => {
     const names = ["Ärjy", "Alfa", "Zulu"]
     expect([...names].sort(fi.collator.compare)).toEqual([

@@ -1,16 +1,14 @@
-// Checks the static export in out/ for the things that can only go wrong at
-// build time, and that nothing else would notice until the site was live.
-//
-// Runs on `postbuild`, so it guards local builds and the Pages deploy alike:
-// a failure here fails `npm run build`, and the workflow never gets as far as
-// uploading an artifact.
-//
-// Until this existed the same checks were run by hand after each change, and
-// pasted into commit messages. One of them was quietly broken: the landing
-// bundle was grepped for the string "papaparse", which does not survive
-// minification, so that library was never actually being checked. Hence the
-// self-test below — a marker that stops matching must fail loudly rather than
-// turn its check into a no-op.
+/*
+ * Checks the static export in out/ for the things that can only go wrong at
+ * build time, and that nothing else would notice until the site was live.
+ *
+ * Runs on `postbuild`, so it guards local builds and the Pages deploy alike:
+ * a failure here fails `npm run build`, and the workflow never gets as far as
+ * uploading an artifact.
+ *
+ * Each library check self-tests, so a marker that stops matching fails loudly
+ * rather than turning its check into a no-op.
+ */
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
 import { join, relative } from "node:path"
@@ -78,8 +76,10 @@ const allChunks = existsSync(chunkDir)
   ? walk(chunkDir, (f) => f.endsWith(".js"))
   : []
 
-// 1. Every absolute path in the exported HTML carries the base path.
-//    A missed prefix is invisible locally at the root and 404s in production.
+/*
+ * 1. Every absolute path in the exported HTML carries the base path. A
+ *    missed prefix is invisible locally at the root and 404s in production.
+ */
 const basePath = basePathFromSource()
 if (basePath !== null) {
   const bad = new Set()
@@ -131,8 +131,10 @@ for (const { name, markers } of FORBIDDEN_ON_LANDING) {
     continue
   }
 
-  // Self-test: the markers must still identify the library somewhere in the
-  // export, or "absent from the landing" means nothing.
+  /*
+   * Self-test: the markers must still identify the library somewhere in the
+   * export, or "absent from the landing" means nothing.
+   */
   if (!markers.some((m) => allSource.includes(m))) {
     fail(
       `None of ${name}'s markers (${markers.join(", ")}) appear anywhere in ` +
@@ -155,8 +157,10 @@ for (const [path, what] of [
   if (!existsSync(path)) fail(`Missing ${relative(OUT, path)} — ${what}.`)
 }
 
-// The OG card has to be a real PNG: it is served by a host that types the
-// response from the file extension, and a crawler rejects anything else.
+/*
+ * The OG card has to be a real PNG: it is served by a host that types the
+ * response from the file extension, and a crawler rejects anything else.
+ */
 const og = join(OUT, "og", "opengraph-image.png")
 if (existsSync(og)) {
   const magic = readFileSync(og).subarray(0, 8)
@@ -166,7 +170,7 @@ if (existsSync(og)) {
     fail("out/og/opengraph-image.png is not a PNG.")
 }
 
-// 4. One <html> per document. Two root layouts used to produce two.
+// 4. One <html> per document.
 for (const file of htmlFiles) {
   const count = (readFileSync(file, "utf8").match(/<html[\s>]/g) ?? []).length
   if (count !== 1) {

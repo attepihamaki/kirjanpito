@@ -24,8 +24,10 @@ export function useDelayedFlag(
   React.useEffect(() => {
     if (!active) return
     const timer = setTimeout(() => setShown(true), delay)
-    // Also the reset: the cleanup runs when `active` goes false again, so
-    // there is no second effect setting state on the inactive path.
+    /*
+     * Also the reset: the cleanup runs when `active` goes false again, so
+     * there is no second effect setting state on the inactive path.
+     */
     return () => {
       clearTimeout(timer)
       setShown(false)

@@ -1,12 +1,6 @@
 import { createStore, delMany, get, keys, set, type UseStore } from "idb-keyval"
 
-/**
- * Receipt blobs in IndexedDB, per CLAUDE.md §7.4.
- *
- * The prototype-era database was `kirjanpito-tositteet`; nothing migrates from
- * it, so receipts stored under that name are not reachable and the user
- * re-imports their ZIP to get them back.
- */
+/** Receipt blobs in IndexedDB, per CLAUDE.md §7.4. */
 const DB_NAME = "bookkeeping-receipts"
 const STORE_NAME = "files"
 

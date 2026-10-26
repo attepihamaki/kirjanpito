@@ -19,9 +19,8 @@ export interface Option {
  *
  * Base UI's `Select` needs an `items` map to render the trigger's label
  * rather than the raw value, *and* the same labels again as `SelectItem`
- * children. Every call site used to spell both out, so each one carried its
- * options twice — the VAT view wrote its quarter labels out twice in the one
- * component. Taking one `options` array and deriving the map removes that.
+ * children. This takes one `options` array and derives both, so a call site
+ * never spells its options out twice.
  */
 export function OptionSelect({
   options,
