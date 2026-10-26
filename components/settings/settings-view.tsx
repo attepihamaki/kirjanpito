@@ -394,7 +394,7 @@ function RateInput({ cat }: { cat: Category }) {
     <Input
       value={draft}
       aria-label={`${f.t("settings.defaultVat")} – ${f.catName(cat)}`}
-      className="tabular ml-auto h-7 w-20 text-right"
+      className="tabular ml-auto h-8 w-20 text-right"
       onChange={(e) => setDraft(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => {

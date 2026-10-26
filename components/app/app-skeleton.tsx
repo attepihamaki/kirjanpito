@@ -19,8 +19,8 @@ export function AppSkeleton() {
           <Skeleton className="h-4 w-28" />
         </div>
         <div className="flex flex-col gap-3 px-2">
-          <Skeleton className="h-8 w-full" />
-          <Skeleton className="h-[7.5rem] w-full" />
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-32 w-full" />
         </div>
         <div className="flex flex-col gap-1.5 px-2 pt-2">
           {Array.from({ length: 5 }, (_, i) => (
@@ -31,10 +31,10 @@ export function AppSkeleton() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex h-14 shrink-0 items-center gap-2 px-4 lg:px-6">
-          <Skeleton className="size-8" />
+          <Skeleton className="size-9" />
           <div className="ml-auto flex items-center gap-2">
-            <Skeleton className="size-8" />
-            <Skeleton className="size-8" />
+            <Skeleton className="size-9" />
+            <Skeleton className="size-9" />
           </div>
         </div>
         <div className="flex flex-col gap-4 px-4 py-5 lg:px-6 lg:py-6">
