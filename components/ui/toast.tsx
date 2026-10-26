@@ -24,12 +24,19 @@ function ToastPortal({ ...props }: ToastPrimitive.Portal.Props) {
   return <ToastPrimitive.Portal data-slot="toast-portal" {...props} />
 }
 
+/*
+ * Local edit: the viewport is z-100, above the z-50 that dialogs, sheets and
+ * overlays share. All of those are portalled to the body, so at an equal
+ * z-index the later one wins — and the Toaster wraps the tree, so its portal
+ * is always the earlier one. A toast raised from inside a dialog, which is
+ * where several of them come from, would be rendered behind it.
+ */
 function ToastViewport({ className, ...props }: ToastPrimitive.Viewport.Props) {
   return (
     <ToastPrimitive.Viewport
       data-slot="toast-viewport"
       className={cn(
-        "pointer-events-none fixed inset-x-4 bottom-4 z-50 mx-auto w-auto max-w-sm outline-none sm:right-4 sm:left-auto sm:mx-0 sm:w-full",
+        "pointer-events-none fixed inset-x-4 bottom-4 z-100 mx-auto w-auto max-w-sm outline-none sm:right-4 sm:left-auto sm:mx-0 sm:w-full",
         className
       )}
       {...props}

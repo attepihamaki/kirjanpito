@@ -40,7 +40,7 @@ There is **no backend, no account and no database**. The user opens their bookke
   - `idb` or `idb-keyval` for IndexedDB.
   - `next-themes` for light, dark and system theme (the standard shadcn approach).
   - Tables are hand-composed on shadcn's `Table`, **not** `@tanstack/react-table`, which was removed from the dependencies. Sorting, filtering and pagination all live in the store — they have to, because the toolbar, the month chips and the totals strip read the same state — which would leave a table adapter owning nothing. See the comment at the top of `components/ledger/ledger-table.tsx`.
-  - Toasts are `components/ui/toast.tsx`, **not** `sonner`, which was removed from the dependencies. It is a provider, so it wraps the tree in `HtmlShell` rather than sitting beside it.
+  - Toasts are `components/ui/toast.tsx`, **not** `sonner`, which was removed from the dependencies. It is a provider, so it wraps the tree in `HtmlShell` rather than sitting beside it. Its viewport is the one layer above the `z-50` that dialogs, sheets and overlays share: they are all portalled to the body, where an equal z-index is settled by DOM order, and the provider's portal is always the earliest. Toasts are raised from inside dialogs, so **the viewport stays at `z-100`**.
   - State: a small store such as Zustand with a persistence layer, or React context plus `useReducer`. Keep the domain logic (calculations, CSV, paths) in plain TypeScript modules with no React, so it can be unit-tested.
 - Money is always stored as **integer cents**, never floats.
 
