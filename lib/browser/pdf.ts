@@ -96,3 +96,29 @@ export async function pdfPageSize(
   const viewport = page.getViewport({ scale: 1 })
   return { width: viewport.width, height: viewport.height }
 }
+
+/**
+ * The first page drawn to a JPEG data URL `width` pixels wide, for a
+ * thumbnail.
+ *
+ * A data URL rather than an object URL: the caller holds the string for as
+ * long as it shows it and there is nothing to revoke afterwards. The document
+ * is opened and destroyed inside the call, so no pdf.js resources outlive it.
+ */
+export async function renderPdfThumbnail(
+  blob: Blob,
+  width = 300
+): Promise<string> {
+  const handle = await loadPdf(blob)
+  try {
+    const { width: pageWidth } = await pdfPageSize(handle.doc, 1)
+    const canvas = document.createElement("canvas")
+    await renderPdfPage(handle.doc, 1, canvas, {
+      scale: width / pageWidth,
+      rotation: 0,
+    })
+    return canvas.toDataURL("image/jpeg", 0.82)
+  } finally {
+    await handle.destroy()
+  }
+}
