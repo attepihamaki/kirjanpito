@@ -1,0 +1,59 @@
+# Builds the static export and publishes it to GitHub Pages.
+#
+# One-time setup in the repository: Settings → Pages → Source = "GitHub
+# Actions", and Settings → Pages → Custom domain = kirjanpito.attepihamaki.fi
+# with "Enforce HTTPS" ticked once the certificate has been issued. The domain
+# also lives in public/CNAME so that every export carries it; without that file
+# a deploy would clear the setting.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish rather than cancelling it half-published.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # typecheck + lint + unit tests. A red build must not reach the domain.
+      - run: npm run check
+
+      # `prebuild` copies the pdf.js worker into public/ — it is gitignored, so
+      # this step is what puts it in the export.
+      - run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
