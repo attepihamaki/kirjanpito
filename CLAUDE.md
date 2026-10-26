@@ -617,7 +617,19 @@ Sidebar → shadcn's `Sidebar` (with `Sheet`, `Tooltip` and `hooks/use-mobile.ts
 
 ## 11b. SEO and the route structure
 
-The landing page is a public, indexed document; the bookkeeping app is not.
+The landing page is the public document; the bookkeeping app is not.
+
+> **Indexing is currently switched off entirely.** `INDEXABLE` in `lib/site.ts`
+> is `false` while the site is served from its github.io working URL: a search
+> result pointing there would outlive the move to the real domain and compete
+> with it as a duplicate. The flag drives three things — the robots meta on
+> every document (`app/layout.tsx`), `robots.txt` and the sitemap — and
+> `test/seo.test.tsx` asserts all three against it, in whichever position it
+> is in, so flipping it cannot leave one behind. The Open Graph card is
+> deliberately **not** gated: noindex keeps a page out of search results, not
+> out of a chat app's link preview. Turn it on in the same change that sets
+> `BASE_PATH` back to `""` and `SITE_URL` to the custom domain. Everything
+> below describes how the site behaves with it on.
 
 **Only Finnish is indexed.** English remains a first-class UI language (§9), but
 it is a stored preference, not a URL. That single decision is what keeps the
@@ -659,7 +671,9 @@ app/
 - **The 404 is the ordinary `app/not-found.tsx`**, wrapped by the root layout
   like any other page; `experimental.globalNotFound` is gone from
   `next.config.ts` along with the second root layout that forced it. Next already
-  adds the `noindex` meta, so the file only sets a title. The page is plain text
+  adds the `noindex` meta, so the file only sets a title. (With `INDEXABLE` off
+  the 404 carries two robots tags, Next's and the root layout's; they agree, and
+  a crawler takes the most restrictive of several anyway.) The page is plain text
   and buttons — no receipt motif: it is a dead end, not a document.
 - **`output: "export"`** with `trailingSlash: true` and `images.unoptimized`.
   `robots.ts`, `sitemap.ts` and `og/[file]/route.tsx` are Route Handlers and
@@ -723,15 +737,17 @@ static files, so any static host would do.
   there would break the receipt viewer in production only.
 - **`robots.txt` and `sitemap.xml` are published under the prefix too**, at
   `/kirjanpito/robots.txt` — and a crawler only reads the one at the host root,
-  which belongs to a different repository. So while the site lives here, robots
-  is inert and the `noindex` on the app layout is what actually keeps `/app` out
-  of the index. Both files are still generated with correct host-absolute paths,
-  so moving to a host root needs no code change in them.
-- **To move to a custom domain:** set `BASE_PATH` to `""` and `SITE_URL` to that
-  origin, add `public/CNAME` containing the domain (that file is what carries it
-  into the export — without it a deploy clears the repository's custom-domain
-  setting), and set the domain in Settings → Pages. Nothing else in the codebase
-  mentions the prefix.
+  which belongs to a different repository. So robots is inert here whatever it
+  says, which is the second reason `INDEXABLE` puts the real instruction in a
+  meta tag on each document: that one travels with the page. Both files are
+  still generated with correct host-absolute paths, so moving to a host root
+  needs no code change in them.
+- **To move to a custom domain:** in `lib/site.ts` set `BASE_PATH` to `""`,
+  `SITE_URL` to that origin and `INDEXABLE` to `true`; add `public/CNAME`
+  containing the domain (that file is what carries it into the export — without
+  it a deploy clears the repository's custom-domain setting); and set the domain
+  in Settings → Pages. Nothing else in the codebase mentions the prefix or the
+  indexing state.
 - **Jekyll never runs**, because Pages is deployed from the Actions artifact
   rather than from a branch. That is what makes `_next/` serve; a branch-based
   deploy would need a `.nojekyll` file.

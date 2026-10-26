@@ -32,6 +32,25 @@ export const SITE_URL = (
 ).replace(/\/$/, "")
 
 /**
+ * Whether search engines may index the site.
+ *
+ * **Off while the site is served from attepihamaki.github.io/kirjanpito.**
+ * That address is a working URL, not the published one, and a search result
+ * pointing at it would outlive the move to the real domain — as a duplicate
+ * of it, competing with the page it is a copy of. Turn this on in the same
+ * change that sets BASE_PATH back to "" and SITE_URL to the custom domain.
+ *
+ * It drives exactly three things: the robots meta tag on every document
+ * (`app/layout.tsx`), `robots.txt` (`app/robots.ts`) and the sitemap
+ * (`app/sitemap.ts`). `test/seo.test.tsx` checks that all three agree with it.
+ *
+ * Nothing else changes with it. The Open Graph card is still generated and
+ * still declared, so a link pasted into Slack, WhatsApp or iMessage previews
+ * normally — noindex keeps a page out of search results, not out of a chat.
+ */
+export const INDEXABLE = false
+
+/**
  * The landing page — the one indexed document.
  *
  * There is no per-language URL. Only Finnish is indexed, so the landing is

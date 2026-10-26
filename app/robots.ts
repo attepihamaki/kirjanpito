@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next"
 
-import { BASE_PATH, SITE_URL } from "@/lib/site"
+import { BASE_PATH, INDEXABLE, SITE_URL } from "@/lib/site"
 
 // Required by output: "export" — this is a Route Handler, and a static
 // export has no request to serve it from.
@@ -18,6 +18,12 @@ export const dynamic = "force-static"
  * is what actually keeps /app out of the index.
  */
 export default function robots(): MetadataRoute.Robots {
+  // SEO is off (§11b). Disallow everything and point at no sitemap, so the
+  // file never contradicts the noindex the documents carry.
+  if (!INDEXABLE) {
+    return { rules: { userAgent: "*", disallow: "/" } }
+  }
+
   return {
     rules: {
       userAgent: "*",
