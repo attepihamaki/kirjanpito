@@ -666,6 +666,7 @@ Anything that appears in two views is a component in `components/common/`, takin
 | tables                       | `ui/table.tsx`. Row padding is the `density` prop — `"comfortable"` for the ledger, the default elsewhere — never a `[&_td]:` override at the call site. `Table` is already the horizontal scroller, so never wrap it in another `overflow-x-auto` |
 | money                        | `money.tsx` — `Money` with `tone` / `signed`, `ZeroDash` for an absent amount. Only a string context (an interpolated message, a chart tick, `ReceiptRow`) calls `f.money` directly, and writes a minus with `MINUS`, never a literal |
 | a control that can be busy   | `busy-button.tsx` — `BusyButton` swaps the icon for a spinner and, with `busyLabel`, the label too; `BusyIcon` is the swap alone, for controls that are not `Button`s |
+| a link that looks like a button | `button-link.tsx` — a `next/link` wearing `buttonVariants`. `Button` enforces button semantics, so a link must never go through its `render` prop: it would announce `role="button"` on something that navigates |
 | small labels                 | `pill.tsx` — `tone` (neutral / income / expense) and `size`. shadcn's `Badge` is not used: `--destructive` means "error", not "expense" |
 | income or expense            | `filter-controls.tsx` — `EntryTypeToggle` (income first, coloured) and `TypeFilterToggle` (all / income / expense) |
 | a full-screen scrim          | `overlay.tsx` — `blocking` is the whole difference between the import overlay and the drop hint |

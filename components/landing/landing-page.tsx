@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import { PlusIcon, UploadIcon } from "lucide-react"
 
 import { ImportOverlay } from "@/components/app/import-overlay"
@@ -9,6 +8,7 @@ import { LandingReceipts } from "@/components/landing/landing-receipts"
 import { LangToggle } from "@/components/app/lang-toggle"
 import { ThemeToggle } from "@/components/app/theme-toggle"
 import { BusyButton } from "@/components/common/busy-button"
+import { ButtonLink } from "@/components/common/button-link"
 import { DropTile } from "@/components/common/drop-tile"
 import { SiteFooter, SiteHeader } from "@/components/common/site-chrome"
 import { Pill } from "@/components/common/pill"
@@ -267,9 +267,9 @@ function HeroCta({
     <div className={cn("mt-7 flex flex-col gap-3", className)}>
       <div className={cn("flex flex-wrap gap-2", className)}>
         {openState ? (
-          <Button size="lg" render={<Link href={APP_ROUTES.ledger} />}>
+          <ButtonLink size="lg" href={APP_ROUTES.ledger}>
             {f.t("landing.continue")}
-          </Button>
+          </ButtonLink>
         ) : (
           <Button size="lg" onClick={() => void startNewBook(ctx)}>
             <PlusIcon data-icon="inline-start" />
@@ -327,9 +327,9 @@ function OpenOrContinue({
 
   if (hydrated && open) {
     return (
-      <Button size="sm" render={<Link href={APP_ROUTES.ledger} />}>
+      <ButtonLink size="sm" href={APP_ROUTES.ledger}>
         {f.t("landing.toApp")}
-      </Button>
+      </ButtonLink>
     )
   }
   return (

@@ -1,14 +1,13 @@
 "use client"
 
-import Link from "next/link"
 import { ArrowLeftIcon } from "lucide-react"
 
 import { LangToggle } from "@/components/app/lang-toggle"
 import { ThemeToggle } from "@/components/app/theme-toggle"
+import { ButtonLink } from "@/components/common/button-link"
 import { SiteFooter, SiteHeader } from "@/components/common/site-chrome"
 import { DisplayHeading, Lead } from "@/components/common/typography"
 import { LangRoot, useFormatters } from "@/components/lang-provider"
-import { Button } from "@/components/ui/button"
 import { APP_ROUTES, LANDING } from "@/lib/site"
 import { useBookStore } from "@/stores/book-store"
 
@@ -52,18 +51,14 @@ function NotFoundBody() {
           <Lead className="mt-5">{f.t("notFound.lead")}</Lead>
 
           <div className="mt-7 flex flex-wrap gap-2">
-            <Button size="lg" render={<Link href={LANDING} />}>
+            <ButtonLink size="lg" href={LANDING}>
               <ArrowLeftIcon data-icon="inline-start" />
               {f.t("notFound.home")}
-            </Button>
+            </ButtonLink>
             {hydrated && open ? (
-              <Button
-                size="lg"
-                variant="outline"
-                render={<Link href={APP_ROUTES.ledger} />}
-              >
+              <ButtonLink size="lg" variant="outline" href={APP_ROUTES.ledger}>
                 {f.t("landing.continue")}
-              </Button>
+              </ButtonLink>
             ) : null}
           </div>
         </div>
