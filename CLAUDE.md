@@ -697,7 +697,11 @@ app/
   only module importing pdfjs and is always dynamically imported. The build
   verification greps the chunks referenced by `out/index.html`.
 - `SITE_URL` comes from `NEXT_PUBLIC_SITE_URL` in `lib/site.ts`, which also holds
-  the route constants.
+  `BASE_PATH` and the route constants. `SITE_URL` **includes `BASE_PATH`**: the
+  site's root document is `https://attepihamaki.github.io/kirjanpito/`, and Next
+  joins that pathname onto the relative URLs in the metadata, so `OG_PATH`
+  resolves to `…/kirjanpito/og/opengraph-image.png` rather than losing the
+  prefix.
 
 ### Hosting: GitHub Pages
 
@@ -706,20 +710,28 @@ on every push to `main` — `npm run check`, then `npm run build`, then the `out
 directory as a Pages artifact. Nothing about the app is host-specific: it is
 static files, so any static host would do.
 
-- **The custom domain is what keeps the route tree flat.** The repository is a
-  project repo (`attepihamaki.github.io/kirjanpito`), which would normally serve
-  the site under a `/kirjanpito` path prefix. `public/CNAME` points it at
-  `kirjanpito.attepihamaki.fi`, which serves from the root of its own host, so
-  there is **no `basePath` and no `assetPrefix`**. The CNAME file must stay in
-  `public/` — a deploy that did not carry it would clear the repository setting
-  and the site would fall back to the prefixed URL.
-- **If the custom domain is ever dropped**, `basePath` and `assetPrefix` become
-  necessary, and with them one real code change:
-  `lib/browser/pdf.ts` sets `workerSrc = "/pdf.worker.min.mjs"`, the only
-  hard-coded absolute path in the codebase and the only one Next does not
-  prefix. Everything else routes through `next/navigation` or `next/link`,
-  which are `basePath`-aware. A missed prefix there would break the receipt
-  viewer in production only.
+- **The site is served under the repository's path**, `https://attepihamaki.github.io/kirjanpito/`,
+  because this is a project repo and no custom domain is set. `BASE_PATH` in
+  `lib/site.ts` is that prefix, and `next.config.ts` imports it as `basePath`.
+  **`assetPrefix` is not needed and must not be added**: `basePath` already
+  prefixes the routes, every `next/link` and every `_next/` asset — verified in
+  `out/`. The two differ only when assets come from another origin.
+- **`lib/browser/pdf.ts` is the one place that spells the prefix out.** It hands
+  pdf.js `` `${BASE_PATH}/pdf.worker.min.mjs` ``, a URL that never passes through
+  Next, so nothing prefixes it automatically. Everything else routes through
+  `next/navigation` or `next/link`, which are `basePath`-aware. A missed prefix
+  there would break the receipt viewer in production only.
+- **`robots.txt` and `sitemap.xml` are published under the prefix too**, at
+  `/kirjanpito/robots.txt` — and a crawler only reads the one at the host root,
+  which belongs to a different repository. So while the site lives here, robots
+  is inert and the `noindex` on the app layout is what actually keeps `/app` out
+  of the index. Both files are still generated with correct host-absolute paths,
+  so moving to a host root needs no code change in them.
+- **To move to a custom domain:** set `BASE_PATH` to `""` and `SITE_URL` to that
+  origin, add `public/CNAME` containing the domain (that file is what carries it
+  into the export — without it a deploy clears the repository's custom-domain
+  setting), and set the domain in Settings → Pages. Nothing else in the codebase
+  mentions the prefix.
 - **Jekyll never runs**, because Pages is deployed from the Actions artifact
   rather than from a branch. That is what makes `_next/` serve; a branch-based
   deploy would need a `.nojekyll` file.

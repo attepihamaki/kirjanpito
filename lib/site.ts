@@ -1,13 +1,34 @@
 /**
- * Canonical origin, used for metadataBase and the sitemap.
+ * The path prefix the site is served under, or "" when it is served from the
+ * root of a host.
  *
- * The site is a static export on GitHub Pages. The repository is a project
- * repo (attepihamaki.github.io/kirjanpito), but the custom domain in
- * public/CNAME serves it from the root of its own host — so there is no path
- * prefix, no `basePath`, and every absolute path in the app stays correct.
+ * The site is a static export on GitHub Pages, from the project repo
+ * attepihamaki/kirjanpito, so Pages serves it under the repository's own path
+ * — attepihamaki.github.io/kirjanpito — and every absolute path in the app
+ * has to carry that prefix.
+ *
+ * `next.config.ts` imports this as `basePath`, which is enough on its own:
+ * Next prefixes every route, every `next/link` and every `_next/` asset with
+ * it, so nothing in the app spells the prefix out. The single exception is
+ * `lib/browser/pdf.ts`, which hands pdf.js a worker URL that never passes
+ * through Next — it imports this constant instead.
+ *
+ * To serve from a host root again (a custom domain, or a user/organisation
+ * Pages repo), set this to "" and SITE_URL to that origin; `public/CNAME`
+ * would come back with it, since a deploy without that file clears the
+ * repository's custom-domain setting.
+ */
+export const BASE_PATH = "/kirjanpito"
+
+/**
+ * Canonical URL of the site, used for metadataBase, robots and the sitemap.
+ * It includes BASE_PATH: the site's root document is
+ * https://attepihamaki.github.io/kirjanpito/, not the host root, and Next
+ * joins this pathname onto the relative URLs in the metadata.
  */
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://kirjanpito.attepihamaki.fi"
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  `https://attepihamaki.github.io${BASE_PATH}`
 ).replace(/\/$/, "")
 
 /**

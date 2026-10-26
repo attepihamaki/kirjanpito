@@ -3,8 +3,8 @@
  *
  * Reached exclusively through `await import("@/lib/browser/pdf")` from an
  * event handler, so pdf.js never enters the landing page's bundle. The worker
- * is copied to /pdf.worker.min.mjs by scripts/copy-pdf-worker.mjs — see the
- * note there for why it is not resolved through the bundler.
+ * is copied to public/pdf.worker.min.mjs by scripts/copy-pdf-worker.mjs — see
+ * the note there for why it is not resolved through the bundler.
  */
 
 import type {
@@ -12,12 +12,16 @@ import type {
   PDFPageProxy,
 } from "pdfjs-dist/types/src/display/api"
 
+import { BASE_PATH } from "@/lib/site"
+
 let configured = false
 
 async function pdfjs() {
   const lib = await import("pdfjs-dist")
   if (!configured) {
-    lib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs"
+    // The one URL in the app that Next does not prefix for us: it is handed
+    // to pdf.js, not to next/link, so it carries BASE_PATH by hand (§11b).
+    lib.GlobalWorkerOptions.workerSrc = `${BASE_PATH}/pdf.worker.min.mjs`
     configured = true
   }
   return lib

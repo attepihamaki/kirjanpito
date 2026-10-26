@@ -1,10 +1,11 @@
 # Builds the static export and publishes it to GitHub Pages.
 #
 # One-time setup in the repository: Settings → Pages → Source = "GitHub
-# Actions", and Settings → Pages → Custom domain = kirjanpito.attepihamaki.fi
-# with "Enforce HTTPS" ticked once the certificate has been issued. The domain
-# also lives in public/CNAME so that every export carries it; without that file
-# a deploy would clear the setting.
+# Actions". Nothing else — the site is served from the repository's own path,
+# https://attepihamaki.github.io/kirjanpito/, which is what BASE_PATH in
+# lib/site.ts spells out. Setting a custom domain later means setting
+# BASE_PATH back to "" and adding public/CNAME, which is what carries the
+# domain into the export.
 name: Deploy to GitHub Pages
 
 on:
