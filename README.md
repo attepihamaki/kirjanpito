@@ -66,14 +66,14 @@ npm run dev      # http://localhost:3000/kirjanpito
 Note the path — the app is served under `/kirjanpito` in development too, so
 that what you test matches what deploys. See [Deployment](#deployment).
 
-| Script                  | What it does                                                      |
-| ----------------------- | ----------------------------------------------------------------- |
-| `npm run dev`           | Dev server. `predev` copies the pdf.js worker into `public/`.     |
-| `npm run build`         | Static export into `out/`. `prebuild` does the same copy.         |
-| `npm run check`         | `typecheck` → `lint` → `test`. What CI runs.                      |
-| `npm test`              | Vitest once. `npm run test:watch` to keep it open.                |
-| `npm run test:coverage` | Coverage, with thresholds enforced on the domain and i18n layers. |
-| `npm run format`        | Prettier over `**/*.{ts,tsx}`.                                    |
+| Script                  | What it does                                                                               |
+| ----------------------- | ------------------------------------------------------------------------------------------ |
+| `npm run dev`           | Dev server. `predev` copies the pdf.js worker into `public/`.                              |
+| `npm run build`         | Static export into `out/`. `prebuild` does the same copy, `postbuild` verifies the result. |
+| `npm run check`         | `typecheck` → `lint` → `test`. What CI runs.                                               |
+| `npm test`              | Vitest once. `npm run test:watch` to keep it open.                                         |
+| `npm run test:coverage` | Coverage, with thresholds enforced on the domain and i18n layers.                          |
+| `npm run format`        | Prettier over `**/*.{ts,tsx}`.                                                             |
 
 ## Layout
 
@@ -99,8 +99,6 @@ lib/
 stores/              Zustand stores and the derived selectors.
 hooks/               File drop, receipt GC, beforeunload, breakpoint, delays.
 test/                Component tests. Domain tests sit next to their module.
-docs/                The original Excel workbook and the HTML prototype the
-                     app was built from.
 ```
 
 ## Architecture
@@ -139,7 +137,8 @@ nothing.
 A few deliberate choices worth knowing before changing things:
 
 - **`pdfjs-dist`, `jszip`, `papaparse` and `recharts` must stay out of the
-  landing bundle.** Each is reachable only through a dynamic import.
+  landing bundle.** Each is reachable only through a dynamic import, and
+  `scripts/verify-export.mjs` fails the build if one gets in.
 - **The pdf.js worker is copied to `public/` by a script**, not resolved
   through the bundler, because Turbopack's choice between copying it as an
   asset and pulling it into the module graph differs between `next dev` and
@@ -210,8 +209,10 @@ if the three SEO files stop agreeing with the flag.
 
 ## Background
 
-`CLAUDE.md` is the full specification — the domain rules, the file formats, the
-design system and the reasoning behind the decisions above. It is the place to
-look before changing behaviour. `docs/` holds the Excel workbook the app
-replaces (including a note on the four bugs found in its formulas, which the app
-deliberately does not reproduce) and the HTML prototype the design comes from.
+The app replaces an Excel workbook, and was built from an HTML prototype.
+Neither is in the repository — they are source material rather than part of the
+project — but `CLAUDE.md` carries everything taken from them: the domain rules,
+the chart of accounts, the file formats, the design system and the reasoning
+behind the decisions above. That includes the four bugs found in the workbook's
+formulas, which the app deliberately does not reproduce. It is the place to look
+before changing behaviour.

@@ -8,6 +8,7 @@
     "predev": "node scripts/copy-pdf-worker.mjs",
     "build": "next build",
     "prebuild": "node scripts/copy-pdf-worker.mjs",
+    "postbuild": "node scripts/verify-export.mjs",
     "start": "next start",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",

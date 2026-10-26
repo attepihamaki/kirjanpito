@@ -2,6 +2,8 @@
 
 This file explains what the app is, what has been decided and built so far, and how to carry it into the real project. The prototype was built as a single HTML file (the "artifact"), which is provided alongside this file together with the original Excel workbook `docs/reference/kirjanpito.xlsx`. The artifact is the reference implementation for behaviour, texts and design. This file is the reference for intent and rules. If they disagree, ask the user.
 
+> **`docs/` is local-only and gitignored.** Neither the workbook nor the prototype is in the repository: they are the user's source material, not part of the published project. References to them below are still accurate for a working copy that has them. Without them, this file is the specification — §3 describes the workbook sheet by sheet, §10 lists the reference figures the tests assert, and §11 records the palette the prototype defines, so nothing here depends on opening either file.
+
 The user writes in Finnish and English. The app's default language is Finnish.
 
 ---
@@ -678,7 +680,8 @@ app/
 - **`output: "export"`** with `trailingSlash: true` and `images.unoptimized`.
   `robots.ts`, `sitemap.ts` and `og/[file]/route.tsx` are Route Handlers and
   need `export const dynamic = "force-static"` — without it the build fails.
-  `ImageResponse` does emit PNGs under static export; verified in `out/`.
+  `ImageResponse` does emit PNGs under static export; `verify-export.mjs`
+  checks the file is there and really is a PNG.
 - **The OG card is a route handler, not the `opengraph-image.tsx` convention.**
   The convention emits an extensionless `out/opengraph-image` and tags it as
   `/opengraph-image`, relying on the route's `contentType` export — which only
@@ -708,8 +711,16 @@ app/
   `recharts`.** Commands are split into `lib/commands/book-commands.ts` (safe to
   import statically) and `lib/commands/io-commands.ts` (pulled in with
   `await import()` from the landing's file handler). `lib/browser/pdf.ts` is the
-  only module importing pdfjs and is always dynamically imported. The build
-  verification greps the chunks referenced by `out/index.html`.
+  only module importing pdfjs and is always dynamically imported.
+  **`scripts/verify-export.mjs` enforces this on every build** (`postbuild`, so
+  a failure fails `npm run build` and the deploy never uploads an artifact). It
+  reads the chunks `out/index.html` references and looks for several string
+  markers per library, because minification keeps string literals and mangles
+  identifiers — the package name itself is usually gone. It also **self-tests**:
+  each library's markers must still match somewhere in the export, or the check
+  fails as a no-op rather than passing vacuously. That rule exists because the
+  hand-run version of this check grepped for `"papaparse"`, a string that does
+  not survive minification, and so had never once tested that library.
 - `SITE_URL` comes from `NEXT_PUBLIC_SITE_URL` in `lib/site.ts`, which also holds
   `BASE_PATH` and the route constants. `SITE_URL` **includes `BASE_PATH`**: the
   site's root document is `https://attepihamaki.github.io/kirjanpito/`, and Next
