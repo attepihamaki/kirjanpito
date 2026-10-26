@@ -3,6 +3,7 @@
 import * as React from "react"
 import { CopyIcon, Trash2Icon } from "lucide-react"
 
+import { EntryTypeToggle } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
 import { AttachmentGrid } from "@/components/entry/attachment-grid"
 import { ReceiptPreview } from "@/components/entry/receipt-preview"
@@ -401,29 +402,11 @@ function EntryDialogForm({
 
             <Field>
               <FieldLabel>{f.t("common.type")}</FieldLabel>
-              <ToggleGroup
-                aria-label={f.t("common.type")}
-                value={[form.type]}
-                onValueChange={(value) => {
-                  const next = value[0] as EntryType | undefined
-                  if (!next || next === form.type) return
-                  // The old category belongs to the other side.
-                  update({ type: next, catId: "" })
-                }}
-              >
-                <ToggleGroupItem
-                  value="income"
-                  className="data-pressed:bg-income-subtle data-pressed:text-income"
-                >
-                  {f.t("common.income")}
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="expense"
-                  className="data-pressed:bg-expense-subtle data-pressed:text-expense"
-                >
-                  {f.t("common.expense")}
-                </ToggleGroupItem>
-              </ToggleGroup>
+              <EntryTypeToggle
+                value={form.type}
+                // The old category belongs to the other side.
+                onChange={(type) => update({ type, catId: "" })}
+              />
             </Field>
 
             <Field>

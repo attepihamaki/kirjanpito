@@ -3,6 +3,7 @@
 import * as React from "react"
 import { PrinterIcon } from "lucide-react"
 
+import { Money, ZeroDash } from "@/components/common/money"
 import { PageHeader } from "@/components/common/page-header"
 import { Button } from "@/components/ui/button"
 import { useFormatters } from "@/components/lang-provider"
@@ -117,8 +118,8 @@ export function StatementView() {
                       ? f.t("statement.revenue")
                       : f.t("statement.expenses")}
                   </th>
-                  <td className="tabular pt-5 pb-1 text-right font-semibold">
-                    {f.money(row.total)}
+                  <td className="pt-5 pb-1 text-right font-semibold">
+                    <Money cents={row.total} />
                   </td>
                 </tr>
               ) : row.kind === "group" ? (
@@ -149,8 +150,8 @@ export function StatementView() {
                     </span>
                     {row.label}
                   </td>
-                  <td className="tabular py-1.5 text-right">
-                    {row.net ? f.money(row.net) : "–"}
+                  <td className="py-1.5 text-right">
+                    {row.net ? <Money cents={row.net} /> : <ZeroDash />}
                   </td>
                 </tr>
               )
@@ -160,14 +161,14 @@ export function StatementView() {
           <tfoot>
             <tr>
               <td className="pt-5">{f.t("statement.revenueTotal")}</td>
-              <td className="tabular pt-5 text-right">
-                {f.money(statement.revenueTotal)}
+              <td className="pt-5 text-right">
+                <Money cents={statement.revenueTotal} />
               </td>
             </tr>
             <tr>
               <td className="pb-2">{f.t("statement.deductibleTotal")}</td>
-              <td className="tabular pb-2 text-right">
-                −{f.money(statement.deductibleTotal)}
+              <td className="pb-2 text-right">
+                <Money cents={statement.deductibleTotal} signed />
               </td>
             </tr>
             <tr className="border-t-[3px] border-double border-foreground/40">
@@ -177,8 +178,8 @@ export function StatementView() {
                   : f.t("statement.loss")}
               </th>
               {/* Form 5 wants a positive figure on both 358 and 359. */}
-              <td className="tabular pt-2 text-right text-base font-semibold">
-                {f.money(statement.resultMagnitude)}
+              <td className="pt-2 text-right text-base font-semibold">
+                <Money cents={statement.resultMagnitude} />
               </td>
             </tr>
           </tfoot>

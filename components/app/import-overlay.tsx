@@ -1,5 +1,7 @@
 "use client"
 
+import { Overlay } from "@/components/common/overlay"
+import { Surface } from "@/components/common/surface"
 import { Spinner } from "@/components/ui/spinner"
 import { useT } from "@/components/lang-provider"
 import { useDelayedFlag } from "@/hooks/use-delayed-flag"
@@ -26,15 +28,14 @@ export function ImportOverlay() {
   if (!busy) return null
 
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
-    >
-      <div className="flex items-center gap-3 rounded-xl border bg-card px-6 py-4 shadow-lg">
+    <Overlay role="status" aria-live="polite">
+      <Surface
+        radius="xl"
+        className="flex items-center gap-3 px-6 py-4 shadow-lg"
+      >
         <Spinner className="size-5 text-muted-foreground" />
         <p className="font-heading text-lg font-medium">{t("io.opening")}</p>
-      </div>
-    </div>
+      </Surface>
+    </Overlay>
   )
 }

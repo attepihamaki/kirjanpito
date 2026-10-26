@@ -8,7 +8,16 @@ import { ImportOverlay } from "@/components/app/import-overlay"
 import { LandingReceipts } from "@/components/landing/landing-receipts"
 import { LangToggle } from "@/components/app/lang-toggle"
 import { ThemeToggle } from "@/components/app/theme-toggle"
+import { BusyButton } from "@/components/common/busy-button"
+import { DropTile } from "@/components/common/drop-tile"
 import { SiteFooter, SiteHeader } from "@/components/common/site-chrome"
+import { Pill } from "@/components/common/pill"
+import { Surface } from "@/components/common/surface"
+import {
+  DisplayHeading,
+  Lead,
+  SectionHeading,
+} from "@/components/common/typography"
 import {
   Accordion,
   AccordionContent,
@@ -16,12 +25,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
-import { Spinner } from "@/components/ui/spinner"
-import {
-  AppLangProvider,
-  LangHtmlAttr,
-  useFormatters,
-} from "@/components/lang-provider"
+import { LangRoot, useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { useDelayedFlag } from "@/hooks/use-delayed-flag"
 /*
@@ -29,6 +33,7 @@ import { useDelayedFlag } from "@/hooks/use-delayed-flag"
  * business in the landing page bundle. csv-header has no dependencies.
  */
 import { CSV_HEADER_LINE } from "@/lib/domain/csv-header"
+import { MINUS } from "@/lib/domain/money"
 import { startNewBook } from "@/lib/commands/book-commands"
 import { APP_ROUTES, LANDING, LANDING_FAQ_ID } from "@/lib/site"
 import { useBookStore } from "@/stores/book-store"
@@ -46,10 +51,9 @@ import { cn } from "@/lib/utils"
  */
 export function LandingPage() {
   return (
-    <AppLangProvider>
-      <LangHtmlAttr />
+    <LangRoot>
       <LandingBody />
-    </AppLangProvider>
+    </LangRoot>
   )
 }
 
@@ -87,12 +91,8 @@ function LandingBody() {
         {/* Hero */}
         <section className="mx-auto grid w-full max-w-5xl gap-10 px-4 py-10 md:grid-cols-[1.1fr_1fr] md:py-16">
           <div className="flex flex-col justify-center">
-            <h1 className="font-heading text-[clamp(2.25rem,5.4vw,3.75rem)] leading-[1.05] font-semibold tracking-[-0.035em] text-balance">
-              {f.t("landing.title")}
-            </h1>
-            <p className="mt-5 max-w-prose text-lg text-pretty text-muted-foreground">
-              {f.t("landing.lead")}
-            </p>
+            <DisplayHeading>{f.t("landing.title")}</DisplayHeading>
+            <Lead className="mt-5">{f.t("landing.lead")}</Lead>
             <HeroCta onPick={() => inputRef.current?.click()} />
           </div>
           <LandingReceipts />
@@ -126,19 +126,12 @@ function LandingBody() {
             >
               <div className="flex flex-wrap gap-1.5">
                 {[25.5, 13.5, 10, 0].map((rate) => (
-                  <span
-                    key={rate}
-                    className="tabular rounded-full bg-muted px-2 py-0.5 text-xs"
-                  >
+                  <Pill key={rate} className="tabular">
                     {f.rate(rate)}
-                  </span>
+                  </Pill>
                 ))}
-                <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                  EU
-                </span>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                  {f.t("summary.reverseCharge")}
-                </span>
+                <Pill>EU</Pill>
+                <Pill>{f.t("summary.reverseCharge")}</Pill>
               </div>
             </FeatureCard>
 
@@ -148,7 +141,7 @@ function LandingBody() {
             >
               <dl className="flex flex-col gap-1 text-xs">
                 <MiniRow label="300" value={f.money(1250000)} />
-                <MiniRow label="333" value={`−${f.money(22821)}`} />
+                <MiniRow label="333" value={`${MINUS}${f.money(22821)}`} />
                 <div className="mt-1 flex justify-between border-t pt-1 font-medium">
                   <dt>358</dt>
                   <dd className="tabular">{f.money(1227179)}</dd>
@@ -235,15 +228,13 @@ function LandingBody() {
 
         {/* Closing CTA */}
         <section className="mx-auto w-full max-w-5xl px-4 pb-16">
-          <div className="rounded-xl border bg-card px-6 py-10 text-center">
-            <h2 className="font-heading text-2xl font-semibold tracking-tight">
-              {f.t("landing.endTitle")}
-            </h2>
+          <Surface radius="xl" className="px-6 py-10 text-center">
+            <SectionHeading>{f.t("landing.endTitle")}</SectionHeading>
             <HeroCta
               onPick={() => inputRef.current?.click()}
               className="justify-center"
             />
-          </div>
+          </Surface>
         </section>
       </main>
 
@@ -285,14 +276,16 @@ function HeroCta({
             {f.t("landing.start")}
           </Button>
         )}
-        <Button size="lg" variant="outline" disabled={busy} onClick={onPick}>
-          {busy ? (
-            <Spinner data-icon="inline-start" />
-          ) : (
-            <UploadIcon data-icon="inline-start" />
-          )}
-          {busy ? f.t("io.opening") : f.t("landing.open")}
-        </Button>
+        <BusyButton
+          icon={UploadIcon}
+          busy={busy}
+          busyLabel={f.t("io.opening")}
+          size="lg"
+          variant="outline"
+          onClick={onPick}
+        >
+          {f.t("landing.open")}
+        </BusyButton>
       </div>
 
       {openState ? (
@@ -302,11 +295,10 @@ function HeroCta({
           {dirty && entries.length ? `. ${f.t("file.dirty")}.` : ""}
         </p>
       ) : (
-        <button
-          type="button"
+        <DropTile
           disabled={busy}
           onClick={onPick}
-          className="focus-ring flex items-center gap-3 rounded-lg border border-dashed px-4 py-3 text-left transition-colors hover:border-primary disabled:opacity-50"
+          className="flex items-center gap-3 rounded-lg px-4 py-3"
         >
           <UploadIcon className="size-5 shrink-0 text-muted-foreground" />
           <span className="flex flex-col">
@@ -315,7 +307,7 @@ function HeroCta({
               {f.t("landing.dropSub")}
             </span>
           </span>
-        </button>
+        </DropTile>
       )}
     </div>
   )
@@ -341,14 +333,15 @@ function OpenOrContinue({
     )
   }
   return (
-    <Button size="sm" variant="outline" disabled={busy} onClick={onPick}>
-      {busy ? (
-        <Spinner data-icon="inline-start" />
-      ) : (
-        <UploadIcon data-icon="inline-start" />
-      )}
+    <BusyButton
+      icon={UploadIcon}
+      busy={busy}
+      size="sm"
+      variant="outline"
+      onClick={onPick}
+    >
       {compact ? f.t("file.openShort") : f.t("file.open")}
-    </Button>
+    </BusyButton>
   )
 }
 
@@ -364,14 +357,17 @@ function Section({
 }) {
   return (
     <section id={id} className="mx-auto w-full max-w-5xl px-4 py-10 md:py-14">
-      <h2 className="mb-6 font-heading text-2xl font-semibold tracking-tight">
-        {title}
-      </h2>
+      <SectionHeading className="mb-6">{title}</SectionHeading>
       {children}
     </section>
   )
 }
 
+/*
+ * A `Surface` rather than a `Panel`: the title belongs to the card's flow
+ * above an illustration, not on a ruled heading strip, and it is an h3 under
+ * the section's own heading.
+ */
 function FeatureCard({
   title,
   body,
@@ -382,11 +378,11 @@ function FeatureCard({
   children: React.ReactNode
 }) {
   return (
-    <article className="flex flex-col gap-3 rounded-lg border bg-card p-5">
+    <Surface as="article" className="flex flex-col gap-3 p-5">
       <h3 className="font-medium">{title}</h3>
       <p className="text-sm text-muted-foreground">{body}</p>
       <div className="mt-auto rounded-md bg-muted/40 p-3">{children}</div>
-    </article>
+    </Surface>
   )
 }
 

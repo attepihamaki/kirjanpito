@@ -1,11 +1,14 @@
+import { Surface } from "@/components/common/surface"
 import { cn } from "@/lib/utils"
 
 /**
- * A bordered panel with a ruled heading — the shape the VAT tables, the
- * "other sales" list, the summary grids and the settings sections all use.
+ * A `Surface` with a ruled heading — the shape the VAT tables, the "other
+ * sales" list, the summary grids and the settings sections all use.
  *
- * It is a --card surface over the page's --background (§11); a bordered panel
- * with no fill would vanish into the page.
+ * The heading is optional. A panel with no title, no actions and no
+ * description is a plain bordered box, which is what the totals strip and the
+ * VAT result banner are; giving them the same component keeps every card in
+ * the app one radius, one border and one fill.
  *
  * A panel whose actions commit something puts them in `footer`, on a ruled,
  * tinted strip rather than loose among the fields — the shape FormBox's
@@ -24,7 +27,8 @@ export function Panel({
   bodyClassName,
   children,
 }: {
-  title: string
+  /** Omitted for a panel that is a bare bordered box. */
+  title?: string
   /** A line under the heading saying what the panel is for. */
   description?: string
   /** Controls that sit on the heading row, e.g. a search box and filters. */
@@ -37,29 +41,28 @@ export function Panel({
   children?: React.ReactNode
 }) {
   const destructive = variant === "destructive"
+  const heading = title || actions || description
 
   return (
-    <section
-      className={cn(
-        "rounded-lg border bg-card",
-        destructive && "border-destructive/40",
-        className
-      )}
-    >
-      <div
-        className={cn(
-          "border-b px-4 py-3",
-          actions && "flex flex-wrap items-center gap-2"
-        )}
-      >
-        <h2 className={cn("font-medium", actions && "mr-2")}>{title}</h2>
-        {actions}
-        {description ? (
-          <p className="mt-1 w-full text-sm text-muted-foreground">
-            {description}
-          </p>
-        ) : null}
-      </div>
+    <Surface as="section" tone={variant} className={className}>
+      {heading ? (
+        <div
+          className={cn(
+            "border-b px-4 py-3",
+            actions && "flex flex-wrap items-center gap-2"
+          )}
+        >
+          {title ? (
+            <h2 className={cn("font-medium", actions && "mr-2")}>{title}</h2>
+          ) : null}
+          {actions}
+          {description ? (
+            <p className="mt-1 w-full text-sm text-muted-foreground">
+              {description}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       {children ? <div className={bodyClassName}>{children}</div> : null}
 
@@ -73,6 +76,6 @@ export function Panel({
           {footer}
         </div>
       ) : null}
-    </section>
+    </Surface>
   )
 }

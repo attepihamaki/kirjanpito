@@ -4,12 +4,14 @@ import * as React from "react"
 import { PlusIcon, Trash2Icon } from "lucide-react"
 
 import {
+  EntryTypeToggle,
   SearchInput,
   TypeFilterToggle,
 } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
 import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
+import { Pill } from "@/components/common/pill"
 import { SortableHeader } from "@/components/common/sortable-header"
 import { TablePagination } from "@/components/common/table-pagination"
 import { Button } from "@/components/ui/button"
@@ -30,9 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { toast } from "@/components/ui/toast"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useFormatters } from "@/components/lang-provider"
-import { cn } from "@/lib/utils"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { clearAllEntries, resetCategories } from "@/lib/commands/book-commands"
 import { LINES, categoryName } from "@/lib/domain/accounts"
@@ -141,21 +141,7 @@ function AddCategoryForm() {
       <FieldGroup className="sm:grid sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         <Field>
           <FieldLabel>{f.t("common.type")}</FieldLabel>
-          <ToggleGroup
-            aria-label={f.t("common.type")}
-            value={[side]}
-            onValueChange={(value) => {
-              const next = value[0] as EntryType | undefined
-              if (next) setSide(next)
-            }}
-          >
-            <ToggleGroupItem value="expense">
-              {f.t("common.expense")}
-            </ToggleGroupItem>
-            <ToggleGroupItem value="income">
-              {f.t("common.income")}
-            </ToggleGroupItem>
-          </ToggleGroup>
+          <EntryTypeToggle value={side} onChange={setSide} />
         </Field>
 
         <Field>
@@ -300,74 +286,68 @@ function CategoryTable() {
         </>
       }
     >
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {header("enabled", f.t("settings.inUse"))}
-              {header("side", f.t("common.type"))}
-              {header("account", f.t("common.account"))}
-              {header("name", f.t("common.name"))}
-              {header("vatRate", f.t("settings.defaultVat"), "right")}
-              <TableHead className="w-px" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {view.rows.map((cat) => {
-              const income = categorySide(cat) === "income"
-              const deletable = cat.custom && !usedIds.has(cat.id)
-              return (
-                <TableRow key={cat.id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={cat.enabled}
-                      aria-label={f.t("settings.isActive", {
-                        c: f.catName(cat),
-                      })}
-                      onCheckedChange={(checked) =>
-                        upsertCategory({ ...cat, enabled: checked === true })
-                      }
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className={cn(
-                        "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
-                        income
-                          ? "bg-income-subtle text-income"
-                          : "bg-expense-subtle text-expense"
-                      )}
+      <Table>
+        <TableHeader>
+          <TableRow>
+            {header("enabled", f.t("settings.inUse"))}
+            {header("side", f.t("common.type"))}
+            {header("account", f.t("common.account"))}
+            {header("name", f.t("common.name"))}
+            {header("vatRate", f.t("settings.defaultVat"), "right")}
+            <TableHead className="w-px" />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {view.rows.map((cat) => {
+            const income = categorySide(cat) === "income"
+            const deletable = cat.custom && !usedIds.has(cat.id)
+            return (
+              <TableRow key={cat.id}>
+                <TableCell>
+                  <Checkbox
+                    checked={cat.enabled}
+                    aria-label={f.t("settings.isActive", {
+                      c: f.catName(cat),
+                    })}
+                    onCheckedChange={(checked) =>
+                      upsertCategory({ ...cat, enabled: checked === true })
+                    }
+                  />
+                </TableCell>
+                <TableCell>
+                  <Pill
+                    tone={income ? "income" : "expense"}
+                    className="font-medium"
+                  >
+                    {income ? f.t("common.income") : f.t("common.expense")}
+                  </Pill>
+                </TableCell>
+                <TableCell className="tabular text-muted-foreground">
+                  {categoryAccount(cat)}
+                </TableCell>
+                <TableCell>{f.catName(cat)}</TableCell>
+                <TableCell className="text-right">
+                  <RateInput key={cat.vatRate} cat={cat} />
+                </TableCell>
+                <TableCell>
+                  {deletable ? (
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={f.t("settings.deleteCategory")}
+                      onClick={() => removeCategory(cat.id)}
                     >
-                      {income ? f.t("common.income") : f.t("common.expense")}
-                    </span>
-                  </TableCell>
-                  <TableCell className="tabular text-muted-foreground">
-                    {categoryAccount(cat)}
-                  </TableCell>
-                  <TableCell>{f.catName(cat)}</TableCell>
-                  <TableCell className="text-right">
-                    <RateInput key={cat.vatRate} cat={cat} />
-                  </TableCell>
-                  <TableCell>
-                    {deletable ? (
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={f.t("settings.deleteCategory")}
-                        onClick={() => removeCategory(cat.id)}
-                      >
-                        <Trash2Icon />
-                      </Button>
-                    ) : null}
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </div>
+                      <Trash2Icon />
+                    </Button>
+                  ) : null}
+                </TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
 
-      <div className="px-4 pb-3">
+      <div className="px-4 py-3">
         <TablePagination
           page={view.page}
           pages={view.pages}

@@ -1,3 +1,4 @@
+import { Pill } from "@/components/common/pill"
 import { cn } from "@/lib/utils"
 
 /**
@@ -48,16 +49,13 @@ export function ReceiptHead({
 }) {
   return (
     <div className="flex items-start justify-between gap-2">
-      <span
-        className={cn(
-          "rounded-sm px-1.5 py-0.5 font-heading text-[0.65rem] font-semibold tracking-wide",
-          tone === "income"
-            ? "bg-income-subtle text-income"
-            : "bg-expense-subtle text-expense"
-        )}
+      <Pill
+        tone={tone}
+        size="sm"
+        className="font-heading font-semibold tracking-wide"
       >
         {label}
-      </span>
+      </Pill>
       <span className="tabular text-xs text-paper-foreground/70">{date}</span>
     </div>
   )

@@ -15,7 +15,13 @@ import type { PageSize } from "@/stores/book-store"
 const SIZES: PageSize[] = [10, 25, 50, 100]
 const SIZE_OPTIONS = SIZES.map((s) => ({ value: String(s), label: String(s) }))
 
-/** "Rivejä sivulla", "Sivu 1 / 2" and « ‹ › » (§8.4). */
+/**
+ * "Rivejä sivulla", "Sivu 1 / 2" and « ‹ › » (§8.4).
+ *
+ * It carries no margin of its own: one caller sits it inside a panel and the
+ * other below a table in a spaced column, so the space around it belongs to
+ * whichever of them is placing it.
+ */
 export function TablePagination({
   page,
   pages,
@@ -34,7 +40,7 @@ export function TablePagination({
   const last = page >= pages
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 pt-3">
+    <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">
           {t("table.rowsPerPage")}

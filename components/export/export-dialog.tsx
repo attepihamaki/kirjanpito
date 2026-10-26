@@ -3,6 +3,7 @@
 import * as React from "react"
 import { DownloadIcon } from "lucide-react"
 
+import { BusyButton } from "@/components/common/busy-button"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -14,7 +15,6 @@ import {
 } from "@/components/ui/dialog"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Spinner } from "@/components/ui/spinner"
 import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { availableReceiptCount } from "@/lib/commands/book-commands"
@@ -117,14 +117,14 @@ function ExportDialogForm({ onClose }: { onClose: () => void }) {
           <Button variant="outline" onClick={onClose}>
             {f.t("common.cancel")}
           </Button>
-          <Button disabled={busy} onClick={() => void run()}>
-            {busy ? (
-              <Spinner data-icon="inline-start" />
-            ) : (
-              <DownloadIcon data-icon="inline-start" />
-            )}
-            {busy ? f.t("io.exporting") : f.t("io.exportAction")}
-          </Button>
+          <BusyButton
+            icon={DownloadIcon}
+            busy={busy}
+            busyLabel={f.t("io.exporting")}
+            onClick={() => void run()}
+          >
+            {f.t("io.exportAction")}
+          </BusyButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

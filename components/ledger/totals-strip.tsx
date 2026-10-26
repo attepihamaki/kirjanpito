@@ -1,6 +1,7 @@
 "use client"
 
 import { Money } from "@/components/common/money"
+import { Panel } from "@/components/common/panel"
 import { useT } from "@/components/lang-provider"
 import type { LedgerTotals } from "@/lib/domain/vat"
 
@@ -16,7 +17,7 @@ export function TotalsStrip({ totals }: { totals: LedgerTotals }) {
   const refund = totals.due < 0
 
   return (
-    <div className="grid grid-cols-1 divide-y rounded-lg border bg-card sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+    <Panel bodyClassName="grid grid-cols-1 divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
       <Cell label={t("ledger.incomeNet")}>
         <Money cents={totals.incomeNet} tone="income" />
       </Cell>
@@ -29,7 +30,7 @@ export function TotalsStrip({ totals }: { totals: LedgerTotals }) {
           tone={refund ? "income" : undefined}
         />
       </Cell>
-    </div>
+    </Panel>
   )
 }
 

@@ -22,7 +22,6 @@ import { quarterMonths } from "@/lib/domain/dates"
 import { filterPeriod, type Period } from "@/lib/domain/period"
 import { indexCategories } from "@/lib/domain/types"
 import { vatReport, type VatSide } from "@/lib/domain/vat"
-import { cn } from "@/lib/utils"
 import { useBookStore, type VatMode } from "@/stores/book-store"
 
 export function VatView() {
@@ -116,25 +115,22 @@ export function VatView() {
         </div>
 
         {/* Result banner */}
-        <div className="rounded-lg border bg-card p-5">
+        <Panel bodyClassName="p-5">
           <p className="text-sm text-muted-foreground">
             {refund ? f.t("vat.refundableTitle") : f.t("vat.payableTitle")}
           </p>
-          <p
-            className={cn(
-              "tabular mt-1 font-heading text-4xl font-semibold tracking-tight",
-              refund && "text-income"
-            )}
-          >
-            {f.money(Math.abs(report.due))}
-          </p>
+          <Money
+            cents={Math.abs(report.due)}
+            tone={refund ? "income" : undefined}
+            className="mt-1 block font-heading text-4xl font-semibold tracking-tight"
+          />
           <p className="mt-2 text-sm text-muted-foreground">
             {f.t("vat.formula", {
               a: f.money(report.sales.total.vat),
               b: f.money(report.purchases.total.vat),
             })}
           </p>
-        </div>
+        </Panel>
 
         {report.anomalies.length ? (
           <Alert>
@@ -194,7 +190,7 @@ function RateTable({
   )
 
   return (
-    <Panel title={title} bodyClassName="overflow-x-auto">
+    <Panel title={title}>
       <Table>
         <TableHeader>
           <TableRow>

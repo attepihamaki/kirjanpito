@@ -1,5 +1,6 @@
 "use client"
 
+import { Pill } from "@/components/common/pill"
 import {
   ReceiptHead,
   ReceiptPaper,
@@ -8,6 +9,7 @@ import {
   ReceiptTotal,
 } from "@/components/common/receipt-paper"
 import { useFormatters } from "@/components/lang-provider"
+import { MINUS } from "@/lib/domain/money"
 import { cn } from "@/lib/utils"
 
 /**
@@ -55,13 +57,16 @@ export function LandingReceipts() {
         <p className="text-xs text-paper-foreground/70">{f.month(9)} 2026</p>
         <ReceiptRule />
         <ReceiptRow label={f.t("landing.salesTax")} value={f.money(63750)} />
-        <ReceiptRow label={f.t("landing.buyTax")} value={`−${f.money(2032)}`} />
+        <ReceiptRow
+          label={f.t("landing.buyTax")}
+          value={`${MINUS}${f.money(2032)}`}
+        />
         <ReceiptRule />
         <ReceiptTotal label={f.t("landing.due")} value={f.money(61718)} />
         <p className="mt-3 text-center">
-          <span className="rounded-sm bg-income-subtle px-1.5 py-0.5 text-[0.65rem] text-income">
+          <Pill tone="income" size="sm">
             {f.t("receipt.salesBadge")}
-          </span>
+          </Pill>
         </p>
       </Receipt>
     </div>

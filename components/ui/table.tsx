@@ -3,7 +3,23 @@
 import * as React from "react"
 import { cn } from "cn"
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+/*
+ * `density` is the one local edit to this file. Row padding is set here so
+ * every table in the app draws from the same two values: "default" for the
+ * dense reference tables, "comfortable" for a ledger that is scanned down a
+ * single column.
+ *
+ * The container is already the horizontal scroller, so a call site must not
+ * add another `overflow-x-auto` around it — the outer one would never scroll
+ * and a sticky column would anchor to the wrong element.
+ */
+function Table({
+  className,
+  density = "default",
+  ...props
+}: React.ComponentProps<"table"> & {
+  density?: "default" | "comfortable"
+}) {
   return (
     <div
       data-slot="table-container"
@@ -11,7 +27,11 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
     >
       <table
         data-slot="table"
-        className={cn("w-full caption-bottom text-sm", className)}
+        className={cn(
+          "w-full caption-bottom text-sm",
+          density === "comfortable" && "[&_td]:px-3 [&_td]:py-3.5 [&_th]:px-3",
+          className
+        )}
         {...props}
       />
     </div>

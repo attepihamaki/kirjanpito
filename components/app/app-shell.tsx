@@ -9,8 +9,9 @@ import { AppTopbar } from "@/components/app/app-topbar"
 import { ImportOverlay } from "@/components/app/import-overlay"
 import { ExportDialog } from "@/components/export/export-dialog"
 import { EntryDialog } from "@/components/entry/entry-dialog"
+import { Overlay } from "@/components/common/overlay"
 import { ReceiptViewer } from "@/components/receipt/receipt-viewer"
-import { AppLangProvider, LangHtmlAttr, useT } from "@/components/lang-provider"
+import { LangRoot, useT } from "@/components/lang-provider"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { toast } from "@/components/ui/toast"
@@ -25,10 +26,9 @@ import { useBookStore } from "@/stores/book-store"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <AppLangProvider>
-      <LangHtmlAttr />
+    <LangRoot>
       <AppShellInner>{children}</AppShellInner>
-    </AppLangProvider>
+    </LangRoot>
   )
 }
 
@@ -122,18 +122,17 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
         </SidebarInset>
 
         {dragging ? (
-          <div
-            className={cn(
-              "pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm",
-              draggingMedia && "bg-background/60"
-            )}
+          // Not blocking: a blocking scrim would swallow the drop itself.
+          <Overlay
+            blocking={false}
+            className={cn(draggingMedia && "bg-background/60")}
           >
             <div className="rounded-xl border-2 border-dashed border-primary px-8 py-6 text-center">
               <p className="font-heading text-lg font-medium">
                 {draggingMedia ? t("receipt.drop") : t("io.dropHere")}
               </p>
             </div>
-          </div>
+          </Overlay>
         ) : null}
 
         <ImportOverlay />

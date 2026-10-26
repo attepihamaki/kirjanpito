@@ -3,6 +3,8 @@
 import * as React from "react"
 import { FileTextIcon, PlusIcon, XIcon } from "lucide-react"
 
+import { BusyIcon } from "@/components/common/busy-button"
+import { DropTile } from "@/components/common/drop-tile"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { useFormatters } from "@/components/lang-provider"
@@ -133,22 +135,16 @@ export function AttachmentGrid({
             onRemove={() => onRemove(i)}
           />
         ))}
-        <button
-          type="button"
+        <DropTile
           onClick={onAdd}
           disabled={busy}
-          className={cn(
-            "flex aspect-3/4 flex-col items-center justify-center gap-1 rounded-md border border-dashed text-muted-foreground transition-colors",
-            "hover:border-primary hover:text-foreground",
-            "focus-ring",
-            "disabled:cursor-not-allowed disabled:opacity-60"
-          )}
+          className="flex aspect-3/4 flex-col items-center justify-center gap-1 rounded-md text-muted-foreground hover:text-foreground"
         >
-          {busy ? <Spinner /> : <PlusIcon className="size-5" />}
+          <BusyIcon busy={busy} icon={PlusIcon} className="size-5" />
           <span className="px-1 text-center text-[0.7rem]">
             {f.t("receipt.add")}
           </span>
-        </button>
+        </DropTile>
       </div>
       <p className="text-xs text-muted-foreground">{f.t("receipt.hint")}</p>
     </div>

@@ -6,11 +6,8 @@ import { ArrowLeftIcon } from "lucide-react"
 import { LangToggle } from "@/components/app/lang-toggle"
 import { ThemeToggle } from "@/components/app/theme-toggle"
 import { SiteFooter, SiteHeader } from "@/components/common/site-chrome"
-import {
-  AppLangProvider,
-  LangHtmlAttr,
-  useFormatters,
-} from "@/components/lang-provider"
+import { DisplayHeading, Lead } from "@/components/common/typography"
+import { LangRoot, useFormatters } from "@/components/lang-provider"
 import { Button } from "@/components/ui/button"
 import { APP_ROUTES, LANDING } from "@/lib/site"
 import { useBookStore } from "@/stores/book-store"
@@ -26,10 +23,9 @@ import { useBookStore } from "@/stores/book-store"
  */
 export function NotFoundPage() {
   return (
-    <AppLangProvider>
-      <LangHtmlAttr />
+    <LangRoot>
       <NotFoundBody />
-    </AppLangProvider>
+    </LangRoot>
   )
 }
 
@@ -50,12 +46,10 @@ function NotFoundBody() {
           <p className="tabular font-heading text-sm font-semibold tracking-wide text-muted-foreground">
             {f.t("notFound.badge")} 404
           </p>
-          <h1 className="mt-2 font-heading text-[clamp(2rem,4.5vw,3rem)] leading-[1.08] font-semibold tracking-[-0.03em] text-balance">
+          <DisplayHeading size="md" className="mt-2">
             {f.t("notFound.title")}
-          </h1>
-          <p className="mt-5 max-w-prose text-lg text-pretty text-muted-foreground">
-            {f.t("notFound.lead")}
-          </p>
+          </DisplayHeading>
+          <Lead className="mt-5">{f.t("notFound.lead")}</Lead>
 
           <div className="mt-7 flex flex-wrap gap-2">
             <Button size="lg" render={<Link href={LANDING} />}>

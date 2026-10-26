@@ -4,6 +4,7 @@ import { DownloadIcon, UploadIcon, XIcon } from "lucide-react"
 
 import { FileStatus } from "@/components/app/file-status"
 import { YearSelect } from "@/components/app/year-select"
+import { BusyButton, BusyIcon } from "@/components/common/busy-button"
 import { Button } from "@/components/ui/button"
 import {
   SidebarGroup,
@@ -11,7 +12,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { Spinner } from "@/components/ui/spinner"
 import { useT } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { useDelayedFlag } from "@/hooks/use-delayed-flag"
@@ -77,22 +77,22 @@ export function FileBox({
           <FileStatus />
 
           <div className="flex gap-2">
-            <Button
+            {/* No busy label: the three labels here are one word each so they
+                fit one narrow column, and the spinner already says it is
+                working. */}
+            <BusyButton
+              icon={UploadIcon}
+              busy={busy}
               variant="outline"
               size="sm"
               className="flex-1"
               title={busy ? t("io.opening") : t("file.open")}
-              disabled={busy}
               onClick={onOpenFile}
             >
-              {busy ? (
-                <Spinner data-icon="inline-start" />
-              ) : (
-                <UploadIcon data-icon="inline-start" />
-              )}
               {t("file.importBtn")}
-            </Button>
-            <Button
+            </BusyButton>
+            <BusyButton
+              icon={DownloadIcon}
               // §8.2: export is highlighted while changes are unexported.
               variant={dirty ? "default" : "outline"}
               size="sm"
@@ -101,9 +101,8 @@ export function FileBox({
               disabled={busy}
               onClick={onExport}
             >
-              <DownloadIcon data-icon="inline-start" />
               {t("file.exportBtn")}
-            </Button>
+            </BusyButton>
           </div>
         </div>
       </div>
@@ -115,7 +114,7 @@ export function FileBox({
             disabled={busy}
             onClick={onOpenFile}
           >
-            {busy ? <Spinner /> : <UploadIcon />}
+            <BusyIcon busy={busy} icon={UploadIcon} />
             <span>{t("file.open")}</span>
           </SidebarMenuButton>
         </SidebarMenuItem>

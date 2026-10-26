@@ -6,11 +6,17 @@ import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useT } from "@/components/lang-provider"
 import { cn } from "@/lib/utils"
+import type { EntryType } from "@/lib/domain/types"
 import type { TypeFilter } from "@/stores/book-store"
 
 /**
- * The two filter controls the ledger toolbar (§8.4) and the categories table
- * (§8.10) both need, down to the magnifier's offsets.
+ * The controls that pick a type or narrow a list: the ledger toolbar (§8.4),
+ * the categories table and the new-category form (§8.10), and the entry
+ * dialog (§8.5).
+ *
+ * Income always comes before expense, and the two always carry their colours.
+ * Two of these sit a click apart in the same app, so an order or a tone that
+ * differed between them would read as a different control.
  */
 
 export function SearchInput({
@@ -38,6 +44,44 @@ export function SearchInput({
         className="pl-8"
       />
     </div>
+  )
+}
+
+/**
+ * Income or expense, coloured when selected: the type of an entry (§8.5) and
+ * the side of a new category (§8.10).
+ */
+export function EntryTypeToggle({
+  value,
+  onChange,
+}: {
+  value: EntryType
+  onChange: (value: EntryType) => void
+}) {
+  const t = useT()
+
+  return (
+    <ToggleGroup
+      aria-label={t("common.type")}
+      value={[value]}
+      onValueChange={(next) => {
+        const picked = next[0] as EntryType | undefined
+        if (picked && picked !== value) onChange(picked)
+      }}
+    >
+      <ToggleGroupItem
+        value="income"
+        className="data-pressed:bg-income-subtle data-pressed:text-income"
+      >
+        {t("common.income")}
+      </ToggleGroupItem>
+      <ToggleGroupItem
+        value="expense"
+        className="data-pressed:bg-expense-subtle data-pressed:text-expense"
+      >
+        {t("common.expense")}
+      </ToggleGroupItem>
+    </ToggleGroup>
   )
 }
 

@@ -75,8 +75,7 @@ export function SummaryView() {
       />
 
       <div className="flex flex-col gap-6">
-        <section className="rounded-lg border bg-card p-4">
-          <h2 className="mb-3 font-medium">{f.t("summary.chartLabel")}</h2>
+        <Panel title={f.t("summary.chartLabel")} bodyClassName="p-4">
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ left: 8, right: 8 }}>
@@ -133,7 +132,7 @@ export function SummaryView() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </section>
+        </Panel>
 
         <WideTable
           title={f.t("summary.sales")}
@@ -210,7 +209,8 @@ function WideTable({
   const sticky = "sticky left-0 z-10 bg-background [tr:hover_&]:bg-muted"
 
   return (
-    <Panel title={title} bodyClassName="overflow-x-auto">
+    // The scroll container the sticky column anchors to is `Table`'s own.
+    <Panel title={title}>
       <Table>
         <TableHeader>
           <TableRow>

@@ -5,6 +5,7 @@ import { CopyIcon, PaperclipIcon, PencilIcon, Trash2Icon } from "lucide-react"
 
 import { Money, ZeroDash } from "@/components/common/money"
 import { SortableHeader } from "@/components/common/sortable-header"
+import { Surface } from "@/components/common/surface"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -61,12 +62,11 @@ export function LedgerTable({
   )
 
   return (
-    /*
-     * Roomier than the default p-2 cells, which read as cramped in a ledger
-     * you scan down a single column of.
-     */
-    <div className="overflow-x-auto rounded-lg border bg-card [&_td]:px-3 [&_td]:py-3.5 [&_th]:px-3">
-      <Table>
+    // `overflow-hidden` so the table's square corners stay inside the card's.
+    <Surface className="overflow-hidden">
+      {/* Roomier than the default cells, which read as cramped in a ledger
+          you scan down a single column of. */}
+      <Table density="comfortable">
         <TableHeader>
           <TableRow>
             {header("date", f.t("ledger.colDate"))}
@@ -115,7 +115,7 @@ export function LedgerTable({
           ))}
         </TableBody>
       </Table>
-    </div>
+    </Surface>
   )
 }
 

@@ -32,6 +32,21 @@ export function AppLangProvider({ children }: { children: React.ReactNode }) {
   return <LangProvider lang={lang}>{children}</LangProvider>
 }
 
+/**
+ * The root of a rendered document: the app shell, the landing page and the
+ * 404 all start with this. It binds the subtree to the stored language and
+ * keeps `<html lang>` in step, which every one of them needs and none of them
+ * may do differently.
+ */
+export function LangRoot({ children }: { children: React.ReactNode }) {
+  return (
+    <AppLangProvider>
+      <LangHtmlAttr />
+      {children}
+    </AppLangProvider>
+  )
+}
+
 export function useFormatters(): Formatters {
   return React.useContext(LangContext)
 }
