@@ -5,40 +5,50 @@ import { cn } from "@/lib/utils"
 import { useBookStore } from "@/stores/book-store"
 
 /**
- * The amber / green status dot and its label (§8.2).
+ * The one wording of the save status (§8.2), so the dot's label and the file
+ * menu's accessible name can never drift apart.
  *
- * `labelClassName` lets the top bar drop the text on narrow screens while the
- * dot stays; the accessible name carries it either way.
+ * It says "saved", not "exported", because both ways of keeping the work end
+ * in a file. Which file is what `dirty` encodes: a download clears it only
+ * when there is no linked file left to go stale (§7.5).
  */
-export function FileStatus({
-  className,
-  labelClassName,
-}: {
-  className?: string
-  labelClassName?: string
-}) {
+export function useFileStatusText() {
   const t = useT()
   const dirty = useBookStore((s) => s.dirty)
-  const text = dirty ? t("file.dirty") : t("file.clean")
+  return dirty ? t("file.dirty") : t("file.clean")
+}
+
+/**
+ * The amber / green dot alone, for the menu trigger, which has no room for the
+ * label and carries the wording in its accessible name instead.
+ */
+export function StatusDot({ className }: { className?: string }) {
+  const dirty = useBookStore((s) => s.dirty)
+
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "size-2 shrink-0 rounded-full",
+        dirty ? "bg-warning" : "bg-income",
+        className
+      )}
+    />
+  )
+}
+
+/** The status dot with its label (§8.2). */
+export function FileStatus({ className }: { className?: string }) {
+  const text = useFileStatusText()
 
   return (
     <div
       role="status"
       aria-label={text}
-      title={text}
       className={cn("flex items-center gap-2 text-xs", className)}
     >
-      <span
-        aria-hidden="true"
-        className={cn(
-          "size-2 shrink-0 rounded-full",
-          dirty ? "bg-warning" : "bg-income"
-        )}
-      />
-      <span
-        aria-hidden="true"
-        className={cn("truncate text-muted-foreground", labelClassName)}
-      >
+      <StatusDot />
+      <span aria-hidden="true" className="truncate text-muted-foreground">
         {text}
       </span>
     </div>

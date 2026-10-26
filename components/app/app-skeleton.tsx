@@ -12,19 +12,15 @@ import { Skeleton } from "@/components/ui/skeleton"
 export function AppSkeleton() {
   return (
     <div className="flex min-h-svh">
-      {/* 16rem is shadcn's --sidebar-width, so nothing shifts on rehydrate. */}
-      <div className="hidden w-64 shrink-0 flex-col gap-4 border-r bg-sidebar p-2 min-[900px]:flex">
+      {/* 15rem is --sidebar-width, so nothing shifts on rehydrate. */}
+      <div className="hidden w-60 shrink-0 flex-col gap-4 border-r bg-sidebar p-2 min-[900px]:flex">
         <div className="flex items-center gap-2.5 p-2">
           <BrandMark />
           <Skeleton className="h-4 w-28" />
         </div>
-        <div className="flex flex-col gap-3 px-2">
-          <Skeleton className="h-9 w-full" />
-          <Skeleton className="h-32 w-full" />
-        </div>
-        <div className="flex flex-col gap-1.5 px-2 pt-2">
+        <div className="flex flex-col gap-1.5 px-2">
           {Array.from({ length: 5 }, (_, i) => (
-            <Skeleton key={i} className="h-8 w-full" />
+            <Skeleton key={i} className="h-9 w-full" />
           ))}
         </div>
       </div>
@@ -33,6 +29,7 @@ export function AppSkeleton() {
         <div className="flex h-14 shrink-0 items-center gap-2 px-4 lg:px-6">
           <Skeleton className="size-9" />
           <div className="ml-auto flex items-center gap-2">
+            <Skeleton className="h-9 w-40" />
             <Skeleton className="size-9" />
             <Skeleton className="size-9" />
           </div>

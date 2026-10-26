@@ -1,12 +1,17 @@
 import { toast } from "@/components/ui/toast"
 
 import { releaseAllObjectUrls } from "@/lib/browser/object-urls"
+import { fileToUint8Array, readFileAsText, saveBlob } from "@/lib/browser/download"
 import {
-  fileToUint8Array,
-  readFileAsText,
-  saveBlob,
-  saveText,
-} from "@/lib/browser/download"
+  isFileHandleSupported,
+  lastModified,
+  pickFileToOpen,
+  pickFileToSave,
+  recallHandle,
+  rememberHandle,
+  requestWritePermission,
+  writeFile,
+} from "@/lib/browser/file-handle"
 import {
   getReceipt,
   isReceiptStorageSupported,
@@ -29,6 +34,7 @@ import {
 import { dirOf, packZip, resolveReceipt, unpackZip } from "@/lib/domain/zip"
 import { SKIP_CODE_KEYS } from "@/lib/i18n/messages"
 import { APP_ROUTES } from "@/lib/site"
+import { confirm } from "@/lib/ui/confirm"
 import type { Ctx } from "@/lib/commands/ctx"
 import { availableReceiptCount, guardDirty } from "@/lib/commands/book-commands"
 import { useBookStore } from "@/stores/book-store"
@@ -86,8 +92,17 @@ function importSummary(
   return text
 }
 
-/** Open a CSV or ZIP the user picked or dropped. */
-export async function openFile(ctx: Ctx, file: File): Promise<void> {
+/**
+ * Open a CSV or ZIP the user picked or dropped.
+ *
+ * `handle` is the file it can later be saved back to (§7.5), and is null for
+ * a drop or an `<input type="file">` pick, neither of which yields one.
+ */
+export async function openFile(
+  ctx: Ctx,
+  file: File,
+  handle: FileSystemFileHandle | null = null
+): Promise<void> {
   /*
    * A second file dropped while the first is still being unpacked would
    * interleave two `replaceBook` calls and leave a mixed bookkeeping.
@@ -104,8 +119,14 @@ export async function openFile(ctx: Ctx, file: File): Promise<void> {
    */
   useBookStore.getState().setImporting(true)
   try {
-    if (isZip) await importZip(ctx, file)
-    else await importCsv(ctx, file)
+    const opened = isZip
+      ? await importZip(ctx, file, handle)
+      : await importCsv(ctx, file, handle)
+    /*
+     * Only a file that actually became the open bookkeeping is remembered;
+     * a rejected CSV must not leave the previous book pointing at it.
+     */
+    if (opened) await rememberHandle(handle)
   } catch (error) {
     console.error(error)
     toast.add({ title: ctx.t("io.readFailed") })
@@ -114,12 +135,46 @@ export async function openFile(ctx: Ctx, file: File): Promise<void> {
   }
 }
 
-async function importCsv(ctx: Ctx, file: File): Promise<void> {
+/**
+ * Open through the file picker, which — unlike an `<input type="file">` —
+ * hands back a handle the bookkeeping can be saved to. Falls back to null so
+ * the caller can open its own input on browsers without the picker.
+ */
+export async function pickAndOpenFile(ctx: Ctx): Promise<boolean> {
+  if (!isFileHandleSupported()) return false
+  let handle: FileSystemFileHandle | null = null
+  try {
+    handle = await pickFileToOpen()
+  } catch (error) {
+    console.error(error)
+    toast.add({ title: ctx.t("io.readFailed") })
+    return true
+  }
+  // Cancelling the picker is a normal outcome, and still "handled".
+  if (handle) await openFile(ctx, await handle.getFile(), handle)
+  return true
+}
+
+/** Put back the link to the file this bookkeeping came from, after a reload. */
+export async function restoreFileHandle(): Promise<void> {
+  const handle = await recallHandle()
+  if (!handle) return
+  const state = useBookStore.getState()
+  // A bookkeeping that is no longer open has no file behind it.
+  if (!state.open || state.fileHandle) return
+  useBookStore.setState({ fileHandle: handle })
+}
+
+async function importCsv(
+  ctx: Ctx,
+  file: File,
+  handle: FileSystemFileHandle | null
+): Promise<boolean> {
   const text = await readFileAsText(file)
   const result = parseCsv(text, useBookStore.getState().cats, uid)
   if (!result.ok) {
     toast.add({ title: failureMessage(ctx, result) })
-    return
+    return false
   }
 
   /*
@@ -135,20 +190,25 @@ async function importCsv(ctx: Ctx, file: File): Promise<void> {
     }
   })
 
-  applyImport(ctx, file.name, result, entries, { imported: 0, missing })
+  applyImport(ctx, file, handle, result, entries, { imported: 0, missing })
+  return true
 }
 
-async function importZip(ctx: Ctx, file: File): Promise<void> {
+async function importZip(
+  ctx: Ctx,
+  file: File,
+  handle: FileSystemFileHandle | null
+): Promise<boolean> {
   const unpacked = await unpackZip(await fileToUint8Array(file))
   if (!unpacked) {
     toast.add({ title: ctx.t("io.zipNoCsv") })
-    return
+    return false
   }
 
   const result = parseCsv(unpacked.csvText, useBookStore.getState().cats, uid)
   if (!result.ok) {
     toast.add({ title: failureMessage(ctx, result) })
-    return
+    return false
   }
 
   const csvDir = dirOf(unpacked.csvPath)
@@ -188,7 +248,8 @@ async function importZip(ctx: Ctx, file: File): Promise<void> {
     entries.push({ ...entry, ...(atts.length ? { atts } : {}) })
   }
 
-  applyImport(ctx, file.name, result, entries, { imported, missing })
+  applyImport(ctx, file, handle, result, entries, { imported, missing })
+  return true
 }
 
 function missingAttachment(path: string): Attachment {
@@ -218,8 +279,8 @@ function failureMessage(
 
 function applyImport(
   ctx: Ctx,
-  /** The picked file's name, extension included (§7.3). */
-  fileName: string,
+  file: File,
+  handle: FileSystemFileHandle | null,
   result: ImportSuccess,
   entries: Entry[],
   receipts: { imported: number; missing: number }
@@ -228,10 +289,17 @@ function applyImport(
   useBookStore.getState().replaceBook({
     entries,
     cats: result.categories,
-    fileName: fileName || null,
+    // The name carries its extension (§7.3).
+    fileName: file.name || null,
+    fileHandle: handle,
+    /*
+     * The baseline a later save compares against: anything that moves this
+     * timestamp happened outside the app and must not be overwritten blind.
+     */
+    savedAt: handle ? file.lastModified : null,
     // §7.1: after import the selected year is the latest year in the file.
     year: result.latestYear ?? new Date().getFullYear(),
-    // A freshly imported file is, by definition, already exported.
+    // A freshly read file is, by definition, already saved.
     dirty: false,
   })
   toast.add({ title: importSummary(ctx, result, receipts) })
@@ -239,20 +307,21 @@ function applyImport(
 }
 
 /* -------------------------------------------------------------------------
- * Export
+ * Writing the bookkeeping out
  * ---------------------------------------------------------------------- */
 
-export async function exportBook(
-  ctx: Ctx,
+/** The bookkeeping as the bytes of a file, named but not yet anywhere. */
+interface BookFile {
+  name: string
+  blob: Blob
+  isZip: boolean
+}
+
+async function buildBookFile(
   baseName: string,
   csvOnly: boolean
-): Promise<void> {
+): Promise<BookFile> {
   const { entries, cats } = useBookStore.getState()
-  if (!entries.length) {
-    toast.add({ title: ctx.t("io.nothingToExport") })
-    return
-  }
-
   const name = cleanFileName(baseName) || "kirjanpito"
   const paths = buildReceiptPaths(entries)
   /*
@@ -260,36 +329,168 @@ export async function exportBook(
    * receipts existed (§7.1).
    */
   const csvText = serializeCsv(entries, indexCategories(cats), paths)
-  const withReceipts = !csvOnly && availableReceiptCount(entries) > 0
-  const savedAs = `${name}.${withReceipts ? "zip" : "csv"}`
+  const isZip = !csvOnly && availableReceiptCount(entries) > 0
+
+  if (!isZip) {
+    return {
+      name: `${name}.csv`,
+      blob: new Blob([csvText], { type: CSV_MIME }),
+      isZip,
+    }
+  }
+
+  const attachmentIds = new Map<string, string>()
+  for (const e of entries) {
+    for (const [i, a] of (e.atts ?? []).entries()) {
+      if (a.id) attachmentIds.set(attachmentKey(e.id, i), a.id)
+    }
+  }
+  const bytes = await packZip({
+    csvName: `${name}.csv`,
+    csvText,
+    paths,
+    attachmentIds,
+    read: async (id) => {
+      const blob = await getReceipt(id)
+      return blob ? new Uint8Array(await blob.arrayBuffer()) : null
+    },
+  })
+  return {
+    name: `${name}.zip`,
+    blob: new Blob([bytes as BlobPart], { type: ZIP_MIME }),
+    isZip,
+  }
+}
+
+/** The name without its extension, for seeding a picker or a dialog. */
+function baseOf(fileName: string): string {
+  return fileName.replace(/\.(csv|zip)$/i, "")
+}
+
+/**
+ * Download a copy (§7.3). This never touches the linked file, so it clears
+ * the dirty flag only when there is no linked file to go stale — otherwise
+ * the dot would claim the user's bookkeeping was written when it was not.
+ */
+export async function exportBook(
+  ctx: Ctx,
+  baseName: string,
+  csvOnly: boolean
+): Promise<void> {
+  const { entries, fileHandle } = useBookStore.getState()
+  if (!entries.length) {
+    toast.add({ title: ctx.t("io.nothingToExport") })
+    return
+  }
 
   try {
-    if (!withReceipts) {
-      saveText(csvText, savedAs, CSV_MIME)
-    } else {
-      const attachmentIds = new Map<string, string>()
-      for (const e of entries) {
-        for (const [i, a] of (e.atts ?? []).entries()) {
-          if (a.id) attachmentIds.set(attachmentKey(e.id, i), a.id)
-        }
-      }
-      const bytes = await packZip({
-        csvName: `${name}.csv`,
-        csvText,
-        paths,
-        attachmentIds,
-        read: async (id) => {
-          const blob = await getReceipt(id)
-          return blob ? new Uint8Array(await blob.arrayBuffer()) : null
-        },
-      })
-      saveBlob(new Blob([bytes as BlobPart], { type: ZIP_MIME }), savedAs)
-    }
-
-    useBookStore.getState().markExported(savedAs)
-    toast.add({ title: ctx.t("io.exported", { f: savedAs }) })
+    const file = await buildBookFile(baseName, csvOnly)
+    saveBlob(file.blob, file.name)
+    if (!fileHandle) useBookStore.getState().markSaved({ fileName: file.name })
+    toast.add({ title: ctx.t("io.exported", { f: file.name }) })
   } catch (error) {
     console.error(error)
     toast.add({ title: ctx.t("io.exportFailed") })
   }
+}
+
+/**
+ * Write the bookkeeping back to the file it was opened from (§7.5), asking
+ * for a file when there is none yet, when its shape has changed, or when it
+ * has gone missing. Must be called from a user gesture: both the write
+ * permission prompt and the save picker need one.
+ *
+ * `suggestedBase` seeds the picker in those cases; the caller supplies it
+ * because the default name is language-dependent (§7.3).
+ */
+export async function saveBook(
+  ctx: Ctx,
+  suggestedBase: string
+): Promise<void> {
+  const state = useBookStore.getState()
+  if (!state.entries.length) {
+    toast.add({ title: ctx.t("io.nothingToExport") })
+    return
+  }
+  if (state.saving) return
+
+  useBookStore.getState().setSaving(true)
+  try {
+    const file = await buildBookFile(
+      state.fileName ? baseOf(state.fileName) : suggestedBase,
+      false
+    )
+    const handle = await handleToWrite(ctx, file)
+    if (!handle) return
+
+    await writeFile(handle, file.blob)
+    useBookStore.getState().markSaved({
+      fileName: handle.name,
+      fileHandle: handle,
+      savedAt: await lastModified(handle),
+    })
+    await rememberHandle(handle)
+    toast.add({ title: ctx.t("io.saved", { f: handle.name }) })
+  } catch (error) {
+    console.error(error)
+    toast.add({ title: ctx.t("io.saveFailed") })
+  } finally {
+    useBookStore.getState().setSaving(false)
+  }
+}
+
+/**
+ * The handle `saveBook` should write to, or null if the user backed out.
+ *
+ * A linked file is reused only when it can still take this bookkeeping: the
+ * extension has to match its shape, since a book that has grown receipts is a
+ * ZIP and cannot be written into a path called `.csv`, and nothing may have
+ * touched it since we last read or wrote it.
+ */
+async function handleToWrite(
+  ctx: Ctx,
+  file: BookFile
+): Promise<FileSystemFileHandle | null> {
+  const { fileHandle, fileName, savedAt } = useBookStore.getState()
+  const pick = () => pickFileToSave(file.name, file.isZip)
+
+  if (!fileHandle) return pick()
+
+  const sameShape = fileHandle.name.toLowerCase().endsWith(
+    file.isZip ? ".zip" : ".csv"
+  )
+  if (!sameShape) {
+    toast.add({ title: ctx.t("io.shapeChanged", { f: file.name }) })
+    return pick()
+  }
+
+  if (!(await requestWritePermission(fileHandle))) {
+    toast.add({ title: ctx.t("io.saveDenied") })
+    return null
+  }
+
+  let onDisk: number
+  try {
+    onDisk = await lastModified(fileHandle)
+  } catch {
+    // Moved, renamed or deleted since it was opened.
+    useBookStore.getState().forgetFileHandle()
+    await rememberHandle(null)
+    toast.add({ title: ctx.t("io.fileGone") })
+    return pick()
+  }
+
+  if (savedAt !== null && onDisk !== savedAt) {
+    const overwrite = await confirm({
+      title: ctx.t("confirm.overwriteTitle"),
+      message: ctx.t("confirm.overwriteMessage", {
+        f: fileName ?? fileHandle.name,
+      }),
+      confirmLabel: ctx.t("confirm.overwriteConfirm"),
+      cancelLabel: ctx.t("common.cancel"),
+    })
+    if (!overwrite) return null
+  }
+
+  return fileHandle
 }

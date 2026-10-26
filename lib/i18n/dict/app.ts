@@ -29,29 +29,44 @@ export const APP_DICT = {
   "nav.statement": ["Tuloslaskelma", "Income statement"],
   "nav.summary": ["Yhteenveto", "Summary"],
   "nav.settings": ["Asetukset", "Settings"],
-  "nav.help": ["Ohje", "Help"],
 
-  // --- The open file (§8.2) ---
-  "file.clean": ["Kaikki muutokset viety", "All changes exported"],
-  "file.export": ["Vie tiedosto", "Export file"],
+  /*
+   * --- The open file (§8.2) ---
+   *
+   * The status words are deliberately about saving rather than exporting, so
+   * they hold whether the bookkeeping is written back to its own file (§7.5)
+   * or only ever downloaded as a copy. Both end in a file; only one of them
+   * ends in *that* file, and `dirty` already encodes which (§7.5).
+   */
+  "file.clean": ["Tallennettu", "Saved"],
+  "file.save": ["Tallenna", "Save"],
+  /*
+   * Named after what it does, not after its relationship to "Tallenna":
+   * where the browser cannot write to a file (§7.5) this row is the only way
+   * to keep the work, so "kopio" would imply an original somewhere else. It
+   * also puts the row in line with "Avaa tiedosto" and "Sulje tiedosto".
+   */
+  "file.download": ["Lataa tiedosto", "Download file"],
   "file.openShort": ["Avaa", "Open"],
   "file.close": ["Sulje tiedosto", "Close file"],
   "file.closed": ["Tiedosto suljettu.", "File closed."],
-  /*
-   * The file box's own buttons. Short on purpose: three of them share one
-   * sidebar row, and the box above them already says which file it is.
-   */
-  "file.importBtn": ["Tuo", "Import"],
-  "file.exportBtn": ["Vie", "Export"],
-  "file.closeBtn": ["Sulje", "Close"],
 
   // --- Confirmations (§8.11) ---
   "confirm.closeTitle": ["Suljetaanko tiedosto?", "Close the file?"],
   "confirm.closeMessage": [
-    "Kirjanpidossa on muutoksia, joita ei ole viety CSV-tiedostoon. Jos suljet tiedoston, ne menetetään.",
-    "There are changes that haven’t been exported to CSV. If you close the file, they’ll be lost.",
+    "Kirjanpidossa on muutoksia, joita ei ole tallennettu tiedostoon. Jos suljet sen, ne menetetään.",
+    "There are changes that haven’t been saved to a file. If you close it, they’ll be lost.",
   ],
-  "confirm.closeConfirm": ["Sulje viemättä", "Close without exporting"],
+  "confirm.closeConfirm": ["Sulje tallentamatta", "Close without saving"],
+  "confirm.overwriteTitle": [
+    "Korvataanko tiedosto?",
+    "Overwrite the file?",
+  ],
+  "confirm.overwriteMessage": [
+    "Tiedostoa {f} on muutettu tämän sovelluksen ulkopuolella sen jälkeen, kun se avattiin. Tallennus korvaa nuo muutokset.",
+    "The file {f} has been changed outside this app since it was opened. Saving will overwrite those changes.",
+  ],
+  "confirm.overwriteConfirm": ["Korvaa", "Overwrite"],
   "confirm.deleteTitle": ["Poistetaanko kirjaus?", "Delete this entry?"],
   "confirm.deleteMessage": [
     "Kirjaus ”{x}” poistetaan.",
@@ -62,14 +77,14 @@ export const APP_DICT = {
     "Replace the open bookkeeping?",
   ],
   "confirm.replaceMessage": [
-    "Avoimessa kirjanpidossa on muutoksia, joita ei ole viety. Tuotava tiedosto korvaa ne.",
-    "The open bookkeeping has changes that haven’t been exported. The imported file will replace them.",
+    "Avoimessa kirjanpidossa on muutoksia, joita ei ole tallennettu. Avattava tiedosto korvaa ne.",
+    "The open bookkeeping has changes that haven’t been saved. The file you open will replace them.",
   ],
   "confirm.replaceConfirm": ["Korvaa", "Replace"],
   "confirm.clearTitle": ["Tyhjennetäänkö kirjaukset?", "Clear all entries?"],
   "confirm.clearMessage": [
-    "Kaikki kirjaukset poistetaan tästä selaimesta. Vie ne ensin CSV-tiedostoksi, jos haluat säilyttää ne.",
-    "All entries will be removed from this browser. Export them to CSV first if you want to keep them.",
+    "Kaikki kirjaukset poistetaan tästä selaimesta. Tallenna ne ensin tiedostoon, jos haluat säilyttää ne.",
+    "All entries will be removed from this browser. Save them to a file first if you want to keep them.",
   ],
   "confirm.clearConfirm": ["Tyhjennä", "Clear"],
   "confirm.discardTitle": ["Hylätäänkö muutokset?", "Discard changes?"],
@@ -86,6 +101,7 @@ export const APP_DICT = {
 
   // --- Shared by several views ---
   "common.all": ["Kaikki", "All"],
+  "common.allTypes": ["Kaikki tyypit", "All types"],
   "common.actions": ["Toiminnot", "Actions"],
   "common.type": ["Tyyppi", "Type"],
   "common.typeFilter": ["Tyyppi", "Type"],
@@ -406,16 +422,17 @@ export const APP_DICT = {
     "Pudota CSV- tai ZIP-tiedosto avataksesi sen",
     "Drop a CSV or ZIP file to open it",
   ],
-  "io.exportTitle": ["Vie kirjanpito", "Export bookkeeping"],
+  /* Neutral on purpose: the row that opens this dialog has two names. */
+  "io.exportTitle": ["Lataa kirjanpito", "Download bookkeeping"],
   "io.fileNameLabel": ["Tiedoston nimi", "File name"],
   "io.exportHint": [
     "Tiedosto sisältää kaikkien tilikausien kirjaukset.",
     "The file includes the entries of all financial years.",
   ],
-  "io.exportAction": ["Vie tiedosto", "Export file"],
+  "io.exportAction": ["Lataa", "Download"],
   "io.csvOnly": [
-    "Vie vain CSV-tiedosto ilman tositteita",
-    "Export only the CSV file, without receipts",
+    "Lataa vain CSV-tiedosto ilman tositteita",
+    "Download only the CSV file, without receipts",
   ],
   /*
    * The paths are written either way, so a re-import still knows the receipts
@@ -440,11 +457,30 @@ export const APP_DICT = {
     "Nothing to export. Add some entries first.",
   ],
   "io.exporting": ["Pakataan tositteita…", "Packing receipts…"],
-  "io.exported": ["Viety tiedostoon {f}.", "Exported to {f}."],
-  "io.exportCancelled": ["Vienti peruttiin.", "Export cancelled."],
+  "io.exported": ["Ladattu tiedostoon {f}.", "Downloaded as {f}."],
+
+  // --- Saving back to the opened file (§7.5) ---
+  "io.saving": ["Tallennetaan…", "Saving…"],
+  "io.saved": ["Tallennettu tiedostoon {f}.", "Saved to {f}."],
+  "io.saveFailed": [
+    "Tallennus epäonnistui.",
+    "Couldn’t save the file.",
+  ],
+  "io.saveDenied": [
+    "Selain ei antanut lupaa kirjoittaa tiedostoon. Voit silti ladata kopion.",
+    "The browser didn’t allow writing to the file. You can still download a copy.",
+  ],
+  "io.fileGone": [
+    "Tiedostoa ei enää löydy. Valitse, mihin kirjanpito tallennetaan.",
+    "That file can’t be found any more. Choose where to save the bookkeeping.",
+  ],
+  "io.shapeChanged": [
+    "Kirjanpito tallennetaan nyt nimellä {f}, koska tositteet eivät mahdu entiseen tiedostomuotoon. Valitse, mihin.",
+    "The bookkeeping is now saved as {f}, because its receipts don’t fit the previous file format. Choose where.",
+  ],
   "io.exportFailed": [
-    "Tiedoston tallennus ei onnistunut tässä näkymässä.",
-    "Couldn’t save the file in this view.",
+    "Kopion lataaminen epäonnistui.",
+    "Couldn’t download the copy.",
   ],
   "io.zipFailed": [
     "ZIP-tiedostoa ei voitu lukea.",

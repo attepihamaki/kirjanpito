@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils"
 
 /**
  * A small label: the income / expense badge, the VAT rate chips on the
- * landing page, the type column in the categories table.
+ * landing page, the type column in the ledger and in the categories table.
  *
  * shadcn's `Badge` is not used. Its variants are default / secondary /
  * destructive / outline, and the tone that matters here is income versus

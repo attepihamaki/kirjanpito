@@ -1,6 +1,6 @@
 "use client"
 
-import { GlobeIcon } from "lucide-react"
+import { LanguagesIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -21,7 +21,7 @@ const LANGS: ReadonlyArray<{ code: Lang; label: string }> = [
 ]
 
 /**
- * The language picker (§8.2): a globe button opening a checked list, the way
+ * The language picker (§8.2): an icon button opening a checked list, the way
  * FormBox's header does it. Language is a stored preference, never a route
  * (§11b), so choosing one is a pure state change.
  */
@@ -43,7 +43,7 @@ export function LangToggle({ className }: { className?: string }) {
           />
         }
       >
-        <GlobeIcon />
+        <LanguagesIcon />
       </DropdownMenuTrigger>
       {/* The default content width tracks the trigger, which here is a 32px
           icon button. */}

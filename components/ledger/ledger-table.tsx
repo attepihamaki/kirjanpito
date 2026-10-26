@@ -4,8 +4,8 @@ import * as React from "react"
 import { CopyIcon, PaperclipIcon, PencilIcon, Trash2Icon } from "lucide-react"
 
 import { Money, ZeroDash } from "@/components/common/money"
+import { Pill } from "@/components/common/pill"
 import { SortableHeader } from "@/components/common/sortable-header"
-import { Surface } from "@/components/common/surface"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -28,8 +28,12 @@ import { useBookStore, type LedgerSortKey } from "@/stores/book-store"
  *
  * Hand-composed rather than driven by TanStack Table: sorting, filtering and
  * pagination all live in the store (they have to, because the toolbar, the
- * month chips and the totals strip read the same state), which would leave
+ * month chips and the totals cards read the same state), which would leave
  * the table adapter owning nothing.
+ *
+ * It renders the table alone. The surface around it and the pagination under
+ * it are composed by the view that owns the paging state, the way the
+ * categories table sits inside its panel.
  */
 export function LedgerTable({
   rows,
@@ -53,8 +57,8 @@ export function LedgerTable({
     <SortableHeader
       label={label}
       columnKey={key}
-      active={sort.key === key}
-      dir={sort.dir}
+      active={sort?.key === key}
+      dir={sort?.dir ?? 1}
       onToggle={toggleSort}
       align={align}
       className={className}
@@ -62,60 +66,63 @@ export function LedgerTable({
   )
 
   return (
-    // `overflow-hidden` so the table's square corners stay inside the card's.
-    <Surface className="overflow-hidden">
-      {/* Roomier than the default cells, which read as cramped in a ledger
-          you scan down a single column of. */}
-      <Table density="comfortable">
-        <TableHeader>
-          <TableRow>
-            {header("date", f.t("ledger.colDate"))}
-            {header("description", f.t("ledger.colDescription"))}
-            {header(
-              "category",
-              f.t("ledger.colCategory"),
-              "left",
-              "hidden min-[1240px]:table-cell"
-            )}
-            {header(
-              "net",
-              f.t("ledger.colNet"),
-              "right",
-              "hidden min-[560px]:table-cell"
-            )}
-            {header(
-              "vat",
-              f.t("ledger.colVat"),
-              "right",
-              "hidden min-[560px]:table-cell"
-            )}
-            {header("gross", f.t("ledger.colGross"), "right")}
-            <TableHead className="hidden w-px min-[560px]:table-cell">
-              <span className="sr-only">{f.t("common.actions")}</span>
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((entry) => (
-            <LedgerRow
-              key={entry.id}
-              entry={entry}
-              cat={cats.get(entry.catId)}
-              onEdit={() =>
-                openDialog({ kind: "entry", mode: "edit", entryId: entry.id })
-              }
-              onCopy={() =>
-                openDialog({ kind: "entry", mode: "copy", entryId: entry.id })
-              }
-              onDelete={() => void deleteEntry(ctx, entry)}
-              onViewReceipt={(index) =>
-                openDialog({ kind: "viewer", entryId: entry.id, index })
-              }
-            />
-          ))}
-        </TableBody>
-      </Table>
-    </Surface>
+    /* Roomier than the default cells, which read as cramped in a ledger you
+       scan down a single column of. */
+    <Table density="comfortable">
+      <TableHeader>
+        <TableRow>
+          {header("date", f.t("ledger.colDate"))}
+          {header(
+            "type",
+            f.t("common.type"),
+            "left",
+            "hidden min-[560px]:table-cell"
+          )}
+          {header("description", f.t("ledger.colDescription"))}
+          {header(
+            "category",
+            f.t("ledger.colCategory"),
+            "left",
+            "hidden min-[1240px]:table-cell"
+          )}
+          {header(
+            "net",
+            f.t("ledger.colNet"),
+            "right",
+            "hidden min-[560px]:table-cell"
+          )}
+          {header(
+            "vat",
+            f.t("ledger.colVat"),
+            "right",
+            "hidden min-[560px]:table-cell"
+          )}
+          {header("gross", f.t("ledger.colGross"), "right")}
+          <TableHead className="hidden w-px min-[560px]:table-cell">
+            <span className="sr-only">{f.t("common.actions")}</span>
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((entry) => (
+          <LedgerRow
+            key={entry.id}
+            entry={entry}
+            cat={cats.get(entry.catId)}
+            onEdit={() =>
+              openDialog({ kind: "entry", mode: "edit", entryId: entry.id })
+            }
+            onCopy={() =>
+              openDialog({ kind: "entry", mode: "copy", entryId: entry.id })
+            }
+            onDelete={() => void deleteEntry(ctx, entry)}
+            onViewReceipt={(index) =>
+              openDialog({ kind: "viewer", entryId: entry.id, index })
+            }
+          />
+        ))}
+      </TableBody>
+    </Table>
   )
 }
 
@@ -151,16 +158,15 @@ function LedgerRow({
       }}
       className="focus-ring cursor-pointer"
     >
-      <TableCell className="tabular relative pl-5 whitespace-nowrap">
-        {/* Coloured left edge: green for income, red for expenses. */}
-        <span
-          aria-hidden="true"
-          className={cn(
-            "absolute inset-y-1 left-0 w-[3px] rounded-r-sm",
-            income ? "bg-income" : "bg-expense"
-          )}
-        />
+      <TableCell className="tabular whitespace-nowrap">
         {f.date(entry.date)}
+      </TableCell>
+
+      {/* The same badge as the categories table, so the two read alike. */}
+      <TableCell className="hidden min-[560px]:table-cell">
+        <Pill tone={income ? "income" : "expense"} className="font-medium">
+          {income ? f.t("common.income") : f.t("common.expense")}
+        </Pill>
       </TableCell>
 
       <TableCell className="max-w-[22rem]">

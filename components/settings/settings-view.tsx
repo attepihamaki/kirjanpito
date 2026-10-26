@@ -6,7 +6,7 @@ import { PlusIcon, Trash2Icon } from "lucide-react"
 import {
   EntryTypeToggle,
   SearchInput,
-  TypeFilterToggle,
+  TypeFilterSelect,
 } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
 import { PageHeader } from "@/components/common/page-header"
@@ -45,7 +45,11 @@ import {
   paginate,
   usedCategoryIds,
 } from "@/stores/selectors"
-import { useBookStore, type CatSortKey } from "@/stores/book-store"
+import {
+  CAT_SORT_DEFAULT,
+  useBookStore,
+  type CatSortKey,
+} from "@/stores/book-store"
 
 export function SettingsView() {
   const f = useFormatters()
@@ -224,8 +228,11 @@ function CategoryTable() {
       return categoryName(c, f.lang).toLowerCase().includes(needle)
     })
 
+    // No column chosen: the table falls back to its own order (§8.4).
+    const { key, dir } = sort ?? CAT_SORT_DEFAULT
+
     const value = (c: Category): string | number => {
-      switch (sort.key) {
+      switch (key) {
         case "enabled":
           return c.enabled ? 0 : 1
         case "side":
@@ -251,7 +258,7 @@ function CategoryTable() {
           f.collator.compare(
             categoryName(a, f.lang),
             categoryName(b, f.lang)
-          )) * sort.dir
+          )) * dir
       )
     })
   }, [cats, query, typeFilter, sort, f.lang, f.collator])
@@ -262,8 +269,8 @@ function CategoryTable() {
     <SortableHeader
       label={label}
       columnKey={key}
-      active={sort.key === key}
-      dir={sort.dir}
+      active={sort?.key === key}
+      dir={sort?.dir ?? 1}
       onToggle={toggleSort}
       align={align}
     />
@@ -279,10 +286,7 @@ function CategoryTable() {
             onChange={setQuery}
             placeholder={f.t("settings.searchCategories")}
           />
-          <TypeFilterToggle value={typeFilter} onChange={setType} />
-          <span className="text-sm text-muted-foreground">
-            {f.t("settings.categoryCount", { n: view.total })}
-          </span>
+          <TypeFilterSelect value={typeFilter} onChange={setType} />
         </>
       }
     >
@@ -347,15 +351,14 @@ function CategoryTable() {
         </TableBody>
       </Table>
 
-      <div className="px-4 py-3">
-        <TablePagination
-          page={view.page}
-          pages={view.pages}
-          size={size}
-          onPageChange={setPage}
-          onSizeChange={setSize}
-        />
-      </div>
+      <TablePagination
+        page={view.page}
+        pages={view.pages}
+        size={size}
+        count={f.t("settings.categoryCount", { n: view.total })}
+        onPageChange={setPage}
+        onSizeChange={setSize}
+      />
     </Panel>
   )
 }

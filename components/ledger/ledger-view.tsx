@@ -5,14 +5,15 @@ import { PlusIcon, XIcon } from "lucide-react"
 
 import {
   SearchInput,
-  TypeFilterToggle,
+  TypeFilterSelect,
 } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
 import { PageHeader } from "@/components/common/page-header"
+import { Surface } from "@/components/common/surface"
 import { TablePagination } from "@/components/common/table-pagination"
 import { LedgerTable } from "@/components/ledger/ledger-table"
 import { MonthChips } from "@/components/ledger/month-chips"
-import { TotalsStrip } from "@/components/ledger/totals-strip"
+import { TotalsCards } from "@/components/ledger/totals-cards"
 import { Button } from "@/components/ui/button"
 import {
   Empty,
@@ -57,7 +58,7 @@ export function LedgerView() {
   const catMap = React.useMemo(() => indexCategories(cats), [cats])
 
   /*
-   * The period slice drives the totals strip and the category filter's
+   * The period slice drives the totals cards and the category filter's
    * options; the filtered list drives the table and the count.
    */
   const periodEntries = React.useMemo(
@@ -122,6 +123,13 @@ export function LedgerView() {
   const view = paginate(filtered, page, size)
   const hasFilters =
     query.trim() !== "" || typeFilter !== "all" || catFilter !== "all"
+
+  /*
+   * A month with nothing in it has nothing to search or filter, so the
+   * toolbar goes with the table: a row of controls that cannot change the
+   * result reads as if the filters were what emptied the page.
+   */
+  const periodEmpty = periodEntries.length === 0
   const periodLabel =
     month === 0
       ? `${f.t("ledger.wholeYear")} ${year}`
@@ -162,63 +170,73 @@ export function LedgerView() {
 
       <div className="flex flex-col gap-4">
         <MonthChips />
-        <TotalsStrip totals={totals} />
+        <TotalsCards totals={totals} />
 
-        <div className="flex flex-wrap items-center gap-2">
-          <SearchInput
-            value={query}
-            onChange={setQuery}
-            placeholder={f.t("ledger.search")}
-            className="min-w-[14rem]"
-          />
-
-          <TypeFilterToggle value={typeFilter} onChange={setType} />
-
-          <OptionSelect
-            options={catFilterOptions}
-            value={catFilter}
-            onChange={setCat}
-            label={f.t("ledger.colCategory")}
-            className="w-[13rem]"
-          />
-
-          {hasFilters ? (
-            <Button variant="ghost" size="sm" onClick={clearFilters}>
-              <XIcon data-icon="inline-start" />
-              {f.t("ledger.clearFilters")}
-            </Button>
-          ) : null}
-
-          <span className="ml-auto text-sm text-muted-foreground">
-            {f.t("ledger.entryCount", { n: view.total })}
-          </span>
-        </div>
-
-        {view.total === 0 ? (
+        {periodEmpty ? (
           <Empty>
             <EmptyHeader>
-              <EmptyTitle>{f.t("ledger.noMatch")}</EmptyTitle>
+              <EmptyTitle>
+                {f.t("ledger.noEntriesFor", { p: periodLabel })}
+              </EmptyTitle>
             </EmptyHeader>
-            {hasFilters ? (
-              <EmptyContent>
-                <Button variant="outline" onClick={clearFilters}>
-                  {f.t("ledger.clearFilters")}
-                </Button>
-              </EmptyContent>
-            ) : null}
           </Empty>
         ) : (
           <>
-            <LedgerTable rows={view.rows} cats={catMap} />
-            {view.total > 10 || view.pages > 1 ? (
-              <TablePagination
-                page={view.page}
-                pages={view.pages}
-                size={size}
-                onPageChange={setPage}
-                onSizeChange={setSize}
+            <div className="flex flex-wrap items-center gap-2">
+              <SearchInput
+                value={query}
+                onChange={setQuery}
+                placeholder={f.t("ledger.search")}
               />
-            ) : null}
+
+              <TypeFilterSelect value={typeFilter} onChange={setType} />
+
+              <OptionSelect
+                options={catFilterOptions}
+                value={catFilter}
+                onChange={setCat}
+                label={f.t("ledger.colCategory")}
+                className="w-[13rem]"
+              />
+
+              {hasFilters ? (
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  <XIcon data-icon="inline-start" />
+                  {f.t("ledger.clearFilters")}
+                </Button>
+              ) : null}
+            </div>
+
+            {view.total === 0 ? (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyTitle>{f.t("ledger.noMatch")}</EmptyTitle>
+                </EmptyHeader>
+                {hasFilters ? (
+                  <EmptyContent>
+                    <Button variant="outline" onClick={clearFilters}>
+                      {f.t("ledger.clearFilters")}
+                    </Button>
+                  </EmptyContent>
+                ) : null}
+              </Empty>
+            ) : (
+              // `overflow-hidden` so the table's square corners stay inside the card's.
+              <Surface className="overflow-hidden">
+                <LedgerTable rows={view.rows} cats={catMap} />
+                {/* Always shown, as in the categories table: the rows-per-page
+                    control is how the page length is set, so it cannot appear
+                    only once the list has outgrown the current length. */}
+                <TablePagination
+                  page={view.page}
+                  pages={view.pages}
+                  size={size}
+                  count={f.t("ledger.entryCount", { n: view.total })}
+                  onPageChange={setPage}
+                  onSizeChange={setSize}
+                />
+              </Surface>
+            )}
           </>
         )}
       </div>

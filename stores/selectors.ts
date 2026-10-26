@@ -2,11 +2,12 @@ import { LINE_BY_KEY, categoryName } from "@/lib/domain/accounts"
 import { calcEntry, signedGross } from "@/lib/domain/calc"
 import { monthOf, yearOf } from "@/lib/domain/dates"
 import type { Category, Entry, Lang } from "@/lib/domain/types"
-import type {
-  LedgerSortKey,
-  MonthFilter,
-  SortState,
-  TypeFilter,
+import {
+  LEDGER_SORT_DEFAULT,
+  type LedgerSortKey,
+  type MonthFilter,
+  type SortState,
+  type TypeFilter,
 } from "@/stores/book-store"
 
 /**
@@ -52,7 +53,8 @@ export interface LedgerFilters {
   query: string
   type: TypeFilter
   catId: string
-  sort: SortState<LedgerSortKey>
+  /** Null while no column is chosen: the rows then take `LEDGER_SORT_DEFAULT`. */
+  sort: SortState<LedgerSortKey> | null
 }
 
 function ledgerValue(
@@ -64,6 +66,9 @@ function ledgerValue(
   switch (key) {
     case "date":
       return entry.date
+    case "type":
+      // Income first, as in the type toggle and the categories table.
+      return entry.type === "income" ? 0 : 1
     case "description":
       return entry.description
     case "category": {
@@ -101,7 +106,7 @@ export function filterAndSortEntries(
     )
   })
 
-  const { key, dir } = filters.sort
+  const { key, dir } = filters.sort ?? LEDGER_SORT_DEFAULT
   return filtered.sort((a, b) => {
     const av = ledgerValue(a, key, cats, lang)
     const bv = ledgerValue(b, key, cats, lang)

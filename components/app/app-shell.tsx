@@ -19,7 +19,12 @@ import { useBeforeUnload } from "@/hooks/use-before-unload"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { useFileDrop, isBookFile, isMediaFile } from "@/hooks/use-file-drop"
 import { useReceiptGc } from "@/hooks/use-receipt-gc"
-import { openFile } from "@/lib/commands/io-commands"
+import { useAppShortcuts } from "@/hooks/use-app-shortcuts"
+import {
+  openFile,
+  pickAndOpenFile,
+  restoreFileHandle,
+} from "@/lib/commands/io-commands"
 import { LANDING } from "@/lib/site"
 import { cn } from "@/lib/utils"
 import { useBookStore } from "@/stores/book-store"
@@ -39,6 +44,16 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
   useReceiptGc()
   useBeforeUnload()
+
+  /*
+   * §7.5: the link to the opened file lives in IndexedDB, not in the store's
+   * localStorage blob, so it is put back by hand once the book has rehydrated.
+   * Keyed on `hydrated` alone — a bookkeeping opened later in this session
+   * carries its own handle, and re-running here would hand it the last one.
+   */
+  React.useEffect(() => {
+    if (hydrated) void restoreFileHandle()
+  }, [hydrated])
 
   /*
    * §8.1: with no bookkeeping open, every app route sends the user to the
@@ -67,7 +82,24 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
   const pushDropped = React.useRef<((files: File[]) => void) | null>(null)
 
   const inputRef = React.useRef<HTMLInputElement>(null)
-  const pickFile = () => inputRef.current?.click()
+  /*
+   * The picker is tried first because it hands back a handle the bookkeeping
+   * can be saved to (§7.5); the hidden input is the fallback where there is
+   * no picker, and gives a file that can only ever be read.
+   */
+  const pickFile = React.useCallback(() => {
+    void (async () => {
+      if (!(await pickAndOpenFile(ctx))) inputRef.current?.click()
+    })()
+  }, [ctx])
+
+  const openExportDialog = React.useCallback(
+    () => openDialog({ kind: "export" }),
+    [openDialog]
+  )
+
+  // Stable callbacks: the shortcut listener is rebound whenever they change.
+  useAppShortcuts({ onOpenFile: pickFile, onExport: openExportDialog })
 
   const handleDrop = React.useCallback(
     (files: File[]) => {
@@ -109,13 +141,10 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
           }}
         />
 
-        <AppSidebar
-          onOpenFile={pickFile}
-          onExport={() => openDialog({ kind: "export" })}
-        />
+        <AppSidebar />
 
         <SidebarInset className="min-w-0">
-          <AppTopbar />
+          <AppTopbar onOpenFile={pickFile} onExport={openExportDialog} />
           <div className="min-w-0 flex-1 px-4 py-5 lg:px-6 lg:py-6">
             {children}
           </div>

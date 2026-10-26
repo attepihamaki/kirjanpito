@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils"
 /**
  * The card surface (§11): a --card panel over the page's --background. Every
  * bordered box in the app is one of these — the panels, the ledger table, the
- * totals strip, the VAT banner, the landing cards, the import overlay's box.
+ * totals cards, the VAT banner, the landing cards, the import overlay's box.
  *
  * It exists so the surface is declared once. A bordered box with no fill
  * would vanish into the page, and a second hand-written copy of these three

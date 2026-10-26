@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { LangProvider } from "@/components/lang-provider"
 import { LedgerView } from "@/components/ledger/ledger-view"
-import { TotalsStrip } from "@/components/ledger/totals-strip"
+import { TotalsCards } from "@/components/ledger/totals-cards"
 import { defaultCategories } from "@/lib/domain/accounts"
 import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { createIdFactory } from "@/lib/domain/id"
@@ -40,7 +40,7 @@ function loadSampleIntoStore() {
     ledgerQuery: "",
     ledgerType: "all",
     ledgerCat: "all",
-    ledgerSort: { key: "date", dir: 1 },
+    ledgerSort: null,
     ledgerPage: 1,
     ledgerSize: 10,
   })
@@ -73,11 +73,11 @@ beforeEach(() => {
   useBookStore.setState(useBookStore.getInitialState())
 })
 
-describe("TotalsStrip", () => {
+describe("TotalsCards", () => {
   it("shows the §10 year figures", () => {
     const cats = indexCategories(defaultCategories())
     const totals = ledgerTotals(sampleEntries(createIdFactory()), cats)
-    mount(<TotalsStrip totals={totals} />)
+    mount(<TotalsCards totals={totals} />)
 
     expect(screen.getByText("Tulot, veroton")).toBeInTheDocument()
     expect(screen.getByText(eur(1250000))).toBeInTheDocument()
@@ -103,7 +103,7 @@ describe("TotalsStrip", () => {
       ],
       cats
     )
-    mount(<TotalsStrip totals={totals} />)
+    mount(<TotalsCards totals={totals} />)
     expect(screen.getByText("Palautettava ALV")).toBeInTheDocument()
     expect(screen.getByText(eur(2550))).toBeInTheDocument()
   })
@@ -126,6 +126,16 @@ describe("LedgerView with the sample data", () => {
     // One header row plus ten entries.
     expect(screen.getAllByRole("row")).toHaveLength(11)
     expect(screen.getByText("Sivu 1 / 2")).toBeInTheDocument()
+  })
+
+  it("keeps the pagination row on a list that fits one page", async () => {
+    const user = userEvent.setup()
+    mount(<LedgerView />)
+
+    await user.click(screen.getByRole("button", { name: /^Loka/ }))
+
+    expect(screen.getByText("Sivu 1 / 1")).toBeInTheDocument()
+    expect(screen.getByLabelText("Rivejä sivulla")).toBeInTheDocument()
   })
 
   it("sorts by date ascending, so the first row is 8.1.2026", () => {
@@ -157,6 +167,23 @@ describe("LedgerView with the sample data", () => {
     expect(screen.getByText(eur(36218))).toBeInTheDocument()
   })
 
+  it("drops the toolbar on a month with no entries", async () => {
+    const user = userEvent.setup()
+    mount(<LedgerView />)
+
+    await user.click(screen.getByRole("button", { name: /^Marras/ }))
+
+    expect(
+      screen.getByText("Ei kirjauksia: Marraskuu 2026.")
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByLabelText("Hae selitteestä tai luokasta")
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("combobox", { name: "Tyyppi" })
+    ).not.toBeInTheDocument()
+  })
+
   it("narrows the list with the search box", async () => {
     const user = userEvent.setup()
     mount(<LedgerView />)
@@ -174,7 +201,8 @@ describe("LedgerView with the sample data", () => {
     const user = userEvent.setup()
     mount(<LedgerView />)
 
-    await user.click(screen.getByRole("button", { name: "Tulot" }))
+    await user.click(screen.getByRole("combobox", { name: "Tyyppi" }))
+    await user.click(await screen.findByRole("option", { name: "Tulot" }))
     expect(screen.getByText("5 kirjausta")).toBeInTheDocument()
 
     await user.click(
@@ -183,17 +211,44 @@ describe("LedgerView with the sample data", () => {
     expect(screen.getByText("16 kirjausta")).toBeInTheDocument()
   })
 
-  it("reverses the order when the date header is clicked", async () => {
+  it("reverses the order on the second click of the date header", async () => {
     const user = userEvent.setup()
     mount(<LedgerView />)
+    const header = () => screen.getByRole("button", { name: /^Päivämäärä/ })
 
-    await user.click(screen.getByRole("button", { name: /^Päivämäärä/ }))
+    // The first click picks the column, ascending; the second turns it around.
+    await user.click(header())
+    await user.click(header())
 
     const rows = screen.getAllByRole("row")
     expect(within(rows[1]).getByText("30.10.2026")).toBeInTheDocument()
     expect(
       screen.getByRole("columnheader", { name: /^Päivämäärä/ })
     ).toHaveAttribute("aria-sort", "descending")
+  })
+
+  it.each([
+    ["Selite", /^Selite/],
+    // The default order follows this column, and it still reaches ⇅.
+    ["Päivämäärä", /^Päivämäärä/],
+  ])("unsorts %s on a third click", async (_label, pattern) => {
+    const user = userEvent.setup()
+    mount(<LedgerView />)
+    const header = () => screen.getByRole("button", { name: pattern })
+
+    await user.click(header())
+    await user.click(header())
+    await user.click(header())
+
+    for (const name of [/^Päivämäärä/, /^Selite/]) {
+      expect(screen.getByRole("columnheader", { name })).toHaveAttribute(
+        "aria-sort",
+        "none"
+      )
+    }
+    expect(
+      within(screen.getAllByRole("row")[1]).getByText("8.1.2026")
+    ).toBeInTheDocument()
   })
 
   it("opens the entry dialog when a row is clicked", async () => {

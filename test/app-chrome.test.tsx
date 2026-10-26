@@ -48,84 +48,137 @@ describe("app chrome", () => {
   })
 
   /**
-   * §8.2: only what is the same on every view lives in the top bar. The year
-   * and the file are in the sidebar, next to each other.
+   * §8.2: the top bar holds what is the same on every view — the sidebar
+   * toggle, the two preferences, and the file. The file is an icon button
+   * like the rest, so the name and the status live in its accessible name
+   * rather than in visible text.
    */
-  it("keeps the top bar to the sidebar toggle and the two preferences", () => {
-    mount(<AppTopbar />)
+  it("names the open file and its status on the top bar button", () => {
+    mount(<AppTopbar onOpenFile={noop} onExport={noop} />)
 
     const bar = screen.getByRole("banner")
+    // Named with the extension the file really had (§7.3).
+    const file = within(bar).getByRole("button", {
+      name: "kirjanpito_2026-10-24.zip, Tallentamattomia muutoksia",
+    })
+    expect(file).toBeVisible()
+    expect(file).toHaveTextContent("")
     expect(within(bar).getByRole("button", { name: "Kieli" })).toBeVisible()
     expect(
       within(bar).getByRole("button", { name: "Tumma teema" })
     ).toBeVisible()
+    // The year is in the popover, not loose on the bar.
     expect(within(bar).queryByRole("combobox")).toBeNull()
-    expect(within(bar).queryByRole("button", { name: "Vie" })).toBeNull()
   })
 
-  it("puts the year and the file box above the navigation in the sidebar", () => {
-    mount(<AppSidebar onOpenFile={noop} onExport={noop} />)
-
-    expect(
-      screen.getByRole("combobox", { name: "Tilikausi" })
-    ).toHaveTextContent("2026")
-    // Shown with the extension the file really had (§7.3).
-    expect(screen.getByText("kirjanpito_2026-10-24.zip")).toBeVisible()
-    expect(
-      screen.getByRole("status", { name: "Muutoksia, joita ei ole viety" })
-    ).toBeInTheDocument()
-
-    const buttons = screen
-      .getAllByRole("button")
-      .map((el) => el.textContent?.trim())
-    expect(buttons.slice(0, 3)).toEqual(["Sulje", "Tuo", "Vie"])
-
-    // The box sits above the navigation.
-    const vie = screen.getByRole("button", { name: "Vie" })
-    const firstNavLink = screen.getByRole("link", { name: "Kirjanpito" })
-    expect(
-      vie.compareDocumentPosition(firstNavLink) &
-        Node.DOCUMENT_POSITION_FOLLOWING
-    ).toBeTruthy()
-  })
-
-  it("fires the file actions from the sidebar", async () => {
+  it("offers the year and the file actions in the popover", async () => {
     const user = userEvent.setup()
     const onOpenFile = vi.fn()
     const onExport = vi.fn()
-    mount(<AppSidebar onOpenFile={onOpenFile} onExport={onExport} />)
+    mount(<AppTopbar onOpenFile={onOpenFile} onExport={onExport} />)
 
-    await user.click(screen.getByRole("button", { name: "Tuo" }))
-    await user.click(screen.getByRole("button", { name: "Vie" }))
+    const openMenu = () =>
+      user.click(screen.getByRole("button", { name: /kirjanpito_2026/ }))
+
+    await openMenu()
+    expect(
+      screen.getByRole("combobox", { name: "Tilikausi" })
+    ).toHaveTextContent("2026")
+    expect(
+      screen.getByRole("status", { name: "Tallentamattomia muutoksia" })
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Sulje tiedosto" })).toBeVisible()
+
+    // Acting closes the popover, so each action needs it opened again.
+    await user.click(screen.getByRole("button", { name: /Avaa tiedosto/ }))
+    await openMenu()
+    await user.click(screen.getByRole("button", { name: /Lataa tiedosto/ }))
 
     expect(onOpenFile).toHaveBeenCalledOnce()
     expect(onExport).toHaveBeenCalledOnce()
   })
 
   /**
-   * Collapsed, the box and the year have nowhere to go, so an icon menu
-   * stands in. The two renders must offer the same three actions.
+   * §8.2: the rows spell out their shortcuts. jsdom is not a Mac, so these
+   * are the Ctrl forms; "save as" is what makes Ctrl+Shift+S the download.
    */
-  it("keeps every file action reachable from the collapsed rail", async () => {
+  it("names each row's shortcut", async () => {
     const user = userEvent.setup()
-    const onOpenFile = vi.fn()
-    const onExport = vi.fn()
-    mount(<AppSidebar onOpenFile={onOpenFile} onExport={onExport} />)
+    vi.stubGlobal("showOpenFilePicker", vi.fn())
+    vi.stubGlobal("showSaveFilePicker", vi.fn())
+    try {
+      mount(<AppTopbar onOpenFile={noop} onExport={noop} />)
+      await user.click(screen.getByRole("button", { name: /kirjanpito_2026/ }))
 
-    await user.click(screen.getByRole("button", { name: "Avaa tiedosto" }))
-    await user.click(screen.getByRole("button", { name: "Vie tiedosto" }))
-    expect(screen.getByRole("button", { name: "Sulje tiedosto" })).toBeTruthy()
+      /*
+       * The key cap is `aria-hidden`, so the row's name is still its label
+       * alone and the combination travels in `aria-keyshortcuts`.
+       */
+      const row = (name: string) => screen.getByRole("button", { name })
+      expect(row("Avaa tiedosto")).toHaveTextContent("Ctrl+O")
+      expect(row("Avaa tiedosto")).toHaveAttribute(
+        "aria-keyshortcuts",
+        "Control+O"
+      )
+      expect(row("Tallenna")).toHaveTextContent("Ctrl+S")
+      expect(row("Lataa tiedosto")).toHaveTextContent("Ctrl+Shift+S")
+      expect(row("Lataa tiedosto")).toHaveAttribute(
+        "aria-keyshortcuts",
+        "Control+Shift+S"
+      )
+      // Ctrl+W cannot be intercepted, so closing deliberately has none.
+      expect(row("Sulje tiedosto")).not.toHaveAttribute("aria-keyshortcuts")
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
 
-    expect(onOpenFile).toHaveBeenCalledOnce()
-    expect(onExport).toHaveBeenCalledOnce()
+  /**
+   * §7.5: writing back to the file is a File System Access API feature, and
+   * jsdom has no pickers — so this is also the Firefox / Safari / phone case,
+   * where the row must be absent rather than present and dead.
+   */
+  it("hides the save row when the browser cannot write to a file", async () => {
+    const user = userEvent.setup()
+    mount(<AppTopbar onOpenFile={noop} onExport={noop} />)
+
+    await user.click(screen.getByRole("button", { name: /kirjanpito_2026/ }))
+    expect(screen.queryByRole("button", { name: /Tallenna/ })).toBeNull()
+    // The download is still there, and still called the same thing.
+    expect(screen.getByRole("button", { name: /Lataa tiedosto/ })).toBeVisible()
+  })
+
+  it("shows the save row where the file pickers exist", async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal("showOpenFilePicker", vi.fn())
+    vi.stubGlobal("showSaveFilePicker", vi.fn())
+    try {
+      mount(<AppTopbar onOpenFile={noop} onExport={noop} />)
+
+      await user.click(screen.getByRole("button", { name: /kirjanpito_2026/ }))
+      expect(screen.getByRole("button", { name: /Tallenna/ })).toBeVisible()
+      expect(
+        screen.getByRole("button", { name: /Lataa tiedosto/ })
+      ).toBeVisible()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it("keeps the sidebar to the brand and the navigation", () => {
+    mount(<AppSidebar />)
+
+    expect(screen.getByRole("link", { name: "Kirjanpito" })).toBeVisible()
+    expect(screen.queryByRole("combobox")).toBeNull()
+    expect(screen.queryByText("kirjanpito_2026-10-24.zip")).toBeNull()
   })
 
   it("collapses the sidebar from the top bar and remembers it", async () => {
     const user = userEvent.setup()
     mount(
       <>
-        <AppSidebar onOpenFile={noop} onExport={noop} />
-        <AppTopbar />
+        <AppSidebar />
+        <AppTopbar onOpenFile={noop} onExport={noop} />
       </>
     )
 
@@ -149,7 +202,7 @@ describe("app chrome", () => {
   })
 
   it("marks the current view in the sidebar navigation", () => {
-    mount(<AppSidebar onOpenFile={noop} onExport={noop} />)
+    mount(<AppSidebar />)
 
     expect(screen.getByRole("link", { name: "ALV-laskelma" })).toHaveAttribute(
       "aria-current",

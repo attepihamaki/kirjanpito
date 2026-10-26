@@ -27,7 +27,10 @@ import { PanelLeftIcon } from "lucide-react"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
-const SIDEBAR_WIDTH = "16rem"
+/* One step narrower than shadcn's 16rem. The longest label, "Tuloslaskelma",
+ * still fits beside its icon, and `app-skeleton.tsx` draws the same width so
+ * nothing shifts on rehydrate. */
+const SIDEBAR_WIDTH = "15rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
@@ -493,6 +496,10 @@ const sidebarMenuButtonVariants = cva(
       size: {
         default: "h-8 text-sm",
         sm: "h-7 text-xs",
+        /* 36 px, the app's default control height (§11), for the navigation
+         * rows. Collapsed, the base class pins every row back to 32 px so the
+         * icons sit on one grid in the rail. */
+        md: "h-9 text-sm",
         lg: "h-12 text-sm group-data-[collapsible=icon]:p-0!",
       },
     },

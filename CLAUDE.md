@@ -21,11 +21,12 @@ The app does not file anything and is not tax advice. A short disclaimer to this
 
 ### Core product idea: the file is the database
 
-There is **no backend, no account and no database**. The user opens their bookkeeping from a file, works on it in the browser, and exports it back to a file.
+There is **no backend, no account and no database**. The user opens their bookkeeping from a file, works on it in the browser, and writes it back to a file.
 
 - Without receipts, the file is a **CSV**.
 - With receipts attached, the file is a **ZIP** containing the CSV and the receipt files, in folders by year and month.
-- Between exports, work is kept in the browser (localStorage for entries and settings, IndexedDB for receipt files), so a page reload doesn't lose anything. The exported file is the user's real, safe copy.
+- Where the browser allows it, the app **saves straight back to the file that was opened** (§7.5). Where it does not, the user **downloads a copy**. Either way the file on disk is the user's real, safe copy.
+- Between saves, work is kept in the browser (localStorage for entries and settings, IndexedDB for receipt files), so a page reload doesn't lose anything — but the browser is a working buffer, not the record.
 
 ---
 
@@ -39,14 +40,14 @@ There is **no backend, no account and no database**. The user opens their bookke
   - `pdfjs-dist` for rendering PDFs. **The worker is copied to `public/pdf.worker.min.mjs` by `scripts/copy-pdf-worker.mjs` on `predev`/`prebuild`, and `workerSrc` points at that fixed URL.** The `new URL(..., import.meta.url)` form was rejected: the worker is an ES module bundle, and whether Turbopack copies it as an asset or pulls it into the module graph differs between the dev server and the export — a failure that would surface only in production. pdfjs is still imported dynamically, from `lib/browser/pdf.ts` alone.
   - `idb` or `idb-keyval` for IndexedDB.
   - `next-themes` for light, dark and system theme (the standard shadcn approach).
-  - Tables are hand-composed on shadcn's `Table`, **not** `@tanstack/react-table`, which was removed from the dependencies. Sorting, filtering and pagination all live in the store — they have to, because the toolbar, the month chips and the totals strip read the same state — which would leave a table adapter owning nothing. See the comment at the top of `components/ledger/ledger-table.tsx`.
+  - Tables are hand-composed on shadcn's `Table`, **not** `@tanstack/react-table`, which was removed from the dependencies. Sorting, filtering and pagination all live in the store — they have to, because the toolbar, the month chips and the totals cards read the same state — which would leave a table adapter owning nothing. See the comment at the top of `components/ledger/ledger-table.tsx`.
   - Toasts are `components/ui/toast.tsx`, **not** `sonner`, which was removed from the dependencies. It is a provider, so it wraps the tree in `HtmlShell` rather than sitting beside it. Its viewport is the one layer above the `z-50` that dialogs, sheets and overlays share: they are all portalled to the body, where an equal z-index is settled by DOM order, and the provider's portal is always the earliest. Toasts are raised from inside dialogs, so **the viewport stays at `z-100`**.
   - State: a small store such as Zustand with a persistence layer, or React context plus `useReducer`. Keep the domain logic (calculations, CSV, paths) in plain TypeScript modules with no React, so it can be unit-tested.
 - Money is always stored as **integer cents**, never floats.
 
 ### Things in the artifact that exist only because of claude.ai, and should not be ported
 
-- **`window.claude.use("downloads")`.** The artifact saves files through a claude.ai capability. In the real app, use a normal Blob plus an `<a download>` link, or the File System Access API where available.
+- **`window.claude.use("downloads")`.** The artifact saves files through a claude.ai capability. The app uses a normal Blob plus an `<a download>` link for downloading a copy, and the File System Access API to save back to the opened file where it exists (§7.5).
 - **Loading PDF.js and JSZip from cdnjs with script tags**, and running the PDF.js worker on the main thread (`globalThis.pdfjsWorker`). In the real app, import them from npm.
 - **Custom in-app confirmation dialogs** replaced `window.confirm()` because claude.ai's sandbox blocks native dialogs. Keep in-app dialogs anyway (shadcn `AlertDialog`), since they're better UX and translatable. Never use `window.confirm`.
 - The **single-file, hand-rendered HTML** structure. Rebuild it as proper React components.
@@ -258,7 +259,7 @@ The period is a month, a quarter or the whole year, within the selected financia
 - **Purchase VAT** (expense entries): entries with rate > 0, grouped by rate. 0 % expenses (wages, YEL, bank fees) are not shown, and the 0 % row is hidden in the purchases table.
 - **VAT payable** = total sales VAT − total purchase VAT. If negative, it is shown as **refundable** (palautettava), in green.
 
-### 6.2 Totals strip on the ledger
+### 6.2 Totals cards on the ledger
 
 For the selected month (or the whole year): income net total, expense net total, and VAT payable or refundable (same rules as 6.1).
 
@@ -332,11 +333,11 @@ tositteet/
 - **Import:** the user picks a ZIP. Use the shallowest `.csv` in it (ignoring `__MACOSX`). Paths in `tosite` are resolved relative to the CSV's folder, falling back to the ZIP root. Files found are stored in IndexedDB. Listed files that aren't found become `missing` attachments that keep their path, so re-exporting doesn't lose the reference. Importing a plain CSV that has `tosite` paths marks those receipts as missing in the same way. A listed path that names neither an image nor a PDF is not a receipt at all: it is dropped rather than kept as missing, so it cannot reappear in the next export, and the toast counts it.
 - Unpacking, decoding and writing every receipt to IndexedDB takes seconds for a real ZIP, so the import raises `importing` in the store and the UI shows progress once it passes 400 ms — see §8.2.
 
-### 7.3 File naming on export
+### 7.3 File naming when downloading a copy
 
-An export dialog lets the user edit the base name, with a fixed extension shown beside the field (`.csv` or `.zip`). The default is `kirjanpito_{YYYY-MM-DD}` in Finnish or `accounting_{YYYY-MM-DD}` in English, using **today's date**. Characters `\ / : * ? " < > |` and control characters are stripped, and a trailing `.csv` is removed. An empty name falls back to the default. The last opened or exported name is shown in the sidebar, but it is **not** used as the default.
+The download dialog lets the user edit the base name, with a fixed extension shown beside the field (`.csv` or `.zip`). The default is `kirjanpito_{YYYY-MM-DD}` in Finnish or `accounting_{YYYY-MM-DD}` in English, using **today's date**. Characters `\ / : * ? " < > |` and control characters are stripped, and a trailing `.csv` is removed. An empty name falls back to the default. The last opened or downloaded name is shown in the file menu, but it is **not** used as the default.
 
-`fileName` in the store holds that name **with its extension** (`kirjanpito_2026-10-24.zip`), for display only, and is set by both import and export. Opening a file and finding the box still reading "Uusi kirjanpito" is the bug this format fixes: the first port hard-coded `fileName: null` on import, and the display site appended a literal `.csv`, which was wrong for a ZIP. `lib/commands/io-commands.test.ts` covers it.
+`fileName` in the store holds that name **with its extension** (`kirjanpito_2026-10-24.zip`), for display only, and is set by opening, saving and downloading alike. Opening a file and finding the box still reading "Uusi kirjanpito" is the bug this format fixes: the first port hard-coded `fileName: null` on import, and the display site appended a literal `.csv`, which was wrong for a ZIP. `lib/commands/io-commands.test.ts` covers it.
 
 ### 7.4 Receipt files
 
@@ -347,6 +348,56 @@ An export dialog lets the user edit the base name, with a fixed extension shown 
 - **Garbage collection:** after saving or deleting entries, closing the file, importing, or closing the entry dialog, delete IndexedDB files that no entry (and no open dialog) references. Revoke object URLs of removed thumbnails.
 
 ---
+
+### 7.5 Saving back to the opened file
+
+On browsers with the File System Access API the app writes the bookkeeping
+back to the file it was opened from, so the user does not have to download a
+copy to keep their work. **Saving is always an explicit action**, never
+automatic: a handle's write permission reverts to "prompt" on reload and
+re-granting it needs a user gesture, so there is no honest way to promise the
+user they will never think about saving. There is also no undo and no version
+history here, and packing a ZIP of receipts is not instant.
+
+- **`lib/browser/file-handle.ts` is the only module that touches the API.** It
+  feature-detects the pickers, wraps the permission calls, writes, and keeps
+  the handle in IndexedDB. Everything else treats a handle as optional.
+- **`isFileHandleSupported` gates the UI.** Firefox, Safari and phones have no
+  pickers, and a file taken from `<input type="file">` or a drop carries no
+  handle on any browser. There the app behaves exactly as it did: the
+  downloaded copy is how the work is kept, and the file menu has no save row
+  at all rather than a dead one (§8.2).
+- **Opening goes through the picker first** (`pickAndOpenFile`), falling back
+  to the hidden `<input>` when there is none. Both the app and the landing page
+  do this, since a file can be opened from either.
+- **`saveBook` asks for a file** when there is no handle, when the book's shape
+  has outgrown it — a book that has grown receipts is a ZIP and cannot be
+  written into a path called `.csv` — or when the file has been moved or
+  deleted. Otherwise it writes in place. `createWritable` streams into a swap
+  file that the browser moves into place on `close`, so a failure part-way
+  through leaves the file on disk untouched.
+- **A file changed outside the app is not overwritten blind.** `savedAt` holds
+  the file's modification time as of the last read or write; if the file's own
+  timestamp has moved since, saving asks first (§8.11). Writing moves that
+  timestamp, so the baseline follows it or the app would mistake its own save
+  for someone else's edit.
+- **Downloading a copy clears the dirty flag only when no file is linked.**
+  With one, the copy says nothing about that file, and claiming otherwise
+  would let the user close a bookkeeping whose own file is still stale.
+- **Leaving a bookkeeping unlinks the file**, in the store *and* in IndexedDB
+  (`unlinkFile` in `lib/commands/book-commands.ts`). The stored handle outlives
+  a reload, so a new book that skipped this would find the old file waiting and
+  save itself over it.
+- `Ctrl`/`⌘`+`S` saves. It is bound only where a file can be written at all,
+  so on Firefox and Safari the browser keeps its own — see §8.2 for the full
+  set of shortcuts and what each row shows.
+- **Not done, deliberately:** a dropped file could carry a handle too, through
+  `DataTransferItem.getAsFileSystemHandle()`. It does not yet, so dropping a
+  file opens it read-only and the first save asks where to put it, with the
+  file's own name pre-filled.
+- `lib/commands/save-commands.test.ts` covers the round trip, the picker
+  fallback, a refused permission, the outside-edit guard and both download
+  cases, against a fake handle.
 
 ## 8. App structure and features
 
@@ -361,32 +412,51 @@ An export dialog lets the user edit the base name, with a fixed extension shown 
 ### 8.2 Shell (sidebar + top bar)
 
 The layout follows the sibling project FormBox (`../formbox`): a sidebar that
-holds the brand, the file and the navigation, and a top bar across the content
-area for the view's context and the user's preferences. **The top bar is the
-same at every width**, so no control exists twice; below 900 px the sidebar
-becomes a sheet instead of the app growing a second header. The earlier split
-— a desktop sidebar plus a separate mobile top bar with its own copies of
-everything and a row of nav tabs — is gone.
+holds the brand and the navigation, and a top bar across the content area for
+the open file and the user's preferences. **The top bar is the same at every
+width**, so no control exists twice; below 900 px the sidebar becomes a sheet
+instead of the app growing a second header. The earlier split — a desktop
+sidebar plus a separate mobile top bar with its own copies of everything and a
+row of nav tabs — is gone.
 
 - **Sidebar** (`components/app/app-sidebar.tsx`, shadcn `Sidebar`,
   `collapsible="icon"`), top to bottom:
   - Brand: a "K" mark, "Kirjanpito", and the subtitle "Yhdenkertainen kirjanpito" — shortened from the prototype's "Toiminimen yhdenkertainen kirjanpito", which could not fit the button without truncating. The two lines need `leading-tight`: at the default leading they are 36 px and the `size="lg"` button's content box is 32. Links to the landing page.
-  - **`components/app/file-box.tsx`** — the financial year and the open file, which belong together because the year is read out of the file:
-    - "Tilikausi" and a year selector, offering the years found in the data plus the current year and the selected year.
-    - A recessed panel (`border`, `bg-background` on the `--sidebar` surface, as the prototype's `.filebox`): the file name (or "Uusi kirjanpito") with a "✕ Sulje" button on its right, a status dot with text (amber "Muutoksia, joita ei ole viety" / green "Kaikki muutokset viety"), and side-by-side "Tuo" and "Vie" buttons. **"Vie" is `variant="default"` while there are unexported changes** and `outline` otherwise. The three labels are deliberately one word each: they share one narrow column, and the panel above them already names the file.
   - Navigation with icons: Kirjanpito, ALV-laskelma, Tuloslaskelma, Yhteenveto, Asetukset.
-  - **A secondary group pinned to the bottom with `mt-auto`**, as in FormBox's sidebar: an "Ohje" row linking to the landing page's FAQ (`LANDING_FAQ`, the `#faq` anchor on that section), and the §1 disclaimer "Laskelmat eivät ole vero- tai kirjanpitoneuvontaa." as plain text under it. The app is reachable without ever passing the landing page — a bookmark goes straight to `/app/ledger` — so the explanation of what this is needed a route back, and the disclaimer appeared only on the landing and in the report notes, never where the figures are entered. The rail keeps the link and drops the text, the same rule the file box follows.
-  - ≥ 900 px it collapses to a 3 rem icon rail; below 900 px it is a sheet, and tapping a link closes it. Navigation rows are `SidebarMenuButton`s and collapse on their own. **The file box cannot** — neither a select nor a bordered panel fits a rail — so it renders twice: the box, and an icon menu (Avaa tiedosto / Vie tiedosto / Sulje tiedosto) that takes over in icon mode. Both must offer the same three actions; collapsing is allowed to lose the name, the status line and the year, nothing else.
+  - **Nothing below the navigation.** The sidebar is the brand and the five views; the §1 disclaimer lives on the landing page and in the report notes, and the brand row is the route back to the landing page and its FAQ.
+  - **15 rem wide**, one step under shadcn's 16 rem, which the five short labels do not need. `app-skeleton.tsx` draws the same width, so nothing shifts on rehydrate. The mobile sheet keeps its own 18 rem: it is an overlay on a phone, not a column beside the content.
+  - ≥ 900 px it collapses to a 3 rem icon rail; below 900 px it is a sheet, and tapping a link closes it. **Everything in it is a menu row**, so collapsing loses only the words — there is nothing here that needs a second rendering to survive the rail.
   - The expanded / collapsed state is `sidebarOpen` in the store (§12), **not** shadcn's `sidebar_state` cookie: nothing is server-rendered, so a cookie could never be read back.
-- **Top bar** (`components/app/app-topbar.tsx`), laid out like FormBox's `AppHeader`: `h-14`, `gap-2`, `px-4 lg:px-6`, sticky, and **no rule below it** — the sidebar's border already separates the chrome from the page, and a second line only boxed the content in. It holds only what is the same on every view — a panel icon on the left that collapses the sidebar (≥ 900 px) or opens it as a sheet (< 900 px), and, pushed right, the theme toggle and the language picker. The icon is hand-rolled rather than shadcn's `SidebarTrigger`, which hard-codes an English screen-reader label.
+- **Top bar** (`components/app/app-topbar.tsx`), laid out like FormBox's `AppHeader`: `h-14`, `gap-2`, `px-4 lg:px-6`, sticky, and **no rule below it** — the sidebar's border already separates the chrome from the page, and a second line only boxed the content in. It holds only what is the same on every view: a panel icon on the left that collapses the sidebar (≥ 900 px) or opens it as a sheet (< 900 px), and, pushed right, the theme toggle, the language picker and the file menu. The panel icon is hand-rolled rather than shadcn's `SidebarTrigger`, which hard-codes an English screen-reader label.
   - **Every control in the bar is 36 px tall** — `size="icon"` buttons and the default `Select` trigger — so the row reads as one line rather than three sizes. Match that when adding anything.
+- **File menu** (`components/app/file-menu.tsx`) — the open file and everything that acts on it, as one `Popover` at the right-hand end of the top bar:
+  - The trigger is a `ghost` `size="icon"` button at the right-hand end of the bar, after the language picker, so the file reads as app chrome rather than as the one loud control in it. Its icon is lucide's `book-bookmark`, and the **status dot rides the icon's top-right corner the way an unread badge does** — with no file name on the bar, the dot is the only always-visible sign that there is unsaved work. Nothing in the button is visible text, so the `aria-label` is `"{name}, {status}"` and the `title` is the file name. While a file is being read or written the icon is a spinner (§7.2, §7.5).
+  - The popup, top to bottom: the file name and the status line (amber "Tallentamattomia muutoksia" / green "Tallennettu"); "Tilikausi" and a year selector, offering the years found in the data plus the current year and the selected year; and the actions as full-width rows with their icons on one line — "Avaa tiedosto", "Tallenna", "Lataa tiedosto", "Sulje tiedosto".
+  - **Three of the four rows carry a shortcut**, as a `<kbd>` key cap: muted text, recessed to `--background` rather than filled with `--muted`, which is what the row itself turns on hover. `hooks/use-app-shortcuts.ts` owns the one listener, and `useShortcut` in `use-save-book.ts` writes each combination both ways — `⇧⌘S` or `Ctrl+Shift+S` for the cap, `Meta+Shift+S` or `Control+Shift+S` for the row's `aria-keyshortcuts`.
+
+    | row | shortcut | why |
+    | --- | --- | --- |
+    | Avaa tiedosto | `Ctrl`/`⌘`+`O` | universal, and a page is allowed to cancel it |
+    | Tallenna | `Ctrl`/`⌘`+`S` | only bound where the browser can write to a file (§7.5); elsewhere it stays the browser's own |
+    | Lataa tiedosto | `Ctrl`/`⌘`+`Shift`+`S` | reads as "save as", which is what a downloaded copy is |
+    | Sulje tiedosto | **none** | `Ctrl`/`⌘`+`W` is one of the few combinations a browser will not hand to a page, so binding it would close the tab instead |
+
+  - **The key cap is `aria-hidden`, and the combination travels in `aria-keyshortcuts`.** Accessible names concatenate with no separator, so a cap inside the row would have it announced as "TallennaCtrl+S".
+  - **No shortcut fires while a dialog is open**, or during an import or a save, or with no bookkeeping open. Every one of them replaces or rewrites the whole bookkeeping, and the entry being typed into a dialog is not in the book yet. `test/app-shortcuts.test.tsx` covers each refusal, and that the browser keeps its own default in those cases.
+  - **Every row is a `ghost` button, with no highlighted one.** They are menu items, and a filled row among them would read as the only real action. The dot and the status line are what say there is unsaved work; a second signal competing with them only makes the popup louder.
+  - **"Tallenna" is absent, not disabled, where the browser cannot write to a file.** A permanent dead control in front of every Firefox, Safari and phone user is worse than three rows that all work.
+  - **The download is named after what it does, not after "Tallenna".** "Lataa kopio" would read as a copy of an original, which is wrong wherever the download is the only way to keep the work — and one label for one action beats a row that renames itself per browser. It also puts the row in line with "Avaa tiedosto" and "Sulje tiedosto". The dialog it opens is titled "Lataa kirjanpito".
+  - The status words are about saving, not exporting, so one wording covers both ways of keeping the work. Which file is current is `dirty`'s job (§7.5).
+  - The year belongs in here because it is read out of the file: this popup is the one place that answers "which bookkeeping, which year, and is it saved".
+  - Every action closes the popup first — it hands over to a dialog, a picker, or empties the bookkeeping.
+  - `components/app/file-status.tsx` holds the one wording of the save status: `useFileStatusText` for the trigger's accessible name, `StatusDot` for the dot alone (the trigger's badge), `FileStatus` for the dot with its label (the popup's status line).
 - **Theme toggle:** one ghost button with a sun / moon icon that flips light ↔ dark, as in FormBox. There is no "system" control — next-themes still has `defaultTheme="system"`, so an untouched browser follows the OS; it simply cannot be chosen back. Both icons are always in the markup and CSS picks one off the `.dark` class, so the prerendered HTML is already right.
-- **Language picker:** a globe button opening a checked list of Suomi / English (endonyms, so each option reads the same either way). Language stays a stored preference, never a route (§11b).
+- **Language picker:** a `LanguagesIcon` button opening a checked list of Suomi / English (endonyms, so each option reads the same either way). Language stays a stored preference, never a route (§11b).
 - **Drag and drop anywhere:**
   - Dropping a CSV or ZIP opens it. A full-screen overlay says "Pudota CSV- tai ZIP-tiedosto avataksesi sen".
   - While the entry dialog is open, dropped images and PDFs are attached to it instead, and the dialog gets a dashed outline.
   - Dropping media while no dialog is open shows a hint to open an entry first.
-- **Reading a file shows progress, but only once it is slow** (§7.2). `importing` in the store is raised for the whole of `openFile`, and `hooks/use-delayed-flag.ts` turns it into a visible state **after `BUSY_DELAY_MS` (400 ms)**: the sidebar's "Tuo" button becomes a spinner, "Vie" is disabled, and `components/app/import-overlay.tsx` covers the page with "Avataan tiedostoa…". A plain CSV opens in a few milliseconds and never reaches the delay, so nothing flickers; a ZIP of receipts does, and used to leave the UI silent for seconds. The overlay is **blocking**, unlike the drop overlay — the import is about to replace the whole bookkeeping. Both the app and the landing page render it, because a file can be picked from either and the drop overlay vanishes the instant the file lands. `importing` also guards re-entry: a second file dropped mid-import is ignored rather than interleaving two `replaceBook` calls.
+- **Reading a file shows progress, but only once it is slow** (§7.2). `importing` in the store is raised for the whole of `openFile`, and `hooks/use-delayed-flag.ts` turns it into a visible state **after `BUSY_DELAY_MS` (400 ms)**: the file menu's trigger icon and its "Avaa tiedosto" row become spinners, "Vie tiedosto" is disabled, and `components/app/import-overlay.tsx` covers the page with "Avataan tiedostoa…". A plain CSV opens in a few milliseconds and never reaches the delay, so nothing flickers; a ZIP of receipts does, and used to leave the UI silent for seconds. The overlay is **blocking**, unlike the drop overlay — the import is about to replace the whole bookkeeping. Both the app and the landing page render it, because a file can be picked from either and the drop overlay vanishes the instant the file lands. `importing` also guards re-entry: a second file dropped mid-import is ignored rather than interleaving two `replaceBook` calls.
 
 ### 8.3 Landing page
 
@@ -396,7 +466,7 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
    - Headline "Toiminimen kirjanpito, joka mahtuu yhteen tiedostoon." and a lead paragraph.
    - Calls to action:
      - Closed state: "Aloita uusi kirjanpito" and "Avaa tiedosto", plus a dashed drop zone ("Pudota CSV- tai ZIP-tiedosto tähän…").
-     - Open state: "Jatka kirjanpitoa" and "Avaa tiedosto", with a meta line showing the file name, the number of entries and the unexported-changes status.
+     - Open state: "Jatka kirjanpitoa" and "Avaa tiedosto", with a meta line showing the file name, the number of entries and the unsaved-changes status.
    - Visual: two overlapping, slightly rotated paper receipts on a soft accent panel. One is an expense receipt, the other the October VAT calculation ending in "Maksettava 617,18 €". On small screens only the VAT receipt is shown.
 2. **"Tositteesta veroilmoitukseen neljässä vaiheessa".** Four numbered steps: open or start, record receipts (including attaching), check the figures, export (a ZIP organised by year and month).
 3. **"Mitä kirjanpito laskee puolestasi".** Three cards: VAT (with rate chips), income statement (a mini statement), and monthly summary (a mini bar chart).
@@ -404,26 +474,27 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
 5. **"Kysyttyä".** An accordion with four questions: who it's for, whether it files returns, moving over from Excel (lists the columns; `tosite` is optional), and what happens when the browser is closed.
 6. A closing call to action, "Aloita tämän kuun tositteista.", and a footer disclaimer: "Laskelmat eivät ole vero- tai kirjanpitoneuvontaa."
 
-- "Aloita uusi kirjanpito" opens an empty ledger and sets the year to the current year. If there are unexported changes, it asks first.
+- "Aloita uusi kirjanpito" opens an empty ledger and sets the year to the current year. If there are unsaved changes, it asks first.
 
 ### 8.4 Ledger (Kirjanpito)
 
 - Header: "Kirjanpito", the period ("Koko vuosi 2026" or "Lokakuu 2026"), and a primary "Uusi kirjaus" button.
-- **Month chips:** Kaikki plus Tammi…Joulu, with entry counts. Empty months are greyed. The selected chip is a filled pill.
-- **Totals strip** (§6.2): three cells in one bordered bar, not separate cards.
-- **Toolbar:**
-  - Search over description and category.
-  - A type filter (Kaikki / Tulot / Kulut).
+- **Month chips:** Kaikki plus Tammi…Joulu, with entry counts. Empty months are greyed. The selected chip is filled in the primary colour. Each chip is shaped exactly like a default `Button` — **36 px tall** and the button radius (§11) — so the chip row and the toolbar below it read as one scale and one shape.
+- **Totals cards** (§6.2): three cards side by side, each a bare `Panel`, stacking to one column under 640 px. One bar with dividers made the three figures read as a single row of a table; they are three separate answers.
+- **Toolbar:** three controls of the same shape, left to right, and nothing pushed to the right-hand end. It is **hidden, together with the table, on a period that holds no entries at all** — the page then shows "Ei kirjauksia: Lokakuu 2026." A row of controls that cannot change the result reads as if the filters were what emptied the page. The filters keep their values while hidden and come back with the next period that has rows.
+  - Search over description and category. It is a **fixed 20 rem box**, not one that grows into the row: the queries are a word or two, and a field stretched across the toolbar reads as the page's main control.
+  - A type filter (Kaikki tyypit / Tulot / Kulut) as a **select**, like the category filter beside it. A segmented control would be the one control here shaped unlike the others, and it grows with the language. `EntryTypeToggle` (§8.5, §8.10) stays segmented because it is a form field, not a filter.
   - A category filter, listing only the categories used in the period.
   - "Tyhjennä suodattimet" when any filter is active.
-  - An entry count ("16 kirjausta").
-- **Table columns:** Pvm, Selite, Luokka, Veroton, ALV (amount, with the rate small below), Verollinen (bold, with "−" for expenses), and actions.
-  - Every column is sortable, with ↑/↓ shown on the active column and ⇅ on the others. The default sort is date ascending. Sorting by gross uses signed values.
-  - Rows have a coloured left edge: green for income, red for expenses.
+- **Table columns:** Pvm, Tyyppi, Selite, Luokka, Veroton, ALV (amount, with the rate small below), Verollinen (bold, with "−" for expenses), and actions.
+  - Every column is sortable, with ↑/↓ shown on the active column and ⇅ on the others. Sorting by gross uses signed values, and sorting by type puts income first.
+  - **A header cycles through three states: ascending, descending, then no column chosen** (⇅ everywhere), so every sort can be undone. The third state is `ledgerSort: null` / `catSort: null`, **not the default order spelled out**: the column that order follows — Pvm here, Tili in the categories table — would otherwise be stuck between its two directions, because "back to the default" *is* that column ascending. With null it reaches ⇅ like every other column. The rows then take `LEDGER_SORT_DEFAULT` / `CAT_SORT_DEFAULT` from `stores/book-store.ts`, read where the list is built rather than where the header is clicked, and `nextSort` is the one implementation of the cycle.
+  - A first click is always ascending, including on Pvm, where the rows are in that order already and only the icon moves.
+  - Tyyppi is a `Pill` in the income or expense tone — the same badge as the categories table (§8.10), so the two tables read alike.
   - The description cell shows a **paperclip button** (with a count if there are several receipts) that opens the viewer.
   - Row actions: **edit (pencil)**, **copy as new**, and delete. Clicking or pressing Enter on a row also edits it.
-  - Responsive: the category column is hidden under 1240 px. Under 560 px, the net, VAT and actions columns are hidden (tap the row to edit).
-- **Pagination** (shown when there are more than 10 rows): "Rivejä sivulla" with a 10/25/50/100 select (default 10), "Sivu 1 / 2", and first / previous / next / last icon buttons. The page resets to 1 when filters, sorting or the month change.
+  - Responsive: the category column is hidden under 1240 px. Under 560 px, the type, net, VAT and actions columns are hidden (tap the row to edit); the signed gross is what still tells income from expense there.
+- **Pagination:** the row count ("16 kirjausta") at the left-hand end, and at the right "Rivejä sivulla" with a 10/25/50/100 select (default 10), "Sivu 1 / 2", and first / previous / next / last icon buttons. The strip reads as "what you are looking at" / "how to move through it", which is why the count lives here rather than in the toolbar. The page resets to 1 when filters, sorting or the month change. It sits **inside the table's surface**, as the categories table places it (§8.10) — `ledger-table.tsx` renders the table alone and the view composes the `Surface` around both. `TablePagination` owns that strip, its padding and the rule above it: the table body drops the last row's own bottom border, which in a table that ends its surface would land on the surface's edge. **It is always shown**, even on a single page: the rows-per-page select is how the page length is set, so hiding the row until the list outgrows that length would hide the only control that changes it.
 - **Empty state** (open but no entries): "Ei vielä kirjauksia" with "Uusi kirjaus" and "Avaa tiedosto".
 
 ### 8.5 Entry dialog (Uusi kirjaus / Muokkaa kirjausta / Kopio kirjaus)
@@ -495,10 +566,10 @@ Every section on this page is a `Panel` (§11).
   - One error line (`FieldError`) under the grid, and **the field it is about carries `aria-invalid`** — the error is stored as `{ field, message }`. A bad VAT rate used to light up the name input, because the message was a bare string with nowhere to point. Typing in the offending field clears it.
   - The typed values survive re-renders. Leaving the page with a typed but unadded name asks first.
 - **Categories table:**
-  - Search, a type filter, and a count.
-  - Sortable columns: Käytössä (checkbox), Tyyppi (badge), Tili, Nimi, and Oletus ALV % (an inline input that commits on change and shows a toast).
+  - Search and a type filter in the panel's heading row; the category count sits at the left of the pagination strip, as the entry count does on the ledger (§8.4).
+  - Sortable columns: Käytössä (checkbox), Tyyppi (badge), Tili, Nimi, and Oletus ALV % (an inline input that commits on change and shows a toast). They cycle in three states as on the ledger (§8.4); with none chosen the rows are in Tili order.
   - Delete is only offered for custom categories that no entry uses.
-  - Pagination with a default of 25 rows.
+  - Pagination with a default of 25 rows, laid out as on the ledger (§8.4).
 - **Two data panels, not one.** Restoring categories is reversible and routine; clearing the entries erases the bookkeeping from this browser. One shared section gave them the same visual weight, which is exactly wrong for the second.
   - "Tiedot" — a description of what restoring does, and "Palauta oletusluokat" (`outline`) on the footer. It restores the defaults and keeps custom categories that are in use.
   - A `variant="destructive"` panel titled "Tyhjennä kirjaukset", with "Tyhjennä" (`destructive`) on the footer. It deletes all entries (with a confirmation) and leaves the bookkeeping open but empty.
@@ -507,20 +578,23 @@ Every section on this page is a `Panel` (§11).
 
 Use one shared `AlertDialog`-based `confirm()` helper, with a title, a message, a destructive confirm button (red) and a cancel button. The cancel button can be relabelled, e.g. "Jatka muokkausta", and gets focus by default. Cases:
 
-| Trigger                                | Condition                       | Title / confirm label                                                     |
-| -------------------------------------- | ------------------------------- | ------------------------------------------------------------------------- |
-| Close file ("Sulje")                   | unexported changes              | "Suljetaanko tiedosto?" / "Sulje viemättä"                                |
-| Start new bookkeeping                  | unexported changes              | same as above                                                             |
-| Open a file over the current one       | unexported changes              | "Korvataanko avoin kirjanpito?" / "Korvaa"                                |
-| Delete an entry (row or dialog)        | always                          | "Poistetaanko kirjaus?" / "Poista"                                        |
-| Clear all entries                      | always                          | "Tyhjennetäänkö kirjaukset?" / "Tyhjennä"                                 |
-| Close the entry dialog (Peruuta / Esc) | form differs from its snapshot  | "Hylätäänkö muutokset?" / "Hylkää muutokset", cancel = "Jatka muokkausta" |
-| Navigate away from Settings            | the new-category name is filled | same as above, with the category message                                  |
-| Browser tab close (`beforeunload`)     | any of the above dirty states   | the browser's native prompt                                               |
+| Trigger                                | Condition                          | Title / confirm label                                                     |
+| -------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------- |
+| Close file ("Sulje tiedosto")          | unsaved changes                    | "Suljetaanko tiedosto?" / "Sulje tallentamatta"                           |
+| Start new bookkeeping                  | unsaved changes                    | same as above                                                             |
+| Open a file over the current one       | unsaved changes                    | "Korvataanko avoin kirjanpito?" / "Korvaa"                                |
+| Save over a file edited elsewhere      | its timestamp moved since we read it | "Korvataanko tiedosto?" / "Korvaa"                                      |
+| Delete an entry (row or dialog)        | always                             | "Poistetaanko kirjaus?" / "Poista"                                        |
+| Clear all entries                      | always                             | "Tyhjennetäänkö kirjaukset?" / "Tyhjennä"                                 |
+| Close the entry dialog (Peruuta / Esc) | form differs from its snapshot     | "Hylätäänkö muutokset?" / "Hylkää muutokset", cancel = "Jatka muokkausta" |
+| Navigate away from Settings            | the new-category name is filled    | same as above, with the category message                                  |
+| Browser tab close (`beforeunload`)     | any of the above dirty states      | the browser's native prompt                                               |
 
-**Dirty bookkeeping** means the entries changed since the last import or export. It is set by any add, edit or delete, and cleared by a successful export or an import.
+**Dirty bookkeeping** means the entries changed since the last read or write of a file. It is set by any add, edit or delete, and cleared by opening a file, by saving to the linked one, and by downloading a copy **only when no file is linked** (§7.5).
 
-Closing a file clears entries, the file name and filters, sets the bookkeeping to closed, garbage-collects receipts, and returns to the landing page.
+The wording everywhere is about saving rather than exporting, so one set of strings covers both ways of keeping the work. The row above that highlights this: the close confirmation is the same sentence whether the user saves to their own file or downloads a copy.
+
+Closing a file clears entries, the file name and filters, unlinks the file (§7.5), sets the bookkeeping to closed, garbage-collects receipts, and returns to the landing page.
 
 ---
 
@@ -645,16 +719,16 @@ The prototype split them, and the app follows:
   with it, and carries the ordinary `foreground` / `muted-foreground` text.
   Only in light mode is it the same warm tone as `--paper`.
 
-- **Type:** Geist (400–700) for everything, with tabular figures for numbers. Page titles are 26 px / 600 / −0.02 em. The landing headline is `clamp(38px, 5.4vw, 64px)` with tight leading (1.03) and −0.035 em tracking.
-- **Radii:** 6 px for inputs and buttons, 10 px for panels, 14 px for dialogs and large cards. Segmented controls and chips are pills.
-- **Control heights:** **36 px** is the default for a button, an input, a `Select` trigger and a segmented control, 32 px one step down (`size="sm"` / `icon-sm`) and 40 px one step up (`lg`). Each is a unit taller than the shadcn default, which was too tight for a form that is mostly amounts and dates. The scale is spelled out in four files — `button.tsx`, `input.tsx`, `select.tsx` and `toggle.tsx` — because each owns its own variants; **they are changed together or not at all**, or a row of mixed controls stops lining up. The sidebar's navigation rows keep shadcn's 32 px: they are a list, not a row of controls.
+- **Type:** **Geist is the app's only face** (400–700), with tabular figures for numbers. `HtmlShell` loads it and defines `--font-sans`; there is no `--font-mono`, and no monospace is loaded or wanted. One consequence worth knowing: Tailwind's preflight puts `code`, `kbd`, `samp` and `pre` in a mono stack of the browser's own, so **any such element needs `font-sans`** — the save shortcut's `<kbd>` carries it. Adding a monospace back means a `next/font` call, a `--font-mono` line in `globals.css`'s `@theme inline` block beside `--font-sans`, and dropping that override; without the theme line Tailwind keeps its generic stack and the loaded face goes unused. Page titles are 26 px / 600 / −0.02 em. The landing headline is `clamp(38px, 5.4vw, 64px)` with tight leading (1.03) and −0.035 em tracking.
+- **Radii:** 6 px for inputs and buttons, 10 px for panels, 14 px for dialogs and large cards. Segmented controls and the month chips take the button radius — they are buttons, and a pill among them would be the one control shaped unlike the rest. Only `Pill` itself and the status dot are fully round.
+- **Control heights:** **36 px** is the default for a button, an input, a `Select` trigger and a segmented control, 32 px one step down (`size="sm"` / `icon-sm`) and 40 px one step up (`lg`). Each is a unit taller than the shadcn default, which was too tight for a form that is mostly amounts and dates. The scale is spelled out in five files — `button.tsx`, `input.tsx`, `select.tsx`, `toggle.tsx` and `sidebar.tsx` — because each owns its own variants; **they are changed together or not at all**, or a row of mixed controls stops lining up. `sidebar.tsx` carries the scale as a `size="md"` on `SidebarMenuButton` (shadcn's own sizes are 28 / 32 / 48), which the navigation rows use; the brand button stays `lg`. Collapsed, every row is pinned back to 32 px so the icons sit on one grid in the 3 rem rail — `app-skeleton.tsx` draws the expanded height, so nothing shifts on rehydrate.
 - **Theme:** light ↔ dark from the top bar, defaulting to the system theme (§8.2).
 - **Responsive breakpoints:** 900 px (the sidebar becomes a sheet; dialogs stack) and 560 px (compact table and totals). 900 is also `MOBILE_BREAKPOINT` in `hooks/use-mobile.ts`, and the `min-[900px]:` that replaced shadcn's hard-coded `md:` inside `components/ui/sidebar.tsx` — the CSS and the JS have to flip on the same pixel.
 - **Accessibility:** visible focus rings, `aria-sort` on sortable headers, `aria-pressed` on toggles, `aria-label` on icon buttons, `prefers-reduced-motion` respected. The only motion is a short pop-in on dialogs.
 
 ### Suggested shadcn/ui mapping
 
-Sidebar → shadcn's `Sidebar` (with `Sheet`, `Tooltip` and `hooks/use-mobile.ts`), in `components/app/app-sidebar.tsx`. It was hand-written and the shadcn one deleted while the sidebar was a static panel; §8.2's collapse-to-icons and mobile sheet are exactly the machinery it provides, so it came back — the one local edit is the 900 px breakpoint. Language picker → `DropdownMenu`. Buttons → `Button` (variants default, outline, ghost, destructive). Segmented controls → `ToggleGroup`. Selects → `Select`. Entry, export and viewer dialogs → `Dialog`. Confirmations → `AlertDialog`. Tables → `Table`, hand-composed (see §2). Pagination → `components/common/table-pagination.tsx` ("Rows per page", "Page 1 of 2", «‹›»). Field errors → `FieldError` from `components/ui/field.tsx` — never a hand-rolled `<p className="text-sm text-destructive">`, and never without `aria-invalid` on the field the message is about. Toasts → `components/ui/toast.tsx` (see §2). FAQ → `Accordion`. Checkboxes → `Checkbox`. Inputs → `Input`. Chart → Recharts, used directly in `summary-view.tsx`; shadcn's `Chart` wrapper was removed. Use the shadcn/ui skill for component usage.
+Sidebar → shadcn's `Sidebar` (with `Sheet`, `Tooltip` and `hooks/use-mobile.ts`), in `components/app/app-sidebar.tsx`. It was hand-written and the shadcn one deleted while the sidebar was a static panel; §8.2's collapse-to-icons and mobile sheet are exactly the machinery it provides, so it came back — the local edits are the 900 px breakpoint, the `md` row size and the 15 rem width. Language picker → `DropdownMenu`. File menu → `Popover`, not `DropdownMenu`: it holds a year `Select`, and a select inside a menu fights the menu's own keyboard handling. Buttons → `Button` (variants default, outline, ghost, destructive). Segmented controls → `ToggleGroup`. Selects → `Select`. Entry, export and viewer dialogs → `Dialog`. Confirmations → `AlertDialog`. Tables → `Table`, hand-composed (see §2). Pagination → `components/common/table-pagination.tsx` ("Rows per page", "Page 1 of 2", «‹›»). Field errors → `FieldError` from `components/ui/field.tsx` — never a hand-rolled `<p className="text-sm text-destructive">`, and never without `aria-invalid` on the field the message is about. Toasts → `components/ui/toast.tsx` (see §2). FAQ → `Accordion`. Checkboxes → `Checkbox`. Inputs → `Input`. Chart → Recharts, used directly in `summary-view.tsx`; shadcn's `Chart` wrapper was removed. Use the shadcn/ui skill for component usage.
 
 ### One source of truth per element
 
@@ -663,13 +737,13 @@ Anything that appears in two views is a component in `components/common/`, takin
 | element                      | component                                                                                                                                                                                                                                                                    |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | every bordered box           | `surface.tsx` — `radius` (lg / xl) and `tone`. shadcn's `Card` is not used; it was deleted (§11)                                                                                                                                                                               |
-| a box with a ruled heading   | `panel.tsx`, built on `Surface`. `title`, `description` and `actions` are all optional — with none of them it is a bare box, which is what the totals strip and the VAT banner are. `footer` is a tinted strip for buttons acting on its contents; `variant="destructive"` is for an action that cannot be undone |
-| tables                       | `ui/table.tsx`. Row padding is the `density` prop — `"comfortable"` for the ledger, the default elsewhere — never a `[&_td]:` override at the call site. `Table` is already the horizontal scroller, so never wrap it in another `overflow-x-auto` |
+| a box with a ruled heading   | `panel.tsx`, built on `Surface`. `title`, `description` and `actions` are all optional — with none of them it is a bare box, which is what the totals cards and the VAT banner are. `footer` is a tinted strip for buttons acting on its contents; `variant="destructive"` is for an action that cannot be undone |
+| tables                       | `ui/table.tsx`. Row padding is the `density` prop — `"comfortable"` for the ledger, the default elsewhere — never a `[&_td]:` override at the call site. `Table` is already the horizontal scroller, so never wrap it in another `overflow-x-auto`. The header row is **56 px**, the height of the `TablePagination` strip under the table (a 32 px control row inside `py-3`): they are the table's two chrome rows and are changed together |
 | money                        | `money.tsx` — `Money` with `tone` / `signed`, `ZeroDash` for an absent amount. Only a string context (an interpolated message, a chart tick, `ReceiptRow`) calls `f.money` directly, and writes a minus with `MINUS`, never a literal |
 | a control that can be busy   | `busy-button.tsx` — `BusyButton` swaps the icon for a spinner and, with `busyLabel`, the label too; `BusyIcon` is the swap alone, for controls that are not `Button`s |
 | a link that looks like a button | `button-link.tsx` — a `next/link` wearing `buttonVariants`. `Button` enforces button semantics, so a link must never go through its `render` prop: it would announce `role="button"` on something that navigates |
 | small labels                 | `pill.tsx` — `tone` (neutral / income / expense) and `size`. shadcn's `Badge` is not used: `--destructive` means "error", not "expense" |
-| income or expense            | `filter-controls.tsx` — `EntryTypeToggle` (income first, coloured) and `TypeFilterToggle` (all / income / expense) |
+| income or expense            | `filter-controls.tsx` — `EntryTypeToggle` (income first, coloured, a form field) and `TypeFilterSelect` (all / income / expense, a toolbar filter) |
 | a full-screen scrim          | `overlay.tsx` — `blocking` is the whole difference between the import overlay and the drop hint |
 | a dashed "put a file here"   | `drop-tile.tsx` — owns the outline, hover, focus and disabled state; the caller gives it its shape |
 | the receipt motif            | `receipt-paper.tsx` — `ReceiptPaper` and its `Head` / `Rule` / `Row` / `Total` parts, shared by the entry preview and the landing hero |
@@ -682,7 +756,7 @@ Anything that appears in two views is a component in `components/common/`, takin
 
 `components/landing/og-image.tsx` is the one deliberate duplicate: Satori supports no CSS variables and no Tailwind, so the card restates the receipt in literal hex and inline flex. It cannot share anything above.
 
-**Only the components actually in use are kept.** `components/ui/` holds 22 files; `avatar`, `badge`, `breadcrumb`, `card`, `chart`, `drawer`, `scroll-area`, `sonner` and `tabs` were generated by the shadcn CLI, never imported, and deleted. (`dropdown-menu`, `sheet`, `sidebar` and `tooltip` were deleted too, then re-added for §8.2's shell.) Re-add any of them with `npx shadcn add <name>` if a use appears — do not keep unused ones around on spec. `card` and `badge` are the exceptions that stay out: `Surface` and `Pill` cover them with the variants this app actually needs, and the table above says why.
+**Only the components actually in use are kept.** `components/ui/` holds 23 files; `avatar`, `badge`, `breadcrumb`, `card`, `chart`, `drawer`, `scroll-area`, `sonner` and `tabs` were generated by the shadcn CLI, never imported, and deleted. (`dropdown-menu`, `sheet`, `sidebar` and `tooltip` were deleted too, then re-added for §8.2's shell, which also brought in `popover`.) Re-add any of them with `npx shadcn add <name>` if a use appears — do not keep unused ones around on spec. `card` and `badge` are the exceptions that stay out: `Surface` and `Pill` cover them with the variants this app actually needs, and the table above says why.
 
 ---
 
@@ -875,6 +949,12 @@ before any file is open, and must not read or write `bookkeeping` to get it.
   seeding only a key that is still empty — the separate key is the newer truth.
 - IndexedDB `bookkeeping-receipts`, store `files`: receipt Blobs keyed by
   attachment id.
+- IndexedDB `bookkeeping-file`, store `handle`, key `book`: the
+  `FileSystemFileHandle` of the opened file (§7.5). Its own database, because
+  adding a second object store to the one above would mean a version upgrade.
+  It is **not** in the localStorage blob — a handle is not JSON — so
+  `AppShell` restores it by hand once the book has rehydrated, and both ways
+  of leaving a bookkeeping delete it.
 - **sessionStorage is not used.**
 
 `stores/storage.test.ts` covers all of this: the landing-page visit that
@@ -907,6 +987,7 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 - [ ] The §10 fixture gives the figures in §10.
 - [ ] Exporting a CSV and importing it back reproduces the same entries (including custom categories and the `syotto` mode).
 - [ ] Exporting a ZIP with receipts and importing it back restores the receipts. A plain CSV import keeps their paths as missing.
+- [ ] On Chrome, a file opened through the picker saves back to itself, survives a reload, and asks before overwriting a file edited elsewhere (§7.5). On Firefox and Safari the save row is absent and nothing else changes.
 - [ ] Every confirmation in §8.11 appears in the right situations, and only then.
 - [ ] No `window.confirm` / `alert` anywhere.
 - [ ] Currency is shown in Finnish format in both languages.
@@ -917,5 +998,7 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 
 - VAT rate suggestions or validation by entry date (§5).
 - Confirming the income statement rules with the user against form 5 (§6.3).
-- Whether to remember a last-used file name, and whether to support the File System Access API to save over the same file.
+- Whether to remember a last-used file name for the download dialog's default (§7.3).
+- Carrying a handle through drag and drop with `DataTransferItem.getAsFileSystemHandle()`, so a dropped file is savable too (§7.5).
+- Autosave on a debounce, once the explicit save of §7.5 has proved itself. Deliberately not done first: a reload needs a gesture to regrant write permission, there is no undo, and packing a ZIP of receipts is not instant.
 - Possibly importing categories from, or exporting them to, the file (currently they live only in the browser; unknown categories are recreated on import).

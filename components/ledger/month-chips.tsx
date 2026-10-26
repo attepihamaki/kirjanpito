@@ -44,8 +44,13 @@ export function MonthChips() {
             type="button"
             aria-pressed={selected}
             onClick={() => setMonth(chip.value)}
+            /*
+             * A button in every dimension (§11): 36 px tall and `rounded-lg`,
+             * so the chip row and the toolbar below it read as one scale and
+             * one shape.
+             */
             className={cn(
-              "shrink-0 rounded-full border px-3 py-1 text-sm whitespace-nowrap transition-colors",
+              "inline-flex h-9 shrink-0 items-center rounded-lg border px-3 text-sm whitespace-nowrap transition-colors",
               "focus-ring",
               selected
                 ? "border-primary bg-primary font-medium text-primary-foreground"

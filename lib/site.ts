@@ -47,11 +47,10 @@ export const INDEXABLE = false
 export const LANDING = "/"
 
 /**
- * The landing page's FAQ, which the app's sidebar links back to. The id is
- * English like the routes, because it is an address rather than a label.
+ * The landing page's FAQ section. The id is English like the routes, because
+ * it is an address rather than a label.
  */
 export const LANDING_FAQ_ID = "faq"
-export const LANDING_FAQ = `${LANDING}#${LANDING_FAQ_ID}`
 
 /**
  * The bookkeeping app. Everything under /app is noindex and renders nothing

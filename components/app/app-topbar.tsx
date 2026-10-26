@@ -2,6 +2,7 @@
 
 import { PanelLeftIcon } from "lucide-react"
 
+import { FileMenu } from "@/components/app/file-menu"
 import { LangToggle } from "@/components/app/lang-toggle"
 import { ThemeToggle } from "@/components/app/theme-toggle"
 import { Button } from "@/components/ui/button"
@@ -10,17 +11,24 @@ import { useT } from "@/components/lang-provider"
 
 /**
  * The bar across the top of every app view (§8.2), laid out like FormBox's
- * `AppHeader`: `h-14`, the sidebar toggle on the left, the preferences pushed
- * right, every control 32 px tall. No rule below it — the sidebar's own
- * border already separates the chrome from the page.
+ * `AppHeader`: `h-14`, the sidebar toggle on the left, the file and the
+ * preferences pushed right, every control 36 px tall. No rule below it — the
+ * sidebar's own border already separates the chrome from the page.
  *
- * Only what is the same on every view lives here. The year and the file are
- * in the sidebar, next to each other, since the year is read out of the file.
+ * Only what is the same on every view lives here. The file qualifies: it is
+ * what every view is a reading of, and it stays one button wide by keeping its
+ * controls in a popover.
  *
  * One bar serves every width; below 900 px the sidebar becomes a sheet rather
  * than the app growing a second header.
  */
-export function AppTopbar() {
+export function AppTopbar({
+  onOpenFile,
+  onExport,
+}: {
+  onOpenFile: () => void
+  onExport: () => void
+}) {
   const t = useT()
   const { toggleSidebar } = useSidebar()
 
@@ -43,6 +51,7 @@ export function AppTopbar() {
         <div className="ml-auto flex items-center gap-2">
           <ThemeToggle />
           <LangToggle />
+          <FileMenu onOpenFile={onOpenFile} onExport={onExport} />
         </div>
       </div>
     </header>

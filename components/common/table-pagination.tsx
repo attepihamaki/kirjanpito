@@ -16,22 +16,26 @@ const SIZES: PageSize[] = [10, 25, 50, 100]
 const SIZE_OPTIONS = SIZES.map((s) => ({ value: String(s), label: String(s) }))
 
 /**
- * "Rivejä sivulla", "Sivu 1 / 2" and « ‹ › » (§8.4).
+ * The row count, "Rivejä sivulla", "Sivu 1 / 2" and « ‹ › » (§8.4).
  *
- * It carries no margin of its own: one caller sits it inside a panel and the
- * other below a table in a spaced column, so the space around it belongs to
- * whichever of them is placing it.
+ * It is the strip at the foot of a table's surface, so it owns that strip: the
+ * padding and the rule that separates it from the last row. The table body
+ * drops its own last border, which would otherwise land on the surface's
+ * bottom edge in the tables that end there.
  */
 export function TablePagination({
   page,
   pages,
   size,
+  count,
   onPageChange,
   onSizeChange,
 }: {
   page: number
   pages: number
   size: PageSize
+  /** How many rows the filters left, e.g. "16 kirjausta". */
+  count?: string
   onPageChange: (page: number) => void
   onSizeChange: (size: PageSize) => void
 }) {
@@ -40,7 +44,13 @@ export function TablePagination({
   const last = page >= pages
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
+    /* The count holds the left-hand end and the two control groups the right,
+       so the strip reads as "what you are looking at" / "how to move". */
+    <div className="flex flex-wrap items-center justify-end gap-x-6 gap-y-3 border-t px-4 py-3">
+      {count ? (
+        <span className="mr-auto text-sm text-muted-foreground">{count}</span>
+      ) : null}
+
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">
           {t("table.rowsPerPage")}

@@ -2,6 +2,7 @@
 
 import { SearchIcon } from "lucide-react"
 
+import { OptionSelect } from "@/components/common/option-select"
 import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useT } from "@/components/lang-provider"
@@ -31,7 +32,10 @@ export function SearchInput({
   className?: string
 }) {
   return (
-    <div className={cn("relative min-w-[12rem] flex-1", className)}>
+    /* A fixed box rather than one that grows into the row: the queries here
+       are a word or two, and a search field stretched across a toolbar reads
+       as the page's main control. */
+    <div className={cn("relative w-[20rem] max-w-full", className)}>
       <SearchIcon
         aria-hidden="true"
         className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
@@ -85,32 +89,36 @@ export function EntryTypeToggle({
   )
 }
 
-/** All / income / expenses. */
-export function TypeFilterToggle({
+/**
+ * All / income / expenses, as a select.
+ *
+ * A segmented control here would be the one toolbar control shaped unlike the
+ * filters beside it, and it grows with the language: "Expenses" is wider than
+ * "Kulut". `EntryTypeToggle` stays segmented because it is a form field with
+ * two choices, not a filter.
+ */
+export function TypeFilterSelect({
   value,
   onChange,
+  className,
 }: {
   value: TypeFilter
   onChange: (value: TypeFilter) => void
+  className?: string
 }) {
   const t = useT()
 
   return (
-    <ToggleGroup
-      aria-label={t("common.typeFilter")}
-      value={[value]}
-      onValueChange={(next) => {
-        const picked = next[0]
-        if (picked) onChange(picked as TypeFilter)
-      }}
-    >
-      <ToggleGroupItem value="all">{t("common.all")}</ToggleGroupItem>
-      <ToggleGroupItem value="income">
-        {t("common.incomePlural")}
-      </ToggleGroupItem>
-      <ToggleGroupItem value="expense">
-        {t("common.expensePlural")}
-      </ToggleGroupItem>
-    </ToggleGroup>
+    <OptionSelect
+      options={[
+        { value: "all", label: t("common.allTypes") },
+        { value: "income", label: t("common.incomePlural") },
+        { value: "expense", label: t("common.expensePlural") },
+      ]}
+      value={value}
+      onChange={(next) => onChange(next as TypeFilter)}
+      label={t("common.typeFilter")}
+      className={cn("w-[10rem]", className)}
+    />
   )
 }

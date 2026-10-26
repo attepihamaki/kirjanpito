@@ -142,7 +142,7 @@ export interface LedgerTotals {
   due: Cents
 }
 
-/** The three figures in the ledger's totals strip (§6.2). */
+/** The three figures in the ledger's totals cards (§6.2). */
 export function ledgerTotals(
   entries: readonly Entry[],
   cats: CategoryMap

@@ -28,9 +28,46 @@ export interface SortState<K extends string> {
 }
 
 export type LedgerSortKey =
-  "date" | "description" | "category" | "net" | "vat" | "gross"
+  | "date"
+  | "type"
+  | "description"
+  | "category"
+  | "net"
+  | "vat"
+  | "gross"
 
 export type CatSortKey = "enabled" | "side" | "account" | "name" | "vatRate"
+
+/**
+ * The order a table falls back to while no column is chosen — a `null` sort
+ * state (§8.4). The sorting itself lives with the rows, so these are read
+ * where the list is built, not where a header is clicked.
+ */
+export const LEDGER_SORT_DEFAULT: SortState<LedgerSortKey> = {
+  key: "date",
+  dir: 1,
+}
+export const CAT_SORT_DEFAULT: SortState<CatSortKey> = {
+  key: "account",
+  dir: 1,
+}
+
+/**
+ * A column header cycles ascending → descending → no column chosen, so every
+ * sort can be undone. The third state is `null` rather than the default order
+ * spelled out: the column that order follows would otherwise never leave its
+ * two directions, since returning to the default *is* that column ascending.
+ * With `null`, every header reaches ⇅ and the rows fall back to the table's
+ * own order.
+ */
+function nextSort<K extends string>(
+  current: SortState<K> | null,
+  key: K
+): SortState<K> | null {
+  if (current?.key !== key) return { key, dir: 1 }
+  if (current.dir === 1) return { key, dir: -1 }
+  return null
+}
 
 export type DialogState =
   | { kind: "none" }
@@ -70,15 +107,31 @@ export interface BookState {
    * interleaving two `replaceBook` calls.
    */
   importing: boolean
+  /**
+   * The file this bookkeeping can be written back to (§7.5), or null when it
+   * can't be — no File System Access API, or the file arrived through an
+   * `<input>` or a drop, neither of which yields a handle. Never persisted to
+   * localStorage: a handle is not JSON. It lives in IndexedDB instead and
+   * `StoreHydrator` puts it back.
+   */
+  fileHandle: FileSystemFileHandle | null
+  /**
+   * What `fileHandle` held when this bookkeeping was last read or written, so
+   * a save can tell whether something else has touched the file since.
+   */
+  savedAt: number | null
+  /** A save is in flight: packing a ZIP of receipts is not instant. */
+  saving: boolean
   month: MonthFilter
   ledgerQuery: string
   ledgerType: TypeFilter
   ledgerCat: string
-  ledgerSort: SortState<LedgerSortKey>
+  /** The column a header click chose, or null for the table's own order. */
+  ledgerSort: SortState<LedgerSortKey> | null
   ledgerPage: number
   catQuery: string
   catType: TypeFilter
-  catSort: SortState<CatSortKey>
+  catSort: SortState<CatSortKey> | null
   catPage: number
   vatMode: VatMode
   vatIndex: number
@@ -101,15 +154,25 @@ export interface BookActions {
     fileName: string | null
     year: number
     dirty: boolean
+    fileHandle: FileSystemFileHandle | null
+    savedAt: number | null
   }): void
   upsertEntry(entry: Entry): void
   removeEntry(id: string): void
   clearEntries(): void
   setYear(year: number): void
   setFileName(name: string | null): void
-  markExported(fileName: string | null): void
+  /** Clear the dirty flag: the bookkeeping now exists in a file (§7.5). */
+  markSaved(next: {
+    fileName: string | null
+    fileHandle?: FileSystemFileHandle | null
+    savedAt?: number | null
+  }): void
+  /** Drop the link to the file without touching the bookkeeping (§7.5). */
+  forgetFileHandle(): void
   setSidebarOpen(open: boolean): void
   setImporting(importing: boolean): void
+  setSaving(saving: boolean): void
   setLastEntryDefaults(next: { mode: AmountMode; type: EntryType }): void
 
   upsertCategory(category: Category): void
@@ -163,15 +226,18 @@ function initialState(): BookState {
     hydrated: false,
     storageAvailable: true,
     importing: false,
+    fileHandle: null,
+    savedAt: null,
+    saving: false,
     month: 0,
     ledgerQuery: "",
     ledgerType: "all",
     ledgerCat: "all",
-    ledgerSort: { key: "date", dir: 1 },
+    ledgerSort: null,
     ledgerPage: 1,
     catQuery: "",
     catType: "all",
-    catSort: { key: "account", dir: 1 },
+    catSort: null,
     catPage: 1,
     vatMode: "month",
     vatIndex: new Date().getMonth() + 1,
@@ -237,6 +303,17 @@ const bookStorage: PersistStorage<PersistedBook> = {
   },
 }
 
+/**
+ * No file behind this bookkeeping any more. Closing or starting fresh must
+ * drop the handle as well as the name, or the next save would write the new
+ * bookkeeping over the old file.
+ */
+const unlinked = {
+  fileName: null,
+  fileHandle: null,
+  savedAt: null,
+}
+
 /** Reset the filters that would otherwise survive a file switch (§8.11). */
 const clearedFilters = {
   month: 0,
@@ -259,21 +336,21 @@ export const useBookStore = create<BookStore>()(
       newBook: (year) =>
         set({
           ...clearedFilters,
+          ...unlinked,
           open: true,
           entries: [],
           year,
           dirty: false,
-          fileName: null,
           gcTick: get().gcTick + 1,
         }),
 
       closeBook: () =>
         set({
           ...clearedFilters,
+          ...unlinked,
           open: false,
           entries: [],
           dirty: false,
-          fileName: null,
           dialog: { kind: "none" },
           draftAttachmentIds: [],
           gcTick: get().gcTick + 1,
@@ -286,6 +363,8 @@ export const useBookStore = create<BookStore>()(
           entries: next.entries,
           cats: next.cats,
           fileName: next.fileName,
+          fileHandle: next.fileHandle,
+          savedAt: next.savedAt,
           year: next.year,
           dirty: next.dirty,
           gcTick: get().gcTick + 1,
@@ -316,9 +395,18 @@ export const useBookStore = create<BookStore>()(
 
       setYear: (year) => set({ year, ledgerPage: 1 }),
       setFileName: (fileName) => set({ fileName }),
-      markExported: (fileName) => set({ dirty: false, fileName }),
+      markSaved: ({ fileName, fileHandle, savedAt }) =>
+        set({
+          dirty: false,
+          fileName,
+          // Downloading a copy leaves the linked file where it was.
+          ...(fileHandle !== undefined ? { fileHandle } : {}),
+          ...(savedAt !== undefined ? { savedAt } : {}),
+        }),
+      forgetFileHandle: () => set({ fileHandle: null, savedAt: null }),
       setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
       setImporting: (importing) => set({ importing }),
+      setSaving: (saving) => set({ saving }),
       setLastEntryDefaults: ({ mode, type }) =>
         set({ lastMode: mode, lastType: type }),
 
@@ -352,16 +440,8 @@ export const useBookStore = create<BookStore>()(
       setLedgerQuery: (ledgerQuery) => set({ ledgerQuery, ledgerPage: 1 }),
       setLedgerType: (ledgerType) => set({ ledgerType, ledgerPage: 1 }),
       setLedgerCat: (ledgerCat) => set({ ledgerCat, ledgerPage: 1 }),
-      toggleLedgerSort: (key) => {
-        const current = get().ledgerSort
-        set({
-          ledgerSort:
-            current.key === key
-              ? { key, dir: current.dir === 1 ? -1 : 1 }
-              : { key, dir: 1 },
-          ledgerPage: 1,
-        })
-      },
+      toggleLedgerSort: (key) =>
+        set({ ledgerSort: nextSort(get().ledgerSort, key), ledgerPage: 1 }),
       setLedgerPage: (ledgerPage) => set({ ledgerPage }),
       setLedgerSize: (ledgerSize) => set({ ledgerSize, ledgerPage: 1 }),
       clearLedgerFilters: () =>
@@ -374,16 +454,8 @@ export const useBookStore = create<BookStore>()(
 
       setCatQuery: (catQuery) => set({ catQuery, catPage: 1 }),
       setCatType: (catType) => set({ catType, catPage: 1 }),
-      toggleCatSort: (key) => {
-        const current = get().catSort
-        set({
-          catSort:
-            current.key === key
-              ? { key, dir: current.dir === 1 ? -1 : 1 }
-              : { key, dir: 1 },
-          catPage: 1,
-        })
-      },
+      toggleCatSort: (key) =>
+        set({ catSort: nextSort(get().catSort, key), catPage: 1 }),
       setCatPage: (catPage) => set({ catPage }),
       setCatSize: (ctSize) => set({ ctSize, catPage: 1 }),
 

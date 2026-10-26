@@ -131,7 +131,7 @@ statically; `io-commands.ts` is loaded with `await import()` because it pulls in
 **`components` — rendering.** Views select narrow slices of the store and call
 selectors. Tables are hand-composed on shadcn's `Table`: sorting, filtering and
 pagination live in the store because the toolbar, the month chips and the
-totals strip all read the same state, which would leave a table adapter owning
+totals cards all read the same state, which would leave a table adapter owning
 nothing.
 
 A few deliberate choices worth knowing before changing things:

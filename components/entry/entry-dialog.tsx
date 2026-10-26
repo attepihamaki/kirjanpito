@@ -37,7 +37,7 @@ import { isoDate, monthOf, todayIso, yearOf } from "@/lib/domain/dates"
 import { uid } from "@/lib/domain/id"
 import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
 import { deleteEntry } from "@/lib/commands/book-commands"
-import { categorySide } from "@/stores/selectors"
+import { categoryAccount, categorySide } from "@/stores/selectors"
 import type {
   AmountMode,
   Attachment,
@@ -257,8 +257,13 @@ function EntryDialogForm({
         // The entry's own category stays listed even when disabled (§8.5).
         return c.enabled || c.id === form.catId
       })
-      .sort((a, b) =>
-        f.collator.compare(categoryName(a, f.lang), categoryName(b, f.lang))
+      /* By account number, as the settings table lists them (§8.10), with the
+       * name deciding the several categories that share one account.
+       */
+      .sort(
+        (a, b) =>
+          categoryAccount(a) - categoryAccount(b) ||
+          f.collator.compare(categoryName(a, f.lang), categoryName(b, f.lang))
       )
   }, [cats, form.type, form.catId, f.collator, f.lang])
 

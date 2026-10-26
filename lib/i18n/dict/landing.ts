@@ -26,7 +26,7 @@ export const LANDING_DICT = {
   "app.themeDark": ["Tumma teema", "Dark theme"],
   "file.open": ["Avaa tiedosto", "Open file"],
   "file.untitled": ["Uusi kirjanpito", "New bookkeeping"],
-  "file.dirty": ["Muutoksia, joita ei ole viety", "Changes not exported yet"],
+  "file.dirty": ["Tallentamattomia muutoksia", "Unsaved changes"],
   "ledger.entryCount": [
     pl("1 kirjaus", "{n} kirjausta"),
     pl("1 entry", "{n} entries"),
@@ -76,7 +76,7 @@ export const LANDING_DICT = {
     "ALV-laskelma kuukaudelle, neljännekselle tai vuodelle ja tuloslaskelma lomakkeen 5 rivijaolla.",
     "VAT return for a month, quarter or year, and an income statement laid out like form 5.",
   ],
-  "landing.step4Title": ["Vie CSV-tiedostoksi", "Export to CSV"],
+  "landing.step4Title": ["Tallenna tiedostoon", "Save to a file"],
   "landing.step4": [
     "Tallenna kirjanpito koneellesi. Tositteet pakataan samaan ZIP-tiedostoon vuoden ja kuukauden mukaan.",
     "Save your bookkeeping to your computer. Receipts are packed into the same ZIP file by year and month.",
@@ -142,8 +142,8 @@ export const LANDING_DICT = {
     "What happens if I close the browser?",
   ],
   "landing.a4": [
-    "Kirjaukset säilyvät tässä selaimessa, kunnes suljet tiedoston tai tyhjennät selaimen tiedot. Vie CSV-tiedosto säännöllisesti, niin kirjanpitosi on aina tallessa.",
-    "Entries stay in this browser until you close the file or clear your browser data. Export the CSV regularly so your bookkeeping is always safe.",
+    "Kirjaukset säilyvät tässä selaimessa, kunnes suljet tiedoston tai tyhjennät selaimen tiedot. Tallenna työsi tiedostoon säännöllisesti, niin kirjanpitosi on aina tallessa. Chromessa ja Edgessä sovellus kirjoittaa suoraan avaamaasi tiedostoon; muissa selaimissa lataat kopion.",
+    "Entries stay in this browser until you close the file or clear your browser data. Save your work to a file regularly so your bookkeeping is always safe. In Chrome and Edge the app writes straight back to the file you opened; in other browsers you download a copy.",
   ],
 
   "landing.endTitle": [

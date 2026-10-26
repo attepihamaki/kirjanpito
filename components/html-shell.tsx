@@ -1,12 +1,12 @@
-import { Geist, Geist_Mono } from "next/font/google"
+import { Geist } from "next/font/google"
 
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toast"
 import { ConfirmDialogHost } from "@/components/confirm-dialog-host"
 import { cn } from "@/lib/utils"
 
+/* Geist is the app's only face (§11), so only `--font-sans` is defined. */
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" })
-const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
 
 /**
  * The `<html>` and `<body>` shell.
@@ -22,7 +22,7 @@ export function HtmlShell({ children }: { children: React.ReactNode }) {
     <html
       lang="fi"
       suppressHydrationWarning
-      className={cn("antialiased", geist.variable, geistMono.variable)}
+      className={cn("antialiased", geist.variable)}
     >
       <body className="font-sans">
         <ThemeProvider>

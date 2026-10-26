@@ -1,6 +1,7 @@
 import { toast } from "@/components/ui/toast"
 
 import { releaseAllObjectUrls } from "@/lib/browser/object-urls"
+import { rememberHandle } from "@/lib/browser/file-handle"
 import type { Entry } from "@/lib/domain/types"
 import { LANDING, APP_ROUTES } from "@/lib/site"
 import { confirm } from "@/lib/ui/confirm"
@@ -15,7 +16,18 @@ import { useBookStore } from "@/stores/book-store"
  * rendered, SEO-critical bundle.
  */
 
-/** Ask before discarding unexported changes (§8.11). False aborts. */
+/**
+ * Forget the file this bookkeeping was linked to (§7.5), in the store and in
+ * IndexedDB. Both ways of leaving a bookkeeping behind go through here: the
+ * stored handle outlives a reload, so a new book that skipped this step would
+ * find the old file waiting and save itself over it.
+ */
+async function unlinkFile(): Promise<void> {
+  useBookStore.getState().forgetFileHandle()
+  await rememberHandle(null)
+}
+
+/** Ask before discarding unsaved changes (§8.11). False aborts. */
 export async function guardDirty(
   ctx: Ctx,
   replacing: boolean
@@ -39,6 +51,7 @@ export async function guardDirty(
 export async function startNewBook(ctx: Ctx): Promise<void> {
   if (!(await guardDirty(ctx, false))) return
   releaseAllObjectUrls()
+  await unlinkFile()
   useBookStore.getState().newBook(new Date().getFullYear())
   ctx.navigate(APP_ROUTES.ledger)
 }
@@ -46,6 +59,7 @@ export async function startNewBook(ctx: Ctx): Promise<void> {
 export async function closeBook(ctx: Ctx): Promise<void> {
   if (!(await guardDirty(ctx, false))) return
   releaseAllObjectUrls()
+  await unlinkFile()
   useBookStore.getState().closeBook()
   toast.add({ title: ctx.t("file.closed") })
   ctx.navigate(LANDING)

@@ -4,10 +4,14 @@ import * as React from "react"
 import { cn } from "cn"
 
 /*
- * `density` is the one local edit to this file. Row padding is set here so
- * every table in the app draws from the same two values: "default" for the
- * dense reference tables, "comfortable" for a ledger that is scanned down a
- * single column.
+ * Two local edits to this file. `density` sets row padding here so every
+ * table in the app draws from the same two values: "default" for the dense
+ * reference tables, "comfortable" for a ledger that is scanned down a single
+ * column. And `TableHead` is 56 px rather than shadcn's 40, matching the
+ * `TablePagination` strip at the foot of a table — the header and that strip
+ * are the table's two chrome rows and read as one band only if they are the
+ * same height. The strip is a 32 px control row inside `py-3`, so a change to
+ * either height has to be made in both places.
  *
  * The container is already the horizontal scroller, so a call site must not
  * add another `overflow-x-auto` around it — the outer one would never scroll
@@ -89,7 +93,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0",
+        "h-14 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0",
         className
       )}
       {...props}

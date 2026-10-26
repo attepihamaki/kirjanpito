@@ -1,35 +1,26 @@
 "use client"
 
 import Link from "next/link"
-import { CircleHelpIcon } from "lucide-react"
 
 import { AppNav } from "@/components/app/app-nav"
-import { FileBox } from "@/components/app/file-box"
 import { BrandMark } from "@/components/common/brand-mark"
 import {
   Sidebar,
   SidebarContent,
-  SidebarGroup,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { useT } from "@/components/lang-provider"
-import { LANDING, LANDING_FAQ } from "@/lib/site"
+import { LANDING } from "@/lib/site"
 
 /**
- * Brand, the financial year, the open file, and navigation (§8.2).
- * Collapsing to icons leaves a rail of 32 px icons with tooltips; `FileBox`
- * swaps itself for one so no action is lost.
+ * Brand and navigation (§8.2). Everything here is a menu row, so collapsing to
+ * icons loses nothing but the words: the file and the financial year live in
+ * the top bar's `FileMenu`, which is one button wide at every width.
  */
-export function AppSidebar({
-  onOpenFile,
-  onExport,
-}: {
-  onOpenFile: () => void
-  onExport: () => void
-}) {
+export function AppSidebar() {
   const t = useT()
 
   return (
@@ -63,41 +54,8 @@ export function AppSidebar({
       </SidebarHeader>
 
       <SidebarContent>
-        <FileBox onOpenFile={onOpenFile} onExport={onExport} />
         <AppNav />
-        <SidebarHelp />
       </SidebarContent>
     </Sidebar>
-  )
-}
-
-/**
- * Pinned to the bottom with `mt-auto`, the way FormBox's sidebar holds its
- * support links: a route back to the landing page's FAQ, and §1's disclaimer
- * where the figures are actually entered.
- *
- * The disclaimer is text, not a menu row, so the rail drops it and keeps the
- * link — the same rule `FileBox` follows when it collapses.
- */
-function SidebarHelp() {
-  const t = useT()
-
-  return (
-    <SidebarGroup className="mt-auto">
-      <SidebarMenu className="gap-0.5">
-        <SidebarMenuItem>
-          <SidebarMenuButton
-            tooltip={t("nav.help")}
-            render={<Link href={LANDING_FAQ} />}
-          >
-            <CircleHelpIcon />
-            <span>{t("nav.help")}</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
-      <p className="px-2 pt-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-        {t("landing.footer")}
-      </p>
-    </SidebarGroup>
   )
 }

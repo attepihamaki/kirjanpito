@@ -62,6 +62,16 @@ function LandingBody() {
   const ctx = useCommandCtx()
   const inputRef = React.useRef<HTMLInputElement>(null)
 
+  /*
+   * §7.5: the picker hands back a handle the bookkeeping can later be saved
+   * to, which the hidden input below cannot. Both load io-commands lazily, so
+   * jszip and papaparse stay out of this bundle (§11b).
+   */
+  const pickFile = async () => {
+    const io = await import("@/lib/commands/io-commands")
+    if (!(await io.pickAndOpenFile(ctx))) inputRef.current?.click()
+  }
+
   return (
     <div className="flex min-h-svh flex-col">
       <input
@@ -84,7 +94,7 @@ function LandingBody() {
       <SiteHeader home={LANDING}>
         <ThemeToggle />
         <LangToggle />
-        <OpenOrContinue onPick={() => inputRef.current?.click()} compact />
+        <OpenOrContinue onPick={() => void pickFile()} compact />
       </SiteHeader>
 
       <main className="flex-1">
@@ -93,7 +103,7 @@ function LandingBody() {
           <div className="flex flex-col justify-center">
             <DisplayHeading>{f.t("landing.title")}</DisplayHeading>
             <Lead className="mt-5">{f.t("landing.lead")}</Lead>
-            <HeroCta onPick={() => inputRef.current?.click()} />
+            <HeroCta onPick={() => void pickFile()} />
           </div>
           <LandingReceipts />
         </section>
@@ -231,7 +241,7 @@ function LandingBody() {
           <Surface radius="xl" className="px-6 py-10 text-center">
             <SectionHeading>{f.t("landing.endTitle")}</SectionHeading>
             <HeroCta
-              onPick={() => inputRef.current?.click()}
+              onPick={() => void pickFile()}
               className="justify-center"
             />
           </Surface>

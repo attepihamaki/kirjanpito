@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
  * sales" list, the summary grids and the settings sections all use.
  *
  * The heading is optional. A panel with no title, no actions and no
- * description is a plain bordered box, which is what the totals strip and the
+ * description is a plain bordered box, which is what the totals cards and the
  * VAT result banner are; giving them the same component keeps every card in
  * the app one radius, one border and one fill.
  *

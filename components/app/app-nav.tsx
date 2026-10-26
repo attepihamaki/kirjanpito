@@ -55,6 +55,7 @@ export function AppNav() {
             return (
               <SidebarMenuItem key={href}>
                 <SidebarMenuButton
+                  size="md"
                   isActive={active}
                   tooltip={label}
                   render={
