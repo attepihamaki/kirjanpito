@@ -19,7 +19,7 @@ import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { availableReceiptCount } from "@/lib/commands/book-commands"
 import { exportBook } from "@/lib/commands/io-commands"
-import { defaultFileBaseName } from "@/lib/domain/receipt-path"
+import { suggestedBaseName } from "@/lib/domain/receipt-path"
 import { useBookStore } from "@/stores/book-store"
 
 /** §7.3: edit the base name; the extension is fixed and shown beside it. */
@@ -44,16 +44,15 @@ function ExportDialogForm({ onClose }: { onClose: () => void }) {
     [entries]
   )
 
-  /*
-   * §7.3: the default always uses today’s date. The last used name is shown
-   * in the sidebar but is not reused here.
-   */
-  const [name, setName] = React.useState(() => defaultFileBaseName(f.lang))
+  // §7.3: the last file's name, or the dated default for a book with none.
+  const [name, setName] = React.useState(() =>
+    suggestedBaseName(useBookStore.getState().fileName, f.lang)
+  )
   const [csvOnly, setCsvOnly] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
 
-  const withReceipts = receiptCount > 0 && !csvOnly
-  const extension = withReceipts ? ".zip" : ".csv"
+  // A bookkeeping is a ZIP; a bare CSV is the one export that is not (§7.6).
+  const extension = csvOnly ? ".csv" : ".zip"
 
   const run = async () => {
     setBusy(true)
@@ -92,25 +91,25 @@ function ExportDialogForm({ onClose }: { onClose: () => void }) {
             </div>
           </Field>
 
-          {receiptCount > 0 ? (
-            <Field orientation="horizontal">
-              <Checkbox
-                id="export-csv-only"
-                checked={csvOnly}
-                onCheckedChange={(checked) => setCsvOnly(checked === true)}
-              />
-              <FieldLabel htmlFor="export-csv-only" className="font-normal">
-                {f.t("io.csvOnly")}
-              </FieldLabel>
-            </Field>
-          ) : null}
+          <Field orientation="horizontal">
+            <Checkbox
+              id="export-csv-only"
+              checked={csvOnly}
+              onCheckedChange={(checked) => setCsvOnly(checked === true)}
+            />
+            <FieldLabel htmlFor="export-csv-only" className="font-normal">
+              {f.t("io.csvOnly")}
+            </FieldLabel>
+          </Field>
         </FieldGroup>
 
         <p className="text-xs text-muted-foreground">
-          {withReceipts
-            ? f.t("io.zipHint", { n: receiptCount })
-            : f.t("io.exportHint")}
-          {receiptCount > 0 && csvOnly ? ` ${f.t("io.csvOnlyHint")}` : ""}
+          {f.t("io.exportHint")}{" "}
+          {csvOnly
+            ? f.t("io.csvOnlyHint")
+            : receiptCount > 0
+              ? f.t("io.zipHint", { n: receiptCount })
+              : f.t("io.zipHintNoReceipts")}
         </p>
 
         <DialogFooter>

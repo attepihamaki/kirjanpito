@@ -23,8 +23,8 @@ The app does not file anything and is not tax advice. A short disclaimer to this
 
 There is **no backend, no account and no database**. The user opens their bookkeeping from a file, works on it in the browser, and writes it back to a file.
 
-- Without receipts, the file is a **CSV**.
-- With receipts attached, the file is a **ZIP** containing the CSV and the receipt files, in folders by year and month.
+- The file is a **ZIP**: the entries as a CSV, a `settings.json` with everything else that belongs to the bookkeeping (§7.6), and the receipt files in folders by year and month.
+- A bare **CSV** is still read, and can still be downloaded on request, but it holds the entries only.
 - Where the browser allows it, the app **saves straight back to the file that was opened** (§7.5). Where it does not, the user **downloads a copy**. Either way the file on disk is the user's real, safe copy.
 - Between saves, work is kept in the browser (localStorage for entries and settings, IndexedDB for receipt files), so a page reload doesn't lose anything — but the browser is a working buffer, not the record.
 
@@ -37,6 +37,7 @@ There is **no backend, no account and no database**. The user opens their bookke
 - Suggested libraries:
   - `papaparse` for CSV parsing. Row validation is hand-written in `lib/domain/csv.ts` rather than done with `zod`: §7.1 requires the import to be _lenient_ — a bad row is skipped and counted, never rejected — and every problem is reported as a machine-readable code the i18n layer translates. A schema validator would have to be unwrapped back into exactly that shape. `zod` was removed from the dependencies.
   - `jszip` for ZIP import and export.
+  - `@dnd-kit/core` and `@dnd-kit/sortable` for rearranging the overview's widgets (§8.12). Native HTML drag and drop has no keyboard or touch support, and dnd-kit's keyboard sensor gives both.
   - `pdfjs-dist` for rendering PDFs. **The worker is copied to `public/pdf.worker.min.mjs` by `scripts/copy-pdf-worker.mjs` on `predev`/`prebuild`, and `workerSrc` points at that fixed URL.** The `new URL(..., import.meta.url)` form was rejected: the worker is an ES module bundle, and whether Turbopack copies it as an asset or pulls it into the module graph differs between the dev server and the export — a failure that would surface only in production. pdfjs is still imported dynamically, from `lib/browser/pdf.ts` alone.
   - `idb` or `idb-keyval` for IndexedDB.
   - `next-themes` for light, dark and system theme (the standard shadcn approach).
@@ -242,7 +243,9 @@ The table order is also the display order of the income statement.
 
 **Expense summary buckets** (Yhteenveto columns): `purchases` = Ostot ja ulkopuoliset palvelut, `personnel` = Henkilöstökulut, `depreciation` = Poistot, edustuskulut ja vuokrat, `otherDeductible` = Muut vähennyskelpoiset kulut, `financial` = Rahoituskulut, `provisions` = Varausten muutokset, `nondeductible` = Vähennyskelvottomat kulut.
 
-**VAT rates offered** in the entry dialog: 25.5, 24, 14, 13.5, 10, 0, plus the entry's own rate if it differs. Background: the general rate rose to 25.5 % on 1 September 2024, and the 14 % rate was lowered to 13.5 % at the start of 2026. Older rates are kept for older entries and corrections. **Not yet implemented:** suggesting or validating the rate from the entry's date. The prototype only pre-fills the category default. Verify current rates with Verohallinto before relying on them.
+**VAT rates offered** in the entry dialog: 25.5, 24, 14, 13.5, 10, 0, plus the entry's own rate if it differs. Background: the general rate rose to 25.5 % on 1 September 2024, and the 14 % rate was lowered to 13.5 % at the start of 2026. Older rates are kept for older entries and corrections.
+
+**The rate follows the entry's date.** `lib/domain/vat-rates.ts` holds the two changes, 24 % → 25,5 % on 1.9.2024 and 14 % → 13,5 % on 1.1.2026, both confirmed on vero.fi. `rateOnDate` maps a rate to the one in force on a date; `rateMismatch` says why a rate does not fit. What decides the rate is when the tax falls due, normally the delivery date, so the entry's date is a stand-in: a mismatch is a hint and never blocks saving, because corrections and credit notes can carry an older rate on purpose. See §8.5 for the dialog, §8.4 for the ledger filter and §8.12 for the checklist.
 
 ---
 
@@ -265,13 +268,14 @@ For the selected month (or the whole year): income net total, expense net total,
 
 ### 6.3 Income statement (Tuloslaskelma)
 
-- Revenue total = the sum of net amounts on all income lines.
+- Revenue total = the sum of net amounts on the income lines **except 317**. Tuloslaskelman verovapaat tuotot is listed on its line and counted in the section heading, but Form 5 reports it separately and it is not taxed, so it stays out of the revenue total and the result. A note under the sheet gives its total. (`AccountLine.taxExempt`; `IncomeStatement.taxExemptTotal`.)
 - Deductible expenses = the sum of net amounts on expense lines **except** 365–367. This **includes 353 and 354**; the Excel omitted 354.
 - Non-deductible expenses (365–367) are listed but not deducted. A note shows their total.
 - Result = revenue − deductible expenses. If ≥ 0, it's labelled "358 Elinkeinotoiminnan tulos"; otherwise "359 Elinkeinotoiminnan tappio".
 - Every line is shown even when zero (greyed out with "–"). Section headings carry the section totals.
 - The period is 1.1.–31.12. of the selected year. All amounts exclude VAT.
-- ⚠️ These rules match the user's Excel with its bugs fixed. Have the user verify them against Verohallinto's form 5 instructions, especially the treatment of 317 (tax-exempt income) and 354.
+- These rules were checked against Verohallinto's Form 5 instructions (vero.fi, "Instructions for filing", Form 5): tax-exempt income is not part of taxable revenue, 354 is deductible, and 365–367 may not be deducted.
+- **Dividends on 319 are one gross line.** In business income only part of a dividend is taxable, and the share depends on whether the payer is listed. Form 5 asks for dividends as received and Verohallinto works out the taxable share, so the app does not split them. Check this if the user ever receives dividends.
 
 ### 6.4 Summary (Yhteenveto)
 
@@ -280,6 +284,20 @@ For the selected year, by month (net amounts):
 - A bar chart of income versus expenses per month, with year totals in the legend.
 - A sales table: total sales (line 300 only), then columns Finland 25.5 / 24 / 14 / 13.5 / 10 / 0 %, EU, other countries, reverse charge, and "Muut tulot" (income on lines 301–324). Totals row.
 - An expenses table: total, then one column per bucket. Totals row.
+
+### 6.5 VAT reporting periods and due dates
+
+`lib/domain/vat-deadline.ts`, pure and tested.
+
+- The user files **monthly, quarterly or yearly**. That is `vatPeriod`, set in Settings (§8.10) and saved in `settings.json`. The default is monthly.
+- A monthly or quarterly return is due on the **12th of the second month after the period**: September 2026 on 12.11.2026, Q4 2026 on 12.2.2027. A yearly return is due at the **end of February** of the following year.
+- A due date on a weekend or a Finnish bank holiday moves to the next working day. The holidays are New Year's Day, Epiphany, Good Friday, Easter Monday, 1 May, Ascension Day, Midsummer Eve, Independence Day and 24 to 26 December. October 2026 is due 14.12.2026, because the 12th is a Saturday.
+- A period is **future**, **open** (today is inside it), **filed** (closed and marked), **due** (closed, not marked, due date ahead or today) or **overdue**. A period is keyed `2026-09`, `2026-Q3` or `2026`, and `vatFiled` maps that key to the ISO date it was marked.
+- **Filing is the user's statement, not the app's knowledge.** The app cannot see OmaVero, so a closed period stays due until the user marks it. A mark can be undone.
+- **A closed period with no entries still needs a return**, a nil return ("Nollailmoitus"). The timeline starts at the period of the book's first entry, so a book started in October does not report January to September as overdue.
+- The overview's VAT widget follows **today**, not the selected year, because December's return falls due in the February after it. It also runs one period past today's, so "and after that" always has an answer.
+- **Source:** vero.fi, "When to file and pay VAT" and the Arvonlisäverovelvollisen opas. The tests assert Verohallinto's own examples: March's return due 12 May, the 2020 yearly return due 1.3.2021, the 2025 one due 2.3.2026. Midsummer Eve and Christmas Eve are in the list because the act on calculating time limits moves a deadline past them too.
+- **Not handled:** a business that stops trading files by the 12th of the second month after the month it ends, whatever its period.
 
 ---
 
@@ -311,12 +329,13 @@ For the selected year, by month (net amounts):
   - Invalid rows (bad date, type or amount) are skipped. A toast summarises: N entries imported, new categories, receipts imported, missing or rejected, and the first skipped rows.
   - After import, the selected year is the latest year found in the file.
 
-### 7.2 ZIP (bookkeeping with receipts)
+### 7.2 ZIP (the bookkeeping file)
 
-When any entry has an available receipt, export produces a ZIP. The user can tick "Vie vain CSV-tiedosto ilman tositteita" to export only the CSV. The structure is:
+A bookkeeping is always written as a ZIP, because `settings.json` (§7.6) has to travel with the entries, receipts or not. The download dialog's "Lataa vain CSV-tiedosto" writes the bare CSV instead, and its hint says that the receipts and the settings stay out. The structure is:
 
 ```
 kirjanpito_2026-10-24.csv
+settings.json
 tositteet/
   2026/
     01/
@@ -329,13 +348,13 @@ tositteet/
 - Path: `tositteet/{YYYY}/{MM}/{YYYY-MM-DD}_{slug(selite)}[_{n}].{ext}`. `_{n}` (1-based) is added only when the entry has several receipts. On a name collision, `-2`, `-3`, … is appended before the extension.
 - Slug: lowercase; å/ä → a, ö → o; strip other diacritics; non-alphanumeric runs → `-`; trim dashes; at most 40 characters; fall back to `tosite`.
 - The extension comes from the file name (`jpeg` → `jpg`), otherwise from the MIME type.
-- Receipt files are stored without compression (STORE); the CSV is DEFLATE-compressed.
+- Receipt files are stored without compression (STORE); the CSV and `settings.json` are DEFLATE-compressed.
 - **Import:** the user picks a ZIP. Use the shallowest `.csv` in it (ignoring `__MACOSX`). Paths in `tosite` are resolved relative to the CSV's folder, falling back to the ZIP root. Files found are stored in IndexedDB. Listed files that aren't found become `missing` attachments that keep their path, so re-exporting doesn't lose the reference. Importing a plain CSV that has `tosite` paths marks those receipts as missing in the same way. A listed path that names neither an image nor a PDF is not a receipt at all: it is dropped rather than kept as missing, so it cannot reappear in the next export, and the toast counts it.
 - Unpacking, decoding and writing every receipt to IndexedDB takes seconds for a real ZIP, so the import raises `importing` in the store and the UI shows progress once it passes 400 ms — see §8.2.
 
 ### 7.3 File naming when downloading a copy
 
-The download dialog lets the user edit the base name, with a fixed extension shown beside the field (`.csv` or `.zip`). The default is `kirjanpito_{YYYY-MM-DD}` in Finnish or `accounting_{YYYY-MM-DD}` in English, using **today's date**. Characters `\ / : * ? " < > |` and control characters are stripped, and a trailing `.csv` is removed. An empty name falls back to the default. The last opened or downloaded name is shown in the file menu, but it is **not** used as the default.
+The download dialog lets the user edit the base name, with a fixed extension shown beside the field (`.csv` or `.zip`). The default is **the last opened or saved name**, as it was, date included, without its extension (`suggestedBaseName` in `lib/domain/receipt-path.ts`). With no file behind the book it is `kirjanpito_{YYYY-MM-DD}` in Finnish or `accounting_{YYYY-MM-DD}` in English, using **today's date**. Characters `\ / : * ? " < > |` and control characters are stripped, and a trailing `.csv` or `.zip` is removed. An empty name falls back to the dated default.
 
 `fileName` in the store holds that name **with its extension** (`kirjanpito_2026-10-24.zip`), for display only, and is set by opening, saving and downloading alike. Opening a file and finding the box still reading "Uusi kirjanpito" is the bug this format fixes: the first port hard-coded `fileName: null` on import, and the display site appended a literal `.csv`, which was wrong for a ZIP. `lib/commands/io-commands.test.ts` covers it.
 
@@ -353,11 +372,11 @@ The download dialog lets the user edit the base name, with a fixed extension sho
 
 On browsers with the File System Access API the app writes the bookkeeping
 back to the file it was opened from, so the user does not have to download a
-copy to keep their work. **Saving is always an explicit action**, never
-automatic: a handle's write permission reverts to "prompt" on reload and
-re-granting it needs a user gesture, so there is no honest way to promise the
-user they will never think about saving. There is also no undo and no version
-history here, and packing a ZIP of receipts is not instant.
+copy to keep their work. **Saving is an explicit action by default.** A
+handle's write permission reverts to "prompt" on reload and re-granting it
+needs a user gesture, there is no undo and no version history, and packing a
+ZIP of receipts is not instant. Autosave exists, but it is opt-in and it never
+asks anything (below).
 
 - **`lib/browser/file-handle.ts` is the only module that touches the API.** It
   feature-detects the pickers, wraps the permission calls, writes, and keeps
@@ -371,9 +390,10 @@ history here, and packing a ZIP of receipts is not instant.
   to the hidden `<input>` when there is none. Both the app and the landing page
   do this, since a file can be opened from either.
 - **`saveBook` asks for a file** when there is no handle, when the book's shape
-  has outgrown it — a book that has grown receipts is a ZIP and cannot be
-  written into a path called `.csv` — or when the file has been moved or
-  deleted. Otherwise it writes in place. `createWritable` streams into a swap
+  has outgrown it, or when the file has been moved or deleted. A bookkeeping is
+  a ZIP (§7.2) and cannot be written into a path called `.csv`, so a book
+  opened from a CSV asks once, on its first save, and writes to the ZIP from
+  then on. Otherwise it writes in place. `createWritable` streams into a swap
   file that the browser moves into place on `close`, so a failure part-way
   through leaves the file on disk untouched.
 - **A file changed outside the app is not overwritten blind.** `savedAt` holds
@@ -391,13 +411,55 @@ history here, and packing a ZIP of receipts is not instant.
 - `Ctrl`/`⌘`+`S` saves. It is bound only where a file can be written at all,
   so on Firefox and Safari the browser keeps its own — see §8.2 for the full
   set of shortcuts and what each row shows.
-- **Not done, deliberately:** a dropped file could carry a handle too, through
-  `DataTransferItem.getAsFileSystemHandle()`. It does not yet, so dropping a
-  file opens it read-only and the first save asks where to put it, with the
-  file's own name pre-filled.
+- **A dropped file carries its handle** on Chromium, through
+  `DataTransferItem.getAsFileSystemHandle()` (`dropHandles` in
+  `file-handle.ts`). The browser empties a drop's items as soon as the event
+  returns, so the handles are requested inside the event and awaited after.
+  Firefox, Safari and a dropped folder give none, and the file opens
+  read-only as before; the first save then asks where to put it.
+- **Autosave** (`autosaveBook` in `io-commands.ts`, `hooks/use-autosave.ts`)
+  is the "Tallenna automaattisesti" setting, off by default and absent where
+  no file can be written. It saves **3 seconds after the last change**, never
+  while a dialog is open or a file is being read or written. It runs only
+  where nothing has to be asked: a linked ZIP, write permission already
+  granted (`hasWritePermission`, which only queries), and no outside edit
+  since the last read or write. Anywhere `saveBook` would ask, it stops
+  instead and sets `autosavePaused`; the amber dot stays, the file menu says
+  autosave is waiting, and one manual save starts it again. After a reload it
+  is always paused until that save, since permission is back to "prompt".
 - `lib/commands/save-commands.test.ts` covers the round trip, the picker
   fallback, a refused permission, the outside-edit guard and both download
   cases, against a fake handle.
+
+### 7.6 settings.json
+
+`lib/domain/settings-file.ts` parses and serialises it; `lib/domain/zip.ts`
+reads and writes it beside the CSV. The CSV stays the Finnish, Excel-friendly
+format of §7.1. Everything else that belongs to a bookkeeping is here.
+
+```json
+{
+  "version": 1,
+  "language": "fi",
+  "theme": "system",
+  "vatPeriod": "month",
+  "vatFiled": { "2026-08": "2026-10-12" },
+  "overview": { "layout": [{ "id": "result", "size": "L", "hidden": false }] },
+  "categories": [{ "id": "333", "line": "333", "name": "Ostot ja varastojen muutokset", "vatRate": 25.5, "enabled": true, "custom": false }],
+  "autosave": false,
+  "pageSize": { "ledger": 10, "categories": 25 }
+}
+```
+
+- **Keys are English**, like browser storage (§12). Nobody opens this file in Excel.
+- **Reading is lenient**, like the CSV. A missing file means defaults. A bad or unknown value is dropped on its own and the rest is kept. `version` leaves room for a migration.
+- **Categories**: the full list. A default category keeps its id, line, name and kind from the chart of accounts and takes only `enabled` and `vatRate` from the file. Custom categories come across whole. The CSV is then matched against this list, so a custom category comes back with its own id instead of being recreated from its name.
+- **The overview layout** goes through `normalizeLayout` in `lib/domain/overview-layout.ts`: an unknown widget id is dropped and a missing one is appended at its default size, so a file from an older or newer version still opens.
+- **Language and theme** are written from the browser's own keys (§12) at save. Opening a file switches the app to them. They are preferences of the browser as much as of the book, so changing them does not mark the book dirty, and the landing page goes on using the browser's keys. The theme is applied through `Ctx.setTheme`, because only React can reach next-themes.
+- **Page sizes and autosave** are saved the same way: written at save, applied on open, never dirty.
+- **The VAT period, the filed marks, the layout and the categories do mark the book dirty**, since the file no longer matches.
+- A plain CSV has no settings. Opening one starts with no filed marks and keeps the rest as it was.
+- `lib/domain/settings-file.test.ts` covers the round trip and the lenient reading; `lib/commands/io-commands.test.ts` covers opening a ZIP with settings.
 
 ## 8. App structure and features
 
@@ -405,7 +467,7 @@ history here, and packing a ZIP of receipts is not instant.
 
 - An **open/closed** flag: whether a bookkeeping is open. It is persisted. On load, if it isn't stored, it is true when entries exist.
 - When **no bookkeeping is open**, every route shows the **landing page**.
-- Views: landing, ledger, VAT return, income statement, summary, settings. The prototype used Finnish hash routes (`etusivu`, `kirjanpito`, `alv`, `tulos`, `yhteenveto`, `asetukset`); the real app uses **English** Next.js routes — see §11b. Only the visible labels are translated.
+- Views: landing, overview, ledger, VAT return, income statement, summary, settings. The prototype used Finnish hash routes (`etusivu`, `kirjanpito`, `alv`, `tulos`, `yhteenveto`, `asetukset`); the real app uses **English** Next.js routes — see §11b. Only the visible labels are translated.
 - The app logo / brand links to the landing page.
 - Persisted UI preferences: language, theme, selected year, last amount mode and type used in the entry dialog, rows per page for each table, and whether the sidebar is collapsed. Language and theme each have their own localStorage key; the rest live with the bookkeeping (§12).
 
@@ -422,8 +484,8 @@ row of nav tabs — is gone.
 - **Sidebar** (`components/app/app-sidebar.tsx`, shadcn `Sidebar`,
   `collapsible="icon"`), top to bottom:
   - Brand: a "K" mark, "Kirjanpito", and the subtitle "Yhdenkertainen kirjanpito" — shortened from the prototype's "Toiminimen yhdenkertainen kirjanpito", which could not fit the button without truncating. The two lines need `leading-tight`: at the default leading they are 36 px and the `size="lg"` button's content box is 32. Links to the landing page.
-  - Navigation with icons: Kirjanpito, ALV-laskelma, Tuloslaskelma, Yhteenveto, Asetukset.
-  - **Nothing below the navigation.** The sidebar is the brand and the five views; the §1 disclaimer lives on the landing page and in the report notes, and the brand row is the route back to the landing page and its FAQ.
+  - Navigation with icons: Yleiskatsaus, Kirjanpito, ALV-laskelma, Tuloslaskelma, Yhteenveto, Asetukset.
+  - **Nothing below the navigation.** The sidebar is the brand and the six views; the §1 disclaimer lives on the landing page and in the report notes, and the brand row is the route back to the landing page and its FAQ.
   - **15 rem wide**, one step under shadcn's 16 rem, which the five short labels do not need. `app-skeleton.tsx` draws the same width, so nothing shifts on rehydrate. The mobile sheet keeps its own 18 rem: it is an overlay on a phone, not a column beside the content.
   - ≥ 900 px it collapses to a 3 rem icon rail; below 900 px it is a sheet, and tapping a link closes it. **Everything in it is a menu row**, so collapsing loses only the words — there is nothing here that needs a second rendering to survive the rail.
   - The expanded / collapsed state is `sidebarOpen` in the store (§12), **not** shadcn's `sidebar_state` cookie: nothing is server-rendered, so a cookie could never be read back.
@@ -466,7 +528,7 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
    - Headline "Toiminimen kirjanpito, joka mahtuu yhteen tiedostoon." and a lead paragraph.
    - Calls to action:
      - Closed state: "Aloita uusi kirjanpito" and "Avaa tiedosto", plus a dashed drop zone ("Pudota CSV- tai ZIP-tiedosto tähän…").
-     - Open state: "Jatka kirjanpitoa" and "Avaa tiedosto", with a meta line showing the file name, the number of entries and the unsaved-changes status.
+     - Open state: "Jatka kirjanpitoa" (to the overview) and "Avaa tiedosto", with a meta line showing the file name, the number of entries and the unsaved-changes status.
    - Visual: two overlapping, slightly rotated paper receipts on a soft accent panel. One is an expense receipt, the other the October VAT calculation ending in "Maksettava 617,18 €". On small screens only the VAT receipt is shown.
 2. **"Tositteesta veroilmoitukseen neljässä vaiheessa".** Four numbered steps: open or start, record receipts (including attaching), check the figures, export (a ZIP organised by year and month).
 3. **"Mitä kirjanpito laskee puolestasi".** Three cards: VAT (with rate chips), income statement (a mini statement), and monthly summary (a mini bar chart).
@@ -474,7 +536,7 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
 5. **"Kysyttyä".** An accordion with four questions: who it's for, whether it files returns, moving over from Excel (lists the columns; `tosite` is optional), and what happens when the browser is closed.
 6. A closing call to action, "Aloita tämän kuun tositteista.", and a footer disclaimer: "Laskelmat eivät ole vero- tai kirjanpitoneuvontaa."
 
-- "Aloita uusi kirjanpito" opens an empty ledger and sets the year to the current year. If there are unsaved changes, it asks first.
+- "Aloita uusi kirjanpito" opens the empty overview and sets the year to the current year. If there are unsaved changes, it asks first.
 
 ### 8.4 Ledger (Kirjanpito)
 
@@ -485,6 +547,7 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
   - Search over description and category. It is a **fixed 20 rem box**, not one that grows into the row: the queries are a word or two, and a field stretched across the toolbar reads as the page's main control.
   - A type filter (Kaikki tyypit / Tulot / Kulut) as a **select**, like the category filter beside it. A segmented control would be the one control here shaped unlike the others, and it grows with the language. `EntryTypeToggle` (§8.5, §8.10) stays segmented because it is a form field, not a filter.
   - A category filter, listing only the categories used in the period.
+  - "Tarkistettavat": Kaikki kirjaukset / Ilman tositetta / Verokanta ei vastaa päivää (`ledgerCheck`). An entry counts as having a receipt only when a file is available; one listed in the CSV but missing from the ZIP does not. A rate mismatch is `rateMismatch` (§5). The overview's checklist sets this filter when it sends the user here.
   - "Tyhjennä suodattimet" when any filter is active.
 - **Table columns:** Pvm, Tyyppi, Selite, Luokka, Veroton, ALV (amount, with the rate small below), Verollinen (bold, with "−" for expenses), and actions.
   - Every column is sortable, with ↑/↓ shown on the active column and ⇅ on the others. Sorting by gross uses signed values, and sorting by type puts income first.
@@ -507,7 +570,7 @@ A two-column modal. On mobile the columns stack.
   - Description (placeholder "Esim. Lasku 1006 – Asiakas Oy").
   - Category select: only enabled categories of the chosen type, plus the entry's current category even if disabled.
   - Amount, right-aligned with tabular figures.
-  - VAT % select: picking a category sets its default rate.
+  - VAT % select. Picking a category sets its default rate **as it was on the entry's date** (§5), and changing the date moves an unchosen rate across a rate change. A rate the user picked, one read from a PDF, and the rate of an entry being edited or copied count as chosen and stay. When the rate does not fit the date, a warning-coloured line under the field says so ("25,5 % on voimassa 1.9.2024 alkaen. Tälle päivälle verokanta on 24 %."). Saving is never blocked by it.
   - "Summa on" segmented control (Verollinen / Veroton).
   - An inline error line.
 - **Footer:**
@@ -540,7 +603,8 @@ A near full-screen modal.
 
 ### 8.7 VAT return (ALV-laskelma)
 
-- Period controls: a segmented control (Kuukausi / Neljännesvuosi / Vuosi) and a select for the month or quarter ("4. neljännes (Loka–Joulu)").
+- Period controls: a segmented control (Kuukausi / Neljännesvuosi / Vuosi), and below it a strip of the year's months or quarters in the shape of the ledger's month chips (§8.4). The view opens on the user's filing period (§6.5).
+- **When the strip shows the user's own filing period**, each chip also shows where it stands: Ilmoitettu, Myöhässä, the due date, Kesken or Tulossa. The result banner then carries the filed toggle for a closed period: "Merkitse ilmoitetuksi", or "Merkitty ilmoitetuksi {date}" with "Poista merkintä". Viewing by another period shows figures only, with a line saying which period is filed in.
 - A result banner: "Maksettava arvonlisävero" (or "Palautettava…") as a large number, with the formula line "Myynnin vero X − ostojen vähennettävä vero Y".
 - Two tables side by side, "Myynnin arvonlisävero" and "Ostojen vähennettävä vero", with the columns Verokanta, Veroton, Vero and Yhteensä, plus a totals row.
 - A "Muut ilmoitettavat myynnit" panel, and a note explaining 0 % purchases and asking the user to check the figures before filing in OmaVero.
@@ -551,11 +615,14 @@ Presented as a printable **sheet**: the `--sheet` surface (warm paper in light, 
 
 ### 8.9 Summary (Yhteenveto)
 
-See §6.4. Wide tables scroll horizontally with a sticky first column.
+See §6.4. Wide tables scroll horizontally with a sticky first column. The chart is the overview's (`components/common/income-expense-chart.tsx`, §8.12): mirrored, with the year totals in the panel heading, and a click opens the ledger on that month.
 
 ### 8.10 Settings (Asetukset)
 
 Every section on this page is a `Panel` (§11).
+
+- **"ALV-ilmoitusjakso"** comes first: a segmented Kuukausi / Neljännesvuosi / Vuosi. It sets `vatPeriod` (§6.5), which the overview's due dates and the VAT view's default period follow.
+- **"Tallennus"**, only where the browser can write to a file: the "Tallenna automaattisesti" checkbox (§7.5), with a description that says there is no undo.
 
 - **"Lisää oma luokka" form:**
   - Type — the same `EntryTypeToggle` the entry dialog uses, so the two controls read alike: Tulo before Kulu, coloured when selected.
@@ -591,18 +658,36 @@ Use one shared `AlertDialog`-based `confirm()` helper, with a title, a message, 
 | Navigate away from Settings            | the new-category name is filled    | same as above, with the category message                                  |
 | Browser tab close (`beforeunload`)     | any of the above dirty states      | the browser's native prompt                                               |
 
-**Dirty bookkeeping** means the entries changed since the last read or write of a file. It is set by any add, edit or delete, and cleared by opening a file, by saving to the linked one, and by downloading a copy **only when no file is linked** (§7.5).
+**Dirty bookkeeping** means the entries or the book's settings changed since the last read or write of a file. It is set by any add, edit or delete, by a category change, and by the VAT period, a filed mark or the overview layout (§7.6), and cleared by opening a file, by saving to the linked one, and by downloading a copy **only when no file is linked** (§7.5).
 
 The wording everywhere is about saving rather than exporting, so one set of strings covers both ways of keeping the work. The row above that highlights this: the close confirmation is the same sentence whether the user saves to their own file or downloads a copy.
 
 Closing a file clears entries, the file name and filters, unlinks the file (§7.5), sets the bookkeeping to closed, garbage-collects receipts, and returns to the landing page.
+
+### 8.12 Overview (Yleiskatsaus)
+
+The app's front page, at `/app/overview`. `/app`, "Jatka kirjanpitoa", opening a file and starting a new bookkeeping all land here. It answers three questions: how the year is going, what VAT is due and when, and what is left to do. Every widget is a summary that links into a view; nothing here edits a figure except the filed mark.
+
+- **`components/overview/`.** `overview-data.tsx` computes everything once, in a context, from the selected year: the summary, the income statement, VAT per month, and the VAT timeline from today (§6.5). The widgets read it.
+- **Widgets**, in their default order and size:
+  - **Tulos** (wide): line 358 or 359 from 1.1. to today, or to 31.12. for a past year; the formula line; a sparkline of the cumulative result; the entry count, the profit margin and the year's VAT. Links to Tuloslaskelma.
+  - **Seuraava ALV-ilmoitus**: the next period not yet filed, its amount as payable, refundable or "Nollailmoitus", a due-date row with the weekday and a days-left pill (amber at 14 days or fewer, red with "pv myöhässä" once overdue), a note when EU or reverse-charge sales must be reported too, and the period after it. "Merkitse ilmoitetuksi" for a closed period, with "Peru" right after. Links to ALV-laskelma on that period.
+  - **Kuukaudet** (wide, two rows tall): `IncomeExpenseChart`, shared with Yhteenveto. Net income above the axis and net expenses below it, one axis. **The bars are mirrored on purpose**: the income green and expense red fail a deuteranopia check side by side (ΔE 5.3 light, 3.5 dark, against 8), and position gives the two series a difference every reader sees. A hover gives the month's income, expenses, VAT and result, the result by the income statement's rules (`monthFigures` in `summary.ts`), so the months add up to 358; a click opens the ledger on that month. Four figures under it: the best month, average income and expenses per elapsed month, months with entries.
+  - **Myynti**: line 300 split into Suomi, EU, muut maat and käänteinen, as a stacked bar and a list; lines 301 to 324 below as other income.
+  - **Kulut ryhmittäin**: the §6.4 buckets with expenses, largest first; empty ones are counted.
+  - **Viimeisimmät kirjaukset** (wide): the year's six newest entries, signed gross, flagged "ei tositetta" where there is no receipt file. A row opens the entry dialog.
+  - **Tarkistettavaa**: unsaved changes with a save (or download) button; each overdue return and each return due within 30 days, with "Ilmoitettu"; entries without a receipt, and entries whose rate does not fit their date, each with "Näytä", which opens the ledger filtered to them; receipts missing from the file; and empty months from the first entry to the last complete month.
+- **The board** (`overview-board.tsx`) is a three-column grid with `grid-flow-dense` from 1100 px, one column below it. "S" spans one column and "L" two; the month chart at "L" also spans two rows, so the default fills the grid with no holes. Widgets use container queries for their own narrow layouts, so a widget adapts to its column, not the window.
+- **Editing the layout.** "Muokkaa näkymää" turns on edit mode. Each widget gets a toolbar: a drag handle, arrows to move it among the visible widgets, widen or narrow (hidden below 1100 px, where size means nothing), and hide. Its contents go `inert`, so a drag never opens an entry. Hidden widgets wait as buttons under the board. "Palauta oletus" resets; "Valmis" leaves. The layout is `overviewLayout`, saved in `settings.json` and dirty like any setting. dnd-kit's screen-reader texts are translated (`overview.dnd*`).
+- **Empty book**: no widgets and no edit button, but the two ways in and three short steps.
+- `test/overview.test.tsx` covers the §10 result, the countdown, filing and undoing, the checklist, hiding and moving widgets, and the empty state.
 
 ---
 
 ## 9. Internationalisation and formatting
 
 - Two languages: **Finnish (default)** and **English**. The choice is persisted. Update `<html lang>` and the document title when it changes. Every UI string is in a dictionary keyed by id, with `[fi, en]` values and `{param}` interpolation. Plural forms are functions (e.g. "1 kirjaus" / "{n} kirjausta"). The artifact's `L` object holds every string and is the source to port. A typed dictionary is enough; no locale routing is needed.
-- **Keys are `namespace.name`** — `t("io.zipNoCsv")`, `t("confirm.clearTitle")`, `t("settings.defaultVat")`. The namespaces are app, common, confirm, entry, file, io, landing, ledger, nav, notFound, receipt, settings, statement, summary, table, vat, viewer. `common.*` is only for words several views share; anything used in one place belongs to that place's namespace even when it is short. The keys were once flat and abbreviated (`setSub`, `f_type`, `nCats`, `delT`, `fb_import`) with four inconsistent prefix styles — unreadable at the call site, and with no room for a second settings subtitle. `messages.test.ts` enforces the shape and the list of namespaces, which is what stops the next key being added the old way.
+- **Keys are `namespace.name`** — `t("io.zipNoCsv")`, `t("confirm.clearTitle")`, `t("settings.defaultVat")`. The namespaces are app, common, confirm, entry, file, io, landing, ledger, nav, notFound, overview, receipt, settings, statement, summary, table, vat, viewer. `common.*` is only for words several views share; anything used in one place belongs to that place's namespace even when it is short. The keys were once flat and abbreviated (`setSub`, `f_type`, `nCats`, `delT`, `fb_import`) with four inconsistent prefix styles — unreadable at the call site, and with no room for a second settings subtitle. `messages.test.ts` enforces the shape and the list of namespaces, which is what stops the next key being added the old way.
 - **The namespace is not the module.** Which of `dict/app.ts` and `dict/landing.ts` a key lives in is a bundling decision (the landing bundle must not ship all ~300 keys in both languages), so a namespace may be split across both: `nav.vat`, `receipt.*` and `statement.profit` sit in the landing module because the hero's decorative receipt and mini statement need them. Keys stay disjoint between the two; a test checks it.
 - **Currency always uses Finnish formatting in both languages:** `1 234,56 €` (`Intl.NumberFormat("fi-FI", { style: "currency", currency: "EUR" })`). The amount input also shows the Finnish format.
 - **Dates:**
@@ -657,10 +742,15 @@ The user also provided two real receipts for testing (a Motonet till receipt as 
 
 The aim is a calm, Nordic, functional tool. The one bold element is the **paper receipt motif**: the live preview in the entry dialog and the landing hero. Everything around it stays quiet. Avoid generic SaaS-card layouts, gradients, all-caps labels and decorative motion.
 
-> **`app/globals.css` is the source of truth for colours, and it is the
-> prototype's palette.** Every value is the matching `docs/prototype/kirjanpito.html`
-> hex converted to oklch, with the hex kept beside it in a comment so the two
-> can be diffed. The prototype's variable names map onto the theme's as:
+> **`app/globals.css` is the source of truth for colours.** The surfaces are
+> shadcn's own "neutral" base, unchanged: white cards on a white page with a
+> `#FAFAFA` sidebar in light, `#171717` cards on `#0A0A0A` in dark, and
+> borders at 10 % white. The one colour of the app's own is `--primary`, the
+> forest green "Metsä" (`#145A3C` light, `#7FCBA2` dark), which also drives
+> `--ring`, `--sidebar-primary` and the green `--chart-*` ramp. Every value is
+> oklch with its hex in a comment beside it. Green also means income here, so
+> a primary button never stands beside an income amount without its label.
+> The prototype's variable names still map onto the theme's as:
 >
 > | prototype     | theme                                |
 > | ------------- | ------------------------------------ |
@@ -678,9 +768,9 @@ The aim is a calm, Nordic, functional tool. The one bold element is the **paper 
 > The rest of the shadcn theme still holds: style `base-nova` on Base UI,
 > `--radius: 0.625rem`, Geist via `next/font/google`. Use the semantic
 > variables and the standard component variants. **Never hard-code a hex value
-> and never write a manual `dark:` override.** A `bg-card` panel over the
-> `--background` canvas is how the prototype's `.panel` sits on `--bg`; a
-> bordered panel with no fill would vanish into the page.
+> and never write a manual `dark:` override.** `Surface` adds shadcn's
+> `shadow-xs`: in light mode a white card on a white page is held apart only
+> by its border and that shadow.
 >
 > `--accent-soft` has no theme equivalent — shadcn's `--accent` is the neutral
 > hover grey, not a tint of the brand colour. The landing hero panel uses
@@ -751,6 +841,7 @@ Anything that appears in two views is a component in `components/common/`, takin
 | landing and 404 type         | `typography.tsx` — `DisplayHeading` (`size` lg / md), `Lead`, `SectionHeading` |
 | the root of a document       | `LangRoot` in `lang-provider.tsx` — the app shell, the landing page and the 404 all start with it |
 | sortable column headers      | `sortable-header.tsx` |
+| the income and expense chart | `income-expense-chart.tsx`: `IncomeExpenseChart` and `IncomeExpenseLegend`, on the overview and Yhteenveto |
 | single-choice selects        | `option-select.tsx` |
 | page titles inside the app   | `page-header.tsx` |
 | the header and footer outside the app shell | `site-chrome.tsx` |
@@ -791,17 +882,17 @@ app/
   og/[file]/route.tsx            /og/opengraph-image.png  1200×630 via next/og
   app/
     layout.tsx                   AppShell + metadata.robots = noindex, nofollow
-    page.tsx                     /app → /app/ledger
-    ledger/  vat/  statement/  summary/  settings/
+    page.tsx                     /app → /app/overview
+    overview/  ledger/  vat/  statement/  summary/  settings/
 ```
 
-- **The app routes are English** (`/app/ledger`, `/app/vat`, `/app/statement`,
+- **The app routes are English** (`/app/overview`, `/app/ledger`, `/app/vat`, `/app/statement`,
   `/app/summary`, `/app/settings`), in both UI languages. Each segment is the key
   it has in `APP_ROUTES`, so a route and the code linking to it cannot drift.
   Nothing under `/app` is indexed, so there is no SEO reason to localise the
   paths, and a single set of URLs keeps language switching a pure state change
   rather than a navigation.
-- **`/app` itself redirects to `/app/ledger`** (`components/app/app-index-redirect.tsx`).
+- **`/app` itself redirects to `/app/overview`** (`components/app/app-index-redirect.tsx`).
   It is a guessable, bookmarkable URL, and without a page here the export has no
   `out/app/index.html` and it would 404. Static export rules out a server-side
   redirect, which costs nothing: the app is client-only and AppShell already
@@ -924,7 +1015,10 @@ before any file is open, and must not read or write `bookkeeping` to get it.
 
 - localStorage `bookkeeping` — exported as `BOOK_STORAGE_KEY` from
   `stores/book-store.ts`, so nothing hard-codes the string twice:
-  `{ entries, cats, year, dirty, fileName, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen }`.
+  `{ entries, cats, year, dirty, fileName, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, vatPeriod, vatFiled, overviewLayout, autosave }`.
+  The book's settings are kept twice: here, as the working buffer, and in the
+  file's `settings.json` (§7.6), as the record. A reload restores them from
+  here; opening a file replaces them from there.
   **The key carries no version suffix.** Zustand's `persist` already writes its
   `version` into the stored value and owns the `migrate` hook, which can
   transform old data; a version in the key could only orphan it, and two version
@@ -997,9 +1091,6 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 
 ## 14. Open questions and ideas not yet done
 
-- VAT rate suggestions or validation by entry date (§5).
-- Confirming the income statement rules with the user against form 5 (§6.3).
-- Whether to remember a last-used file name for the download dialog's default (§7.3).
-- Carrying a handle through drag and drop with `DataTransferItem.getAsFileSystemHandle()`, so a dropped file is savable too (§7.5).
-- Autosave on a debounce, once the explicit save of §7.5 has proved itself. Deliberately not done first: a reload needs a gesture to regrant write permission, there is no undo, and packing a ZIP of receipts is not instant.
-- Possibly importing categories from, or exporting them to, the file (currently they live only in the browser; unknown categories are recreated on import).
+- Undo, at least for a deleted entry and for clearing the entries. Autosave (§7.5) makes a mistake reach the file within seconds, which is why it is opt-in.
+- Splitting dividends (319) into their taxable and tax-free shares, if the user ever receives them (§6.3).
+- The VAT return of a business that stops trading (§6.5).

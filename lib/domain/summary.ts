@@ -1,7 +1,10 @@
 import { BUCKETS, LINE_BY_KEY, RATES } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
 import { monthOf, yearOf } from "@/lib/domain/dates"
+import { incomeStatement } from "@/lib/domain/income-statement"
+import { filterPeriod } from "@/lib/domain/period"
 import type { Bucket, Cents, CategoryMap, Entry } from "@/lib/domain/types"
+import { vatReport } from "@/lib/domain/vat"
 
 export interface MonthRow {
   /** 1–12, or 0 on the totals row. */
@@ -116,5 +119,30 @@ export function summary(
     months,
     rateColumns: [...usedRates].sort((a, b) => b - a),
     totals,
+  }
+}
+
+export interface MonthFigures {
+  /** VAT payable per month, January first. Negative means refundable. */
+  vat: readonly Cents[]
+  /**
+   * Each month's result by the income statement's rules (§6.3), so the
+   * twelve add up to line 358: 317 and 365–367 stay out.
+   */
+  result: readonly Cents[]
+}
+
+/** The per-month figures the income and expense chart shows on hover. */
+export function monthFigures(
+  entries: readonly Entry[],
+  cats: CategoryMap,
+  year: number
+): MonthFigures {
+  const months = Array.from({ length: 12 }, (_, i) =>
+    filterPeriod(entries, { kind: "month", year, month: i + 1 })
+  )
+  return {
+    vat: months.map((m) => vatReport(m, cats).due),
+    result: months.map((m) => incomeStatement(m, cats, year).result),
   }
 }

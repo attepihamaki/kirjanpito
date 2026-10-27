@@ -277,7 +277,7 @@ function HeroCta({
     <div className={cn("mt-7 flex flex-col gap-3", className)}>
       <div className={cn("flex flex-wrap gap-2", className)}>
         {openState ? (
-          <ButtonLink size="lg" href={APP_ROUTES.ledger}>
+          <ButtonLink size="lg" href={APP_ROUTES.overview}>
             {f.t("landing.continue")}
           </ButtonLink>
         ) : (
@@ -337,7 +337,7 @@ function OpenOrContinue({
 
   if (hydrated && open) {
     return (
-      <ButtonLink size="sm" href={APP_ROUTES.ledger}>
+      <ButtonLink size="sm" href={APP_ROUTES.overview}>
         {f.t("landing.toApp")}
       </ButtonLink>
     )

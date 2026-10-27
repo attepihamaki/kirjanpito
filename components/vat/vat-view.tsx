@@ -1,10 +1,10 @@
 "use client"
 
 import * as React from "react"
+import { CheckIcon } from "lucide-react"
 
 import { PageHeader } from "@/components/common/page-header"
 import { Money } from "@/components/common/money"
-import { OptionSelect } from "@/components/common/option-select"
 import { Panel } from "@/components/common/panel"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
@@ -16,12 +16,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useFormatters } from "@/components/lang-provider"
-import { quarterMonths } from "@/lib/domain/dates"
+import { VatPeriodStrip } from "@/components/vat/vat-period-strip"
+import { todayIso } from "@/lib/domain/dates"
 import { filterPeriod, type Period } from "@/lib/domain/period"
 import { indexCategories } from "@/lib/domain/types"
 import { vatReport, type VatSide } from "@/lib/domain/vat"
+import {
+  periodStatus,
+  vatPeriods,
+  type VatPeriodStatus,
+} from "@/lib/domain/vat-deadline"
 import { useBookStore, type VatMode } from "@/stores/book-store"
 
 export function VatView() {
@@ -33,6 +40,10 @@ export function VatView() {
   const index = useBookStore((s) => s.vatIndex)
   const setMode = useBookStore((s) => s.setVatMode)
   const setIndex = useBookStore((s) => s.setVatIndex)
+  const vatPeriod = useBookStore((s) => s.vatPeriod)
+  const vatFiled = useBookStore((s) => s.vatFiled)
+  const setVatFiled = useBookStore((s) => s.setVatFiled)
+  const today = todayIso()
 
   const catMap = React.useMemo(() => indexCategories(cats), [cats])
 
@@ -53,26 +64,17 @@ export function VatView() {
     [entries, period, catMap]
   )
 
-  // Month names or quarter labels, so the trigger shows a name not an index.
-  const periodOptions = React.useMemo(() => {
-    if (mode === "month") {
-      return Array.from({ length: 12 }, (_, i) => ({
-        value: String(i + 1),
-        label: f.month(i),
-      }))
-    }
-    return ([1, 2, 3, 4] as const).map((q) => {
-      const [a, b] = quarterMonths(q)
-      return {
-        value: String(q),
-        label: f.t("vat.quarterOption", {
-          q,
-          a: f.month(a - 1, true),
-          b: f.month(b - 1, true),
-        }),
-      }
-    })
-  }, [mode, f])
+  const periods = React.useMemo(() => vatPeriods(mode, year), [mode, year])
+  /*
+   * Filed marks belong to the period the user reports in (§6.5). Viewing the
+   * year by quarter when filing monthly shows figures, not statuses.
+   */
+  const filing = mode === vatPeriod
+  const statuses: VatPeriodStatus[] | null = filing
+    ? periods.map((p) => periodStatus(p, today, vatFiled))
+    : null
+  const current = periods.find((p) => p.index === index) ?? periods[0]
+  const currentStatus = filing ? periodStatus(current, today, vatFiled) : null
 
   const refund = report.due < 0
   const periodLabel =
@@ -102,34 +104,72 @@ export function VatView() {
             </ToggleGroupItem>
             <ToggleGroupItem value="year">{f.t("vat.year")}</ToggleGroupItem>
           </ToggleGroup>
-
-          {mode !== "year" ? (
-            <OptionSelect
-              options={periodOptions}
-              value={String(index)}
-              onChange={(value) => setIndex(Number(value))}
-              label={f.t("vat.period")}
-              className="w-[15rem]"
-            />
-          ) : null}
         </div>
 
-        {/* Result banner */}
-        <Panel bodyClassName="p-5">
-          <p className="text-sm text-muted-foreground">
-            {refund ? f.t("vat.refundableTitle") : f.t("vat.payableTitle")}
-          </p>
-          <Money
-            cents={Math.abs(report.due)}
-            tone={refund ? "income" : undefined}
-            className="mt-1 block font-heading text-4xl font-semibold tracking-tight"
+        {mode !== "year" ? (
+          <VatPeriodStrip
+            periods={periods}
+            selected={current.index}
+            statuses={statuses}
+            onSelect={setIndex}
           />
-          <p className="mt-2 text-sm text-muted-foreground">
-            {f.t("vat.formula", {
-              a: f.money(report.sales.total.vat),
-              b: f.money(report.purchases.total.vat),
-            })}
-          </p>
+        ) : null}
+
+        {/* Result banner */}
+        <Panel bodyClassName="flex flex-wrap items-end justify-between gap-4 p-5">
+          <div>
+            <p className="text-sm text-muted-foreground">
+              {refund ? f.t("vat.refundableTitle") : f.t("vat.payableTitle")}
+            </p>
+            <Money
+              cents={Math.abs(report.due)}
+              tone={refund ? "income" : undefined}
+              className="mt-1 block font-heading text-4xl font-semibold tracking-tight"
+            />
+            <p className="mt-2 text-sm text-muted-foreground">
+              {f.t("vat.formula", {
+                a: f.money(report.sales.total.vat),
+                b: f.money(report.purchases.total.vat),
+              })}
+            </p>
+          </div>
+
+          {/* Only a closed period of the user's own cadence can be filed. */}
+          {currentStatus &&
+          currentStatus !== "open" &&
+          currentStatus !== "future" ? (
+            <div className="flex flex-col items-start gap-2 text-sm min-[560px]:items-end">
+              <span className="text-muted-foreground">
+                {currentStatus === "filed"
+                  ? f.t("vat.filedOn", { d: f.date(vatFiled[current.key]) })
+                  : f.t("vat.dueDate", { d: f.date(current.due) })}
+              </span>
+              {currentStatus === "filed" ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setVatFiled(current.key, null)}
+                >
+                  {f.t("vat.unmarkFiled")}
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setVatFiled(current.key, today)}
+                >
+                  <CheckIcon data-icon="inline-start" />
+                  {f.t("vat.markFiled")}
+                </Button>
+              )}
+            </div>
+          ) : !filing ? (
+            <p className="max-w-xs text-xs text-muted-foreground">
+              {f.t("vat.cadenceHint", {
+                p: f.t(`vat.${vatPeriod}`).toLowerCase(),
+              })}
+            </p>
+          ) : null}
         </Panel>
 
         {report.anomalies.length ? (

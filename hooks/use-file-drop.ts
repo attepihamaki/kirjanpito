@@ -2,6 +2,7 @@
 
 import * as React from "react"
 
+import { dropHandles } from "@/lib/browser/file-handle"
 import { isReceiptFile } from "@/lib/domain/receipt-path"
 
 export type DropKind = "book" | "media" | null
@@ -26,7 +27,14 @@ export function useFileDrop({
   onDropFiles,
   disabled,
 }: {
-  onDropFiles: (files: File[]) => void
+  /**
+   * `handleFor` resolves to the file's handle where the browser gives one, so
+   * a dropped bookkeeping can be saved back to (§7.5).
+   */
+  onDropFiles: (
+    files: File[],
+    handleFor: (file: File) => Promise<FileSystemFileHandle | null>
+  ) => void
   disabled?: boolean
 }) {
   const [dragging, setDragging] = React.useState(false)
@@ -57,8 +65,9 @@ export function useFileDrop({
       if (!e.dataTransfer?.types?.includes("Files")) return
       e.preventDefault()
       reset()
+      const handleFor = dropHandles(e.dataTransfer.items)
       const files = Array.from(e.dataTransfer.files ?? [])
-      if (files.length) onDropFiles(files)
+      if (files.length) onDropFiles(files, handleFor)
     }
 
     window.addEventListener("dragenter", onDragEnter)

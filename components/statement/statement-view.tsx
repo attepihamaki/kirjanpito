@@ -60,7 +60,7 @@ export function StatementView() {
           side: line.side,
           total:
             line.side === "income"
-              ? statement.revenueTotal
+              ? statement.revenueTotal + statement.taxExemptTotal
               : statement.deductibleTotal + statement.nonDeductibleTotal,
         })
       }
@@ -185,8 +185,16 @@ export function StatementView() {
           </tfoot>
         </table>
 
-        {statement.nonDeductibleTotal ? (
+        {statement.taxExemptTotal ? (
           <p className="mt-6 text-xs text-muted-foreground">
+            {f.t("statement.exemptNote", {
+              a: f.money(statement.taxExemptTotal),
+            })}
+          </p>
+        ) : null}
+
+        {statement.nonDeductibleTotal ? (
+          <p className="mt-3 text-xs text-muted-foreground">
             {f.t("statement.note", {
               a: f.money(statement.nonDeductibleTotal),
             })}

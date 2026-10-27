@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
+import { useTheme } from "next-themes"
 
 import { useT } from "@/components/lang-provider"
 import type { Ctx } from "@/lib/commands/ctx"
@@ -16,12 +17,14 @@ import type { Ctx } from "@/lib/commands/ctx"
 export function useCommandCtx(): Ctx {
   const t = useT()
   const router = useRouter()
+  const { setTheme } = useTheme()
 
   return React.useMemo(
     () => ({
       t,
       navigate: (href: string) => router.push(href),
+      setTheme,
     }),
-    [t, router]
+    [t, router, setTheme]
   )
 }

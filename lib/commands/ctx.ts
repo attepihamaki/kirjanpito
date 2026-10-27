@@ -1,3 +1,4 @@
+import type { ThemeChoice } from "@/lib/domain/settings-file"
 import type { AppT } from "@/lib/i18n/messages"
 
 /**
@@ -7,4 +8,9 @@ import type { AppT } from "@/lib/i18n/messages"
 export interface Ctx {
   t: AppT
   navigate: (href: string) => void
+  /**
+   * Switch the theme, which next-themes owns and only React can reach.
+   * Optional, so a command run outside the app simply skips it.
+   */
+  setTheme?: (theme: ThemeChoice) => void
 }

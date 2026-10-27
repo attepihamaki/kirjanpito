@@ -56,7 +56,11 @@ function NotFoundBody() {
               {f.t("notFound.home")}
             </ButtonLink>
             {hydrated && open ? (
-              <ButtonLink size="lg" variant="outline" href={APP_ROUTES.ledger}>
+              <ButtonLink
+                size="lg"
+                variant="outline"
+                href={APP_ROUTES.overview}
+              >
                 {f.t("landing.continue")}
               </ButtonLink>
             ) : null}

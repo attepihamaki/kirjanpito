@@ -5,6 +5,7 @@ import {
   buildReceiptPaths,
   cleanFileName,
   defaultFileBaseName,
+  suggestedBaseName,
   extensionFor,
   isPdf,
   isReceiptFile,
@@ -303,13 +304,30 @@ describe("cleanFileName", () => {
     )
   })
 
-  it("strips a trailing .csv, case-insensitively", () => {
+  it("strips a trailing .csv or .zip, case-insensitively", () => {
     expect(cleanFileName("kirjanpito.CSV")).toBe("kirjanpito")
+    expect(cleanFileName("kirjanpito.zip")).toBe("kirjanpito")
   })
 
   it("trims and tolerates an empty name", () => {
     expect(cleanFileName("  nimi  ")).toBe("nimi")
     expect(cleanFileName("")).toBe("")
+  })
+})
+
+describe("suggestedBaseName", () => {
+  const d = new Date(2026, 9, 27)
+
+  it("reuses the last file's name as it was, date included", () => {
+    expect(suggestedBaseName("toiminimi_2026-10-24.zip", "fi", d)).toBe(
+      "toiminimi_2026-10-24"
+    )
+    expect(suggestedBaseName("oma.csv", "en", d)).toBe("oma")
+  })
+
+  it("falls back to the dated default", () => {
+    expect(suggestedBaseName(null, "fi", d)).toBe("kirjanpito_2026-10-27")
+    expect(suggestedBaseName(".zip", "en", d)).toBe("accounting_2026-10-27")
   })
 })
 

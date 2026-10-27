@@ -21,6 +21,8 @@ export interface AccountLine {
   bucket: Bucket | null
   /** Lines 365–367: listed on the statement but not deducted (§6.3). */
   nondeductible: boolean
+  /** Line 317: listed on the statement but not taxed, so not in the result (§6.3). */
+  taxExempt: boolean
 }
 
 /**
@@ -350,6 +352,7 @@ function l(
     vatRate,
     bucket,
     nondeductible,
+    taxExempt: key === "317",
   }
 }
 

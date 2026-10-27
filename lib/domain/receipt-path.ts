@@ -185,7 +185,19 @@ export function cleanFileName(input: string): string {
     if (FORBIDDEN_IN_FILENAME.includes(ch)) continue
     out += ch
   }
-  return out.replace(/\.csv$/i, "").trim()
+  return out.replace(/\.(csv|zip)$/i, "").trim()
+}
+
+/**
+ * The name the download dialog suggests (§7.3): the last file opened or
+ * saved, without its extension, or the dated default when there is none.
+ */
+export function suggestedBaseName(
+  fileName: string | null,
+  lang: Lang,
+  now: Date = new Date()
+): string {
+  return (fileName && cleanFileName(fileName)) || defaultFileBaseName(lang, now)
 }
 
 /** "kirjanpito_2026-10-24" / "accounting_2026-10-24", using today's date. */

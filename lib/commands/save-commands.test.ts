@@ -1,8 +1,14 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { exportBook, openFile, saveBook } from "@/lib/commands/io-commands"
+import {
+  autosaveBook,
+  exportBook,
+  openFile,
+  saveBook,
+} from "@/lib/commands/io-commands"
 import { defaultCategories } from "@/lib/domain/accounts"
+import { unpackZip } from "@/lib/domain/zip"
 import { createAppT } from "@/lib/i18n/messages"
 import { useBookStore } from "@/stores/book-store"
 import type { Ctx } from "@/lib/commands/ctx"
@@ -30,9 +36,12 @@ function fakeHandle(name: string, lastModified = 1000) {
     permission: "granted" as PermissionState,
     queryPermission: vi.fn(async () => handle.permission),
     requestPermission: vi.fn(async () => handle.permission),
-    getFile: vi.fn(async () => new File([CSV], name, {
-      lastModified: handle.lastModified,
-    })),
+    getFile: vi.fn(
+      async () =>
+        new File([CSV], name, {
+          lastModified: handle.lastModified,
+        })
+    ),
     createWritable: vi.fn(async () => ({
       write: async (blob: Blob) => {
         written.push(blob)
@@ -76,6 +85,22 @@ async function openLinked(handle: FakeHandle) {
   )
 }
 
+/** A bookkeeping already linked to a ZIP on disk, as after its first save. */
+function linkZip(handle: FakeHandle) {
+  useBookStore.setState({
+    open: true,
+    entries: [sample()],
+    dirty: true,
+    fileName: handle.name,
+    fileHandle: asHandle(handle),
+    savedAt: handle.lastModified,
+  })
+}
+
+async function unzipped(blob: Blob) {
+  return unpackZip(new Uint8Array(await blob.arrayBuffer()))
+}
+
 describe("saving back to the opened file", () => {
   beforeEach(() => {
     vi.unstubAllGlobals()
@@ -93,20 +118,37 @@ describe("saving back to the opened file", () => {
     })
   })
 
-  it("links the file it was opened from and writes back to it", async () => {
+  it("links the file it was opened from", async () => {
     const handle = fakeHandle("kirjanpito.csv")
     stubPickers(null)
     await openLinked(handle)
     expect(useBookStore.getState().fileHandle).toBe(asHandle(handle))
+  })
 
+  /*
+   * A bookkeeping is a ZIP, since settings.json travels with it (§7.6), so a
+   * book opened from a plain CSV has outgrown that file on its first save.
+   */
+  it("moves a book opened from a CSV into a ZIP, then writes back to it", async () => {
+    const csv = fakeHandle("kirjanpito.csv")
+    const zip = fakeHandle("kirjanpito.zip")
+    const picker = stubPickers(zip)
+    await openLinked(csv)
     useBookStore.getState().upsertEntry(sample())
-    expect(useBookStore.getState().dirty).toBe(true)
 
     await saveBook(ctx, "kirjanpito")
-
-    expect(handle.written).toHaveLength(1)
-    expect(await handle.written[0].text()).toContain("pvm;selite")
+    expect(picker).toHaveBeenCalledOnce()
+    expect(csv.written).toHaveLength(0)
+    expect(zip.written).toHaveLength(1)
+    const archive = await unzipped(zip.written[0])
+    expect(archive?.csvText).toContain("pvm;selite")
+    expect(archive?.settingsText).toContain('"vatPeriod"')
     expect(useBookStore.getState().dirty).toBe(false)
+
+    useBookStore.getState().upsertEntry({ ...sample(), id: "e2" })
+    await saveBook(ctx, "kirjanpito")
+    expect(picker).toHaveBeenCalledOnce()
+    expect(zip.written).toHaveLength(2)
   })
 
   /*
@@ -114,7 +156,7 @@ describe("saving back to the opened file", () => {
    * first save has to ask where the bookkeeping should live.
    */
   it("asks for a file when there is nothing to write back to", async () => {
-    const chosen = fakeHandle("uusi.csv")
+    const chosen = fakeHandle("uusi.zip")
     const picker = stubPickers(chosen)
     await openFile(ctx, new File([CSV], "kirjanpito.csv", { type: "text/csv" }))
     expect(useBookStore.getState().fileHandle).toBeNull()
@@ -123,7 +165,7 @@ describe("saving back to the opened file", () => {
 
     expect(picker).toHaveBeenCalledOnce()
     expect(chosen.written).toHaveLength(1)
-    expect(useBookStore.getState().fileName).toBe("uusi.csv")
+    expect(useBookStore.getState().fileName).toBe("uusi.zip")
     expect(useBookStore.getState().fileHandle).toBe(asHandle(chosen))
   })
 
@@ -139,11 +181,10 @@ describe("saving back to the opened file", () => {
   })
 
   it("leaves the bookkeeping dirty when permission is refused", async () => {
-    const handle = fakeHandle("kirjanpito.csv")
+    const handle = fakeHandle("kirjanpito.zip")
     handle.permission = "denied"
     stubPickers(null)
-    await openLinked(handle)
-    useBookStore.setState({ dirty: true })
+    linkZip(handle)
 
     await saveBook(ctx, "kirjanpito")
 
@@ -156,15 +197,15 @@ describe("saving back to the opened file", () => {
    * else — a spreadsheet, another tab — has written to it since it was read.
    */
   it("refuses to overwrite a file changed outside the app", async () => {
-    const handle = fakeHandle("kirjanpito.csv")
-    stubPickers(null)
-    await openLinked(handle)
-    useBookStore.setState({ dirty: true })
+    const handle = fakeHandle("kirjanpito.zip")
+    const picker = stubPickers(null)
+    linkZip(handle)
 
     handle.lastModified = 2000
     await saveBook(ctx, "kirjanpito")
 
     // The confirm dialog has no host in this test, so it resolves to false.
+    expect(picker).not.toHaveBeenCalled()
     expect(handle.written).toHaveLength(0)
     expect(useBookStore.getState().dirty).toBe(true)
   })
@@ -174,11 +215,10 @@ describe("saving back to the opened file", () => {
    * mistake its own save for an outside edit and question the next one.
    */
   it("follows the file's timestamp so a second save is not questioned", async () => {
-    const handle = fakeHandle("kirjanpito.csv")
+    const handle = fakeHandle("kirjanpito.zip")
     stubPickers(null)
-    await openLinked(handle)
+    linkZip(handle)
 
-    useBookStore.getState().upsertEntry(sample())
     await saveBook(ctx, "kirjanpito")
     expect(useBookStore.getState().savedAt).toBe(handle.lastModified)
 
@@ -217,6 +257,12 @@ describe("downloading a copy", () => {
     await exportBook(ctx, "kirjanpito", false)
 
     expect(useBookStore.getState().dirty).toBe(false)
+    expect(useBookStore.getState().fileName).toBe("kirjanpito.zip")
+  })
+
+  it("writes a bare CSV only when asked to", async () => {
+    await exportBook(ctx, "kirjanpito", true)
+
     expect(useBookStore.getState().fileName).toBe("kirjanpito.csv")
   })
 
@@ -251,3 +297,82 @@ function sample() {
     amountMode: "gross" as const,
   }
 }
+
+/*
+ * Opt-in autosave (§7.5): it writes only where nothing has to be asked, and
+ * otherwise stops and waits for a manual save.
+ */
+describe("autosave", () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals()
+    useBookStore.setState({
+      hydrated: true,
+      cats: defaultCategories(),
+      saving: false,
+      importing: false,
+      autosave: true,
+      autosavePaused: false,
+    })
+  })
+
+  it("writes to a linked ZIP it may already write to", async () => {
+    const handle = fakeHandle("kirjanpito.zip")
+    linkZip(handle)
+
+    expect(await autosaveBook(ctx)).toBe(true)
+    expect(handle.written).toHaveLength(1)
+    expect(useBookStore.getState().dirty).toBe(false)
+    expect(useBookStore.getState().savedAt).toBe(handle.lastModified)
+  })
+
+  it("never asks for permission, and pauses instead", async () => {
+    const handle = fakeHandle("kirjanpito.zip")
+    handle.permission = "prompt"
+    linkZip(handle)
+
+    expect(await autosaveBook(ctx)).toBe(false)
+    expect(handle.requestPermission).not.toHaveBeenCalled()
+    expect(handle.written).toHaveLength(0)
+    expect(useBookStore.getState().autosavePaused).toBe(true)
+    expect(useBookStore.getState().dirty).toBe(true)
+  })
+
+  it("pauses on a file changed outside the app, without asking", async () => {
+    const handle = fakeHandle("kirjanpito.zip")
+    linkZip(handle)
+    handle.lastModified = 5000
+
+    expect(await autosaveBook(ctx)).toBe(false)
+    expect(handle.written).toHaveLength(0)
+    expect(useBookStore.getState().autosavePaused).toBe(true)
+  })
+
+  it("pauses on a linked CSV, which a ZIP cannot be written into", async () => {
+    const handle = fakeHandle("kirjanpito.csv")
+    linkZip(handle)
+
+    expect(await autosaveBook(ctx)).toBe(false)
+    expect(useBookStore.getState().autosavePaused).toBe(true)
+  })
+
+  it("does nothing while it is off", async () => {
+    const handle = fakeHandle("kirjanpito.zip")
+    linkZip(handle)
+    useBookStore.setState({ autosave: false })
+
+    expect(await autosaveBook(ctx)).toBe(false)
+    expect(handle.written).toHaveLength(0)
+    expect(useBookStore.getState().autosavePaused).toBe(false)
+  })
+
+  it("starts again after a manual save", async () => {
+    const handle = fakeHandle("kirjanpito.zip")
+    stubPickers(null)
+    linkZip(handle)
+    useBookStore.setState({ autosavePaused: true })
+
+    await saveBook(ctx, "kirjanpito")
+
+    expect(useBookStore.getState().autosavePaused).toBe(false)
+  })
+})

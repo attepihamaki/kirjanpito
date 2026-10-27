@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import {
   Field,
+  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -43,6 +44,7 @@ import {
 } from "@/lib/domain/invoice-text"
 import { isPdf } from "@/lib/domain/receipt-path"
 import { isoDate, monthOf, todayIso, yearOf } from "@/lib/domain/dates"
+import { rateMismatch, rateOnDate } from "@/lib/domain/vat-rates"
 import { uid } from "@/lib/domain/id"
 import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
 import { deleteEntry } from "@/lib/commands/book-commands"
@@ -213,10 +215,12 @@ function EntryDialogForm({
     formRef.current = form
   }, [form])
   /*
-   * Set once a rate has been read from a PDF, so picking a category keeps
-   * the invoice's rate instead of replacing it with the category default.
+   * Set once the rate is one somebody chose: picked from the list, read from
+   * an invoice PDF, or saved on the entry being edited or copied. A chosen
+   * rate survives picking a category and changing the date; an unchosen one
+   * follows the category default and the date (§5).
    */
-  const keepRate = React.useRef(false)
+  const keepRate = React.useRef(mode !== "new")
 
   // Keep freshly attached receipts alive through a GC sweep (§7.4).
   React.useEffect(() => {
@@ -274,9 +278,10 @@ function EntryDialogForm({
         amount: guess.amount != null ? formatMoneyPlain(guess.amount) : "",
         vatRate:
           guess.vatRate ??
-          previousCat?.vatRate ??
-          suggested?.vatRate ??
-          prev.vatRate,
+          rateOnDate(
+            previousCat?.vatRate ?? suggested?.vatRate ?? prev.vatRate,
+            guess.date ?? prev.date
+          ),
         // An invoice's total includes VAT.
         amountMode: guess.amount != null ? "gross" : prev.amountMode,
       }))
@@ -377,6 +382,8 @@ function EntryDialogForm({
     ? RATES
     : [...RATES, form.vatRate]
   const dirty = snapshot(form) !== baseline
+  // A hint, never a block: corrections can carry an older rate (§5).
+  const mismatch = rateMismatch(form.vatRate, form.date)
 
   /** `true` when this field is the one the error line is complaining about. */
   const invalid = (field: ErrorField) =>
@@ -522,7 +529,18 @@ function EntryDialogForm({
                   value={form.date}
                   autoFocus={mode === "copy"}
                   aria-invalid={invalid("date")}
-                  onChange={(e) => update({ date: e.target.value })}
+                  onChange={(e) => {
+                    const date = e.target.value
+                    /*
+                     * A rate the user did not choose follows the date across
+                     * a rate change (§5); one they picked stays.
+                     */
+                    update(
+                      keepRate.current
+                        ? { date }
+                        : { date, vatRate: rateOnDate(form.vatRate, date) }
+                    )
+                  }}
                 />
               </Field>
 
@@ -560,7 +578,9 @@ function EntryDialogForm({
                   update({
                     catId: value,
                     vatRate:
-                      cat && !keepRate.current ? cat.vatRate : form.vatRate,
+                      cat && !keepRate.current
+                        ? rateOnDate(cat.vatRate, form.date)
+                        : form.vatRate,
                   })
                 }}
                 placeholder={f.t("entry.errCategory")}
@@ -592,9 +612,27 @@ function EntryDialogForm({
                     label: f.rate(rate),
                   }))}
                   value={String(form.vatRate)}
-                  onChange={(value) => update({ vatRate: Number(value) })}
+                  onChange={(value) => {
+                    keepRate.current = true
+                    update({ vatRate: Number(value) })
+                  }}
                   label={f.t("entry.vatRate")}
                 />
+                {mismatch ? (
+                  <FieldDescription className="text-warning">
+                    {mismatch.kind === "notYet"
+                      ? f.t("entry.rateNotYet", {
+                          r: f.rate(mismatch.rate),
+                          d: f.date(mismatch.since),
+                          s: f.rate(mismatch.suggested),
+                        })
+                      : f.t("entry.rateEnded", {
+                          r: f.rate(mismatch.rate),
+                          d: f.date(mismatch.until),
+                          s: f.rate(mismatch.suggested),
+                        })}
+                  </FieldDescription>
+                ) : null}
               </Field>
             </div>
 

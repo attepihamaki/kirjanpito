@@ -19,7 +19,7 @@ export function AppSkeleton() {
           <Skeleton className="h-4 w-28" />
         </div>
         <div className="flex flex-col gap-1.5 px-2">
-          {Array.from({ length: 5 }, (_, i) => (
+          {Array.from({ length: 6 }, (_, i) => (
             <Skeleton key={i} className="h-9 w-full" />
           ))}
         </div>

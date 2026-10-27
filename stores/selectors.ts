@@ -2,10 +2,12 @@ import { LINE_BY_KEY, categoryName } from "@/lib/domain/accounts"
 import { calcEntry, signedGross } from "@/lib/domain/calc"
 import { monthOf, yearOf } from "@/lib/domain/dates"
 import type { Category, Entry, Lang } from "@/lib/domain/types"
+import { rateMismatch } from "@/lib/domain/vat-rates"
 import {
   LEDGER_SORT_DEFAULT,
   type LedgerSortKey,
   type MonthFilter,
+  type CheckFilter,
   type SortState,
   type TypeFilter,
 } from "@/stores/book-store"
@@ -45,6 +47,14 @@ export function yearsAvailable(entries: readonly Entry[], selected: number) {
   return [...years].sort((a, b) => b - a)
 }
 
+/**
+ * Whether an entry has a receipt file the app can show. A receipt listed in
+ * the CSV but missing from the ZIP does not count (§7.2).
+ */
+export function hasReceipt(entry: Entry): boolean {
+  return entry.atts?.some((a) => a.id !== null) ?? false
+}
+
 export function usedCategoryIds(entries: readonly Entry[]) {
   return new Set(entries.map((e) => e.catId))
 }
@@ -53,6 +63,7 @@ export interface LedgerFilters {
   query: string
   type: TypeFilter
   catId: string
+  check: CheckFilter
   /** Null while no column is chosen: the rows then take `LEDGER_SORT_DEFAULT`. */
   sort: SortState<LedgerSortKey> | null
 }
@@ -97,6 +108,10 @@ export function filterAndSortEntries(
   const filtered = entries.filter((e) => {
     if (filters.type !== "all" && e.type !== filters.type) return false
     if (filters.catId !== "all" && e.catId !== filters.catId) return false
+    if (filters.check === "noReceipt" && hasReceipt(e)) return false
+    if (filters.check === "rateMismatch" && !rateMismatch(e.vatRate, e.date)) {
+      return false
+    }
     if (!needle) return true
     const cat = cats.get(e.catId)
     const name = cat ? categoryName(cat, lang) : ""

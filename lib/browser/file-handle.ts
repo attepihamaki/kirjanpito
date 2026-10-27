@@ -35,6 +35,10 @@ declare global {
     requestPermission?(d: PermissionDescriptor): Promise<PermissionState>
   }
 
+  interface DataTransferItem {
+    getAsFileSystemHandle?(): Promise<FileSystemHandle | null>
+  }
+
   interface Window {
     showOpenFilePicker?(options?: {
       types?: PickerType[]
@@ -56,6 +60,37 @@ const CSV_TYPE: PickerType = {
 const ZIP_TYPE: PickerType = {
   description: "ZIP",
   accept: { "application/zip": [".zip"] },
+}
+
+/**
+ * The handles behind a drop, looked up by file (§7.5).
+ *
+ * The browser empties a drop's item list as soon as the event returns, so the
+ * handles are requested here, synchronously, and only awaited later. Firefox
+ * and Safari have no `getAsFileSystemHandle`, and a dropped folder is not a
+ * file handle; both come back as null, and the file opens read-only.
+ */
+export function dropHandles(
+  items: DataTransferItemList | undefined
+): (file: File) => Promise<FileSystemFileHandle | null> {
+  const pending = Array.from(items ?? [])
+    .filter((item) => item.kind === "file")
+    .map((item) => {
+      try {
+        return item.getAsFileSystemHandle?.() ?? Promise.resolve(null)
+      } catch {
+        return Promise.resolve(null)
+      }
+    })
+  const all = Promise.all(pending.map((p) => p.catch(() => null)))
+  return async (file) => {
+    const handles = await all
+    const match = handles.find(
+      (h): h is FileSystemFileHandle =>
+        h?.kind === "file" && h.name === file.name
+    )
+    return match ?? null
+  }
 }
 
 export function isFileHandleSupported(): boolean {
@@ -83,7 +118,12 @@ export async function pickFileToOpen(): Promise<FileSystemFileHandle | null> {
   if (!isFileHandleSupported()) return null
   try {
     const [handle] = await window.showOpenFilePicker!({
-      types: [{ description: "CSV / ZIP", accept: { ...CSV_TYPE.accept, ...ZIP_TYPE.accept } }],
+      types: [
+        {
+          description: "CSV / ZIP",
+          accept: { ...CSV_TYPE.accept, ...ZIP_TYPE.accept },
+        },
+      ],
       multiple: false,
     })
     return handle ?? null
@@ -114,6 +154,17 @@ export async function pickFileToSave(
  * Ask for write permission, prompting if it has not been granted yet. Must be
  * called from a user gesture, or the browser refuses the prompt outright.
  */
+/** Whether the handle may be written without asking: no prompt is shown. */
+export async function hasWritePermission(
+  handle: FileSystemFileHandle
+): Promise<boolean> {
+  try {
+    return (await handle.queryPermission?.({ mode: "readwrite" })) === "granted"
+  } catch {
+    return false
+  }
+}
+
 export async function requestWritePermission(
   handle: FileSystemFileHandle
 ): Promise<boolean> {

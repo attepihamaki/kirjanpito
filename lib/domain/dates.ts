@@ -138,6 +138,23 @@ export function formatDate(iso: string, lang: Lang): string {
   return fmt.format(new Date(Date.UTC(y, m - 1, d)))
 }
 
+const weekdayFormatters: Partial<Record<Lang, Intl.DateTimeFormat>> = {}
+
+/** The short weekday name: Finnish "ti", English "Tue". In UTC, as above. */
+export function formatWeekday(iso: string, lang: Lang): string {
+  let fmt = weekdayFormatters[lang]
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat(lang === "fi" ? "fi-FI" : "en-GB", {
+      weekday: "short",
+      timeZone: "UTC",
+    })
+    weekdayFormatters[lang] = fmt
+  }
+  return fmt.format(
+    new Date(Date.UTC(yearOf(iso), monthOf(iso) - 1, Number(iso.slice(8, 10))))
+  )
+}
+
 /** Today in the user's own timezone, as ISO. */
 export function todayIso(now: Date = new Date()): string {
   return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`

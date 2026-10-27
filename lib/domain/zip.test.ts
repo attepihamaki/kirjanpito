@@ -20,6 +20,7 @@ import {
 
 const baseCats = defaultCategories()
 const cats = indexCategories(baseCats)
+const SETTINGS_TEXT = '{"version":1}'
 const enc = new TextEncoder()
 
 function att(over: Partial<Attachment> = {}): Attachment {
@@ -61,6 +62,7 @@ function packInputs(entries: Entry[]) {
     paths,
     attachmentIds,
     read: async (id: string) => enc.encode(`bytes-${id}`),
+    settingsText: SETTINGS_TEXT,
   }
 }
 
@@ -101,9 +103,18 @@ describe("packZip", () => {
     const entries = [entry({ atts: [att({ id: "a1", name: "lasku.pdf" })] })]
     const unpacked = (await unpackZip(await packZip(packInputs(entries))))!
     expect(unpacked.csvPath).toBe("kirjanpito_2026-10-24.csv")
+    expect(unpacked.settingsText).toBe(SETTINGS_TEXT)
     expect([...unpacked.files.keys()]).toEqual([
       "tositteet/2026/10/2026-10-28_lasku-1005.pdf",
     ])
+  })
+
+  it("reads an archive without settings.json as having none", async () => {
+    const JSZip = (await import("jszip")).default
+    const zip = new JSZip()
+    zip.file("a.csv", "pvm;tyyppi;summa")
+    const bytes = await zip.generateAsync({ type: "uint8array" })
+    expect((await unpackZip(bytes))?.settingsText).toBeNull()
   })
 
   it("stores receipts uncompressed and deflates the CSV", async () => {
@@ -118,6 +129,7 @@ describe("packZip", () => {
       paths: new Map([["k", "tositteet/2026/01/x.bin"]]),
       attachmentIds: new Map([["k", "id1"]]),
       read: async () => random,
+      settingsText: SETTINGS_TEXT,
     })
 
     /*
@@ -163,6 +175,7 @@ describe("unpackZip", () => {
       paths: new Map(),
       attachmentIds: new Map(),
       read: async () => null,
+      settingsText: SETTINGS_TEXT,
     })
     expect(await unpackZip(bytes)).toBeNull()
   })

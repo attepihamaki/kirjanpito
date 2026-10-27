@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 
 import {
+  AutosaveNote,
   FileStatus,
   StatusDot,
   useFileStatusText,
@@ -116,6 +117,7 @@ export function FileMenu({
             {name}
           </span>
           <FileStatus />
+          <AutosaveNote />
         </div>
 
         <Separator />

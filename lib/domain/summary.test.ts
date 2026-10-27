@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import { RATES, defaultCategories } from "@/lib/domain/accounts"
 import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { createIdFactory } from "@/lib/domain/id"
-import { salesTotal, summary } from "@/lib/domain/summary"
+import { monthFigures, salesTotal, summary } from "@/lib/domain/summary"
 import { indexCategories, type Category, type Entry } from "@/lib/domain/types"
 
 const baseCats = defaultCategories()
@@ -138,5 +138,19 @@ describe("summary — classification", () => {
   it("ignores entries from other years", () => {
     const r = summary([entry({ date: "2025-05-05" })], cats, 2026)
     expect(r.totals.incomeNet).toBe(0)
+  })
+})
+
+describe("monthFigures", () => {
+  const m = monthFigures(sample, cats, 2026)
+
+  it("adds up to the §10 year", () => {
+    expect(m.result.reduce((a, b) => a + b, 0)).toBe(1064253)
+    expect(m.vat.reduce((a, b) => a + b, 0)).toBe(76022)
+  })
+
+  it("gives October's and January's VAT", () => {
+    expect(m.vat[9]).toBe(36218)
+    expect(m.vat[0]).toBe(46605)
   })
 })

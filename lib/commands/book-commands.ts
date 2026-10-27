@@ -53,7 +53,7 @@ export async function startNewBook(ctx: Ctx): Promise<void> {
   releaseAllObjectUrls()
   await unlinkFile()
   useBookStore.getState().newBook(new Date().getFullYear())
-  ctx.navigate(APP_ROUTES.ledger)
+  ctx.navigate(APP_ROUTES.overview)
 }
 
 export async function closeBook(ctx: Ctx): Promise<void> {

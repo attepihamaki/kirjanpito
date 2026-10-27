@@ -1,8 +1,13 @@
 import { toast } from "@/components/ui/toast"
 
 import { releaseAllObjectUrls } from "@/lib/browser/object-urls"
-import { fileToUint8Array, readFileAsText, saveBlob } from "@/lib/browser/download"
 import {
+  fileToUint8Array,
+  readFileAsText,
+  saveBlob,
+} from "@/lib/browser/download"
+import {
+  hasWritePermission,
   isFileHandleSupported,
   lastModified,
   pickFileToOpen,
@@ -17,6 +22,7 @@ import {
   isReceiptStorageSupported,
   putReceipt,
 } from "@/lib/browser/receipt-store"
+import { readStoredTheme } from "@/lib/browser/theme"
 import { parseCsv, serializeCsv, type ImportSuccess } from "@/lib/domain/csv"
 import { CSV_HEADER_LINE } from "@/lib/domain/csv-header"
 import { uid } from "@/lib/domain/id"
@@ -31,13 +37,20 @@ import {
   type Attachment,
   type Entry,
 } from "@/lib/domain/types"
+import {
+  parseSettings,
+  serializeSettings,
+  type ParsedSettings,
+} from "@/lib/domain/settings-file"
+import { normalizeLayout } from "@/lib/domain/overview-layout"
 import { dirOf, packZip, resolveReceipt, unpackZip } from "@/lib/domain/zip"
 import { SKIP_CODE_KEYS } from "@/lib/i18n/messages"
 import { APP_ROUTES } from "@/lib/site"
 import { confirm } from "@/lib/ui/confirm"
 import type { Ctx } from "@/lib/commands/ctx"
-import { availableReceiptCount, guardDirty } from "@/lib/commands/book-commands"
+import { guardDirty } from "@/lib/commands/book-commands"
 import { useBookStore } from "@/stores/book-store"
+import { useLangStore } from "@/stores/lang-store"
 
 /**
  * Commands that read or write a bookkeeping file. Imported lazily from the
@@ -190,7 +203,15 @@ async function importCsv(
     }
   })
 
-  applyImport(ctx, file, handle, result, entries, { imported: 0, missing })
+  applyImport(
+    ctx,
+    file,
+    handle,
+    result,
+    entries,
+    { imported: 0, missing },
+    null
+  )
   return true
 }
 
@@ -205,7 +226,19 @@ async function importZip(
     return false
   }
 
-  const result = parseCsv(unpacked.csvText, useBookStore.getState().cats, uid)
+  const settings = unpacked.settingsText
+    ? parseSettings(unpacked.settingsText)
+    : null
+  /*
+   * The file's own categories are the base the CSV is matched against, so a
+   * custom category comes back with its id, line and rate rather than being
+   * recreated from its name (§7.6).
+   */
+  const result = parseCsv(
+    unpacked.csvText,
+    settings?.categories ?? useBookStore.getState().cats,
+    uid
+  )
   if (!result.ok) {
     toast.add({ title: failureMessage(ctx, result) })
     return false
@@ -248,7 +281,15 @@ async function importZip(
     entries.push({ ...entry, ...(atts.length ? { atts } : {}) })
   }
 
-  applyImport(ctx, file, handle, result, entries, { imported, missing })
+  applyImport(
+    ctx,
+    file,
+    handle,
+    result,
+    entries,
+    { imported, missing },
+    settings
+  )
   return true
 }
 
@@ -283,7 +324,8 @@ function applyImport(
   handle: FileSystemFileHandle | null,
   result: ImportSuccess,
   entries: Entry[],
-  receipts: { imported: number; missing: number }
+  receipts: { imported: number; missing: number },
+  settings: ParsedSettings | null
 ): void {
   releaseAllObjectUrls()
   useBookStore.getState().replaceBook({
@@ -301,9 +343,26 @@ function applyImport(
     year: result.latestYear ?? new Date().getFullYear(),
     // A freshly read file is, by definition, already saved.
     dirty: false,
+    settings: settings
+      ? {
+          vatPeriod: settings.vatPeriod,
+          vatFiled: settings.vatFiled,
+          overviewLayout: settings.overviewLayout,
+          autosave: settings.autosave,
+          ledgerSize: settings.pageSize?.ledger,
+          ctSize: settings.pageSize?.categories,
+        }
+      : undefined,
   })
+  /*
+   * The language and theme are preferences of the browser as much as of the
+   * book (§12), so opening a file switches to them but they never mark it
+   * dirty. The landing page goes on using the browser's own key.
+   */
+  if (settings?.language) useLangStore.getState().setLang(settings.language)
+  if (settings?.theme) ctx.setTheme?.(settings.theme)
   toast.add({ title: importSummary(ctx, result, receipts) })
-  ctx.navigate(APP_ROUTES.ledger)
+  ctx.navigate(APP_ROUTES.overview)
 }
 
 /* -------------------------------------------------------------------------
@@ -315,6 +374,21 @@ interface BookFile {
   name: string
   blob: Blob
   isZip: boolean
+}
+
+/** Everything `settings.json` holds, as the app stands right now (§7.6). */
+function currentSettingsText(): string {
+  const s = useBookStore.getState()
+  return serializeSettings({
+    language: useLangStore.getState().lang,
+    theme: readStoredTheme(),
+    vatPeriod: s.vatPeriod,
+    vatFiled: s.vatFiled,
+    overviewLayout: normalizeLayout(s.overviewLayout),
+    autosave: s.autosave,
+    categories: s.cats,
+    pageSize: { ledger: s.ledgerSize, categories: s.ctSize },
+  })
 }
 
 async function buildBookFile(
@@ -329,7 +403,11 @@ async function buildBookFile(
    * receipts existed (§7.1).
    */
   const csvText = serializeCsv(entries, indexCategories(cats), paths)
-  const isZip = !csvOnly && availableReceiptCount(entries) > 0
+  /*
+   * A bookkeeping is a ZIP, because settings.json has to travel with the
+   * entries (§7.6). A bare CSV is only ever an explicit export.
+   */
+  const isZip = !csvOnly
 
   if (!isZip) {
     return {
@@ -354,6 +432,7 @@ async function buildBookFile(
       const blob = await getReceipt(id)
       return blob ? new Uint8Array(await blob.arrayBuffer()) : null
     },
+    settingsText: currentSettingsText(),
   })
   return {
     name: `${name}.zip`,
@@ -403,10 +482,7 @@ export async function exportBook(
  * `suggestedBase` seeds the picker in those cases; the caller supplies it
  * because the default name is language-dependent (§7.3).
  */
-export async function saveBook(
-  ctx: Ctx,
-  suggestedBase: string
-): Promise<void> {
+export async function saveBook(ctx: Ctx, suggestedBase: string): Promise<void> {
   const state = useBookStore.getState()
   if (!state.entries.length) {
     toast.add({ title: ctx.t("io.nothingToExport") })
@@ -430,6 +506,8 @@ export async function saveBook(
       savedAt: await lastModified(handle),
     })
     await rememberHandle(handle)
+    // A save that could ask is what autosave was waiting for.
+    useBookStore.getState().setAutosavePaused(false)
     toast.add({ title: ctx.t("io.saved", { f: handle.name }) })
   } catch (error) {
     console.error(error)
@@ -456,9 +534,9 @@ async function handleToWrite(
 
   if (!fileHandle) return pick()
 
-  const sameShape = fileHandle.name.toLowerCase().endsWith(
-    file.isZip ? ".zip" : ".csv"
-  )
+  const sameShape = fileHandle.name
+    .toLowerCase()
+    .endsWith(file.isZip ? ".zip" : ".csv")
   if (!sameShape) {
     toast.add({ title: ctx.t("io.shapeChanged", { f: file.name }) })
     return pick()
@@ -493,4 +571,50 @@ async function handleToWrite(
   }
 
   return fileHandle
+}
+
+/**
+ * Save without asking anything (§7.5): no picker, no permission prompt, no
+ * overwrite question. Wherever `saveBook` would have asked, this stops
+ * instead and pauses autosave, and the amber dot stays until a manual save.
+ * Returns whether it wrote the file.
+ */
+export async function autosaveBook(ctx: Ctx): Promise<boolean> {
+  const state = useBookStore.getState()
+  const handle = state.fileHandle
+  if (!state.autosave || state.autosavePaused || !state.dirty) return false
+  if (state.saving || state.importing || !state.entries.length) return false
+
+  const pause = () => {
+    useBookStore.getState().setAutosavePaused(true)
+    return false
+  }
+  if (!handle || !handle.name.toLowerCase().endsWith(".zip")) return pause()
+  if (!(await hasWritePermission(handle))) return pause()
+
+  useBookStore.getState().setSaving(true)
+  try {
+    let onDisk: number
+    try {
+      onDisk = await lastModified(handle)
+    } catch {
+      return pause()
+    }
+    if (state.savedAt !== null && onDisk !== state.savedAt) return pause()
+
+    const file = await buildBookFile(baseOf(handle.name), false)
+    await writeFile(handle, file.blob)
+    useBookStore.getState().markSaved({
+      fileName: handle.name,
+      fileHandle: handle,
+      savedAt: await lastModified(handle),
+    })
+    return true
+  } catch (error) {
+    console.error(error)
+    toast.add({ title: ctx.t("io.saveFailed") })
+    return pause()
+  } finally {
+    useBookStore.getState().setSaving(false)
+  }
 }

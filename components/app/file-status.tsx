@@ -1,6 +1,7 @@
 "use client"
 
 import { useT } from "@/components/lang-provider"
+import { useCanSaveToFile } from "@/hooks/use-save-book"
 import { cn } from "@/lib/utils"
 import { useBookStore } from "@/stores/book-store"
 
@@ -34,6 +35,31 @@ export function StatusDot({ className }: { className?: string }) {
         className
       )}
     />
+  )
+}
+
+/**
+ * Whether autosave is on and running, on and paused, or off (§7.5). Off is
+ * also what a browser that cannot write to a file always reports.
+ */
+export function useAutosaveState(): "off" | "on" | "paused" {
+  const autosave = useBookStore((s) => s.autosave)
+  const paused = useBookStore((s) => s.autosavePaused)
+  const linked = useBookStore((s) => s.fileHandle !== null)
+  const canSave = useCanSaveToFile()
+  if (!autosave || !canSave) return "off"
+  return paused || !linked ? "paused" : "on"
+}
+
+/** One line under the save status in the file menu, when autosave is on. */
+export function AutosaveNote() {
+  const t = useT()
+  const state = useAutosaveState()
+  if (state === "off") return null
+  return (
+    <p className="text-xs text-muted-foreground">
+      {state === "on" ? t("file.autosaveOn") : t("file.autosavePaused")}
+    </p>
   )
 }
 

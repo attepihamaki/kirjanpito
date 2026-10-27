@@ -1,17 +1,11 @@
 "use client"
 
 import * as React from "react"
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts"
 
+import {
+  IncomeExpenseChart,
+  IncomeExpenseLegend,
+} from "@/components/common/income-expense-chart"
 import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
 import { Money } from "@/components/common/money"
@@ -26,29 +20,16 @@ import {
 } from "@/components/ui/table"
 import { useFormatters } from "@/components/lang-provider"
 import { BUCKETS } from "@/lib/domain/accounts"
-import { salesTotal, summary, type MonthRow } from "@/lib/domain/summary"
-import { indexCategories, type Bucket } from "@/lib/domain/types"
+import {
+  monthFigures,
+  salesTotal,
+  summary,
+  type MonthRow,
+} from "@/lib/domain/summary"
+import { indexCategories } from "@/lib/domain/types"
+import { BUCKET_KEYS } from "@/lib/i18n/messages"
 import { cn } from "@/lib/utils"
 import { useBookStore } from "@/stores/book-store"
-
-const BUCKET_KEYS: Record<
-  Bucket,
-  | "summary.bucketPurchases"
-  | "summary.bucketPersonnel"
-  | "summary.bucketDepreciation"
-  | "summary.bucketOtherDeductible"
-  | "summary.bucketFinancial"
-  | "summary.bucketProvisions"
-  | "summary.bucketNondeductible"
-> = {
-  purchases: "summary.bucketPurchases",
-  personnel: "summary.bucketPersonnel",
-  depreciation: "summary.bucketDepreciation",
-  otherDeductible: "summary.bucketOtherDeductible",
-  financial: "summary.bucketFinancial",
-  provisions: "summary.bucketProvisions",
-  nondeductible: "summary.bucketNondeductible",
-}
 
 export function SummaryView() {
   const f = useFormatters()
@@ -56,16 +37,13 @@ export function SummaryView() {
   const cats = useBookStore((s) => s.cats)
   const year = useBookStore((s) => s.year)
 
-  const data = React.useMemo(
-    () => summary(entries, indexCategories(cats), year),
-    [entries, cats, year]
-  )
-
-  const chartData = data.months.map((m, i) => ({
-    month: f.month(i, true),
-    income: m.incomeNet / 100,
-    expenses: m.expenseNet / 100,
-  }))
+  const { data, figures } = React.useMemo(() => {
+    const catMap = indexCategories(cats)
+    return {
+      data: summary(entries, catMap, year),
+      figures: monthFigures(entries, catMap, year),
+    }
+  }, [entries, cats, year])
 
   return (
     <>
@@ -75,63 +53,18 @@ export function SummaryView() {
       />
 
       <div className="flex flex-col gap-6">
-        <Panel title={f.t("summary.chartLabel")} bodyClassName="p-4">
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ left: 8, right: 8 }}>
-                <CartesianGrid vertical={false} stroke="var(--border)" />
-                <XAxis
-                  dataKey="month"
-                  tickLine={false}
-                  axisLine={false}
-                  fontSize={12}
-                  stroke="var(--muted-foreground)"
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  width={64}
-                  fontSize={12}
-                  stroke="var(--muted-foreground)"
-                  tickFormatter={(value: number) => f.money(value * 100)}
-                />
-                <Tooltip
-                  cursor={{ fill: "var(--muted)" }}
-                  contentStyle={{
-                    background: "var(--popover)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "var(--radius-md)",
-                    color: "var(--popover-foreground)",
-                    fontSize: 12,
-                  }}
-                  formatter={(value, name) => [
-                    f.money(Math.round(Number(value) * 100)),
-                    name === "income"
-                      ? f.t("common.incomePlural")
-                      : f.t("common.expensePlural"),
-                  ]}
-                />
-                <Legend
-                  formatter={(value) =>
-                    value === "income"
-                      ? `${f.t("common.incomePlural")} · ${f.money(data.totals.incomeNet)}`
-                      : `${f.t("common.expensePlural")} · ${f.money(data.totals.expenseNet)}`
-                  }
-                  wrapperStyle={{ fontSize: 12 }}
-                />
-                <Bar
-                  dataKey="income"
-                  fill="var(--income)"
-                  radius={[3, 3, 0, 0]}
-                />
-                <Bar
-                  dataKey="expenses"
-                  fill="var(--expense)"
-                  radius={[3, 3, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        <Panel
+          title={f.t("summary.chartLabel")}
+          actions={
+            <IncomeExpenseLegend
+              income={data.totals.incomeNet}
+              expenses={data.totals.expenseNet}
+              className="ml-auto"
+            />
+          }
+          bodyClassName="p-4"
+        >
+          <IncomeExpenseChart summary={data} figures={figures} />
         </Panel>
 
         <WideTable

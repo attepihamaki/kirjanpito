@@ -5,7 +5,12 @@ import {
   lineName,
   type AccountLine,
 } from "@/lib/domain/accounts"
-import { MONTHS, MONTHS_SHORT, formatDate } from "@/lib/domain/dates"
+import {
+  MONTHS,
+  MONTHS_SHORT,
+  formatDate,
+  formatWeekday,
+} from "@/lib/domain/dates"
 import {
   formatFileSize,
   formatMoney,
@@ -28,6 +33,8 @@ export interface Formatters {
   money(c: Cents): string
   moneyPlain(c: Cents): string
   date(iso: string): string
+  /** Short weekday name of an ISO date. */
+  weekday(iso: string): string
   rate(r: number): string
   size(bytes: number): string
   catName(c: Category): string
@@ -50,6 +57,7 @@ export function createFormatters(lang: Lang): Formatters {
     money: formatMoney,
     moneyPlain: formatMoneyPlain,
     date: (iso) => formatDate(iso, lang),
+    weekday: (iso) => formatWeekday(iso, lang),
     rate: (r) => formatRate(r, lang),
     size: (bytes) => formatFileSize(bytes, lang),
     catName: (c) => categoryName(c, lang),

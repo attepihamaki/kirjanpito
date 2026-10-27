@@ -47,7 +47,7 @@ describe("404 page", () => {
     ).toHaveAttribute("href", "/")
   })
 
-  it("offers the ledger only once a bookkeeping is known to be open", () => {
+  it("offers the overview only once a bookkeeping is known to be open", () => {
     const { rerender } = render(<NotFoundPage />)
     expect(screen.queryByRole("link", { name: "Jatka kirjanpitoa" })).toBeNull()
 
@@ -55,6 +55,6 @@ describe("404 page", () => {
     rerender(<NotFoundPage />)
     expect(
       screen.getByRole("link", { name: "Jatka kirjanpitoa" })
-    ).toHaveAttribute("href", "/app/ledger")
+    ).toHaveAttribute("href", "/app/overview")
   })
 })

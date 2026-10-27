@@ -61,6 +61,7 @@ export const LANDING_FAQ_ID = "faq"
  * the visible labels are translated.
  */
 export const APP_ROUTES = {
+  overview: "/app/overview",
   ledger: "/app/ledger",
   vat: "/app/vat",
   statement: "/app/statement",

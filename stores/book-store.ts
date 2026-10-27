@@ -4,7 +4,13 @@ import { create } from "zustand"
 import { persist, type PersistStorage } from "zustand/middleware"
 
 import { defaultCategories } from "@/lib/domain/accounts"
+import {
+  DEFAULT_LAYOUT,
+  type OverviewWidget,
+} from "@/lib/domain/overview-layout"
+import type { PageSize } from "@/lib/domain/settings-file"
 import type { AmountMode, Category, Entry, EntryType } from "@/lib/domain/types"
+import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 import { LANG_STORAGE_KEY, writeLang } from "@/stores/lang-store"
 
 /**
@@ -17,9 +23,14 @@ import { LANG_STORAGE_KEY, writeLang } from "@/stores/lang-store"
  */
 export const BOOK_STORAGE_KEY = "bookkeeping"
 
-export type PageSize = 10 | 25 | 50 | 100
+export type { PageSize }
 export type MonthFilter = number // 0 = whole year, 1-12 = that month
 export type TypeFilter = "all" | EntryType
+/**
+ * Entries that need a second look (§8.4): no receipt file to show, or a VAT
+ * rate that does not fit the entry's date.
+ */
+export type CheckFilter = "all" | "noReceipt" | "rateMismatch"
 export type VatMode = "month" | "quarter" | "year"
 
 export interface SortState<K extends string> {
@@ -95,6 +106,14 @@ export interface BookState {
   ctSize: PageSize
   /** Desktop sidebar expanded or collapsed to icons (§8.2). */
   sidebarOpen: boolean
+  /** How often the user files a VAT return (§6.5). Saved in settings.json. */
+  vatPeriod: VatPeriodKind
+  /** Period key → ISO date the return was marked as filed (§6.5). */
+  vatFiled: Record<string, string>
+  /** The overview's widgets, in order (§8.12). Normalised where it is read. */
+  overviewLayout: OverviewWidget[]
+  /** Save to the linked file a moment after each change (§7.5). Opt-in. */
+  autosave: boolean
 
   // ---- ephemeral ----
   hydrated: boolean
@@ -122,10 +141,17 @@ export interface BookState {
   savedAt: number | null
   /** A save is in flight: packing a ZIP of receipts is not instant. */
   saving: boolean
+  /**
+   * Autosave found something it would have to ask about — no write
+   * permission, a file changed outside the app, a file that is not a ZIP —
+   * and stopped. A manual save, which may ask, starts it again.
+   */
+  autosavePaused: boolean
   month: MonthFilter
   ledgerQuery: string
   ledgerType: TypeFilter
   ledgerCat: string
+  ledgerCheck: CheckFilter
   /** The column a header click chose, or null for the table's own order. */
   ledgerSort: SortState<LedgerSortKey> | null
   ledgerPage: number
@@ -156,6 +182,18 @@ export interface BookActions {
     dirty: boolean
     fileHandle: FileSystemFileHandle | null
     savedAt: number | null
+    /**
+     * What the file's `settings.json` carried. A plain CSV has none: its
+     * filed marks start empty and everything else stays as it was.
+     */
+    settings?: {
+      vatPeriod?: VatPeriodKind
+      vatFiled?: Record<string, string>
+      overviewLayout?: OverviewWidget[]
+      autosave?: boolean
+      ledgerSize?: PageSize
+      ctSize?: PageSize
+    }
   }): void
   upsertEntry(entry: Entry): void
   removeEntry(id: string): void
@@ -174,6 +212,12 @@ export interface BookActions {
   setImporting(importing: boolean): void
   setSaving(saving: boolean): void
   setLastEntryDefaults(next: { mode: AmountMode; type: EntryType }): void
+  setVatPeriod(kind: VatPeriodKind): void
+  /** Mark a period as filed on `date`, or clear the mark with null. */
+  setVatFiled(key: string, date: string | null): void
+  setOverviewLayout(layout: OverviewWidget[]): void
+  setAutosave(on: boolean): void
+  setAutosavePaused(paused: boolean): void
 
   upsertCategory(category: Category): void
   removeCategory(id: string): void
@@ -185,6 +229,7 @@ export interface BookActions {
   setLedgerQuery(q: string): void
   setLedgerType(type: TypeFilter): void
   setLedgerCat(id: string): void
+  setLedgerCheck(filter: CheckFilter): void
   toggleLedgerSort(key: LedgerSortKey): void
   setLedgerPage(page: number): void
   setLedgerSize(size: PageSize): void
@@ -222,6 +267,10 @@ function initialState(): BookState {
     ledgerSize: 10,
     ctSize: 25,
     sidebarOpen: true,
+    vatPeriod: "month",
+    vatFiled: {},
+    overviewLayout: DEFAULT_LAYOUT.map((w) => ({ ...w })),
+    autosave: false,
 
     hydrated: false,
     storageAvailable: true,
@@ -229,10 +278,12 @@ function initialState(): BookState {
     fileHandle: null,
     savedAt: null,
     saving: false,
+    autosavePaused: false,
     month: 0,
     ledgerQuery: "",
     ledgerType: "all",
     ledgerCat: "all",
+    ledgerCheck: "all",
     ledgerSort: null,
     ledgerPage: 1,
     catQuery: "",
@@ -262,6 +313,10 @@ type PersistedBook = Pick<
   | "ledgerSize"
   | "ctSize"
   | "sidebarOpen"
+  | "vatPeriod"
+  | "vatFiled"
+  | "overviewLayout"
+  | "autosave"
 >
 
 /**
@@ -320,6 +375,7 @@ const clearedFilters = {
   ledgerQuery: "",
   ledgerType: "all" as TypeFilter,
   ledgerCat: "all",
+  ledgerCheck: "all" as CheckFilter,
   ledgerPage: 1,
   catQuery: "",
   catPage: 1,
@@ -341,6 +397,11 @@ export const useBookStore = create<BookStore>()(
           entries: [],
           year,
           dirty: false,
+          /*
+           * The filing period and the layout carry over as the user's habits;
+           * filed marks belong to the bookkeeping they were made in.
+           */
+          vatFiled: {},
           gcTick: get().gcTick + 1,
         }),
 
@@ -351,12 +412,15 @@ export const useBookStore = create<BookStore>()(
           open: false,
           entries: [],
           dirty: false,
+          vatFiled: {},
           dialog: { kind: "none" },
           draftAttachmentIds: [],
           gcTick: get().gcTick + 1,
         }),
 
-      replaceBook: (next) =>
+      replaceBook: (next) => {
+        const s = next.settings ?? {}
+        const vatPeriod = s.vatPeriod ?? get().vatPeriod
         set({
           ...clearedFilters,
           open: true,
@@ -367,8 +431,17 @@ export const useBookStore = create<BookStore>()(
           savedAt: next.savedAt,
           year: next.year,
           dirty: next.dirty,
+          vatPeriod,
+          vatMode: vatPeriod,
+          vatFiled: s.vatFiled ?? {},
+          overviewLayout: s.overviewLayout ?? get().overviewLayout,
+          autosave: s.autosave ?? get().autosave,
+          autosavePaused: false,
+          ledgerSize: s.ledgerSize ?? get().ledgerSize,
+          ctSize: s.ctSize ?? get().ctSize,
           gcTick: get().gcTick + 1,
-        }),
+        })
+      },
 
       upsertEntry: (entry) => {
         const entries = [...get().entries]
@@ -411,6 +484,28 @@ export const useBookStore = create<BookStore>()(
         set({ lastMode: mode, lastType: type }),
 
       /*
+       * These three live in the file's settings.json, so changing one leaves
+       * the file behind and marks the book dirty, as an entry edit does. The
+       * VAT view follows the filing period, the period the user reports in.
+       */
+      setVatPeriod: (vatPeriod) =>
+        set({ vatPeriod, vatMode: vatPeriod, dirty: true }),
+      setVatFiled: (key, date) => {
+        const vatFiled = { ...get().vatFiled }
+        if (date) vatFiled[key] = date
+        else delete vatFiled[key]
+        set({ vatFiled, dirty: true })
+      },
+      setOverviewLayout: (overviewLayout) =>
+        set({ overviewLayout, dirty: true }),
+      /*
+       * A preference, like the language: it travels in settings.json but
+       * turning it on or off does not change the bookkeeping.
+       */
+      setAutosave: (autosave) => set({ autosave, autosavePaused: false }),
+      setAutosavePaused: (autosavePaused) => set({ autosavePaused }),
+
+      /*
        * Category edits mark the book dirty: category names are written into
        * the exported CSV, so an exported file would otherwise go stale.
        */
@@ -440,6 +535,7 @@ export const useBookStore = create<BookStore>()(
       setLedgerQuery: (ledgerQuery) => set({ ledgerQuery, ledgerPage: 1 }),
       setLedgerType: (ledgerType) => set({ ledgerType, ledgerPage: 1 }),
       setLedgerCat: (ledgerCat) => set({ ledgerCat, ledgerPage: 1 }),
+      setLedgerCheck: (ledgerCheck) => set({ ledgerCheck, ledgerPage: 1 }),
       toggleLedgerSort: (key) =>
         set({ ledgerSort: nextSort(get().ledgerSort, key), ledgerPage: 1 }),
       setLedgerPage: (ledgerPage) => set({ ledgerPage }),
@@ -449,6 +545,7 @@ export const useBookStore = create<BookStore>()(
           ledgerQuery: "",
           ledgerType: "all",
           ledgerCat: "all",
+          ledgerCheck: "all",
           ledgerPage: 1,
         }),
 
@@ -507,6 +604,10 @@ export const useBookStore = create<BookStore>()(
         ledgerSize: s.ledgerSize,
         ctSize: s.ctSize,
         sidebarOpen: s.sidebarOpen,
+        vatPeriod: s.vatPeriod,
+        vatFiled: s.vatFiled,
+        overviewLayout: s.overviewLayout,
+        autosave: s.autosave,
       }),
       migrate: (persisted) => {
         const blob = (persisted ?? {}) as Record<string, unknown>

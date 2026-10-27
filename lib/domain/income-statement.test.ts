@@ -113,6 +113,26 @@ describe("incomeStatement — §6.3 rules", () => {
     expect(s.lines.find((l) => l.line.key === "365")!.net).toBe(5000)
   })
 
+  it("lists tax-exempt income on 317 but leaves it out of the result", () => {
+    const s = incomeStatement(
+      [
+        entry({
+          id: "a",
+          type: "income",
+          catId: "300-domestic",
+          amount: 100000,
+        }),
+        entry({ id: "b", type: "income", catId: "317", amount: 20000 }),
+      ],
+      cats,
+      2026
+    )
+    expect(s.revenueTotal).toBe(100000)
+    expect(s.taxExemptTotal).toBe(20000)
+    expect(s.result).toBe(100000)
+    expect(s.lines.find((l) => l.line.key === "317")!.net).toBe(20000)
+  })
+
   // Form 5 wants a positive figure on both 358 and 359.
   it("reports a loss on 359 as a positive magnitude", () => {
     const s = incomeStatement(

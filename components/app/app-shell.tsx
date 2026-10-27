@@ -20,6 +20,7 @@ import { useCommandCtx } from "@/hooks/use-commands"
 import { useFileDrop, isBookFile, isMediaFile } from "@/hooks/use-file-drop"
 import { useReceiptGc } from "@/hooks/use-receipt-gc"
 import { useAppShortcuts } from "@/hooks/use-app-shortcuts"
+import { useAutosave } from "@/hooks/use-autosave"
 import {
   openFile,
   pickAndOpenFile,
@@ -100,9 +101,13 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
 
   // Stable callbacks: the shortcut listener is rebound whenever they change.
   useAppShortcuts({ onOpenFile: pickFile, onExport: openExportDialog })
+  useAutosave()
 
   const handleDrop = React.useCallback(
-    (files: File[]) => {
+    (
+      files: File[],
+      handleFor: (file: File) => Promise<FileSystemFileHandle | null>
+    ) => {
       const state = useBookStore.getState()
       // §8.2: while the entry dialog is open, dropped media attaches to it.
       if (state.dialog.kind === "entry") {
@@ -115,7 +120,7 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
 
       const book = files.find(isBookFile)
       if (book) {
-        void openFile(ctx, book)
+        void handleFor(book).then((handle) => openFile(ctx, book, handle))
         return
       }
       // Receipts dropped on their own start a new entry around them.

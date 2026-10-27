@@ -1,5 +1,7 @@
 import JSZip from "jszip"
 
+import { SETTINGS_FILE_NAME } from "@/lib/domain/settings-file"
+
 /**
  * ZIP packing and unpacking (§7.2).
  *
@@ -20,6 +22,8 @@ export interface PackInput {
   /** attachmentKey → IndexedDB id. Keys absent here are skipped. */
   attachmentIds: ReadonlyMap<string, string>
   read: ReceiptReader
+  /** `settings.json`, written beside the CSV (§7.6). */
+  settingsText: string
 }
 
 export async function packZip(input: PackInput): Promise<Uint8Array> {
@@ -29,6 +33,7 @@ export async function packZip(input: PackInput): Promise<Uint8Array> {
    * deflating them costs time for nothing.
    */
   zip.file(input.csvName, input.csvText, { compression: "DEFLATE" })
+  zip.file(SETTINGS_FILE_NAME, input.settingsText, { compression: "DEFLATE" })
 
   for (const [key, path] of input.paths) {
     const id = input.attachmentIds.get(key)
@@ -44,6 +49,9 @@ export async function packZip(input: PackInput): Promise<Uint8Array> {
 export interface UnpackedZip {
   csvPath: string
   csvText: string
+  /** `settings.json` beside the CSV, or at the root; null when there is none. */
+  settingsText: string | null
+  /** Every other file, by path: the receipts. */
   files: ReadonlyMap<string, Uint8Array>
 }
 
@@ -67,14 +75,22 @@ export async function unpackZip(data: Uint8Array): Promise<UnpackedZip | null> {
   if (!csvPath) return null
 
   const csvText = await zip.files[csvPath].async("string")
+  const csvDir = dirOf(csvPath)
+  const settingsPath = [csvDir + SETTINGS_FILE_NAME, SETTINGS_FILE_NAME].find(
+    (p) => names.includes(p)
+  )
+  const settingsText = settingsPath
+    ? await zip.files[settingsPath].async("string")
+    : null
+
   const files = new Map<string, Uint8Array>()
   for (const name of names) {
-    if (name === csvPath) continue
+    if (name === csvPath || name === settingsPath) continue
     if (name.split("/").includes("__MACOSX")) continue
     files.set(name, await zip.files[name].async("uint8array"))
   }
 
-  return { csvPath, csvText, files }
+  return { csvPath, csvText, settingsText, files }
 }
 
 /** The folder the CSV sits in, with a trailing slash — "" at the root. */

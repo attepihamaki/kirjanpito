@@ -32,7 +32,7 @@ import {
   paginate,
   usedCategoryIds,
 } from "@/stores/selectors"
-import { useBookStore } from "@/stores/book-store"
+import { useBookStore, type CheckFilter } from "@/stores/book-store"
 
 export function LedgerView() {
   const f = useFormatters()
@@ -43,6 +43,7 @@ export function LedgerView() {
   const query = useBookStore((s) => s.ledgerQuery)
   const typeFilter = useBookStore((s) => s.ledgerType)
   const catFilter = useBookStore((s) => s.ledgerCat)
+  const checkFilter = useBookStore((s) => s.ledgerCheck)
   const sort = useBookStore((s) => s.ledgerSort)
   const page = useBookStore((s) => s.ledgerPage)
   const size = useBookStore((s) => s.ledgerSize)
@@ -50,6 +51,7 @@ export function LedgerView() {
   const setQuery = useBookStore((s) => s.setLedgerQuery)
   const setType = useBookStore((s) => s.setLedgerType)
   const setCat = useBookStore((s) => s.setLedgerCat)
+  const setCheck = useBookStore((s) => s.setLedgerCheck)
   const setPage = useBookStore((s) => s.setLedgerPage)
   const setSize = useBookStore((s) => s.setLedgerSize)
   const clearFilters = useBookStore((s) => s.clearLedgerFilters)
@@ -71,7 +73,13 @@ export function LedgerView() {
       filterAndSortEntries(
         periodEntries,
         catMap,
-        { query, type: typeFilter, catId: catFilter, sort },
+        {
+          query,
+          type: typeFilter,
+          catId: catFilter,
+          check: checkFilter,
+          sort,
+        },
         f.lang,
         f.collator
       ),
@@ -81,6 +89,7 @@ export function LedgerView() {
       query,
       typeFilter,
       catFilter,
+      checkFilter,
       sort,
       f.lang,
       f.collator,
@@ -122,7 +131,10 @@ export function LedgerView() {
 
   const view = paginate(filtered, page, size)
   const hasFilters =
-    query.trim() !== "" || typeFilter !== "all" || catFilter !== "all"
+    query.trim() !== "" ||
+    typeFilter !== "all" ||
+    catFilter !== "all" ||
+    checkFilter !== "all"
 
   /*
    * A month with nothing in it has nothing to search or filter, so the
@@ -197,6 +209,18 @@ export function LedgerView() {
                 onChange={setCat}
                 label={f.t("ledger.colCategory")}
                 className="w-[13rem]"
+              />
+
+              <OptionSelect
+                options={[
+                  { value: "all", label: f.t("ledger.checkAll") },
+                  { value: "noReceipt", label: f.t("ledger.withoutReceipt") },
+                  { value: "rateMismatch", label: f.t("ledger.rateMismatch") },
+                ]}
+                value={checkFilter}
+                onChange={(value) => setCheck(value as CheckFilter)}
+                label={f.t("ledger.checkFilter")}
+                className="w-[14rem]"
               />
 
               {hasFilters ? (

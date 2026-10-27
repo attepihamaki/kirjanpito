@@ -50,6 +50,7 @@ describe("dictionary integrity", () => {
       "ledger",
       "nav",
       "notFound",
+      "overview",
       "receipt",
       "settings",
       "statement",

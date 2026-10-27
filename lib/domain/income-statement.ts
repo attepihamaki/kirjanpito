@@ -12,7 +12,10 @@ export interface IncomeStatement {
   year: number
   /** All 29 lines, in display order, zeros included. */
   lines: readonly StatementLine[]
+  /** Taxable revenue: every income line except 317 (§6.3). */
   revenueTotal: Cents
+  /** Line 317, which is reported on Form 5 but not taxed. */
+  taxExemptTotal: Cents
   /** Excludes 365–367, includes 353 and 354 (§6.3). */
   deductibleTotal: Cents
   nonDeductibleTotal: Cents
@@ -52,13 +55,16 @@ export function incomeStatement(
   )
 
   let revenueTotal = 0
+  let taxExemptTotal = 0
   let deductibleTotal = 0
   let nonDeductibleTotal = 0
 
   const lines: StatementLine[] = LINES.map((line) => {
     const net = byLine.get(line.key) ?? 0
-    if (line.side === "income") revenueTotal += net
-    else if (line.nondeductible) nonDeductibleTotal += net
+    if (line.side === "income") {
+      if (line.taxExempt) taxExemptTotal += net
+      else revenueTotal += net
+    } else if (line.nondeductible) nonDeductibleTotal += net
     else deductibleTotal += net
     return { line, net }
   })
@@ -68,6 +74,7 @@ export function incomeStatement(
     year,
     lines,
     revenueTotal,
+    taxExemptTotal,
     deductibleTotal,
     nonDeductibleTotal,
     result,

@@ -8,7 +8,7 @@ import { useBookStore } from "@/stores/book-store"
 
 /**
  * `/app` itself is not a view — it is the bookmarkable, guessable parent of
- * the five that are. Without a page here the static export has no
+ * the six that are. Without a page here the static export has no
  * `out/app/index.html` and the URL lands on the 404.
  *
  * `output: "export"` rules out a server-side redirect, so it happens on the
@@ -29,7 +29,7 @@ export function AppIndexRedirect() {
      * replace, not push: /app is a waypoint, and Back should leave the app
      * rather than bounce through it.
      */
-    if (hydrated && open) router.replace(APP_ROUTES.ledger)
+    if (hydrated && open) router.replace(APP_ROUTES.overview)
   }, [hydrated, open, router])
 
   return null
