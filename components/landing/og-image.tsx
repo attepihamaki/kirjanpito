@@ -55,7 +55,7 @@ export function OgImage({ lang }: { lang: Lang }) {
         width: "100%",
         height: "100%",
         display: "flex",
-        background: "#f5f7fa",
+        background: "#ffffff",
         fontFamily: "sans-serif",
       }}
     >
@@ -77,7 +77,7 @@ export function OgImage({ lang }: { lang: Lang }) {
               width: "44px",
               height: "44px",
               borderRadius: "10px",
-              background: "#1d4f91",
+              background: "#145a3c",
               color: "#ffffff",
               fontSize: "24px",
               fontWeight: 600,
@@ -85,7 +85,7 @@ export function OgImage({ lang }: { lang: Lang }) {
           >
             K
           </div>
-          <div style={{ fontSize: "26px", fontWeight: 600, color: "#142033" }}>
+          <div style={{ fontSize: "26px", fontWeight: 600, color: "#0a0a0a" }}>
             Kirjanpito
           </div>
         </div>
@@ -97,7 +97,7 @@ export function OgImage({ lang }: { lang: Lang }) {
             fontWeight: 600,
             lineHeight: 1.1,
             letterSpacing: "-0.03em",
-            color: "#142033",
+            color: "#0a0a0a",
             marginTop: "36px",
           }}
         >
@@ -108,7 +108,7 @@ export function OgImage({ lang }: { lang: Lang }) {
           style={{
             display: "flex",
             fontSize: "24px",
-            color: "#5a6678",
+            color: "#737373",
             marginTop: "22px",
           }}
         >
@@ -122,7 +122,7 @@ export function OgImage({ lang }: { lang: Lang }) {
           flex: 1,
           alignItems: "center",
           justifyContent: "center",
-          background: "#ecf0f5",
+          background: "#e8eeec",
         }}
       >
         <div

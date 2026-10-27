@@ -28,7 +28,7 @@ export function Surface({
   return (
     <Tag
       className={cn(
-        "border bg-card",
+        "border bg-card shadow-xs",
         radius === "xl" ? "rounded-xl" : "rounded-lg",
         tone === "destructive" && "border-destructive/40",
         className

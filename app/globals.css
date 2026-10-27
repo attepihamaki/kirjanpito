@@ -64,51 +64,55 @@
  * beside it so the two can be diffed. Use the semantic variables and the
  * standard component variants: never hard-code a hex, never write a manual
  * `dark:` override (CLAUDE.md §11).
+ *
+ * The surfaces are shadcn's own "neutral" base, unchanged. The one colour of
+ * our own is --primary, the forest green "Metsä", which also drives --ring,
+ * --sidebar-primary and the --chart-* ramp.
  */
 :root {
-  /* #F5F7FA */
-  --background: oklch(0.975 0.005 258);
-  /* #142033 */
-  --foreground: oklch(0.243 0.04 259);
   /* #FFFFFF */
+  --background: oklch(1 0 0);
+  /* #0A0A0A */
+  --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.243 0.04 259);
+  --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.243 0.04 259);
-  /* #1D4F91 */
-  --primary: oklch(0.431 0.121 257);
+  --popover-foreground: oklch(0.145 0 0);
+  /* #145A3C */
+  --primary: oklch(0.417 0.085 160);
   /* #FFFFFF */
   --primary-foreground: oklch(1 0 0);
-  /* #ECF0F5 */
-  --secondary: oklch(0.954 0.008 254);
-  --secondary-foreground: oklch(0.243 0.04 259);
-  --muted: oklch(0.954 0.008 254);
-  /* #5A6678 */
-  --muted-foreground: oklch(0.507 0.032 258);
-  --accent: oklch(0.954 0.008 254);
-  --accent-foreground: oklch(0.243 0.04 259);
+  /* #F5F5F5 */
+  --secondary: oklch(0.97 0 0);
+  /* #171717 */
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  /* #737373 */
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
   /* #B03A2E */
   --destructive: oklch(0.518 0.156 29);
-  /* #DCE3EC */
-  --border: oklch(0.913 0.014 255);
-  /* #C3CDD9 */
-  --input: oklch(0.844 0.02 253);
-  --ring: oklch(0.431 0.121 257);
-  /* A ramp around the accent, through --sheet-blue #3D72C4 at chart-3. */
-  --chart-1: oklch(0.8 0.075 256);
-  --chart-2: oklch(0.69 0.105 257);
-  --chart-3: oklch(0.557 0.14 259);
-  --chart-4: oklch(0.431 0.121 257);
-  --chart-5: oklch(0.345 0.098 257);
+  /* #E5E5E5 */
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.417 0.085 160);
+  /* #A8CFBA, #4F9273, #2F7656, #145A3C, #0C432C */
+  --chart-1: oklch(0.82 0.051 162);
+  --chart-2: oklch(0.606 0.084 162);
+  --chart-3: oklch(0.511 0.088 161);
+  --chart-4: oklch(0.417 0.085 160);
+  --chart-5: oklch(0.341 0.069 161);
   --radius: 0.625rem;
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.243 0.04 259);
-  --sidebar-primary: oklch(0.431 0.121 257);
+  /* #FAFAFA */
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.417 0.085 160);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.954 0.008 254);
-  --sidebar-accent-foreground: oklch(0.243 0.04 259);
-  --sidebar-border: oklch(0.913 0.014 255);
-  --sidebar-ring: oklch(0.431 0.121 257);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.417 0.085 160);
 
   /*
      * Kirjanpito additions (CLAUDE.md §11). The theme has no income/expense
@@ -150,47 +154,47 @@
 }
 
 .dark {
-  /* #0E1420 */
-  --background: oklch(0.192 0.026 264);
-  /* #E6ECF4 */
-  --foreground: oklch(0.941 0.013 256);
-  /* #151C29 */
-  --card: oklch(0.226 0.028 263);
-  --card-foreground: oklch(0.941 0.013 256);
-  --popover: oklch(0.226 0.028 263);
-  --popover-foreground: oklch(0.941 0.013 256);
-  /* #7FA9E3 */
-  --primary: oklch(0.727 0.096 257);
-  /* #0E1A2B */
-  --primary-foreground: oklch(0.216 0.038 257);
-  /* #1C2534 */
-  --secondary: oklch(0.263 0.031 260);
-  --secondary-foreground: oklch(0.941 0.013 256);
-  --muted: oklch(0.263 0.031 260);
-  /* #9AA6B8 */
-  --muted-foreground: oklch(0.722 0.03 258);
-  --accent: oklch(0.263 0.031 260);
-  --accent-foreground: oklch(0.941 0.013 256);
+  /* #0A0A0A */
+  --background: oklch(0.145 0 0);
+  /* #FAFAFA */
+  --foreground: oklch(0.985 0 0);
+  /* #171717 */
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  /* #7FCBA2 */
+  --primary: oklch(0.781 0.096 160);
+  /* #0A1F15 */
+  --primary-foreground: oklch(0.218 0.034 161);
+  /* #262626 */
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  /* #A1A1A1 */
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
   /* #EE8B80 */
   --destructive: oklch(0.739 0.123 27);
-  /* #273246 */
-  --border: oklch(0.316 0.039 262);
-  /* #364258 */
-  --input: oklch(0.378 0.041 262);
-  --ring: oklch(0.727 0.096 257);
-  --chart-1: oklch(0.8 0.075 256);
-  --chart-2: oklch(0.69 0.105 257);
-  --chart-3: oklch(0.557 0.14 259);
-  --chart-4: oklch(0.431 0.121 257);
-  --chart-5: oklch(0.345 0.098 257);
-  --sidebar: oklch(0.226 0.028 263);
-  --sidebar-foreground: oklch(0.941 0.013 256);
-  --sidebar-primary: oklch(0.727 0.096 257);
-  --sidebar-primary-foreground: oklch(0.216 0.038 257);
-  --sidebar-accent: oklch(0.263 0.031 260);
-  --sidebar-accent-foreground: oklch(0.941 0.013 256);
-  --sidebar-border: oklch(0.316 0.039 262);
-  --sidebar-ring: oklch(0.727 0.096 257);
+  /* white at 10 % and 15 % */
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.781 0.096 160);
+  /* #25493A, #4A8C6C, #6FB590, #A8DEC0, #D2EFDF */
+  --chart-1: oklch(0.373 0.05 165);
+  --chart-2: oklch(0.587 0.085 161);
+  --chart-3: oklch(0.716 0.09 160);
+  --chart-4: oklch(0.855 0.07 160);
+  --chart-5: oklch(0.927 0.037 162);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.781 0.096 160);
+  --sidebar-primary-foreground: oklch(0.218 0.034 161);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.781 0.096 160);
 
   /* Kirjanpito additions, dark. --paper and its pair are absent on purpose:
      a paper receipt is the same slip whichever theme surrounds it. */
@@ -204,10 +208,9 @@
   --expense-subtle: oklch(0.272 0.044 27);
   /* #E3B25C */
   --warning: oklch(0.791 0.118 80);
-  /* #151C29 */
-  --sheet: oklch(0.226 0.028 263);
-  /* #273246 */
-  --sheet-edge: oklch(0.316 0.039 262);
+  /* #171717, and the border's white at 10 % */
+  --sheet: oklch(0.205 0 0);
+  --sheet-edge: oklch(1 0 0 / 10%);
 }
 
 @layer base {
