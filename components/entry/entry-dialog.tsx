@@ -7,6 +7,7 @@ import { EntryTypeToggle } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
 import { AttachmentGrid } from "@/components/entry/attachment-grid"
 import { ReceiptPreview } from "@/components/entry/receipt-preview"
+import { AttachmentViewer } from "@/components/receipt/receipt-viewer"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -203,6 +204,8 @@ function EntryDialogForm({
    */
   const [error, setError] = React.useState<FieldErrorState>(null)
   const [busy, setBusy] = React.useState(false)
+  // The receipt open in the viewer on top of this dialog, if any (§8.6).
+  const [viewing, setViewing] = React.useState<number | null>(null)
   const fileRef = React.useRef<HTMLInputElement>(null)
   // Read by the async PDF pre-fill, which must see the form as it is now.
   const formRef = React.useRef(form)
@@ -634,11 +637,7 @@ function EntryDialogForm({
               attachments={form.atts}
               busy={busy}
               onAdd={() => fileRef.current?.click()}
-              onOpen={(index) => {
-                if (editing && mode === "edit") {
-                  openDialog({ kind: "viewer", entryId: editing.id, index })
-                }
-              }}
+              onOpen={setViewing}
               onRemove={(index) =>
                 update({ atts: form.atts.filter((_, i) => i !== index) })
               }
@@ -686,6 +685,15 @@ function EntryDialogForm({
             <Button onClick={() => save(false)}>{f.t("common.save")}</Button>
           </div>
         </DialogFooter>
+
+        {viewing != null ? (
+          <AttachmentViewer
+            attachments={form.atts}
+            index={viewing}
+            onIndexChange={setViewing}
+            onClose={() => setViewing(null)}
+          />
+        ) : null}
       </DialogContent>
     </Dialog>
   )

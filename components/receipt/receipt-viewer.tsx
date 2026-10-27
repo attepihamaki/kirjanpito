@@ -40,18 +40,47 @@ type Status =
   | { kind: "image"; bitmap: ImageBitmap; blob: Blob }
   | { kind: "pdf"; doc: PdfDoc; pages: number; blob: Blob }
 
-/** Near full-screen receipt viewer (§8.6). */
+/** Near full-screen receipt viewer (§8.6), for a saved entry's receipts. */
 export function ReceiptViewer() {
   const dialog = useBookStore((s) => s.dialog)
   const entries = useBookStore((s) => s.entries)
+  const openDialog = useBookStore((s) => s.openDialog)
   const closeDialog = useBookStore((s) => s.closeDialog)
 
   if (dialog.kind !== "viewer") return null
   const entry = entries.find((e) => e.id === dialog.entryId)
-  const attachments = entry?.atts ?? []
-  const index = Math.min(Math.max(0, dialog.index), attachments.length - 1)
+  if (!entry) return null
+  return (
+    <AttachmentViewer
+      attachments={entry.atts ?? []}
+      index={dialog.index}
+      onIndexChange={(index) =>
+        openDialog({ kind: "viewer", entryId: entry.id, index })
+      }
+      onClose={closeDialog}
+    />
+  )
+}
+
+/**
+ * The viewer over any list of receipts. The entry dialog opens it on its own
+ * unsaved attachments, as a dialog nested in its own, so the form stays
+ * mounted underneath and nothing typed into it is lost.
+ */
+export function AttachmentViewer({
+  attachments,
+  index: requested,
+  onIndexChange,
+  onClose,
+}: {
+  attachments: readonly Attachment[]
+  index: number
+  onIndexChange: (index: number) => void
+  onClose: () => void
+}) {
+  const index = Math.min(Math.max(0, requested), attachments.length - 1)
   const att = attachments[index]
-  if (!entry || !att) return null
+  if (!att) return null
 
   /*
    * Keyed on the attachment, so moving between receipts remounts with fresh
@@ -60,30 +89,29 @@ export function ReceiptViewer() {
   return (
     <ViewerBody
       key={(att.id ?? att.path ?? att.name) + ":" + index}
-      entryId={entry.id}
       att={att}
       index={index}
       count={attachments.length}
-      onClose={closeDialog}
+      onIndexChange={onIndexChange}
+      onClose={onClose}
     />
   )
 }
 
 function ViewerBody({
-  entryId,
   att,
   index,
   count,
+  onIndexChange,
   onClose,
 }: {
-  entryId: string
   att: Attachment
   index: number
   count: number
+  onIndexChange: (index: number) => void
   onClose: () => void
 }) {
   const f = useFormatters()
-  const openDialog = useBookStore((s) => s.openDialog)
 
   const [status, setStatus] = React.useState<Status>({ kind: "loading" })
   const [page, setPage] = React.useState(1)
@@ -222,9 +250,9 @@ function ViewerBody({
     (delta: number) => {
       const next = index + delta
       if (next < 0 || next >= count) return
-      openDialog({ kind: "viewer", entryId, index: next })
+      onIndexChange(next)
     },
-    [entryId, index, count, openDialog]
+    [index, count, onIndexChange]
   )
 
   // ←/→ move between receipts, +/− zoom (§8.6).
