@@ -12,6 +12,7 @@ import type {
   PDFPageProxy,
 } from "pdfjs-dist/types/src/display/api"
 
+import { layoutTextRuns, toTextRun } from "@/lib/domain/invoice-text"
 import { BASE_PATH } from "@/lib/site"
 
 let configured = false
@@ -118,6 +119,25 @@ export async function renderPdfThumbnail(
       rotation: 0,
     })
     return canvas.toDataURL("image/jpeg", 0.82)
+  } finally {
+    await handle.destroy()
+  }
+}
+
+/**
+ * The text layer of every page, laid out as rows by `layoutTextRuns`. A
+ * scanned PDF has no text layer and gives "".
+ */
+export async function extractPdfText(blob: Blob): Promise<string> {
+  const handle = await loadPdf(blob)
+  try {
+    const pages: string[] = []
+    for (let n = 1; n <= handle.numPages; n++) {
+      const page = await handle.doc.getPage(n)
+      const content = await page.getTextContent()
+      pages.push(layoutTextRuns(content.items.flatMap(toTextRun)))
+    }
+    return pages.join("\n")
   } finally {
     await handle.destroy()
   }

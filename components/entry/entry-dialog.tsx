@@ -33,6 +33,14 @@ import {
   putReceipt,
 } from "@/lib/browser/receipt-store"
 import { RATES, categoryName } from "@/lib/domain/accounts"
+import {
+  describeInvoice,
+  isEmptyGuess,
+  parseInvoiceText,
+  previousEntryFrom,
+  suggestCategory,
+} from "@/lib/domain/invoice-text"
+import { isPdf } from "@/lib/domain/receipt-path"
 import { isoDate, monthOf, todayIso, yearOf } from "@/lib/domain/dates"
 import { uid } from "@/lib/domain/id"
 import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
@@ -145,6 +153,7 @@ export function EntryDialog({
       key={dialog.mode + ":" + (dialog.entryId ?? "new")}
       mode={dialog.mode}
       entryId={dialog.entryId}
+      files={dialog.files}
       registerDropTarget={registerDropTarget}
     />
   )
@@ -153,10 +162,12 @@ export function EntryDialog({
 function EntryDialogForm({
   mode,
   entryId,
+  files,
   registerDropTarget,
 }: {
   mode: "new" | "edit" | "copy"
   entryId?: string
+  files?: File[]
   registerDropTarget: (fn: ((files: File[]) => void) | null) => void
 }) {
   const f = useFormatters()
@@ -193,11 +204,83 @@ function EntryDialogForm({
   const [error, setError] = React.useState<FieldErrorState>(null)
   const [busy, setBusy] = React.useState(false)
   const fileRef = React.useRef<HTMLInputElement>(null)
+  // Read by the async PDF pre-fill, which must see the form as it is now.
+  const formRef = React.useRef(form)
+  React.useEffect(() => {
+    formRef.current = form
+  }, [form])
+  /*
+   * Set once a rate has been read from a PDF, so picking a category keeps
+   * the invoice's rate instead of replacing it with the category default.
+   */
+  const keepRate = React.useRef(false)
 
   // Keep freshly attached receipts alive through a GC sweep (§7.4).
   React.useEffect(() => {
     setDraftIds(form.atts.map((a) => a.id).filter((id): id is string => !!id))
   }, [form.atts, setDraftIds])
+
+  /**
+   * Fill an untouched form from an invoice PDF's text layer. A form the user
+   * has typed an amount or a description into is left alone, so adding a
+   * receipt to a half-written entry never overwrites it.
+   */
+  const prefillFromPdf = React.useCallback(
+    async (file: File) => {
+      let guess
+      try {
+        const { extractPdfText } = await import("@/lib/browser/pdf")
+        guess = parseInvoiceText(await extractPdfText(file))
+      } catch {
+        return
+      }
+      const current = formRef.current
+      if (isEmptyGuess(guess) || current.amount || current.description) return
+
+      const previous = previousEntryFrom(
+        useBookStore.getState().entries,
+        guess.vendor
+      )
+      const previousCat =
+        previous && cats.some((c) => c.id === previous.catId)
+          ? previous
+          : undefined
+      /*
+       * Without a previous entry from the same seller, a category guessed
+       * from the words on the invoice. Only an enabled one: a disabled
+       * category is one the user has said they do not book to.
+       */
+      const suggestedId = suggestCategory(guess)
+      const suggested = previousCat
+        ? undefined
+        : cats.find((c) => c.id === suggestedId && c.enabled)
+      const description = describeInvoice(guess, (number) =>
+        f.t("receipt.invoiceDescription", { number })
+      )
+      if (guess.vatRate != null) keepRate.current = true
+
+      setForm((prev) => ({
+        ...prev,
+        date: guess.date ?? prev.date,
+        description,
+        ...(previousCat
+          ? { type: previousCat.type, catId: previousCat.catId }
+          : suggested
+            ? { type: "expense" as const, catId: suggested.id }
+            : {}),
+        amount: guess.amount != null ? formatMoneyPlain(guess.amount) : "",
+        vatRate:
+          guess.vatRate ??
+          previousCat?.vatRate ??
+          suggested?.vatRate ??
+          prev.vatRate,
+        // An invoice's total includes VAT.
+        amountMode: guess.amount != null ? "gross" : prev.amountMode,
+      }))
+      toast.add({ title: f.t("receipt.prefilled") })
+    },
+    [cats, f]
+  )
 
   const addFiles = React.useCallback(
     async (files: File[]) => {
@@ -236,12 +319,25 @@ function EntryDialogForm({
         if (added.length) {
           setForm((prev) => ({ ...prev, atts: [...prev.atts, ...added] }))
         }
+        const pdf = accepted.find((file) => isPdf(file))
+        if (pdf) await prefillFromPdf(pdf)
       } finally {
         setBusy(false)
       }
     },
-    [f]
+    [f, prefillFromPdf]
   )
+
+  /*
+   * Receipts dropped with no dialog open. The ref keeps a Strict Mode
+   * re-run of the effect from attaching them twice.
+   */
+  const seeded = React.useRef(false)
+  React.useEffect(() => {
+    if (seeded.current || !files?.length) return
+    seeded.current = true
+    void addFiles(files)
+  }, [files, addFiles])
 
   // Let the shell forward dropped media here while this dialog is open.
   React.useEffect(() => {
@@ -251,20 +347,22 @@ function EntryDialogForm({
   }, [addFiles, registerDropTarget])
 
   const typeCats = React.useMemo(() => {
-    return cats
-      .filter((c) => {
-        if (categorySide(c) !== form.type) return false
-        // The entry's own category stays listed even when disabled (§8.5).
-        return c.enabled || c.id === form.catId
-      })
-      /* By account number, as the settings table lists them (§8.10), with the
-       * name deciding the several categories that share one account.
-       */
-      .sort(
-        (a, b) =>
-          categoryAccount(a) - categoryAccount(b) ||
-          f.collator.compare(categoryName(a, f.lang), categoryName(b, f.lang))
-      )
+    return (
+      cats
+        .filter((c) => {
+          if (categorySide(c) !== form.type) return false
+          // The entry's own category stays listed even when disabled (§8.5).
+          return c.enabled || c.id === form.catId
+        })
+        /* By account number, as the settings table lists them (§8.10), with the
+         * name deciding the several categories that share one account.
+         */
+        .sort(
+          (a, b) =>
+            categoryAccount(a) - categoryAccount(b) ||
+            f.collator.compare(categoryName(a, f.lang), categoryName(b, f.lang))
+        )
+    )
   }, [cats, form.type, form.catId, f.collator, f.lang])
 
   const catOptions = typeCats.map((c) => ({
@@ -362,6 +460,7 @@ function EntryDialogForm({
         vatRate: 0,
         atts: [],
       }
+      keepRate.current = false
       setForm(next)
       setBaseline(snapshot(next))
     } else {
@@ -457,7 +556,8 @@ function EntryDialogForm({
                   // Picking a category pre-fills its default rate (§8.5).
                   update({
                     catId: value,
-                    vatRate: cat ? cat.vatRate : form.vatRate,
+                    vatRate:
+                      cat && !keepRate.current ? cat.vatRate : form.vatRate,
                   })
                 }}
                 placeholder={f.t("entry.errCategory")}

@@ -28,13 +28,7 @@ export interface SortState<K extends string> {
 }
 
 export type LedgerSortKey =
-  | "date"
-  | "type"
-  | "description"
-  | "category"
-  | "net"
-  | "vat"
-  | "gross"
+  "date" | "type" | "description" | "category" | "net" | "vat" | "gross"
 
 export type CatSortKey = "enabled" | "side" | "account" | "name" | "vatRate"
 
@@ -71,7 +65,13 @@ function nextSort<K extends string>(
 
 export type DialogState =
   | { kind: "none" }
-  | { kind: "entry"; mode: "new" | "edit" | "copy"; entryId?: string }
+  | {
+      kind: "entry"
+      mode: "new" | "edit" | "copy"
+      entryId?: string
+      /** Receipts dropped with no dialog open, attached as the dialog opens. */
+      files?: File[]
+    }
   | { kind: "viewer"; entryId: string; index: number }
   | { kind: "export" }
 

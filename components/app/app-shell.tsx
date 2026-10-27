@@ -118,9 +118,13 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
         void openFile(ctx, book)
         return
       }
-      if (files.some(isMediaFile)) toast.add({ title: t("receipt.dropHint") })
+      // Receipts dropped on their own start a new entry around them.
+      const media = files.filter(isMediaFile)
+      if (media.length) {
+        openDialog({ kind: "entry", mode: "new", files: media })
+      }
     },
-    [ctx, t]
+    [ctx, openDialog, t]
   )
 
   const dragging = useFileDrop({ onDropFiles: handleDrop })

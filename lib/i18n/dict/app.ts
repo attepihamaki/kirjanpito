@@ -58,10 +58,7 @@ export const APP_DICT = {
     "There are changes that haven’t been saved to a file. If you close it, they’ll be lost.",
   ],
   "confirm.closeConfirm": ["Sulje tallentamatta", "Close without saving"],
-  "confirm.overwriteTitle": [
-    "Korvataanko tiedosto?",
-    "Overwrite the file?",
-  ],
+  "confirm.overwriteTitle": ["Korvataanko tiedosto?", "Overwrite the file?"],
   "confirm.overwriteMessage": [
     "Tiedostoa {f} on muutettu tämän sovelluksen ulkopuolella sen jälkeen, kun se avattiin. Tallennus korvaa nuo muutokset.",
     "The file {f} has been changed outside this app since it was opened. Saving will overwrite those changes.",
@@ -216,10 +213,11 @@ export const APP_DICT = {
     "Tositteiden tallennus ei ole käytettävissä tässä selaimessa.",
     "Saving receipts isn’t available in this browser.",
   ],
-  "receipt.dropHint": [
-    "Avaa kirjaus, jos haluat liittää siihen tositteen.",
-    "Open an entry to attach a receipt to it.",
+  "receipt.prefilled": [
+    "Tiedot luettiin PDF:stä. Tarkista ne ennen tallennusta.",
+    "Details were read from the PDF. Check them before saving.",
   ],
+  "receipt.invoiceDescription": ["Lasku {number}", "Invoice {number}"],
   "receipt.drop": [
     "Pudota tosite liittääksesi sen kirjaukseen",
     "Drop a receipt to attach it to the entry",
@@ -462,10 +460,7 @@ export const APP_DICT = {
   // --- Saving back to the opened file (§7.5) ---
   "io.saving": ["Tallennetaan…", "Saving…"],
   "io.saved": ["Tallennettu tiedostoon {f}.", "Saved to {f}."],
-  "io.saveFailed": [
-    "Tallennus epäonnistui.",
-    "Couldn’t save the file.",
-  ],
+  "io.saveFailed": ["Tallennus epäonnistui.", "Couldn’t save the file."],
   "io.saveDenied": [
     "Selain ei antanut lupaa kirjoittaa tiedostoon. Voit silti ladata kopion.",
     "The browser didn’t allow writing to the file. You can still download a copy.",
