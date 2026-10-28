@@ -113,6 +113,30 @@ describe("incomeStatement — §6.3 rules", () => {
     expect(s.lines.find((l) => l.line.key === "365")!.net).toBe(5000)
   })
 
+  it("deducts half of 341 and lists it in full", () => {
+    const s = incomeStatement(
+      [
+        entry({
+          id: "a",
+          type: "income",
+          catId: "300-domestic",
+          amount: 100000,
+        }),
+        entry({ id: "b", catId: "341", amount: 20001 }),
+        entry({ id: "c", catId: "333", amount: 5000 }),
+      ],
+      cats,
+      2026
+    )
+    expect(s.lines.find((l) => l.line.key === "341")!.net).toBe(20001)
+    expect(s.entertainmentTotal).toBe(20001)
+    // Field 342 may not exceed half of 341, so the odd cent stays out.
+    expect(s.entertainmentDeductible).toBe(10000)
+    expect(s.deductibleTotal).toBe(15000)
+    expect(s.nonDeductibleTotal).toBe(0)
+    expect(s.result).toBe(85000)
+  })
+
   it("lists tax-exempt income on 317 but leaves it out of the result", () => {
     const s = incomeStatement(
       [

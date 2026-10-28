@@ -127,7 +127,9 @@ export interface MonthFigures {
   vat: readonly Cents[]
   /**
    * Each month's result by the income statement's rules (§6.3), so the
-   * twelve add up to line 358: 317 and 365–367 stay out.
+   * twelve add up to line 358: 317 and 365–367 stay out, and 341 counts
+   * half. A month is the year to date minus the year before it, so halving
+   * 341 month by month cannot drift from the year by a cent.
    */
   result: readonly Cents[]
 }
@@ -141,8 +143,19 @@ export function monthFigures(
   const months = Array.from({ length: 12 }, (_, i) =>
     filterPeriod(entries, { kind: "month", year, month: i + 1 })
   )
+  const toDate = [
+    0,
+    ...months.map(
+      (_, i) =>
+        incomeStatement(
+          entries.filter((e) => monthOf(e.date) <= i + 1),
+          cats,
+          year
+        ).result
+    ),
+  ]
   return {
     vat: months.map((m) => vatReport(m, cats).due),
-    result: months.map((m) => incomeStatement(m, cats, year).result),
+    result: months.map((_, i) => toDate[i + 1] - toDate[i] + 0),
   }
 }

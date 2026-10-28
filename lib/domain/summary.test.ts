@@ -153,4 +153,21 @@ describe("monthFigures", () => {
     expect(m.vat[9]).toBe(36218)
     expect(m.vat[0]).toBe(46605)
   })
+
+  it("halves 341 without drifting from the year by a cent", () => {
+    const book = [
+      entry({ id: "a", type: "expense", catId: "341", amount: 1001 }),
+      entry({
+        id: "b",
+        date: "2026-06-05",
+        type: "expense",
+        catId: "341",
+        amount: 1001,
+      }),
+    ]
+    const months = monthFigures(book, cats, 2026).result
+    expect(months.reduce((a, b) => a + b, 0)).toBe(-1001)
+    expect(months[4]).toBe(-500)
+    expect(months[5]).toBe(-501)
+  })
 })

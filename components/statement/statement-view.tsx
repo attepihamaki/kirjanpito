@@ -61,7 +61,10 @@ export function StatementView() {
           total:
             line.side === "income"
               ? statement.revenueTotal + statement.taxExemptTotal
-              : statement.deductibleTotal + statement.nonDeductibleTotal,
+              : statement.deductibleTotal +
+                statement.nonDeductibleTotal +
+                statement.entertainmentTotal -
+                statement.entertainmentDeductible,
         })
       }
       const groupLabel = f.groupName(line)
@@ -189,6 +192,15 @@ export function StatementView() {
           <p className="mt-6 text-xs text-muted-foreground">
             {f.t("statement.exemptNote", {
               a: f.money(statement.taxExemptTotal),
+            })}
+          </p>
+        ) : null}
+
+        {statement.entertainmentTotal ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            {f.t("statement.entertainmentNote", {
+              a: f.money(statement.entertainmentTotal),
+              b: f.money(statement.entertainmentDeductible),
             })}
           </p>
         ) : null}

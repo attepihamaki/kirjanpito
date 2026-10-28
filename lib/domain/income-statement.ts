@@ -16,9 +16,14 @@ export interface IncomeStatement {
   revenueTotal: Cents
   /** Line 317, which is reported on Form 5 but not taxed. */
   taxExemptTotal: Cents
-  /** Excludes 365–367, includes 353 and 354 (§6.3). */
+  /** Excludes 365–367 and half of 341, includes 353 and 354 (§6.3). */
   deductibleTotal: Cents
+  /** Lines 365–367. */
   nonDeductibleTotal: Cents
+  /** Line 341 in full, as Form 5 asks for it. */
+  entertainmentTotal: Cents
+  /** The half of 341 that is deducted: Form 5's field 342, at most 50 % of 341. */
+  entertainmentDeductible: Cents
   /** Signed: revenue − deductible. */
   result: Cents
   resultLine: "358" | "359"
@@ -58,6 +63,7 @@ export function incomeStatement(
   let taxExemptTotal = 0
   let deductibleTotal = 0
   let nonDeductibleTotal = 0
+  let entertainmentTotal = 0
 
   const lines: StatementLine[] = LINES.map((line) => {
     const net = byLine.get(line.key) ?? 0
@@ -65,9 +71,14 @@ export function incomeStatement(
       if (line.taxExempt) taxExemptTotal += net
       else revenueTotal += net
     } else if (line.nondeductible) nonDeductibleTotal += net
+    else if (line.halfDeductible) entertainmentTotal += net
     else deductibleTotal += net
     return { line, net }
   })
+
+  // Truncated, so 342 never exceeds half of 341 by a rounded cent.
+  const entertainmentDeductible = Math.trunc(entertainmentTotal / 2) + 0
+  deductibleTotal += entertainmentDeductible
 
   const result = revenueTotal - deductibleTotal + 0
   return {
@@ -77,6 +88,8 @@ export function incomeStatement(
     taxExemptTotal,
     deductibleTotal,
     nonDeductibleTotal,
+    entertainmentTotal,
+    entertainmentDeductible,
     result,
     resultLine: result >= 0 ? "358" : "359",
     resultMagnitude: Math.abs(result) + 0,

@@ -228,7 +228,7 @@ Each line has a key, an account number (tili), a side, Finnish and English names
 | 366         | 366  | expense | Sakot ja muut rangaistusmaksut                   | Fines and penalties                     | (same)                                                                  | 0                      | nondeductible   |
 | 367         | 367  | expense | Muut vähennyskelvottomat kulut                   | Other non-deductible expenses           | (same)                                                                  | 0                      | nondeductible   |
 
-The table order is also the display order of the income statement.
+The table order is also the display order of the income statement. **It is not quite Form 5's order, and that is deliberate.** The form lists the income fields as 300, 318, 301, 313–315, 319–328, 323, 312, 324, 317, so grants come second and reserve decreases late. The app keeps the order above, which groups the lines under their headings. Each line still carries its form number, so copying a figure into OmaVero goes by number, not by position. The expense lines are in the form's order. Checked against Verohallinto's 2026 data file specification for Form 5.
 
 **Sales categories on line 300** (income), each its own category:
 
@@ -270,12 +270,13 @@ For the selected month (or the whole year): income net total, expense net total,
 
 - Revenue total = the sum of net amounts on the income lines **except 317**. Tuloslaskelman verovapaat tuotot is listed on its line and counted in the section heading, but Form 5 reports it separately and it is not taxed, so it stays out of the revenue total and the result. A note under the sheet gives its total. (`AccountLine.taxExempt`; `IncomeStatement.taxExemptTotal`.)
 - Deductible expenses = the sum of net amounts on expense lines **except** 365–367. This **includes 353 and 354**; the Excel omitted 354.
+- **Entertainment expenses (341) are half deductible.** Form 5 asks for the full amount in 341 and the deductible part in field 342, which may not exceed half of it, and its total of deductible expenses (355) adds 342, not 341. The app lists 341 in full, deducts `Math.trunc(341 / 2)` (`IncomeStatement.entertainmentDeductible`) and says so in a note under the sheet. The per-month results of §8.12 are year to date minus the month before, so they still add up to 358.
 - Non-deductible expenses (365–367) are listed but not deducted. A note shows their total.
 - Result = revenue − deductible expenses. If ≥ 0, it's labelled "358 Elinkeinotoiminnan tulos"; otherwise "359 Elinkeinotoiminnan tappio".
 - Every line is shown even when zero (greyed out with "–"). Section headings carry the section totals.
 - The period is 1.1.–31.12. of the selected year. All amounts exclude VAT.
 - These rules were checked against Verohallinto's Form 5 instructions (vero.fi, "Instructions for filing", Form 5): tax-exempt income is not part of taxable revenue, 354 is deductible, and 365–367 may not be deducted.
-- **Dividends on 319 are one gross line.** In business income only part of a dividend is taxable, and the share depends on whether the payer is listed. Form 5 asks for dividends as received and Verohallinto works out the taxable share, so the app does not split them. Check this if the user ever receives dividends.
+- **Dividends on 319 are one gross line, and that is wrong for the result.** Form 5 splits them into listed (319, taxable portion in 320) and non-listed (321, taxable portion in 322), and its taxable income (316) adds only 320 and 322. The app counts the full dividend in revenue, which overstates 358. Fix it before the user receives dividends (§14).
 
 ### 6.4 Summary (Yhteenveto)
 
@@ -1104,5 +1105,6 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 ## 14. Open questions and ideas not yet done
 
 - Undo, at least for a deleted entry and for clearing the entries. Autosave (§7.5) makes a mistake reach the file within seconds, which is why it is opt-in.
-- Splitting dividends (319) into their taxable and tax-free shares, if the user ever receives them (§6.3).
+- Splitting dividends into listed (319/320) and non-listed (321/322), with only the taxable portion in the result (§6.3).
+- Form 5 fields the app leaves out: 338 and 347, the deductible parts of depreciation (337) and interest (346), which the app takes to be the full amounts; co-operative surplus (325–328); and the additional deductions of 364, which come from fields 388 and 392 elsewhere on the return.
 - The VAT return of a business that stops trading (§6.5).

@@ -527,6 +527,10 @@ export const APP_DICT = {
     "Total deductible expenses",
   ],
   "statement.loss": ["359 Elinkeinotoiminnan tappio", "359 Business loss"],
+  "statement.entertainmentNote": [
+    "Edustuskuluista (341, yhteensä {a}) vähennetään puolet, {b}. Veroilmoitukseen koko summa kuuluu kohtaan 341 ja vähennettävä osuus kohtaan 342.",
+    "Half of entertainment expenses (341, total {a}) is deducted, {b}. On the tax return the full amount goes in 341 and the deductible part in 342.",
+  ],
   "statement.note": [
     "Vähennyskelvottomat kulut (365–367, yhteensä {a}) näytetään, mutta niitä ei vähennetä tuloksesta. Summat ovat verottomia.",
     "Non-deductible expenses (365–367, total {a}) are shown but not deducted from the result. Amounts exclude VAT.",

@@ -23,6 +23,8 @@ export interface AccountLine {
   nondeductible: boolean
   /** Line 317: listed on the statement but not taxed, so not in the result (§6.3). */
   taxExempt: boolean
+  /** Line 341: only half is deducted, as Form 5's field 342 (§6.3). */
+  halfDeductible: boolean
 }
 
 /**
@@ -353,6 +355,7 @@ function l(
     bucket,
     nondeductible,
     taxExempt: key === "317",
+    halfDeductible: key === "341",
   }
 }
 
