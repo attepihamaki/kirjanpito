@@ -52,7 +52,9 @@ export function AppNav() {
       <SidebarGroupContent>
         <SidebarMenu className="gap-0.5">
           {NAV_ITEMS.map(({ href, key, icon: Icon }) => {
-            const active = current === href.replace(/\/$/, "")
+            // A sub-page keeps its section lit: /app/settings/categories is Asetukset.
+            const base = href.replace(/\/$/, "")
+            const active = current === base || current.startsWith(`${base}/`)
             const label = t(key)
             return (
               <SidebarMenuItem key={href}>

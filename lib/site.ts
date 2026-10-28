@@ -70,3 +70,12 @@ export const APP_ROUTES = {
 } as const
 
 export type AppRoute = (typeof APP_ROUTES)[keyof typeof APP_ROUTES]
+
+/**
+ * The settings sub-pages (§8.10). The general page is the settings route
+ * itself, so a link to Asetukset lands on it.
+ */
+export const SETTINGS_ROUTES = {
+  general: APP_ROUTES.settings,
+  categories: `${APP_ROUTES.settings}/categories`,
+} as const

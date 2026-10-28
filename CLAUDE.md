@@ -619,10 +619,20 @@ See §6.4. Wide tables scroll horizontally with a sticky first column. The chart
 
 ### 8.10 Settings (Asetukset)
 
-Every section on this page is a `Panel` (§11).
+Every section is a `Panel` (§11). The page is split into two sub-pages, so the categories table does not bury the handful of book-wide settings:
+
+- **Yleiset** at `/app/settings`: the VAT period, saving, and clearing the entries.
+- **Luokat** at `/app/settings/categories`: the add form, the categories table, and restoring the defaults.
+
+`app/app/settings/layout.tsx` renders `SettingsShell` (`components/settings/settings-shell.tsx`): the page title and a row of tab links shaped like the month chips (§8.4). The current tab is `bg-muted` with `aria-current="page"`, not filled with the primary colour, because it marks a place rather than a filter. The routes are `SETTINGS_ROUTES` in `lib/site.ts`. The sidebar keeps Asetukset lit on any path below it. The new-category name lives in the store (`catFormName`), so it survives switching tabs.
+
+On **Yleiset**:
 
 - **"ALV-ilmoitusjakso"** comes first: a segmented Kuukausi / Neljännesvuosi / Vuosi. It sets `vatPeriod` (§6.5), which the overview's due dates and the VAT view's default period follow.
 - **"Tallennus"**, only where the browser can write to a file: the "Tallenna automaattisesti" checkbox (§7.5), with a description that says there is no undo.
+- **"Tyhjennä kirjaukset"**, last, as a `variant="destructive"` panel with "Tyhjennä" (`destructive`) on the footer. It deletes all entries (with a confirmation) and leaves the bookkeeping open but empty.
+
+On **Luokat**:
 
 - **"Lisää oma luokka" form:**
   - Type — the same `EntryTypeToggle` the entry dialog uses, so the two controls read alike: Tulo before Kulu, coloured when selected.
@@ -638,9 +648,7 @@ Every section on this page is a `Panel` (§11).
   - Sortable columns: Käytössä (checkbox), Tyyppi (badge), Tili, Nimi, and Oletus ALV % (an inline input that commits on change and shows a toast). They cycle in three states as on the ledger (§8.4); with none chosen the rows are in Tili order.
   - Delete is only offered for custom categories that no entry uses.
   - Pagination with a default of 25 rows, laid out as on the ledger (§8.4).
-- **Two data panels, not one.** Restoring categories is reversible and routine; clearing the entries erases the bookkeeping from this browser. One shared section gave them the same visual weight, which is exactly wrong for the second.
-  - "Tiedot" — a description of what restoring does, and "Palauta oletusluokat" (`outline`) on the footer. It restores the defaults and keeps custom categories that are in use.
-  - A `variant="destructive"` panel titled "Tyhjennä kirjaukset", with "Tyhjennä" (`destructive`) on the footer. It deletes all entries (with a confirmation) and leaves the bookkeeping open but empty.
+- **"Oletusluokat"**, under the table: a description of what restoring does, and "Palauta oletusluokat" (`outline`) on the footer. It restores the defaults and keeps custom categories that are in use. It is reversible and routine, so it sits beside the table it changes; clearing the entries is not, so it is on the other page in its own destructive panel.
 
 ### 8.11 Confirmations and unsaved-change rules (apply everywhere)
 
@@ -883,7 +891,9 @@ app/
   app/
     layout.tsx                   AppShell + metadata.robots = noindex, nofollow
     page.tsx                     /app → /app/overview
-    overview/  ledger/  vat/  statement/  summary/  settings/
+    overview/  ledger/  vat/  statement/  summary/
+    settings/                    layout.tsx = SettingsShell; page.tsx = Yleiset
+      categories/                /app/settings/categories (§8.10)
 ```
 
 - **The app routes are English** (`/app/overview`, `/app/ledger`, `/app/vat`, `/app/statement`,

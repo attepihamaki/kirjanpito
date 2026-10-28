@@ -9,7 +9,6 @@ import {
   TypeFilterSelect,
 } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
-import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
 import { Pill } from "@/components/common/pill"
 import { SortableHeader } from "@/components/common/sortable-header"
@@ -32,16 +31,13 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { toast } from "@/components/ui/toast"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
-import { useCanSaveToFile } from "@/hooks/use-save-book"
-import { clearAllEntries, resetCategories } from "@/lib/commands/book-commands"
+import { resetCategories } from "@/lib/commands/book-commands"
 import { LINES, categoryName } from "@/lib/domain/accounts"
 import { uid } from "@/lib/domain/id"
 import { parseRate } from "@/lib/domain/money"
 import type { Category, EntryType } from "@/lib/domain/types"
-import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 import {
   categoryAccount,
   categorySide,
@@ -54,86 +50,14 @@ import {
   type CatSortKey,
 } from "@/stores/book-store"
 
-export function SettingsView() {
-  const f = useFormatters()
-
+/** The categories settings page (§8.10): add, edit and restore categories. */
+export function CategorySettings() {
   return (
-    <>
-      <PageHeader
-        title={f.t("nav.settings")}
-        subtitle={f.t("settings.subtitle")}
-      />
-      <div className="flex flex-col gap-6">
-        <VatPeriodSetting />
-        <AutosaveSetting />
-        <AddCategoryForm />
-        <CategoryTable />
-        <DataActions />
-      </div>
-    </>
-  )
-}
-
-/**
- * How often the user files VAT (§6.5). It decides the due dates the overview
- * counts down to and the period the VAT view opens on.
- */
-function VatPeriodSetting() {
-  const f = useFormatters()
-  const vatPeriod = useBookStore((s) => s.vatPeriod)
-  const setVatPeriod = useBookStore((s) => s.setVatPeriod)
-
-  return (
-    <Panel
-      title={f.t("settings.vatPeriod")}
-      description={f.t("settings.vatPeriodHint")}
-      bodyClassName="p-4"
-    >
-      <ToggleGroup
-        aria-label={f.t("settings.vatPeriod")}
-        value={[vatPeriod]}
-        onValueChange={(value) => {
-          const next = value[0] as VatPeriodKind | undefined
-          if (next) setVatPeriod(next)
-        }}
-      >
-        <ToggleGroupItem value="month">{f.t("vat.month")}</ToggleGroupItem>
-        <ToggleGroupItem value="quarter">{f.t("vat.quarter")}</ToggleGroupItem>
-        <ToggleGroupItem value="year">{f.t("vat.year")}</ToggleGroupItem>
-      </ToggleGroup>
-    </Panel>
-  )
-}
-
-/**
- * Opt-in autosave (§7.5). Absent where the browser cannot write to a file,
- * like the file menu's save row: a switch that can never work is worse than
- * none.
- */
-function AutosaveSetting() {
-  const f = useFormatters()
-  const canSave = useCanSaveToFile()
-  const autosave = useBookStore((s) => s.autosave)
-  const setAutosave = useBookStore((s) => s.setAutosave)
-  if (!canSave) return null
-
-  return (
-    <Panel
-      title={f.t("settings.saving")}
-      description={f.t("settings.autosaveHint")}
-      bodyClassName="p-4"
-    >
-      <Field orientation="horizontal">
-        <Checkbox
-          id="settings-autosave"
-          checked={autosave}
-          onCheckedChange={(checked) => setAutosave(checked === true)}
-        />
-        <FieldLabel htmlFor="settings-autosave" className="font-normal">
-          {f.t("settings.autosave")}
-        </FieldLabel>
-      </Field>
-    </Panel>
+    <div className="flex flex-col gap-6">
+      <AddCategoryForm />
+      <CategoryTable />
+      <ResetCategories />
+    </div>
   )
 }
 
@@ -477,41 +401,22 @@ function RateInput({ cat }: { cat: Category }) {
 }
 
 /**
- * The two data actions, in two panels rather than one: restoring the default
- * categories is reversible and routine, while clearing the entries erases the
- * bookkeeping from this browser, so the second gets its own destructive panel
- * rather than equal weight beside the first.
+ * Restoring the defaults is reversible and keeps the custom categories in
+ * use, so it is an outline button beside the table it changes.
  */
-function DataActions() {
+function ResetCategories() {
   const f = useFormatters()
   const ctx = useCommandCtx()
 
   return (
-    <>
-      <Panel
-        title={f.t("settings.data")}
-        description={f.t("settings.resetHint")}
-        footer={
-          <Button variant="outline" onClick={() => resetCategories(ctx)}>
-            {f.t("settings.resetCategories")}
-          </Button>
-        }
-      />
-
-      <Panel
-        variant="destructive"
-        title={f.t("settings.clearEntries")}
-        description={f.t("settings.clearHint")}
-        footer={
-          <Button
-            variant="destructive"
-            onClick={() => void clearAllEntries(ctx)}
-          >
-            <Trash2Icon data-icon="inline-start" />
-            {f.t("confirm.clearConfirm")}
-          </Button>
-        }
-      />
-    </>
+    <Panel
+      title={f.t("settings.defaultCategories")}
+      description={f.t("settings.resetHint")}
+      footer={
+        <Button variant="outline" onClick={() => resetCategories(ctx)}>
+          {f.t("settings.resetCategories")}
+        </Button>
+      }
+    />
   )
 }

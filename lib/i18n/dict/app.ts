@@ -573,9 +573,11 @@ export const APP_DICT = {
 
   // --- Settings (§8.10) ---
   "settings.subtitle": [
-    "Luokat ja oletusverokannat. Asetukset tallentuvat tähän selaimeen.",
-    "Categories and default VAT rates. Settings are saved in this browser.",
+    "Asetukset tallentuvat kirjanpitotiedostoon, kun tallennat sen.",
+    "Settings are saved with the bookkeeping file when you save it.",
   ],
+  "settings.sections": ["Asetusten osiot", "Settings sections"],
+  "settings.general": ["Yleiset", "General"],
   "settings.vatPeriod": ["ALV-ilmoitusjakso", "VAT reporting period"],
   "settings.vatPeriodHint": [
     "Kuinka usein annat arvonlisäveroilmoituksen. Yleiskatsauksen eräpäivät lasketaan tämän mukaan.",
@@ -610,7 +612,7 @@ export const APP_DICT = {
     "Oletus-ALV päivitetty: {c} {r}.",
     "Default VAT updated: {c} {r}.",
   ],
-  "settings.data": ["Tiedot", "Data"],
+  "settings.defaultCategories": ["Oletusluokat", "Default categories"],
   "settings.resetCategories": [
     "Palauta oletusluokat",
     "Restore default categories",
