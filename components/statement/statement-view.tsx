@@ -1,11 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { PrinterIcon } from "lucide-react"
 
 import { Money, ZeroDash } from "@/components/common/money"
-import { PageHeader } from "@/components/common/page-header"
-import { Button } from "@/components/ui/button"
 import { useFormatters } from "@/components/lang-provider"
 import { incomeStatement } from "@/lib/domain/income-statement"
 import { indexCategories } from "@/lib/domain/types"
@@ -60,11 +57,8 @@ export function StatementView() {
           side: line.side,
           total:
             line.side === "income"
-              ? statement.revenueTotal + statement.taxExemptTotal
-              : statement.deductibleTotal +
-                statement.nonDeductibleTotal +
-                statement.entertainmentTotal -
-                statement.entertainmentDeductible,
+              ? statement.incomeTotal
+              : statement.expenseTotal,
         })
       }
       const groupLabel = f.groupName(line)
@@ -85,19 +79,6 @@ export function StatementView() {
 
   return (
     <>
-      <div className="print-hidden">
-        <PageHeader
-          title={f.t("nav.statement")}
-          subtitle={f.t("statement.subtitle")}
-          actions={
-            <Button variant="outline" onClick={() => window.print()}>
-              <PrinterIcon data-icon="inline-start" />
-              {f.t("statement.print")}
-            </Button>
-          }
-        />
-      </div>
-
       <div className="print-sheet mx-auto max-w-2xl rounded-lg border border-sheet-edge bg-sheet p-6 shadow-sm md:p-8">
         <header className="mb-6">
           <h2 className="font-heading text-xl font-semibold">
@@ -192,6 +173,15 @@ export function StatementView() {
           <p className="mt-6 text-xs text-muted-foreground">
             {f.t("statement.exemptNote", {
               a: f.money(statement.taxExemptTotal),
+            })}
+          </p>
+        ) : null}
+
+        {statement.dividendTotal ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            {f.t("statement.dividendNote", {
+              a: f.money(statement.dividendTotal),
+              b: f.money(statement.dividendTaxable),
             })}
           </p>
         ) : null}

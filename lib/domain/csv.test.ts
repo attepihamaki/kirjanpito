@@ -382,6 +382,12 @@ describe("parseCsv — category matching", () => {
     expect(r.entries[0].catId).toBe("333")
   })
 
+  it("matches a former name of a default category", () => {
+    const r = parse(["2026-05-08;tulo;319;Saadut osingot;10,00;0"])
+    expect(r.entries[0].catId).toBe("319")
+    expect(r.newCategoryCount).toBe(0)
+  })
+
   it("books an empty luokka on 344 to Muut vähennyskelpoiset kulut", () => {
     expect(parse(["2026-01-08;kulu;344;;1,00;"]).entries[0].catId).toBe(
       "344-other"

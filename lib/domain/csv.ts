@@ -3,6 +3,7 @@ import Papa from "papaparse"
 import {
   DEFAULT_CATEGORY_FOR_ACCOUNT,
   DEFAULT_EN_NAMES,
+  FORMER_NAMES,
   LINES,
   LINE_BY_KEY,
   type AccountLine,
@@ -381,7 +382,9 @@ function resolveCategory(a: ResolveArgs): { cat: Category; created: boolean } {
     const match = onAccount.find(
       (c) =>
         c.name.toLowerCase() === needle ||
-        (!c.custom && DEFAULT_EN_NAMES[c.id]?.toLowerCase() === needle)
+        (!c.custom &&
+          (DEFAULT_EN_NAMES[c.id]?.toLowerCase() === needle ||
+            FORMER_NAMES[c.id]?.some((n) => n.toLowerCase() === needle)))
     )
     if (match) return { cat: match, created: false }
   } else if (account != null) {

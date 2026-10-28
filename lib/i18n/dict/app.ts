@@ -511,6 +511,59 @@ export const APP_DICT = {
     "For the business tax return (form 5)",
   ],
   "statement.print": ["Tulosta", "Print"],
+  "statement.sections": ["Tuloslaskelman osiot", "Income statement sections"],
+  "statement.sheetTab": ["Laskelma", "Statement"],
+  "statement.form5Tab": ["Lomake 5", "Form 5"],
+  "statement.form5Title": [
+    "Lomake 5, tuloverolaskelma",
+    "Form 5, calculation of taxable income",
+  ],
+  "statement.form5Kicker": ["Verovuosi {y}", "Tax year {y}"],
+  "statement.form5Show": ["Näytettävät kohdat", "Fields to show"],
+  "statement.form5Filled": ["Täytettävät", "To fill in"],
+  "statement.form5All": ["Kaikki kohdat", "All fields"],
+  "statement.form5Intro": [
+    "Napsauta summaa, niin se kopioituu. Liitä se OmaVerossa saman numeron kohtaan.",
+    "Click an amount to copy it. Paste it into the field with the same code in MyTax.",
+  ],
+  "statement.form5Assumed": [
+    "Poistot (337) ja korkokulut (346) on laskettu kokonaan vähennyskelpoisiksi, joten 338 ja 347 ovat samat summat. Jos osa ei ole vähennyskelpoista, muuta kohtia OmaVerossa, jolloin myös 355 ja tulos muuttuvat.",
+    "Depreciation (337) and interest expenses (346) are counted as fully deductible, so 338 and 347 are the same amounts. If part of them is not deductible, change those fields in OmaVero, and 355 and the result change with them.",
+  ],
+  "statement.form5Missing": [
+    "Kirjanpito ei täytä osuuskuntien ylijäämiä (325–328), lisävähennyksiä (364) eikä lomakkeen muita osia, kuten poistoja, ajoneuvoja ja varallisuuslaskelmaa. Ne täytetään OmaVerossa.",
+    "The bookkeeping does not fill co-operative surplus (325–328), additional deductions (364) or the form’s other sections, such as depreciation, vehicles and net worth. Fill those in OmaVero.",
+  ],
+  "statement.copyField": ["Kopioi kohta {code}: {v}", "Copy field {code}: {v}"],
+  "statement.copied": [
+    "Kopioitu: kohta {code}, {v}. Kopioi uudelleen",
+    "Copied: field {code}, {v}. Copy again",
+  ],
+  "statement.form5OpenOmaVero": ["Avaa OmaVero", "Open MyTax"],
+  "statement.form5StepInput": ["Syötä OmaVeroon", "Enter in MyTax"],
+  "statement.form5Progress": ["{n}/{m} kopioitu", "{n}/{m} copied"],
+  "statement.form5AllDone": [
+    "Kaikki kohdat kopioitu. Tarkista vielä yhteissummat.",
+    "Every field copied. Check the totals too.",
+  ],
+  "statement.form5Nothing": [
+    "Tälle vuodelle ei ole summia, jotka täytetään lomakkeelle.",
+    "There are no amounts to enter on the form for this year.",
+  ],
+  "statement.form5StepCheck": ["Tarkista yhteissummat", "Check the totals"],
+  "statement.form5CheckHint": [
+    "Vertaa näitä OmaVeron lukuihin. Niiden pitää täsmätä.",
+    "Compare these with the figures in MyTax. They should match.",
+  ],
+  "statement.form5NotIncluded": [
+    "Mitä laskelma ei sisällä",
+    "What this does not cover",
+  ],
+  "statement.form5NoAmount": ["Ei summaa", "No amount"],
+  "statement.copyFailed": [
+    "Kopiointi ei onnistunut. Selain ei salli leikepöydän käyttöä.",
+    "Could not copy. The browser does not allow clipboard access.",
+  ],
   "statement.revenue": ["Tuotot", "Revenue"],
   "statement.expenses": ["Elinkeinotoiminnan kulut", "Business expenses"],
   "statement.profitOrLoss": ["Voitto tai tappio", "Profit or loss"],
@@ -530,6 +583,10 @@ export const APP_DICT = {
   "statement.entertainmentNote": [
     "Edustuskuluista (341, yhteensä {a}) vähennetään puolet, {b}. Veroilmoitukseen koko summa kuuluu kohtaan 341 ja vähennettävä osuus kohtaan 342.",
     "Half of entertainment expenses (341, total {a}) is deducted, {b}. On the tax return the full amount goes in 341 and the deductible part in 342.",
+  ],
+  "statement.dividendNote": [
+    "Osingoista (319 ja 321, yhteensä {a}) tulokseen lasketaan veronalainen osuus, {b}: 85 % julkisesti noteeratun yhtiön ja 75 % muun yhtiön osingosta. Veroilmoitukseen osuudet kuuluvat kohtiin 320 ja 322.",
+    "Of the dividends (319 and 321, total {a}) the result counts the taxable part, {b}: 85% of a listed company’s dividend and 75% of any other. On the tax return those parts go in 320 and 322.",
   ],
   "statement.note": [
     "Vähennyskelvottomat kulut (365–367, yhteensä {a}) näytetään, mutta niitä ei vähennetä tuloksesta. Summat ovat verottomia.",

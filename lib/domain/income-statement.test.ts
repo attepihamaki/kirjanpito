@@ -71,7 +71,7 @@ describe("incomeStatement — sample 2026", () => {
     expect(s.resultMagnitude).toBe(1064253)
   })
 
-  it("renders all 29 lines in display order, zeros included", () => {
+  it("renders all 30 lines in display order, zeros included", () => {
     expect(s.lines.map((l) => l.line.key)).toEqual([...LINE_KEYS])
     expect(s.lines.find((l) => l.line.key === "312")!.net).toBe(0)
   })
@@ -155,6 +155,26 @@ describe("incomeStatement — §6.3 rules", () => {
     expect(s.taxExemptTotal).toBe(20000)
     expect(s.result).toBe(100000)
     expect(s.lines.find((l) => l.line.key === "317")!.net).toBe(20000)
+  })
+
+  it("counts only the taxable share of dividends, 85 % listed and 75 % other", () => {
+    const s = incomeStatement(
+      [
+        entry({ id: "a", type: "income", catId: "319", amount: 100001 }),
+        entry({ id: "b", type: "income", catId: "321", amount: 20000 }),
+      ],
+      cats,
+      2026
+    )
+    const counted = (key: string) =>
+      s.lines.find((l) => l.line.key === key)!.counted
+    expect(counted("319")).toBe(85001)
+    expect(counted("321")).toBe(15000)
+    expect(s.dividendTotal).toBe(120001)
+    expect(s.dividendTaxable).toBe(100001)
+    expect(s.incomeTotal).toBe(120001)
+    expect(s.revenueTotal).toBe(100001)
+    expect(s.result).toBe(100001)
   })
 
   // Form 5 wants a positive figure on both 358 and 359.

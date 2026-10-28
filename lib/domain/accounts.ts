@@ -25,6 +25,11 @@ export interface AccountLine {
   taxExempt: boolean
   /** Line 341: only half is deducted, as Form 5's field 342 (§6.3). */
   halfDeductible: boolean
+  /**
+   * Dividends: the percentage that is taxable business income, which Form 5
+   * asks for as 320 (of 319) and 322 (of 321). Null on every other line (§6.3).
+   */
+  taxableShare: number | null
 }
 
 /**
@@ -35,6 +40,12 @@ export interface AccountLine {
  * entries and corrections still work.
  */
 export const RATES: readonly number[] = [25.5, 24, 14, 13.5, 10, 0]
+/**
+ * The taxable share of a dividend in a sole trader's business income source:
+ * 85 % from a listed company, 75 % from any other (vero.fi, Osinkotulojen
+ * verotus, 2.4; EVL 6 a § 6 mom.).
+ */
+const TAXABLE_SHARE: Readonly<Record<string, number>> = { "319": 85, "321": 75 }
 
 const GROUP = {
   varVah: { fi: "Varausten vähennys", en: "Decrease in provisions" },
@@ -126,8 +137,17 @@ export const LINES: readonly AccountLine[] = [
     "319",
     319,
     "income",
-    "Saadut osingot",
-    "Dividends received",
+    "Osingot julkisesti noteeratuista yhtiöistä",
+    "Dividends from listed companies",
+    GROUP.muutTuotot,
+    0
+  ),
+  l(
+    "321",
+    321,
+    "income",
+    "Osingot muista kuin julkisesti noteeratuista yhtiöistä",
+    "Dividends from non-listed companies",
     GROUP.muutTuotot,
     0
   ),
@@ -356,6 +376,7 @@ function l(
     nondeductible,
     taxExempt: key === "317",
     halfDeductible: key === "341",
+    taxableShare: TAXABLE_SHARE[key] ?? null,
   }
 }
 
@@ -431,7 +452,15 @@ export const DEFAULT_CATEGORY_FOR_ACCOUNT: Readonly<Record<number, string>> = {
   344: "344-other",
 }
 
-/** The 32 built-in categories: four sales plus one per remaining line. */
+/**
+ * Other names a file may give a default category, matched on CSV import like
+ * the Finnish and English names (§7.1).
+ */
+export const FORMER_NAMES: Readonly<Record<string, readonly string[]>> = {
+  "319": ["Saadut osingot", "Dividends received"],
+}
+
+/** The 33 built-in categories: four sales plus one per remaining line. */
 export function defaultCategories(): Category[] {
   const sales: Category[] = SALES.map((s) => ({
     id: s.id,

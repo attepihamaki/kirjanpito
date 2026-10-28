@@ -79,3 +79,12 @@ export const SETTINGS_ROUTES = {
   general: APP_ROUTES.settings,
   categories: `${APP_ROUTES.settings}/categories`,
 } as const
+
+/**
+ * The income statement's sub-pages (§8.8): the sheet itself, and the same
+ * figures as Form 5's fields for copying into OmaVero.
+ */
+export const STATEMENT_ROUTES = {
+  sheet: APP_ROUTES.statement,
+  form5: `${APP_ROUTES.statement}/form5`,
+} as const

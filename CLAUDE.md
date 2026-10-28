@@ -206,7 +206,8 @@ Each line has a key, an account number (tili), a side, Finnish and English names
 | 315         | 315  | income  | Muu yksityiskäyttö                               | Other private use                       | Yksityiskäyttö / Private use                                            | 0                      | –               |
 | 317         | 317  | income  | Tuloslaskelman verovapaat tuotot                 | Tax-exempt income                       | Muut tuotot / Other income                                              | 0                      | –               |
 | 318         | 318  | income  | Saadut avustukset ja tuet                        | Grants and subsidies received           | Muut tuotot / Other income                                              | 0                      | –               |
-| 319         | 319  | income  | Saadut osingot                                   | Dividends received                      | Muut tuotot / Other income                                              | 0                      | –               |
+| 319         | 319  | income  | Osingot julkisesti noteeratuista yhtiöistä       | Dividends from listed companies         | Muut tuotot / Other income                                              | 0                      | –               |
+| 321         | 321  | income  | Osingot muista kuin julkisesti noteeratuista yhtiöistä | Dividends from non-listed companies | Muut tuotot / Other income                                              | 0                      | –               |
 | 323         | 323  | income  | Korkotuotot ja muut rahoitustuotot               | Interest and other financial income     | Muut tuotot / Other income                                              | 0                      | –               |
 | 324         | 324  | income  | Muut veronalaiset tuotot                         | Other taxable income                    | Muut tuotot / Other income                                              | 0                      | –               |
 | 333         | 333  | expense | Ostot ja varastojen muutokset                    | Purchases and change in inventory       | –                                                                       | 25.5                   | purchases       |
@@ -228,7 +229,9 @@ Each line has a key, an account number (tili), a side, Finnish and English names
 | 366         | 366  | expense | Sakot ja muut rangaistusmaksut                   | Fines and penalties                     | (same)                                                                  | 0                      | nondeductible   |
 | 367         | 367  | expense | Muut vähennyskelvottomat kulut                   | Other non-deductible expenses           | (same)                                                                  | 0                      | nondeductible   |
 
-The table order is also the display order of the income statement. **It is not quite Form 5's order, and that is deliberate.** The form lists the income fields as 300, 318, 301, 313–315, 319–328, 323, 312, 324, 317, so grants come second and reserve decreases late. The app keeps the order above, which groups the lines under their headings. Each line still carries its form number, so copying a figure into OmaVero goes by number, not by position. The expense lines are in the form's order. Checked against Verohallinto's 2026 data file specification for Form 5.
+The table order is also the display order of the income statement. **It is not quite Form 5's order, and that is deliberate.** The form lists the income fields as 300, 318, 301, 313–315, 319–328, 323, 312, 324, 317, so grants come second and reserve decreases late. The app keeps the order above, which groups the lines under their headings. Each line still carries its form number, so copying a figure into OmaVero goes by number, not by position. The expense lines are in the form's order. Checked against Verohallinto's 2026 data file specification for Form 5. The Form 5 view (§8.8) lists the same figures in the form's own order.
+
+319 was "Saadut osingot", one line for all dividends. `FORMER_NAMES` in `accounts.ts` still matches that name on CSV import, so an older file books its dividends to 319 rather than creating a custom category.
 
 **Sales categories on line 300** (income), each its own category:
 
@@ -276,7 +279,8 @@ For the selected month (or the whole year): income net total, expense net total,
 - Every line is shown even when zero (greyed out with "–"). Section headings carry the section totals.
 - The period is 1.1.–31.12. of the selected year. All amounts exclude VAT.
 - These rules were checked against Verohallinto's Form 5 instructions (vero.fi, "Instructions for filing", Form 5): tax-exempt income is not part of taxable revenue, 354 is deductible, and 365–367 may not be deducted.
-- **Dividends on 319 are one gross line, and that is wrong for the result.** Form 5 splits them into listed (319, taxable portion in 320) and non-listed (321, taxable portion in 322), and its taxable income (316) adds only 320 and 322. The app counts the full dividend in revenue, which overstates 358. Fix it before the user receives dividends (§14).
+- **Dividends count only their taxable share.** Form 5 splits them into listed companies (319, taxable portion in 320) and others (321, taxable portion in 322), and its taxable income (316) adds only 320 and 322. In a sole trader's business income source, 85 % of a listed company's dividend is taxable and 75 % of any other (vero.fi, Osinkotulojen verotus, 2.4; EVL 6 a § 6 mom.). `AccountLine.taxableShare` holds the percentage, and the share is rounded to the cent. The sheet lists both lines in full and says what was counted in a note.
+- **Every line has a `counted` part**, the amount that enters the result: the taxable part of an income line, the deductible part of an expense line. Revenue (316) and deductible expenses (355) are sums of it; the section headings are sums of the lines in full (`incomeTotal`, `expenseTotal`).
 
 ### 6.4 Summary (Yhteenveto)
 
@@ -615,6 +619,12 @@ A near full-screen modal.
 
 Presented as a printable **sheet**: the `--sheet` surface (warm paper in light, the card tone in dark — see §11), a thin border, and a soft shadow. It has the title, the period, sections with totals, greyed group headings, lines with muted account numbers, and a double-ruled result line. A "Tulosta" button calls `window.print()`, and the print styles hide the chrome.
 
+The view has two sub-pages, as tabs shaped like the settings tabs (§8.10, `SubPageTabs` in `components/common/sub-page-tabs.tsx`). `StatementShell` holds the title, "Tulosta" and the tabs, so both pages print. The routes are `STATEMENT_ROUTES` in `lib/site.ts`.
+
+- **Laskelma** at `/app/statement`: the sheet above.
+- **Lomake 5** at `/app/statement/form5`: the same figures as Form 5's section 2, in the form's order, with its codes and its labels (`lib/domain/form5.ts`). It opens on "Täytettävät", in two steps: the fields with an amount, as a checklist with a "3/10 kopioitu" count and a progress bar, then the totals 316, 355 and 358 or 359 to check against OmaVero. The totals have no copy button. "Kaikki kohdat" shows every field in the form's order, for finding one by its place; the non-deductible expenses and the result are sections of their own. Each code sits in a box like the paper form's, filled where there is an amount to enter, and a portion (320, 322, 338, 342, 347) is indented under its field. The amount itself is the copy button: a click puts it on the clipboard as `1234,56`, with no spaces and no euro sign, and turns the button green. "Avaa OmaVero" links to vero.fi/omavero; the notes on what the app leaves out are behind "Mitä laskelma ei sisällä". The codes use Geist with tabular figures rather than a monospace, since Geist is the only face (§11). It sits on the same `--sheet` surface as the statement, so the two tabs read as one document, and its rules take `--sheet-edge`. 338 and 347 repeat 337 and 346, since the app deducts depreciation and interest in full, and a note says so. Another note names what the app does not fill: 325 to 328, 364 and the form's other sections. `lib/domain/form5.test.ts` runs Verohallinto's own check rules from the 2026 data file specification against the fields.
+- An Ilmoitin.fi file is not made. That would be filing, and the app does not know the rest of the form (§1).
+
 ### 8.9 Summary (Yhteenveto)
 
 See §6.4. Wide tables scroll horizontally with a sticky first column. The chart is the overview's (`components/common/income-expense-chart.tsx`, §8.12): mirrored, with the year totals in the panel heading, and a click opens the ledger on that month.
@@ -852,6 +862,7 @@ Anything that appears in two views is a component in `components/common/`, takin
 | landing and 404 type         | `typography.tsx` — `DisplayHeading` (`size` lg / md), `Lead`, `SectionHeading` |
 | the root of a document       | `LangRoot` in `lang-provider.tsx` — the app shell, the landing page and the 404 all start with it |
 | sortable column headers      | `sortable-header.tsx` |
+| tabs between sub-pages       | `sub-page-tabs.tsx`, used by Asetukset and Tuloslaskelma |
 | the income and expense chart | `income-expense-chart.tsx`: `IncomeExpenseChart` and `IncomeExpenseLegend`, on the overview and Yhteenveto |
 | single-choice selects        | `option-select.tsx` |
 | page titles inside the app   | `page-header.tsx` |
@@ -894,7 +905,9 @@ app/
   app/
     layout.tsx                   AppShell + metadata.robots = noindex, nofollow
     page.tsx                     /app → /app/overview
-    overview/  ledger/  vat/  statement/  summary/
+    overview/  ledger/  vat/  summary/
+    statement/                   layout.tsx = StatementShell; page.tsx = Laskelma
+      form5/                     /app/statement/form5 (§8.8)
     settings/                    layout.tsx = SettingsShell; page.tsx = Yleiset
       categories/                /app/settings/categories (§8.10)
 ```
@@ -1105,6 +1118,6 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 ## 14. Open questions and ideas not yet done
 
 - Undo, at least for a deleted entry and for clearing the entries. Autosave (§7.5) makes a mistake reach the file within seconds, which is why it is opt-in.
-- Splitting dividends into listed (319/320) and non-listed (321/322), with only the taxable portion in the result (§6.3).
+- Filing through Ilmoitin.fi, at least for the VAT return. Not before the user asks for it (§8.8).
 - Form 5 fields the app leaves out: 338 and 347, the deductible parts of depreciation (337) and interest (346), which the app takes to be the full amounts; co-operative surplus (325–328); and the additional deductions of 364, which come from fields 388 and 392 elsewhere on the return.
 - The VAT return of a business that stops trading (§6.5).

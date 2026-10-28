@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import * as React from "react"
-import { render, screen, within } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { LangProvider } from "@/components/lang-provider"
+import { Form5View } from "@/components/statement/form5-view"
 import { StatementView } from "@/components/statement/statement-view"
 import { VatView } from "@/components/vat/vat-view"
 import { defaultCategories } from "@/lib/domain/accounts"
@@ -151,9 +152,11 @@ describe("StatementView", () => {
 
   it("renders every line, with a dash for the empty ones", () => {
     mount(<StatementView />)
-    // All 29 lines render; the sample touches eight, so 21 show a dash.
-    expect(screen.getAllByText("–")).toHaveLength(21)
-    expect(screen.getByText("Saadut osingot")).toBeInTheDocument()
+    // All 30 lines render; the sample touches eight, so 22 show a dash.
+    expect(screen.getAllByText("–")).toHaveLength(22)
+    expect(
+      screen.getByText("Osingot muista kuin julkisesti noteeratuista yhtiöistä")
+    ).toBeInTheDocument()
     expect(
       screen.getByText("Sakot ja muut rangaistusmaksut")
     ).toBeInTheDocument()
@@ -209,5 +212,47 @@ describe("StatementView", () => {
     expect(screen.getByText("Business revenue")).toBeInTheDocument()
     expect(screen.getByText("358 Business profit")).toBeInTheDocument()
     expect(screen.getByText(eur(1064253))).toBeInTheDocument()
+  })
+})
+
+describe("Form5View", () => {
+  it("lists the fields in the form's order and copies an amount by its code", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    })
+    mount(<Form5View />)
+
+    // It opens on the fields to fill in, then the totals to check.
+    expect(screen.getByText("Liikevaihto")).toBeInTheDocument()
+    expect(screen.queryByText("Saadut avustukset ja tuet")).toBeNull()
+    expect(screen.queryByText("Elinkeinotoiminnan tappio")).toBeNull()
+    expect(
+      screen.getByText("Elinkeinotoiminnan veronalaiset tuotot yhteensä")
+    ).toBeInTheDocument()
+    // Totals are there to check against, not to copy.
+    expect(
+      screen.queryByRole("button", { name: /^Kopioi kohta 358:/ })
+    ).toBeNull()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Kopioi kohta 300: 12500,00" })
+    )
+    expect(writeText).toHaveBeenCalledWith("12500,00")
+    expect(
+      await screen.findByRole("button", {
+        name: "Kopioitu: kohta 300, 12500,00. Kopioi uudelleen",
+      })
+    ).toBeInTheDocument()
+    expect(screen.getByText(/^1\/\d+ kopioitu$/)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: /^Kaikki kohdat/ }))
+    expect(screen.getByText("Saadut avustukset ja tuet")).toBeInTheDocument()
+    expect(screen.getAllByText("Veronalainen osuus")).toHaveLength(2)
+    // An empty field has nothing to copy.
+    expect(
+      screen.queryByRole("button", { name: /^Kopioi kohta 318:/ })
+    ).toBeNull()
   })
 })
