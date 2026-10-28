@@ -31,7 +31,6 @@ export type TypeFilter = "all" | EntryType
  * rate that does not fit the entry's date.
  */
 export type CheckFilter = "all" | "noReceipt" | "rateMismatch"
-export type VatMode = "month" | "quarter" | "year"
 
 export interface SortState<K extends string> {
   key: K
@@ -72,6 +71,27 @@ function nextSort<K extends string>(
   if (current?.key !== key) return { key, dir: 1 }
   if (current.dir === 1) return { key, dir: -1 }
   return null
+}
+
+/**
+ * Carries the VAT view's month or quarter across a change of filing period,
+ * so the view stays on the same part of the year rather than jumping to its
+ * start. The year period has no index, so the old one is kept for later.
+ */
+function clampVatIndex(
+  index: number,
+  from: VatPeriodKind,
+  to: VatPeriodKind
+): number {
+  if (to === "year" || from === to) return index
+  if (to === "quarter") {
+    return from === "month"
+      ? Math.min(Math.max(1, Math.ceil(index / 3)), 4)
+      : Math.min(Math.max(1, index), 4)
+  }
+  return from === "quarter"
+    ? Math.min(Math.max(1, index * 3 - 2), 12)
+    : Math.min(Math.max(1, index), 12)
 }
 
 export type DialogState =
@@ -159,7 +179,7 @@ export interface BookState {
   catType: TypeFilter
   catSort: SortState<CatSortKey> | null
   catPage: number
-  vatMode: VatMode
+  /** The month or quarter the VAT view shows, in the filing period (§6.5). */
   vatIndex: number
   dialog: DialogState
   /** Receipt ids held by the open entry dialog, protected from GC (§7.4). */
@@ -241,7 +261,6 @@ export interface BookActions {
   setCatPage(page: number): void
   setCatSize(size: PageSize): void
 
-  setVatMode(mode: VatMode): void
   setVatIndex(index: number): void
 
   openDialog(dialog: DialogState): void
@@ -290,7 +309,6 @@ function initialState(): BookState {
     catType: "all",
     catSort: null,
     catPage: 1,
-    vatMode: "month",
     vatIndex: new Date().getMonth() + 1,
     dialog: { kind: "none" },
     draftAttachmentIds: [],
@@ -432,7 +450,7 @@ export const useBookStore = create<BookStore>()(
           year: next.year,
           dirty: next.dirty,
           vatPeriod,
-          vatMode: vatPeriod,
+          vatIndex: clampVatIndex(get().vatIndex, get().vatPeriod, vatPeriod),
           vatFiled: s.vatFiled ?? {},
           overviewLayout: s.overviewLayout ?? get().overviewLayout,
           autosave: s.autosave ?? get().autosave,
@@ -486,10 +504,14 @@ export const useBookStore = create<BookStore>()(
       /*
        * These three live in the file's settings.json, so changing one leaves
        * the file behind and marks the book dirty, as an entry edit does. The
-       * VAT view follows the filing period, the period the user reports in.
+       * VAT view shows the filing period, the period the user reports in.
        */
       setVatPeriod: (vatPeriod) =>
-        set({ vatPeriod, vatMode: vatPeriod, dirty: true }),
+        set({
+          vatPeriod,
+          vatIndex: clampVatIndex(get().vatIndex, get().vatPeriod, vatPeriod),
+          dirty: true,
+        }),
       setVatFiled: (key, date) => {
         const vatFiled = { ...get().vatFiled }
         if (date) vatFiled[key] = date
@@ -556,20 +578,6 @@ export const useBookStore = create<BookStore>()(
       setCatPage: (catPage) => set({ catPage }),
       setCatSize: (ctSize) => set({ ctSize, catPage: 1 }),
 
-      setVatMode: (vatMode) =>
-        set({
-          vatMode,
-          /*
-           * Clamp the index into the new mode's range rather than resetting
-           * it, so switching modes stays inside the selected year.
-           */
-          vatIndex:
-            vatMode === "quarter"
-              ? Math.min(Math.max(1, Math.ceil(get().vatIndex / 3)), 4)
-              : vatMode === "month"
-                ? Math.min(Math.max(1, get().vatIndex), 12)
-                : get().vatIndex,
-        }),
       setVatIndex: (vatIndex) => set({ vatIndex }),
 
       openDialog: (dialog) => set({ dialog }),

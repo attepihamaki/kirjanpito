@@ -17,7 +17,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useFormatters } from "@/components/lang-provider"
 import { VatPeriodStrip } from "@/components/vat/vat-period-strip"
 import { todayIso } from "@/lib/domain/dates"
@@ -29,18 +28,17 @@ import {
   vatPeriods,
   type VatPeriodStatus,
 } from "@/lib/domain/vat-deadline"
-import { useBookStore, type VatMode } from "@/stores/book-store"
+import { useBookStore } from "@/stores/book-store"
 
 export function VatView() {
   const f = useFormatters()
   const entries = useBookStore((s) => s.entries)
   const cats = useBookStore((s) => s.cats)
   const year = useBookStore((s) => s.year)
-  const mode = useBookStore((s) => s.vatMode)
+  // The filing period is set in Settings (§8.10); the view only follows it.
+  const mode = useBookStore((s) => s.vatPeriod)
   const index = useBookStore((s) => s.vatIndex)
-  const setMode = useBookStore((s) => s.setVatMode)
   const setIndex = useBookStore((s) => s.setVatIndex)
-  const vatPeriod = useBookStore((s) => s.vatPeriod)
   const vatFiled = useBookStore((s) => s.vatFiled)
   const setVatFiled = useBookStore((s) => s.setVatFiled)
   const today = todayIso()
@@ -65,16 +63,11 @@ export function VatView() {
   )
 
   const periods = React.useMemo(() => vatPeriods(mode, year), [mode, year])
-  /*
-   * Filed marks belong to the period the user reports in (§6.5). Viewing the
-   * year by quarter when filing monthly shows figures, not statuses.
-   */
-  const filing = mode === vatPeriod
-  const statuses: VatPeriodStatus[] | null = filing
-    ? periods.map((p) => periodStatus(p, today, vatFiled))
-    : null
+  const statuses: VatPeriodStatus[] = periods.map((p) =>
+    periodStatus(p, today, vatFiled)
+  )
   const current = periods.find((p) => p.index === index) ?? periods[0]
-  const currentStatus = filing ? periodStatus(current, today, vatFiled) : null
+  const currentStatus = periodStatus(current, today, vatFiled)
 
   const refund = report.due < 0
   const periodLabel =
@@ -89,23 +82,6 @@ export function VatView() {
       <PageHeader title={f.t("nav.vat")} subtitle={periodLabel} />
 
       <div className="flex flex-col gap-5">
-        <div className="flex flex-wrap items-center gap-2">
-          <ToggleGroup
-            aria-label={f.t("vat.period")}
-            value={[mode]}
-            onValueChange={(value) => {
-              const next = value[0] as VatMode | undefined
-              if (next) setMode(next)
-            }}
-          >
-            <ToggleGroupItem value="month">{f.t("vat.month")}</ToggleGroupItem>
-            <ToggleGroupItem value="quarter">
-              {f.t("vat.quarter")}
-            </ToggleGroupItem>
-            <ToggleGroupItem value="year">{f.t("vat.year")}</ToggleGroupItem>
-          </ToggleGroup>
-        </div>
-
         {mode !== "year" ? (
           <VatPeriodStrip
             periods={periods}
@@ -134,10 +110,8 @@ export function VatView() {
             </p>
           </div>
 
-          {/* Only a closed period of the user's own cadence can be filed. */}
-          {currentStatus &&
-          currentStatus !== "open" &&
-          currentStatus !== "future" ? (
+          {/* Only a closed period can be filed. */}
+          {currentStatus !== "open" && currentStatus !== "future" ? (
             <div className="flex flex-col items-start gap-2 text-sm min-[560px]:items-end">
               <span className="text-muted-foreground">
                 {currentStatus === "filed"
@@ -163,12 +137,6 @@ export function VatView() {
                 </Button>
               )}
             </div>
-          ) : !filing ? (
-            <p className="max-w-xs text-xs text-muted-foreground">
-              {f.t("vat.cadenceHint", {
-                p: f.t(`vat.${vatPeriod}`).toLowerCase(),
-              })}
-            </p>
           ) : null}
         </Panel>
 

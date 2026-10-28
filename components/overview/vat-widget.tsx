@@ -62,7 +62,6 @@ export function VatWidget() {
   const openInVatView = () => {
     const s = useBookStore.getState()
     s.setYear(next.year)
-    s.setVatMode(next.kind)
     s.setVatIndex(next.index)
   }
 

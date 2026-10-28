@@ -13,9 +13,9 @@ const DOT: Record<VatPeriodStatus, string> = {
 }
 
 /**
- * The periods of the year as a row of chips (§8.7), each with where it
- * stands when it is a period the user files in. The chips have the month
- * chips' shape (§8.4), one line taller to carry the status.
+ * The filing periods of the year as a row of chips (§8.7), each with where
+ * it stands. The chips have the month chips' shape (§8.4), one line taller
+ * to carry the status.
  */
 export function VatPeriodStrip({
   periods,
@@ -25,8 +25,7 @@ export function VatPeriodStrip({
 }: {
   periods: readonly VatPeriod[]
   selected: number
-  /** Null when this is not the user's filing period: no status to show. */
-  statuses: readonly VatPeriodStatus[] | null
+  statuses: readonly VatPeriodStatus[]
   onSelect: (index: number) => void
 }) {
   const f = useFormatters()
@@ -54,7 +53,7 @@ export function VatPeriodStrip({
       aria-label={f.t("vat.period")}
     >
       {periods.map((p, i) => {
-        const status = statuses?.[i]
+        const status = statuses[i]
         const isSelected = selected === p.index
         return (
           <button

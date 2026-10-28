@@ -603,8 +603,8 @@ A near full-screen modal.
 
 ### 8.7 VAT return (ALV-laskelma)
 
-- Period controls: a segmented control (Kuukausi / Neljännesvuosi / Vuosi), and below it a strip of the year's months or quarters in the shape of the ledger's month chips (§8.4). The view opens on the user's filing period (§6.5).
-- **When the strip shows the user's own filing period**, each chip also shows where it stands: Ilmoitettu, Myöhässä, the due date, Kesken or Tulossa. The result banner then carries the filed toggle for a closed period: "Merkitse ilmoitetuksi", or "Merkitty ilmoitetuksi {date}" with "Poista merkintä". Viewing by another period shows figures only, with a line saying which period is filed in.
+- **The view has no period control of its own.** It always shows the filing period set in Settings (`vatPeriod`, §6.5, §8.10). A monthly or quarterly filer gets a strip of the year's months or quarters in the shape of the ledger's month chips (§8.4); a yearly filer gets the whole year and no strip. Figures by any other period are ones the user never files, so a second switch here would only duplicate the setting.
+- Each chip shows where its period stands: Ilmoitettu, Myöhässä, the due date, Kesken or Tulossa. The result banner carries the filed toggle for a closed period: "Merkitse ilmoitetuksi", or "Merkitty ilmoitetuksi {date}" with "Poista merkintä".
 - A result banner: "Maksettava arvonlisävero" (or "Palautettava…") as a large number, with the formula line "Myynnin vero X − ostojen vähennettävä vero Y".
 - Two tables side by side, "Myynnin arvonlisävero" and "Ostojen vähennettävä vero", with the columns Verokanta, Veroton, Vero and Yhteensä, plus a totals row.
 - A "Muut ilmoitettavat myynnit" panel, and a note explaining 0 % purchases and asking the user to check the figures before filing in OmaVero.
@@ -628,7 +628,7 @@ Every section is a `Panel` (§11). The page is split into two sub-pages, so the 
 
 On **Yleiset**:
 
-- **"ALV-ilmoitusjakso"** comes first: a segmented Kuukausi / Neljännesvuosi / Vuosi. It sets `vatPeriod` (§6.5), which the overview's due dates and the VAT view's default period follow.
+- **"ALV-ilmoitusjakso"** comes first: a segmented Kuukausi / Neljännesvuosi / Vuosi. It sets `vatPeriod` (§6.5), which the overview's due dates and the VAT view follow. Changing it keeps the VAT view on the same part of the year: October becomes Q4.
 - **"Tallennus"**, only where the browser can write to a file: the "Tallenna automaattisesti" checkbox (§7.5), with a description that says there is no undo.
 - **"Tyhjennä kirjaukset"**, last, as a `variant="destructive"` panel with "Tyhjennä" (`destructive`) on the footer. It deletes all entries (with a confirmation) and leaves the bookkeeping open but empty.
 

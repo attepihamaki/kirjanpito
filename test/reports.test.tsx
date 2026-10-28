@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import * as React from "react"
 import { render, screen, within } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { LangProvider } from "@/components/lang-provider"
@@ -46,7 +45,7 @@ beforeEach(() => {
     entries: sampleEntries(createIdFactory("d")),
     cats: defaultCategories(),
     year: 2026,
-    vatMode: "month",
+    vatPeriod: "month",
     vatIndex: 10,
   })
 })
@@ -67,20 +66,23 @@ describe("VatView", () => {
     ).toBeInTheDocument()
   })
 
-  it("switches to the whole year", async () => {
-    const user = userEvent.setup()
+  it("has no period toggle of its own", () => {
     mount(<VatView />)
+    expect(screen.queryByRole("button", { name: "Vuosi" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Neljännesvuosi" })).toBeNull()
+  })
 
-    await user.click(screen.getByRole("button", { name: "Vuosi" }))
+  it("shows the whole year for a yearly filer", () => {
+    useBookStore.setState({ vatPeriod: "year" })
+    mount(<VatView />)
 
     expect(screen.getByText(eur(76022))).toBeInTheDocument()
     expect(screen.getByText("Vuosi 2026")).toBeInTheDocument()
   })
 
-  it("reports EU and reverse-charge sales separately, not as VAT", async () => {
-    const user = userEvent.setup()
+  it("reports EU and reverse-charge sales separately, not as VAT", () => {
+    useBookStore.setState({ vatPeriod: "year" })
     mount(<VatView />)
-    await user.click(screen.getByRole("button", { name: "Vuosi" }))
 
     expect(
       screen.getByText("Tavaroiden ja palveluiden myynti muihin EU-maihin")
@@ -90,10 +92,9 @@ describe("VatView", () => {
     expect(screen.getByText(eur(480000))).toBeInTheDocument()
   })
 
-  it("hides the 0 % row on purchases but keeps it on sales", async () => {
-    const user = userEvent.setup()
+  it("hides the 0 % row on purchases but keeps it on sales", () => {
+    useBookStore.setState({ vatPeriod: "year" })
     mount(<VatView />)
-    await user.click(screen.getByRole("button", { name: "Vuosi" }))
 
     const tables = screen.getAllByRole("table")
     const sales = within(tables[0])
@@ -102,11 +103,9 @@ describe("VatView", () => {
     expect(purchases.queryByText("0 %")).not.toBeInTheDocument()
   })
 
-  it("clamps the period index when switching to quarters", async () => {
-    const user = userEvent.setup()
+  it("stays on October's quarter when the filing period becomes quarterly", () => {
+    useBookStore.getState().setVatPeriod("quarter")
     mount(<VatView />)
-
-    await user.click(screen.getByRole("button", { name: "Neljännesvuosi" }))
 
     // October is in Q4; Q4 is empty beyond October, so the figures match.
     expect(useBookStore.getState().vatIndex).toBe(4)

@@ -468,10 +468,6 @@ export const APP_DICT = {
   "vat.upcoming": ["Tulossa", "Upcoming"],
   "vat.markFiled": ["Merkitse ilmoitetuksi", "Mark as filed"],
   "vat.unmarkFiled": ["Poista merkintä", "Remove the mark"],
-  "vat.cadenceHint": [
-    "Ilmoitusjaksosi on {p}. Ilmoitetuiksi merkitään sen jaksot.",
-    "You file by {p}. Returns are marked as filed in that period.",
-  ],
   "vat.payableTitle": ["Maksettava arvonlisävero", "VAT payable"],
   "vat.refundableTitle": ["Palautettava arvonlisävero", "VAT refundable"],
   "vat.formula": [
