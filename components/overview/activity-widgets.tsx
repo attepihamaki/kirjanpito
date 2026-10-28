@@ -309,12 +309,15 @@ export function ChecksWidget() {
 
   /*
    * Empty months, from the book's first month in this year up to the last
-   * complete one. A month still running is not empty yet.
+   * complete one. A month still running is not empty yet, and a month before
+   * the start month set in Settings was never meant to have entries.
    */
   const used = new Set(data.yearEntries.map((e) => monthOf(e.date)))
   const lastComplete = data.elapsedMonths === 12 ? 12 : data.elapsedMonths - 1
   const emptyMonths: string[] = []
   for (let m = Math.min(...used); m <= lastComplete; m++) {
+    const key = `${data.year}-${String(m).padStart(2, "0")}`
+    if (data.bookStart && key < data.bookStart) continue
     if (!used.has(m)) emptyMonths.push(f.month(m - 1, true).toLowerCase())
   }
   if (emptyMonths.length) {

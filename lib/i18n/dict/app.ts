@@ -466,6 +466,11 @@ export const APP_DICT = {
   "vat.dueDate": ["Eräpäivä {d}", "Due {d}"],
   "vat.running": ["Kesken", "In progress"],
   "vat.upcoming": ["Tulossa", "Upcoming"],
+  "vat.beforeStart": ["Ei ilmoitusta", "No return"],
+  "vat.beforeStartHint": [
+    "Jakso päättyi ennen kirjanpidon aloituskuukautta, joten siitä ei anneta ilmoitusta.",
+    "The period ended before the month the bookkeeping began, so no return is filed for it.",
+  ],
   "vat.markFiled": ["Merkitse ilmoitetuksi", "Mark as filed"],
   "vat.unmarkFiled": ["Poista merkintä", "Remove the mark"],
   "vat.payableTitle": ["Maksettava arvonlisävero", "VAT payable"],
@@ -578,6 +583,17 @@ export const APP_DICT = {
   "settings.vatPeriodHint": [
     "Kuinka usein annat arvonlisäveroilmoituksen. Yleiskatsauksen eräpäivät lasketaan tämän mukaan.",
     "How often you file a VAT return. The due dates on the overview follow it.",
+  ],
+  "settings.bookStart": ["Kirjanpidon aloitus", "Start of the bookkeeping"],
+  "settings.bookStartHint": [
+    "Kuukausi, jona yritystoiminta alkoi. Sitä aiemmista jaksoista ei odoteta ALV-ilmoitusta. Ilman valintaa ilmoitukset lasketaan ensimmäisestä kirjauksesta alkaen.",
+    "The month the business began. No VAT return is expected for the periods before it. Without a choice, returns are counted from the first entry.",
+  ],
+  "settings.bookStartMonth": ["Aloituskuukausi", "Start month"],
+  "settings.bookStartYear": ["Aloitusvuosi", "Start year"],
+  "settings.bookStartNone": [
+    "Ensimmäisestä kirjauksesta",
+    "From the first entry",
   ],
   "settings.saving": ["Tallennus", "Saving"],
   "settings.autosave": ["Tallenna automaattisesti", "Save automatically"],

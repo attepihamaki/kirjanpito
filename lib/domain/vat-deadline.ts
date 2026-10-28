@@ -28,6 +28,8 @@ export interface VatPeriod {
 
 /** Where a period stands on a given day. */
 export type VatPeriodStatus =
+  /** Ended before the bookkeeping began, so no return is owed. */
+  | "before"
   /** Has not started. */
   | "future"
   /** Today falls inside it. */
@@ -170,11 +172,25 @@ export function asPeriod(p: VatPeriod): Period {
   return { kind: "month", year: p.year, month: p.index }
 }
 
+/**
+ * The first day the book owes VAT returns from: the first of the start month
+ * set in Settings (§8.10), or else the date of the book's first entry. Null
+ * when neither exists.
+ */
+export function bookStartDate(
+  startMonth: string | null,
+  firstEntryDate: string | null
+): string | null {
+  return startMonth ? `${startMonth}-01` : firstEntryDate
+}
+
 export function periodStatus(
   p: VatPeriod,
   today: string,
-  filed: Readonly<Record<string, string>>
+  filed: Readonly<Record<string, string>>,
+  start: string | null = null
 ): VatPeriodStatus {
+  if (start && p.to < start) return "before"
   if (today < p.from) return "future"
   if (today <= p.to) return "open"
   if (filed[p.key]) return "filed"
@@ -193,23 +209,23 @@ export interface TimelinePeriod extends VatPeriod {
 }
 
 /**
- * The periods the user has to answer for, oldest first: from the period of
- * the book's first entry up to the one after today's. A return is owed for a
- * closed period even when it had no entries, a nil return, but not for a
- * period before the bookkeeping began, so a book started in October does not
- * report January to September as overdue.
+ * The periods the user has to answer for, oldest first: from the period that
+ * contains `startDate` (see `bookStartDate`) up to the one after today's. A
+ * return is owed for a closed period even when it had no entries, a nil
+ * return, but not for a period before the bookkeeping began, so a book
+ * started in October does not report January to September as overdue.
  *
- * Empty when the book has no entries.
+ * Empty when there is no start date.
  */
 export function vatTimeline(
   kind: VatPeriodKind,
-  firstEntryDate: string | null,
+  startDate: string | null,
   today: string,
   filed: Readonly<Record<string, string>>
 ): TimelinePeriod[] {
-  if (!firstEntryDate) return []
+  if (!startDate) return []
   const out: TimelinePeriod[] = []
-  const start = periodContaining(kind, firstEntryDate)
+  const start = periodContaining(kind, startDate)
   const current = periodContaining(kind, today)
   const lastYear = Math.max(current.year, start.year) + 1
   for (let y = start.year; y <= lastYear; y++) {

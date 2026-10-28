@@ -2,6 +2,7 @@
 
 import { Trash2Icon } from "lucide-react"
 
+import { OptionSelect } from "@/components/common/option-select"
 import { Panel } from "@/components/common/panel"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -19,6 +20,7 @@ export function GeneralSettings() {
   return (
     <div className="flex flex-col gap-6">
       <VatPeriodSetting />
+      <BookStartSetting />
       <AutosaveSetting />
       <ClearEntries />
     </div>
@@ -52,6 +54,64 @@ function VatPeriodSetting() {
         <ToggleGroupItem value="quarter">{f.t("vat.quarter")}</ToggleGroupItem>
         <ToggleGroupItem value="year">{f.t("vat.year")}</ToggleGroupItem>
       </ToggleGroup>
+    </Panel>
+  )
+}
+
+/** Sentinel for "no start month": a `Select` value cannot be null. */
+const NO_START = "none"
+
+/**
+ * The month the business began (§8.10). A period that ended before it owes
+ * no return, so a company founded in October sees no overdue January.
+ */
+function BookStartSetting() {
+  const f = useFormatters()
+  const bookStart = useBookStore((s) => s.bookStart)
+  const setBookStart = useBookStore((s) => s.setBookStart)
+  const selectedYear = useBookStore((s) => s.year)
+
+  const startYear = bookStart ? Number(bookStart.slice(0, 4)) : selectedYear
+  const startMonth = bookStart ? bookStart.slice(5, 7) : NO_START
+  const thisYear = new Date().getFullYear()
+  const years = new Set([startYear, selectedYear])
+  for (let y = thisYear - 10; y <= thisYear + 1; y++) years.add(y)
+
+  const monthOptions = [
+    { value: NO_START, label: f.t("settings.bookStartNone") },
+    ...Array.from({ length: 12 }, (_, i) => ({
+      value: String(i + 1).padStart(2, "0"),
+      label: f.month(i),
+    })),
+  ]
+  const yearOptions = [...years]
+    .sort((a, b) => b - a)
+    .map((y) => ({ value: String(y), label: String(y) }))
+
+  return (
+    <Panel
+      title={f.t("settings.bookStart")}
+      description={f.t("settings.bookStartHint")}
+      bodyClassName="flex flex-wrap gap-2 p-4"
+    >
+      <OptionSelect
+        label={f.t("settings.bookStartMonth")}
+        options={monthOptions}
+        value={startMonth}
+        onChange={(m) =>
+          setBookStart(m === NO_START ? null : `${startYear}-${m}`)
+        }
+        className="w-56"
+      />
+      {bookStart ? (
+        <OptionSelect
+          label={f.t("settings.bookStartYear")}
+          options={yearOptions}
+          value={String(startYear)}
+          onChange={(y) => setBookStart(`${y}-${startMonth}`)}
+          className="w-28"
+        />
+      ) : null}
     </Panel>
   )
 }

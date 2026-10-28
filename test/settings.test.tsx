@@ -53,6 +53,7 @@ describe("settings sub-pages", () => {
       "aria-current"
     )
     expect(screen.getByText("ALV-ilmoitusjakso")).toBeVisible()
+    expect(screen.getByText("Kirjanpidon aloitus")).toBeVisible()
     expect(screen.getByRole("button", { name: "Tyhjennä" })).toBeVisible()
     expect(screen.queryByText("Lisää oma luokka")).toBeNull()
   })

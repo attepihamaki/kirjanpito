@@ -128,6 +128,11 @@ export interface BookState {
   sidebarOpen: boolean
   /** How often the user files a VAT return (§6.5). Saved in settings.json. */
   vatPeriod: VatPeriodKind
+  /**
+   * `"2026-10"`: the month the bookkeeping began (§8.10). No return is owed
+   * for a period that ended before it. Null follows the first entry.
+   */
+  bookStart: string | null
   /** Period key → ISO date the return was marked as filed (§6.5). */
   vatFiled: Record<string, string>
   /** The overview's widgets, in order (§8.12). Normalised where it is read. */
@@ -208,6 +213,7 @@ export interface BookActions {
      */
     settings?: {
       vatPeriod?: VatPeriodKind
+      bookStart?: string | null
       vatFiled?: Record<string, string>
       overviewLayout?: OverviewWidget[]
       autosave?: boolean
@@ -233,6 +239,8 @@ export interface BookActions {
   setSaving(saving: boolean): void
   setLastEntryDefaults(next: { mode: AmountMode; type: EntryType }): void
   setVatPeriod(kind: VatPeriodKind): void
+  /** `"2026-10"`, or null to follow the first entry. */
+  setBookStart(month: string | null): void
   /** Mark a period as filed on `date`, or clear the mark with null. */
   setVatFiled(key: string, date: string | null): void
   setOverviewLayout(layout: OverviewWidget[]): void
@@ -287,6 +295,7 @@ function initialState(): BookState {
     ctSize: 25,
     sidebarOpen: true,
     vatPeriod: "month",
+    bookStart: null,
     vatFiled: {},
     overviewLayout: DEFAULT_LAYOUT.map((w) => ({ ...w })),
     autosave: false,
@@ -332,6 +341,7 @@ type PersistedBook = Pick<
   | "ctSize"
   | "sidebarOpen"
   | "vatPeriod"
+  | "bookStart"
   | "vatFiled"
   | "overviewLayout"
   | "autosave"
@@ -417,8 +427,9 @@ export const useBookStore = create<BookStore>()(
           dirty: false,
           /*
            * The filing period and the layout carry over as the user's habits;
-           * filed marks belong to the bookkeeping they were made in.
+           * the start month and filed marks belong to the bookkeeping.
            */
+          bookStart: null,
           vatFiled: {},
           gcTick: get().gcTick + 1,
         }),
@@ -430,6 +441,7 @@ export const useBookStore = create<BookStore>()(
           open: false,
           entries: [],
           dirty: false,
+          bookStart: null,
           vatFiled: {},
           dialog: { kind: "none" },
           draftAttachmentIds: [],
@@ -451,6 +463,7 @@ export const useBookStore = create<BookStore>()(
           dirty: next.dirty,
           vatPeriod,
           vatIndex: clampVatIndex(get().vatIndex, get().vatPeriod, vatPeriod),
+          bookStart: s.bookStart ?? null,
           vatFiled: s.vatFiled ?? {},
           overviewLayout: s.overviewLayout ?? get().overviewLayout,
           autosave: s.autosave ?? get().autosave,
@@ -502,7 +515,7 @@ export const useBookStore = create<BookStore>()(
         set({ lastMode: mode, lastType: type }),
 
       /*
-       * These three live in the file's settings.json, so changing one leaves
+       * These live in the file's settings.json, so changing one leaves
        * the file behind and marks the book dirty, as an entry edit does. The
        * VAT view shows the filing period, the period the user reports in.
        */
@@ -512,6 +525,7 @@ export const useBookStore = create<BookStore>()(
           vatIndex: clampVatIndex(get().vatIndex, get().vatPeriod, vatPeriod),
           dirty: true,
         }),
+      setBookStart: (bookStart) => set({ bookStart, dirty: true }),
       setVatFiled: (key, date) => {
         const vatFiled = { ...get().vatFiled }
         if (date) vatFiled[key] = date
@@ -613,6 +627,7 @@ export const useBookStore = create<BookStore>()(
         ctSize: s.ctSize,
         sidebarOpen: s.sidebarOpen,
         vatPeriod: s.vatPeriod,
+        bookStart: s.bookStart,
         vatFiled: s.vatFiled,
         overviewLayout: s.overviewLayout,
         autosave: s.autosave,

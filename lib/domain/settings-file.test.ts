@@ -29,6 +29,7 @@ function settings(): BookSettings {
     language: "en",
     theme: "dark",
     vatPeriod: "quarter",
+    bookStart: "2025-10",
     vatFiled: { "2026-Q2": "2026-08-10", "2026-Q1": "2026-05-11" },
     overviewLayout: normalizeLayout([
       { id: "checks", size: "L", hidden: false },
@@ -64,6 +65,7 @@ describe("settings.json", () => {
         language: "sv",
         theme: "dark",
         vatPeriod: "week",
+        bookStart: "2026-13",
         vatFiled: { "2026-09": "2026-11-10", "2026-13": "2026-01-01", x: 1 },
         pageSize: { ledger: 7, categories: 25 },
       })

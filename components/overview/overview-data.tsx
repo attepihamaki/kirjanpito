@@ -22,6 +22,7 @@ import {
 import { vatReport } from "@/lib/domain/vat"
 import {
   asPeriod,
+  bookStartDate,
   vatTimeline,
   type TimelinePeriod,
   type VatPeriod,
@@ -49,6 +50,8 @@ export interface OverviewData {
   statement: IncomeStatement
   /** VAT and result for each month of the year, January first. */
   months: MonthFigures
+  /** The month the bookkeeping began, from Settings, or null. */
+  bookStart: string | null
   timeline: readonly TimelinePeriod[]
 }
 
@@ -63,6 +66,7 @@ export function OverviewDataProvider({
   const cats = useBookStore((s) => s.cats)
   const year = useBookStore((s) => s.year)
   const vatPeriod = useBookStore((s) => s.vatPeriod)
+  const bookStart = useBookStore((s) => s.bookStart)
   const vatFiled = useBookStore((s) => s.vatFiled)
   const today = todayIso()
 
@@ -87,9 +91,15 @@ export function OverviewDataProvider({
       summary: summary(entries, catMap, year),
       statement: incomeStatement(entries, catMap, year),
       months: monthFigures(entries, catMap, year),
-      timeline: vatTimeline(vatPeriod, first, today, vatFiled),
+      bookStart,
+      timeline: vatTimeline(
+        vatPeriod,
+        bookStartDate(bookStart, first),
+        today,
+        vatFiled
+      ),
     }
-  }, [entries, cats, year, today, vatPeriod, vatFiled])
+  }, [entries, cats, year, today, vatPeriod, bookStart, vatFiled])
 
   return (
     <OverviewDataContext.Provider value={value}>

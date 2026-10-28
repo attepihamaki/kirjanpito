@@ -5,6 +5,7 @@ import { type VatPeriod, type VatPeriodStatus } from "@/lib/domain/vat-deadline"
 import { cn } from "@/lib/utils"
 
 const DOT: Record<VatPeriodStatus, string> = {
+  before: "bg-transparent",
   filed: "bg-income",
   overdue: "bg-expense",
   due: "bg-warning",
@@ -44,7 +45,9 @@ export function VatPeriodStrip({
           ? f.t("vat.dueShort", { d: f.date(p.due) })
           : s === "open"
             ? f.t("vat.running")
-            : f.t("vat.upcoming")
+            : s === "before"
+              ? f.t("vat.beforeStart")
+              : f.t("vat.upcoming")
 
   return (
     <div
@@ -66,7 +69,9 @@ export function VatPeriodStrip({
               isSelected
                 ? "border-primary bg-primary text-primary-foreground"
                 : "border-transparent hover:bg-muted",
-              status === "future" && !isSelected && "text-muted-foreground"
+              (status === "future" || status === "before") &&
+                !isSelected &&
+                "text-muted-foreground"
             )}
           >
             <span className={cn(isSelected && "font-medium")}>{label(p)}</span>

@@ -346,6 +346,7 @@ function applyImport(
     settings: settings
       ? {
           vatPeriod: settings.vatPeriod,
+          bookStart: settings.bookStart,
           vatFiled: settings.vatFiled,
           overviewLayout: settings.overviewLayout,
           autosave: settings.autosave,
@@ -383,6 +384,7 @@ function currentSettingsText(): string {
     language: useLangStore.getState().lang,
     theme: readStoredTheme(),
     vatPeriod: s.vatPeriod,
+    bookStart: s.bookStart,
     vatFiled: s.vatFiled,
     overviewLayout: normalizeLayout(s.overviewLayout),
     autosave: s.autosave,

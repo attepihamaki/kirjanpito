@@ -294,7 +294,7 @@ For the selected year, by month (net amounts):
 - A due date on a weekend or a Finnish bank holiday moves to the next working day. The holidays are New Year's Day, Epiphany, Good Friday, Easter Monday, 1 May, Ascension Day, Midsummer Eve, Independence Day and 24 to 26 December. October 2026 is due 14.12.2026, because the 12th is a Saturday.
 - A period is **future**, **open** (today is inside it), **filed** (closed and marked), **due** (closed, not marked, due date ahead or today) or **overdue**. A period is keyed `2026-09`, `2026-Q3` or `2026`, and `vatFiled` maps that key to the ISO date it was marked.
 - **Filing is the user's statement, not the app's knowledge.** The app cannot see OmaVero, so a closed period stays due until the user marks it. A mark can be undone.
-- **A closed period with no entries still needs a return**, a nil return ("Nollailmoitus"). The timeline starts at the period of the book's first entry, so a book started in October does not report January to September as overdue.
+- **A closed period with no entries still needs a return**, a nil return ("Nollailmoitus"). The timeline starts at the period that contains the book's start: the start month set in Settings (`bookStart`, §8.10), or else the first entry (`bookStartDate`). A period that ended before the start is **before**, owes nothing and has no filed toggle, so a business founded in October does not see January to September as overdue.
 - The overview's VAT widget follows **today**, not the selected year, because December's return falls due in the February after it. It also runs one period past today's, so "and after that" always has an answer.
 - **Source:** vero.fi, "When to file and pay VAT" and the Arvonlisäverovelvollisen opas. The tests assert Verohallinto's own examples: March's return due 12 May, the 2020 yearly return due 1.3.2021, the 2025 one due 2.3.2026. Midsummer Eve and Christmas Eve are in the list because the act on calculating time limits moves a deadline past them too.
 - **Not handled:** a business that stops trading files by the 12th of the second month after the month it ends, whatever its period.
@@ -443,6 +443,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
   "language": "fi",
   "theme": "system",
   "vatPeriod": "month",
+  "bookStart": "2026-10",
   "vatFiled": { "2026-08": "2026-10-12" },
   "overview": { "layout": [{ "id": "result", "size": "L", "hidden": false }] },
   "categories": [{ "id": "333", "line": "333", "name": "Ostot ja varastojen muutokset", "vatRate": 25.5, "enabled": true, "custom": false }],
@@ -457,8 +458,8 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
 - **The overview layout** goes through `normalizeLayout` in `lib/domain/overview-layout.ts`: an unknown widget id is dropped and a missing one is appended at its default size, so a file from an older or newer version still opens.
 - **Language and theme** are written from the browser's own keys (§12) at save. Opening a file switches the app to them. They are preferences of the browser as much as of the book, so changing them does not mark the book dirty, and the landing page goes on using the browser's keys. The theme is applied through `Ctx.setTheme`, because only React can reach next-themes.
 - **Page sizes and autosave** are saved the same way: written at save, applied on open, never dirty.
-- **The VAT period, the filed marks, the layout and the categories do mark the book dirty**, since the file no longer matches.
-- A plain CSV has no settings. Opening one starts with no filed marks and keeps the rest as it was.
+- **The VAT period, the start month, the filed marks, the layout and the categories do mark the book dirty**, since the file no longer matches.
+- A plain CSV has no settings. Opening one starts with no filed marks and no start month, and keeps the rest as it was.
 - `lib/domain/settings-file.test.ts` covers the round trip and the lenient reading; `lib/commands/io-commands.test.ts` covers opening a ZIP with settings.
 
 ## 8. App structure and features
@@ -604,7 +605,7 @@ A near full-screen modal.
 ### 8.7 VAT return (ALV-laskelma)
 
 - **The view has no period control of its own.** It always shows the filing period set in Settings (`vatPeriod`, §6.5, §8.10). A monthly or quarterly filer gets a strip of the year's months or quarters in the shape of the ledger's month chips (§8.4); a yearly filer gets the whole year and no strip. Figures by any other period are ones the user never files, so a second switch here would only duplicate the setting.
-- Each chip shows where its period stands: Ilmoitettu, Myöhässä, the due date, Kesken or Tulossa. The result banner carries the filed toggle for a closed period: "Merkitse ilmoitetuksi", or "Merkitty ilmoitetuksi {date}" with "Poista merkintä".
+- Each chip shows where its period stands: Ilmoitettu, Myöhässä, the due date, Kesken, Tulossa, or "Ei ilmoitusta" for a period before the book's start (§6.5), whose banner says so instead of offering the filed toggle. The result banner carries the filed toggle for a closed period: "Merkitse ilmoitetuksi", or "Merkitty ilmoitetuksi {date}" with "Poista merkintä".
 - A result banner: "Maksettava arvonlisävero" (or "Palautettava…") as a large number, with the formula line "Myynnin vero X − ostojen vähennettävä vero Y".
 - Two tables side by side, "Myynnin arvonlisävero" and "Ostojen vähennettävä vero", with the columns Verokanta, Veroton, Vero and Yhteensä, plus a totals row.
 - A "Muut ilmoitettavat myynnit" panel, and a note explaining 0 % purchases and asking the user to check the figures before filing in OmaVero.
@@ -621,7 +622,7 @@ See §6.4. Wide tables scroll horizontally with a sticky first column. The chart
 
 Every section is a `Panel` (§11). The page is split into two sub-pages, so the categories table does not bury the handful of book-wide settings:
 
-- **Yleiset** at `/app/settings`: the VAT period, saving, and clearing the entries.
+- **Yleiset** at `/app/settings`: the VAT period, the start month, saving, and clearing the entries.
 - **Luokat** at `/app/settings/categories`: the add form, the categories table, and restoring the defaults.
 
 `app/app/settings/layout.tsx` renders `SettingsShell` (`components/settings/settings-shell.tsx`): the page title and a row of tab links shaped like the month chips (§8.4). The current tab is `bg-muted` with `aria-current="page"`, not filled with the primary colour, because it marks a place rather than a filter. The routes are `SETTINGS_ROUTES` in `lib/site.ts`. The sidebar keeps Asetukset lit on any path below it. The new-category name lives in the store (`catFormName`), so it survives switching tabs.
@@ -629,6 +630,7 @@ Every section is a `Panel` (§11). The page is split into two sub-pages, so the 
 On **Yleiset**:
 
 - **"ALV-ilmoitusjakso"** comes first: a segmented Kuukausi / Neljännesvuosi / Vuosi. It sets `vatPeriod` (§6.5), which the overview's due dates and the VAT view follow. Changing it keeps the VAT view on the same part of the year: October becomes Q4.
+- **"Kirjanpidon aloitus"**: the month the business began, as a month select ("Ensimmäisestä kirjauksesta" or a month) and, once a month is chosen, a year select. It sets `bookStart` (§6.5). Unset, returns are counted from the first entry.
 - **"Tallennus"**, only where the browser can write to a file: the "Tallenna automaattisesti" checkbox (§7.5), with a description that says there is no undo.
 - **"Tyhjennä kirjaukset"**, last, as a `variant="destructive"` panel with "Tyhjennä" (`destructive`) on the footer. It deletes all entries (with a confirmation) and leaves the bookkeeping open but empty.
 
@@ -684,7 +686,7 @@ The app's front page, at `/app/overview`. `/app`, "Jatka kirjanpitoa", opening a
   - **Myynti**: line 300 split into Suomi, EU, muut maat and käänteinen, as a stacked bar and a list; lines 301 to 324 below as other income.
   - **Kulut ryhmittäin**: the §6.4 buckets with expenses, largest first; empty ones are counted.
   - **Viimeisimmät kirjaukset** (wide): the year's six newest entries, signed gross, flagged "ei tositetta" where there is no receipt file. A row opens the entry dialog.
-  - **Tarkistettavaa**: unsaved changes with a save (or download) button; each overdue return and each return due within 30 days, with "Ilmoitettu"; entries without a receipt, and entries whose rate does not fit their date, each with "Näytä", which opens the ledger filtered to them; receipts missing from the file; and empty months from the first entry to the last complete month.
+  - **Tarkistettavaa**: unsaved changes with a save (or download) button; each overdue return and each return due within 30 days, with "Ilmoitettu"; entries without a receipt, and entries whose rate does not fit their date, each with "Näytä", which opens the ledger filtered to them; receipts missing from the file; and empty months from the first entry to the last complete month, skipping any before the start month.
 - **The board** (`overview-board.tsx`) is a three-column grid with `grid-flow-dense` from 1100 px, one column below it. "S" spans one column and "L" two; the month chart at "L" also spans two rows, so the default fills the grid with no holes. Widgets use container queries for their own narrow layouts, so a widget adapts to its column, not the window.
 - **Editing the layout.** "Muokkaa näkymää" turns on edit mode. Each widget gets a toolbar: a drag handle, arrows to move it among the visible widgets, widen or narrow (hidden below 1100 px, where size means nothing), and hide. Its contents go `inert`, so a drag never opens an entry. Hidden widgets wait as buttons under the board. "Palauta oletus" resets; "Valmis" leaves. The layout is `overviewLayout`, saved in `settings.json` and dirty like any setting. dnd-kit's screen-reader texts are translated (`overview.dnd*`).
 - **Empty book**: no widgets and no edit button, but the two ways in and three short steps.
@@ -1025,7 +1027,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
 
 - localStorage `bookkeeping` — exported as `BOOK_STORAGE_KEY` from
   `stores/book-store.ts`, so nothing hard-codes the string twice:
-  `{ entries, cats, year, dirty, fileName, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, vatPeriod, vatFiled, overviewLayout, autosave }`.
+  `{ entries, cats, year, dirty, fileName, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, vatPeriod, bookStart, vatFiled, overviewLayout, autosave }`.
   The book's settings are kept twice: here, as the working buffer, and in the
   file's `settings.json` (§7.6), as the record. A reload restores them from
   here; opening a file replaces them from there.

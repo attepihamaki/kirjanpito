@@ -33,6 +33,8 @@ export interface BookSettings {
   language: Lang
   theme: ThemeChoice
   vatPeriod: VatPeriodKind
+  /** `"2026-10"`: the month the bookkeeping began, or null to follow the first entry. */
+  bookStart: string | null
   /** Period key (`"2026-09"`, `"2026-Q3"`, `"2026"`) → ISO date it was marked. */
   vatFiled: Record<string, string>
   overviewLayout: OverviewWidget[]
@@ -49,6 +51,7 @@ export interface BookSettings {
 export type ParsedSettings = Partial<BookSettings>
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/
 const PERIOD_KEY = /^\d{4}(-(0[1-9]|1[0-2])|-Q[1-4])?$/
 const SALES_KINDS: readonly SalesKind[] = ["domestic", "eu", "nonEu", "reverse"]
 
@@ -126,6 +129,10 @@ export function parseSettings(text: string): ParsedSettings {
   ) {
     out.vatPeriod = raw.vatPeriod
   }
+  if (raw.bookStart === null) out.bookStart = null
+  else if (typeof raw.bookStart === "string" && MONTH.test(raw.bookStart)) {
+    out.bookStart = raw.bookStart
+  }
   if (isRecord(raw.vatFiled)) {
     const filed: Record<string, string> = {}
     for (const [key, date] of Object.entries(raw.vatFiled)) {
@@ -164,6 +171,7 @@ export function serializeSettings(s: BookSettings): string {
     language: s.language,
     theme: s.theme,
     vatPeriod: s.vatPeriod,
+    bookStart: s.bookStart,
     vatFiled: Object.fromEntries(
       Object.entries(s.vatFiled).sort(([a], [b]) => a.localeCompare(b))
     ),

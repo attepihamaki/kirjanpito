@@ -152,6 +152,7 @@ describe("settings.json", () => {
         language: "en",
         theme: "dark",
         vatPeriod: "quarter",
+        bookStart: "2025-10",
         vatFiled: { "2026-Q1": "2026-05-11" },
         overview: { layout: [{ id: "checks", size: "L", hidden: false }] },
         categories: [
@@ -171,6 +172,7 @@ describe("settings.json", () => {
     const state = useBookStore.getState()
     expect(state.entries).toHaveLength(2)
     expect(state.vatPeriod).toBe("quarter")
+    expect(state.bookStart).toBe("2025-10")
     expect(state.vatFiled).toEqual({ "2026-Q1": "2026-05-11" })
     expect(state.overviewLayout[0].id).toBe("checks")
     expect(state.ledgerSize).toBe(50)

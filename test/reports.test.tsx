@@ -112,6 +112,18 @@ describe("VatView", () => {
     expect(screen.getByText(eur(36218))).toBeInTheDocument()
   })
 
+  it("owes nothing for the months before the start month", () => {
+    useBookStore.setState({ bookStart: "2026-10", vatIndex: 9 })
+    mount(<VatView />)
+
+    expect(screen.getAllByText("Ei ilmoitusta")).toHaveLength(9)
+    expect(screen.queryByText("Myöhässä")).toBeNull()
+    expect(screen.getByText(/ennen kirjanpidon aloituskuukautta/)).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: /Merkitse ilmoitetuksi/ })
+    ).toBeNull()
+  })
+
   it("carries the VAT note", () => {
     mount(<VatView />)
     expect(

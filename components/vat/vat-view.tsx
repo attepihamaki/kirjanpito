@@ -24,6 +24,7 @@ import { filterPeriod, type Period } from "@/lib/domain/period"
 import { indexCategories } from "@/lib/domain/types"
 import { vatReport, type VatSide } from "@/lib/domain/vat"
 import {
+  bookStartDate,
   periodStatus,
   vatPeriods,
   type VatPeriodStatus,
@@ -39,6 +40,7 @@ export function VatView() {
   const mode = useBookStore((s) => s.vatPeriod)
   const index = useBookStore((s) => s.vatIndex)
   const setIndex = useBookStore((s) => s.setVatIndex)
+  const bookStart = useBookStore((s) => s.bookStart)
   const vatFiled = useBookStore((s) => s.vatFiled)
   const setVatFiled = useBookStore((s) => s.setVatFiled)
   const today = todayIso()
@@ -62,12 +64,23 @@ export function VatView() {
     [entries, period, catMap]
   )
 
+  const start = React.useMemo(
+    () =>
+      bookStartDate(
+        bookStart,
+        entries.reduce<string | null>(
+          (min, e) => (min === null || e.date < min ? e.date : min),
+          null
+        )
+      ),
+    [bookStart, entries]
+  )
   const periods = React.useMemo(() => vatPeriods(mode, year), [mode, year])
   const statuses: VatPeriodStatus[] = periods.map((p) =>
-    periodStatus(p, today, vatFiled)
+    periodStatus(p, today, vatFiled, start)
   )
   const current = periods.find((p) => p.index === index) ?? periods[0]
-  const currentStatus = periodStatus(current, today, vatFiled)
+  const currentStatus = periodStatus(current, today, vatFiled, start)
 
   const refund = report.due < 0
   const periodLabel =
@@ -110,8 +123,16 @@ export function VatView() {
             </p>
           </div>
 
+          {currentStatus === "before" ? (
+            <p className="text-sm text-muted-foreground">
+              {f.t("vat.beforeStartHint")}
+            </p>
+          ) : null}
+
           {/* Only a closed period can be filed. */}
-          {currentStatus !== "open" && currentStatus !== "future" ? (
+          {currentStatus === "filed" ||
+          currentStatus === "due" ||
+          currentStatus === "overdue" ? (
             <div className="flex flex-col items-start gap-2 text-sm min-[560px]:items-end">
               <span className="text-muted-foreground">
                 {currentStatus === "filed"

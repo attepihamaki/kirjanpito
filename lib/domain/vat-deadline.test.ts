@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   asPeriod,
   bankHolidays,
+  bookStartDate,
   daysBetween,
   nextWorkingDay,
   periodContaining,
@@ -141,6 +142,27 @@ describe("daysBetween", () => {
   })
 })
 
+describe("periodStatus before the bookkeeping began", () => {
+  const sep = vatPeriods("month", 2026)[8]
+  const q3 = vatPeriods("quarter", 2026)[2]
+
+  it("owes nothing for a period that ended before the start", () => {
+    expect(periodStatus(sep, "2026-12-20", {}, "2026-10-01")).toBe("before")
+  })
+
+  it("still owes the period the start falls in", () => {
+    expect(periodStatus(q3, "2026-12-20", {}, "2026-09-15")).toBe("overdue")
+  })
+})
+
+describe("bookStartDate", () => {
+  it("prefers the start month over the first entry", () => {
+    expect(bookStartDate("2026-10", "2026-03-18")).toBe("2026-10-01")
+    expect(bookStartDate(null, "2026-03-18")).toBe("2026-03-18")
+    expect(bookStartDate(null, null)).toBeNull()
+  })
+})
+
 describe("vatTimeline", () => {
   it("starts at the first entry and ends one period past today", () => {
     const t = vatTimeline("month", "2026-03-18", "2026-10-31", {})
@@ -159,6 +181,13 @@ describe("vatTimeline", () => {
       "2027-01",
       "2027-02",
     ])
+  })
+
+  it("starts at the start month even before the first entry", () => {
+    const start = bookStartDate("2026-10", "2026-03-18")
+    const t = vatTimeline("month", start, "2026-12-01", {})
+    expect(t[0].key).toBe("2026-10")
+    expect(t[0].status).toBe("due")
   })
 
   it("is empty for a book with no entries", () => {
