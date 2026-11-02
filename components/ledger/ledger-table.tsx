@@ -71,6 +71,12 @@ export function LedgerTable({
     <Table density="comfortable">
       <TableHeader>
         <TableRow>
+          {header(
+            "voucher",
+            f.t("ledger.colVoucher"),
+            "right",
+            "hidden w-px min-[560px]:table-cell"
+          )}
           {header("date", f.t("ledger.colDate"))}
           {header(
             "type",
@@ -158,6 +164,10 @@ function LedgerRow({
       }}
       className="focus-ring cursor-pointer"
     >
+      <TableCell className="tabular hidden text-right text-muted-foreground min-[560px]:table-cell">
+        {entry.voucher}
+      </TableCell>
+
       <TableCell className="tabular whitespace-nowrap">
         {f.date(entry.date)}
       </TableCell>

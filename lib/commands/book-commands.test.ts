@@ -9,6 +9,7 @@ import { defaultCategories } from "@/lib/domain/accounts"
 import { createIdFactory } from "@/lib/domain/id"
 import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { collectLiveIds } from "@/lib/domain/gc"
+import { assignVouchers } from "@/lib/domain/voucher"
 import { createAppT } from "@/lib/i18n/messages"
 import { confirm } from "@/lib/ui/confirm"
 import { useBookStore } from "@/stores/book-store"
@@ -43,7 +44,7 @@ beforeEach(() => {
     return String(raised.length)
   })
   vi.spyOn(toast, "close").mockImplementation(() => {})
-  const entries = sampleEntries(createIdFactory("u"))
+  const entries = [...assignVouchers(sampleEntries(createIdFactory("u")))]
   entries[0].atts = [
     { id: "att-1", name: "a.pdf", type: "application/pdf", size: 1 },
   ]

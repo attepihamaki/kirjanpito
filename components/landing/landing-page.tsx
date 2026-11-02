@@ -207,13 +207,13 @@ function LandingBody() {
               <code>
                 <b>{CSV_HEADER_LINE}</b>
                 {"\n"}
-                2026-10-10;Osto – K-Rauta – tarvikkeet;kulu;333;Ostot ja
+                14;2026-10-10;Osto – K-Rauta – tarvikkeet;kulu;333;Ostot ja
                 varastojen muutokset;100,00;25,5;brutto;tositteet/2026/10/…jpg
                 {"\n"}
-                2026-10-28;Lasku 1005 – Mäkinen Rakennus Oy;tulo;300;Myynti –
+                15;2026-10-28;Lasku 1005 – Mäkinen Rakennus Oy;tulo;300;Myynti –
                 Suomi;1882,50;25,5;brutto;tositteet/2026/10/…pdf
                 {"\n"}
-                2026-10-30;Pankin palvelumaksut;kulu;349;Muut
+                16;2026-10-30;Pankin palvelumaksut;kulu;349;Muut
                 rahoituskulut;8,50;0;brutto;
               </code>
             </pre>

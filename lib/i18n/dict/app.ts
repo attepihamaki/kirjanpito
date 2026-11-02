@@ -438,10 +438,12 @@ export const APP_DICT = {
   "ledger.vatPayable": ["Maksettava ALV", "VAT payable"],
   "ledger.vatRefundable": ["Palautettava ALV", "VAT refundable"],
   "ledger.search": [
-    "Hae selitteestä tai luokasta",
-    "Search description or category",
+    "Hae selitteestä, luokasta tai numerolla",
+    "Search description, category or number",
   ],
   "ledger.colDate": ["Päivämäärä", "Date"],
+  /* The voucher number (tositenumero, §4); "tosite" alone is the receipt file. */
+  "ledger.colVoucher": ["Nro", "No."],
   "ledger.colDescription": ["Selite", "Description"],
   "ledger.colCategory": ["Luokka", "Category"],
   "ledger.colNet": ["Veroton", "Net"],
@@ -475,6 +477,7 @@ export const APP_DICT = {
 
   // --- Entry dialog (§8.5) ---
   "entry.editTitle": ["Muokkaa kirjausta", "Edit entry"],
+  "entry.voucher": ["Tositenumero {n}", "Voucher number {n}"],
   "entry.copyTitle": ["Kopio kirjaus", "Copied entry"],
   "entry.date": ["Päivämäärä", "Date"],
   "entry.description": ["Selite", "Description"],

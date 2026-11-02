@@ -12,6 +12,7 @@ import { CSV_HEADER, CSV_HEADER_LINE } from "@/lib/domain/csv-header"
 import { parseCsvDate, yearOf } from "@/lib/domain/dates"
 import { uid } from "@/lib/domain/id"
 import { formatAmountForCsv, parseAmount, parseRate } from "@/lib/domain/money"
+import { isVoucherNumber } from "@/lib/domain/voucher"
 import {
   attachmentKey,
   buildReceiptPaths,
@@ -96,7 +97,10 @@ export function serializeCsv(
   paths: ReadonlyMap<string, string> = buildReceiptPaths(entries)
 ): string {
   const lines: string[] = [CSV_HEADER_LINE]
-  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date))
+  const sorted = [...entries].sort(
+    (a, b) =>
+      a.date.localeCompare(b.date) || (a.voucher ?? 0) - (b.voucher ?? 0)
+  )
 
   for (const e of sorted) {
     const cat = cats.get(e.catId)
@@ -113,6 +117,7 @@ export function serializeCsv(
 
     lines.push(
       [
+        isVoucherNumber(e.voucher) ? String(e.voucher) : "",
         e.date,
         defuseFormula(e.description.trim()),
         TYPE_TO_CSV[e.type],
@@ -351,8 +356,16 @@ export function parseCsv(
     const paths = listed.filter((p) => isReceiptFile({ name: p, type: "" }))
     rejectedReceiptCount += listed.length - paths.length
 
+    /*
+     * A number the file gives is kept. A missing, malformed or repeated one
+     * is filled in by `assignVouchers` when the book is opened (§4).
+     */
+    const voucherRaw = get("tositenro") || get("tositenumero")
+    const voucher = /^\d+$/.test(voucherRaw) ? Number(voucherRaw) : null
+
     entries.push({
       id: makeId(),
+      ...(isVoucherNumber(voucher) ? { voucher } : {}),
       date,
       description: restoreFormula(get("selite")),
       type,

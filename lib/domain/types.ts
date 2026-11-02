@@ -63,6 +63,12 @@ export interface Attachment {
  */
 export interface Entry {
   id: string
+  /**
+   * Voucher number (tositenumero), one series per year from 1 (§4). Set by
+   * `assignVouchers` whenever entries are added or opened, so it is missing
+   * only on an entry that has not reached the store yet.
+   */
+  voucher?: number
   /** ISO date, "YYYY-MM-DD". */
   date: string
   description: string

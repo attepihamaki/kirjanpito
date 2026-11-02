@@ -9,6 +9,7 @@ import { LedgerView } from "@/components/ledger/ledger-view"
 import { TotalsCards } from "@/components/ledger/totals-cards"
 import { defaultCategories } from "@/lib/domain/accounts"
 import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
+import { assignVouchers } from "@/lib/domain/voucher"
 import { createIdFactory } from "@/lib/domain/id"
 import { NBSP } from "@/lib/domain/money"
 import { filterPeriod } from "@/lib/domain/period"
@@ -31,7 +32,7 @@ function loadSampleIntoStore() {
   useBookStore.setState({
     open: true,
     hydrated: true,
-    entries: sampleEntries(createIdFactory("d")),
+    entries: [...assignVouchers(sampleEntries(createIdFactory("d")))],
     cats: defaultCategories(),
     year: 2026,
     month: 0,
@@ -177,7 +178,7 @@ describe("LedgerView with the sample data", () => {
       screen.getByText("Ei kirjauksia: Marraskuu 2026.")
     ).toBeInTheDocument()
     expect(
-      screen.queryByLabelText("Hae selitteestä tai luokasta")
+      screen.queryByLabelText("Hae selitteestä, luokasta tai numerolla")
     ).not.toBeInTheDocument()
     expect(
       screen.queryByRole("combobox", { name: "Tyyppi" })
@@ -189,12 +190,25 @@ describe("LedgerView with the sample data", () => {
     mount(<LedgerView />)
 
     await user.type(
-      screen.getByLabelText("Hae selitteestä tai luokasta"),
+      screen.getByLabelText("Hae selitteestä, luokasta tai numerolla"),
       "vuokra"
     )
 
     expect(screen.getByText("3 kirjausta")).toBeInTheDocument()
     expect(screen.getAllByRole("row")).toHaveLength(4)
+  })
+
+  it("finds an entry by its voucher number", async () => {
+    const user = userEvent.setup()
+    mount(<LedgerView />)
+
+    await user.type(
+      screen.getByLabelText("Hae selitteestä, luokasta tai numerolla"),
+      "14"
+    )
+
+    expect(screen.getByText("1 kirjaus")).toBeInTheDocument()
+    expect(screen.getByText("Osto – K-Rauta – Tarvikkeet")).toBeInTheDocument()
   })
 
   it("filters by type and offers to clear the filters", async () => {
@@ -326,7 +340,7 @@ describe("the period slice drives the totals, not the filters", () => {
     )
 
     await user.type(
-      screen.getByLabelText("Hae selitteestä tai luokasta"),
+      screen.getByLabelText("Hae selitteestä, luokasta tai numerolla"),
       "vuokra"
     )
 

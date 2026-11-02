@@ -65,7 +65,9 @@ describe("serializeCsv", () => {
 
   it("starts with a BOM and the exact header", () => {
     expect(out.startsWith(`﻿${HEADER}\r\n`)).toBe(true)
-    expect(HEADER).toBe("pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite")
+    expect(HEADER).toBe(
+      "tositenro;pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite"
+    )
   })
 
   it("uses CRLF and ends with one", () => {
@@ -534,7 +536,7 @@ describe("formula guard", () => {
     "writes %s as text, not a formula",
     (description) => {
       const rows = cells(serializeCsv([entry({ description })], cats))
-      expect(rows[1][1]).toBe(`'${description}`)
+      expect(rows[1][2]).toBe(`'${description}`)
     }
   )
 
@@ -545,8 +547,8 @@ describe("formula guard", () => {
         cats
       )
     )
-    expect(rows[1][1]).toBe("Hyvitys – Oy")
-    expect(rows[1][5]).toBe("-12,50")
+    expect(rows[1][2]).toBe("Hyvitys – Oy")
+    expect(rows[1][6]).toBe("-12,50")
   })
 
   it("guards custom category names too", () => {
@@ -564,7 +566,7 @@ describe("formula guard", () => {
         indexCategories([...baseCats, custom])
       )
     )
-    expect(rows[1][4]).toBe("'=Ohjelmistot")
+    expect(rows[1][5]).toBe("'=Ohjelmistot")
   })
 
   it.each(["=1+1", "-alennus", "'=already quoted", "''@two", "'plain", "'"])(
@@ -577,11 +579,48 @@ describe("formula guard", () => {
   )
 
   it("reads a hand-written formula cell as it is", () => {
-    const text = [HEADER, "2026-01-08;=1+1;tulo;300;;10,00;25,5;brutto;"].join(
+    const text = [HEADER, ";2026-01-08;=1+1;tulo;300;;10,00;25,5;brutto;"].join(
       "\r\n"
     )
     const r = ok(parseCsv(text, baseCats, createIdFactory("f")))
     expect(r.entries[0].description).toBe("=1+1")
+  })
+})
+
+describe("voucher numbers", () => {
+  it("writes the number first and reads it back", () => {
+    const text = serializeCsv([entry({ voucher: 7 })], cats)
+    expect(text.split("\r\n")[1].startsWith("7;2026-10-28;")).toBe(true)
+    const r = ok(parseCsv(text, baseCats, createIdFactory("v")))
+    expect(r.entries[0].voucher).toBe(7)
+  })
+
+  it("leaves the number to the book when the file has none", () => {
+    const text = csvText([
+      "pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite",
+      "2026-10-28;Lasku;tulo;300;;100,00;25,5;brutto;",
+    ])
+    const r = ok(parseCsv(text, baseCats, createIdFactory("v")))
+    expect(r.entries[0].voucher).toBeUndefined()
+  })
+
+  it.each(["0", "-3", "2,5", "A12"])("ignores %s as a number", (raw) => {
+    const text = csvText([
+      HEADER,
+      `${raw};2026-10-28;Lasku;tulo;300;;100,00;25,5;brutto;`,
+    ])
+    const r = ok(parseCsv(text, baseCats, createIdFactory("v")))
+    expect(r.entries[0].voucher).toBeUndefined()
+  })
+
+  it("orders rows of one day by number", () => {
+    const text = serializeCsv(
+      [entry({ id: "b", voucher: 9 }), entry({ id: "a", voucher: 3 })],
+      cats
+    )
+    const lines = text.split("\r\n")
+    expect(lines[1].startsWith("3;")).toBe(true)
+    expect(lines[2].startsWith("9;")).toBe(true)
   })
 })
 
@@ -702,7 +741,7 @@ describe("CSV round trip", () => {
   it("drops a listed path that is not an image or a PDF, and counts it", () => {
     const text = csvText([
       HEADER,
-      "2026-10-28;Lasku;tulo;300;Myynti – Suomi;100,00;25,5;brutto;a.jpg|notes.txt",
+      ";2026-10-28;Lasku;tulo;300;Myynti – Suomi;100,00;25,5;brutto;a.jpg|notes.txt",
     ])
     const result = ok(parseCsv(text, baseCats, createIdFactory("x")))
     expect(result.entries[0].paths).toEqual(["a.jpg"])

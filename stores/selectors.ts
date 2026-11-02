@@ -68,6 +68,9 @@ function ledgerValue(
   lang: Lang
 ): string | number {
   switch (key) {
+    case "voucher":
+      // By year first, since every year starts its own series at 1.
+      return yearOf(entry.date) * 1_000_000 + (entry.voucher ?? 0)
     case "date":
       return entry.date
     case "type":
@@ -106,6 +109,7 @@ export function filterAndSortEntries(
     const cat = cats.get(e.catId)
     const name = cat ? categoryName(cat, lang) : ""
     return (
+      String(e.voucher) === needle ||
       e.description.toLowerCase().includes(needle) ||
       name.toLowerCase().includes(needle)
     )

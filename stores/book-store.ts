@@ -6,6 +6,7 @@ import { persist, type PersistStorage } from "zustand/middleware"
 import { defaultCategories } from "@/lib/domain/accounts"
 import type { EntryCheck } from "@/lib/domain/entry-checks"
 import { mergeCategories } from "@/lib/domain/settings-file"
+import { assignVouchers, keepVoucher } from "@/lib/domain/voucher"
 import {
   DEFAULT_LAYOUT,
   type OverviewWidget,
@@ -37,7 +38,14 @@ export interface SortState<K extends string> {
 }
 
 export type LedgerSortKey =
-  "date" | "type" | "description" | "category" | "net" | "vat" | "gross"
+  | "voucher"
+  | "date"
+  | "type"
+  | "description"
+  | "category"
+  | "net"
+  | "vat"
+  | "gross"
 
 export type CatSortKey = "enabled" | "side" | "account" | "name" | "vatRate"
 
@@ -507,7 +515,7 @@ export const useBookStore = create<BookStore>()(
         set({
           ...clearedFilters,
           open: true,
-          entries: next.entries,
+          entries: [...assignVouchers(next.entries)],
           cats: next.cats,
           fileName: next.fileName,
           fileHandle: next.fileHandle,
@@ -532,9 +540,13 @@ export const useBookStore = create<BookStore>()(
       upsertEntry: (entry) => {
         const entries = [...get().entries]
         const i = entries.findIndex((e) => e.id === entry.id)
-        if (i >= 0) entries[i] = entry
+        if (i >= 0) entries[i] = keepVoucher(entry, entries[i])
         else entries.push(entry)
-        set({ entries, dirty: true, gcTick: get().gcTick + 1 })
+        set({
+          entries: [...assignVouchers(entries)],
+          dirty: true,
+          gcTick: get().gcTick + 1,
+        })
       },
 
       removeEntry: (id) =>
@@ -556,8 +568,12 @@ export const useBookStore = create<BookStore>()(
         const present = new Set(get().entries.map((e) => e.id))
         const back = restored.filter((e) => !present.has(e.id))
         if (back.length === 0) return
+        /*
+         * Restored entries go first, so they keep their numbers: a new entry
+         * made in the meantime may have taken the newest one (§4).
+         */
         set({
-          entries: [...get().entries, ...back],
+          entries: [...assignVouchers([...back, ...get().entries])],
           dirty: true,
           gcTick: get().gcTick + 1,
         })
@@ -684,7 +700,7 @@ export const useBookStore = create<BookStore>()(
     }),
     {
       name: BOOK_STORAGE_KEY,
-      version: 3,
+      version: 4,
       storage: bookStorage,
       /*
        * Prerender must not touch localStorage; StoreHydrator rehydrates after
@@ -735,6 +751,10 @@ export const useBookStore = create<BookStore>()(
             // Storage unavailable; the language falls back to Finnish.
           }
           delete blob.lang
+        }
+        // Entries stored before voucher numbers get theirs in date order (§4).
+        if (Array.isArray(blob.entries)) {
+          blob.entries = assignVouchers(blob.entries as Entry[])
         }
         // A stored list predates the EU goods and services categories (§5).
         if (Array.isArray(blob.cats)) {

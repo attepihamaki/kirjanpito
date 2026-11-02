@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -502,6 +503,11 @@ function EntryDialogForm({
       <DialogContent className="max-h-[92svh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          {mode === "edit" && editing?.voucher ? (
+            <DialogDescription className="tabular">
+              {f.t("entry.voucher", { n: editing.voucher })}
+            </DialogDescription>
+          ) : null}
         </DialogHeader>
 
         <input

@@ -140,6 +140,7 @@ type AmountMode = "gross" | "net" // amount includes VAT | excludes VAT
 
 interface Entry {
   id: string
+  voucher?: number // voucher number (tositenumero), one series per year
   date: string // ISO date "YYYY-MM-DD"
   description: string
   type: EntryType
@@ -150,6 +151,15 @@ interface Entry {
   atts?: Attachment[] // receipts, may be several
 }
 ```
+
+### Voucher numbers (tositenumero)
+
+The Accounting Act has every entry rest on a dated voucher that is "järjestelmällisesti numeroitu tai vastaavalla tavalla yksilöity" (KPL 2:5, checked on Finlex). An entry here is its own voucher, so it carries the number. `lib/domain/voucher.ts` owns the rule:
+
+- One series per financial year, starting at 1. A new entry takes the year's highest number plus one.
+- An entry keeps its number while it stays in its year (`keepVoucher`). Moved to another year, it takes the next number there. Nothing is renumbered to close a gap, so a deleted entry leaves one, unless it was the newest.
+- `assignVouchers` numbers whatever has no number, or a number another entry of its year already holds, in date order after the year's highest. The store runs it on every add, on opening a file and on restoring deleted entries, which go first so they keep theirs. `persist.migrate` (version 4) numbers a book stored before this existed.
+- In the UI the field is "Tositenumero" / "Voucher number", and the ledger column is "Nro". "Tosite" on its own stays the receipt file.
 
 ### Attachment (tosite)
 
@@ -314,7 +324,7 @@ For the selected year, by month (net amounts):
 ### 7.1 CSV
 
 - **Header row**, always exactly these columns in this order:
-  `pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite`
+  `tositenro;pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite`
 - **The column names and their values are Finnish and must stay Finnish** — this
   is the user's file, it opens in Finnish Excel, and files already exported have
   to keep importing. The in-memory and stored field names are English (§4), and
@@ -323,15 +333,16 @@ For the selected year, by month (net amounts):
   Nothing else in the codebase may spell a Finnish column name.
 - **Export:**
   - UTF-8 with BOM, `;` delimiter, CRLF line endings. Fields containing `;`, `"` or line breaks are quoted with `"` (doubled inside).
-  - `pvm` is ISO `YYYY-MM-DD`. `tyyppi` is `tulo` or `kulu`. `tili` is the account number.
+  - `tositenro` is the voucher number (§4). `pvm` is ISO `YYYY-MM-DD`. `tyyppi` is `tulo` or `kulu`. `tili` is the account number.
   - `luokka` is the category's **Finnish** name (stable across UI languages).
   - `summa` uses a decimal comma with no thousands separator (`1882,50`). `alv` uses a decimal comma (`25,5`). `syotto` is `brutto` or `netto`.
   - `tosite` holds the receipt paths inside the ZIP, separated by `|`. **These are written even when exporting CSV only**, so a plain CSV still records which receipts existed and a re-import can mark them missing per §7.2. The prototype dropped them, which made a CSV-only export lossy.
-  - Rows are sorted by date. The format is identical in both UI languages, so it opens directly in Finnish Excel.
+  - Rows are sorted by date, then by voucher number. The format is identical in both UI languages, so it opens directly in Finnish Excel.
   - **A text cell that Excel would run as a formula gets a leading apostrophe.** That is `selite`, `luokka` or `tosite` starting with `=`, `+`, `-`, `@`, a tab or a carriage return. A value that already starts with apostrophes before one of those gets one more, and the import takes exactly one off, so every value round-trips. The amount and rate columns are left alone, so a negative amount stays a number. Excel may show the apostrophe in the cell.
 - **Import (be lenient):**
   - Strip a BOM. Detect the delimiter from the header line (`;`, tab or `,`, whichever splits it most). Headers are matched case-insensitively. `pvm`, `tyyppi` and `summa` are required; the rest are optional.
   - Dates are accepted as `YYYY-MM-DD` or `D.M.YYYY` and validated as real dates.
+  - `tositenro` (or `tositenumero`) is optional. A positive whole number is kept; a missing, malformed or repeated one is numbered when the book opens (§4), so an older file without the column opens with its entries numbered by date.
   - Amounts may contain spaces, NBSP, `€` and a Unicode minus. If both `,` and `.` appear, the last one is the decimal separator. A lone comma is a decimal comma, except in English mode when the value matches a thousands pattern such as `1,234`.
   - `syotto` values `netto` or `veroton` mean net; anything else means gross. An empty `alv` uses the category default.
   - Category matching: same account number and side, and the name matches the Finnish name or the English default name (case-insensitive). If no name is given, the first category on that account is used. If there's no match but the account number exists, a **custom category** is created with that name. If the account is unknown, the entry is booked to 301 (income) or 344-other (expense) with a warning.
@@ -563,7 +574,7 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
 - **Month chips:** Kaikki plus Tammi…Joulu, with entry counts. Empty months are greyed. The selected chip is filled in the primary colour. Each chip is shaped exactly like a default `Button` — **36 px tall** and the button radius (§11) — so the chip row and the toolbar below it read as one scale and one shape.
 - **Totals cards** (§6.2): three cards side by side, each a bare `Panel`, stacking to one column under 640 px. One bar with dividers made the three figures read as a single row of a table; they are three separate answers.
 - **Toolbar:** three controls of the same shape, left to right, and nothing pushed to the right-hand end. It is **hidden, together with the table, on a period that holds no entries at all** — the page then shows "Ei kirjauksia: Lokakuu 2026." A row of controls that cannot change the result reads as if the filters were what emptied the page. The filters keep their values while hidden and come back with the next period that has rows.
-  - Search over description and category. It is a **fixed 20 rem box**, not one that grows into the row: the queries are a word or two, and a field stretched across the toolbar reads as the page's main control.
+  - Search over description and category, or an exact voucher number. It is a **fixed 20 rem box**, not one that grows into the row: the queries are a word or two, and a field stretched across the toolbar reads as the page's main control.
   - A type filter (Kaikki tyypit / Tulot / Kulut) as a **select**, like the category filter beside it. A segmented control would be the one control here shaped unlike the others, and it grows with the language. `EntryTypeToggle` (§8.5, §8.10) stays segmented because it is a form field, not a filter.
   - A category filter, listing only the categories used in the period.
   - "Tarkistettavat": Kaikki kirjaukset / Ilman tositetta / Verokanta ei vastaa päivää / Päivä tulevaisuudessa / Kotimaan myynti ilman ALV:tä / Poikkeuksellisen suuri summa (`ledgerCheck`). `lib/domain/entry-checks.ts` decides each one, for this filter and the overview's checklist alike, and it is given the whole selected year, so a month on screen does not change what stands out.
@@ -574,7 +585,7 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
     - A large amount is a gross amount over ten times the median of that year's income, or expenses, given at least five of them, and never under 1 000 €. It is meant to catch a misplaced decimal comma.
     - The overview's checklist sets this filter when it sends the user here.
   - "Tyhjennä suodattimet" when any filter is active.
-- **Table columns:** Pvm, Tyyppi, Selite, Luokka, Veroton, ALV (amount, with the rate small below), Verollinen (bold, with "−" for expenses), and actions.
+- **Table columns:** Nro (the voucher number, hidden under 560 px), Pvm, Tyyppi, Selite, Luokka, Veroton, ALV (amount, with the rate small below), Verollinen (bold, with "−" for expenses), and actions.
   - Every column is sortable, with ↑/↓ shown on the active column and ⇅ on the others. Sorting by gross uses signed values, and sorting by type puts income first.
   - **A header cycles through three states: ascending, descending, then no column chosen** (⇅ everywhere), so every sort can be undone. The third state is `ledgerSort: null` / `catSort: null`, **not the default order spelled out**: the column that order follows — Pvm here, Tili in the categories table — would otherwise be stuck between its two directions, because "back to the default" *is* that column ascending. With null it reaches ⇅ like every other column. The rows then take `LEDGER_SORT_DEFAULT` / `CAT_SORT_DEFAULT` from `stores/book-store.ts`, read where the list is built rather than where the header is clicked, and `nextSort` is the one implementation of the cycle.
   - A first click is always ascending, including on Pvm, where the rows are in that order already and only the icon moves.

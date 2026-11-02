@@ -1,5 +1,6 @@
 /**
- * The nine CSV columns, always in this order (§7.1).
+ * The ten CSV columns, always in this order (§7.1). `tositenro` leads, as
+ * the voucher number does on a printed journal (§4).
  *
  * The file format is Finnish and stays Finnish whatever the UI language, so a
  * CSV opens directly in Finnish Excel. Everything in memory and in storage
@@ -12,6 +13,7 @@
  * its bundle.
  */
 export const CSV_HEADER = [
+  "tositenro",
   "pvm",
   "selite",
   "tyyppi",
