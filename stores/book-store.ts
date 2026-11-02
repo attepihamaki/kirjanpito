@@ -190,6 +190,17 @@ export interface BookState {
   dialog: DialogState
   /** Receipt ids held by the open entry dialog, protected from GC (§7.4). */
   draftAttachmentIds: string[]
+  /**
+   * Receipt ids of deleted entries that an undo toast can still bring back,
+   * protected from GC until the toast is gone (§14).
+   */
+  undoAttachmentIds: string[]
+  /**
+   * Bumped whenever a different bookkeeping takes over: new, closed or
+   * opened from a file. An undo checks it, so it never restores entries
+   * into a book they did not come from.
+   */
+  bookEpoch: number
   /** Bumped by every §7.4 trigger; the GC hook watches it. */
   gcTick: number
   /** The settings page's half-filled category name, for the §8.11 guard. */
@@ -225,6 +236,10 @@ export interface BookActions {
   upsertEntry(entry: Entry): void
   removeEntry(id: string): void
   clearEntries(): void
+  /** Put deleted entries back. Ids already present are skipped. */
+  restoreEntries(entries: readonly Entry[]): void
+  holdUndoAttachments(ids: readonly string[]): void
+  releaseUndoAttachments(ids: readonly string[]): void
   setYear(year: number): void
   setFileName(name: string | null): void
   /**
@@ -326,6 +341,8 @@ function initialState(): BookState {
     vatIndex: new Date().getMonth() + 1,
     dialog: { kind: "none" },
     draftAttachmentIds: [],
+    undoAttachmentIds: [],
+    bookEpoch: 0,
     gcTick: 0,
     catFormName: "",
   }
@@ -442,6 +459,8 @@ export const useBookStore = create<BookStore>()(
            */
           bookStart: null,
           vatFiled: {},
+          undoAttachmentIds: [],
+          bookEpoch: get().bookEpoch + 1,
           gcTick: get().gcTick + 1,
         }),
 
@@ -456,6 +475,8 @@ export const useBookStore = create<BookStore>()(
           vatFiled: {},
           dialog: { kind: "none" },
           draftAttachmentIds: [],
+          undoAttachmentIds: [],
+          bookEpoch: get().bookEpoch + 1,
           gcTick: get().gcTick + 1,
         }),
 
@@ -481,6 +502,8 @@ export const useBookStore = create<BookStore>()(
           autosavePaused: false,
           ledgerSize: s.ledgerSize ?? get().ledgerSize,
           ctSize: s.ctSize ?? get().ctSize,
+          undoAttachmentIds: [],
+          bookEpoch: get().bookEpoch + 1,
           gcTick: get().gcTick + 1,
         })
       },
@@ -507,6 +530,28 @@ export const useBookStore = create<BookStore>()(
           ledgerPage: 1,
           gcTick: get().gcTick + 1,
         }),
+
+      restoreEntries: (restored) => {
+        const present = new Set(get().entries.map((e) => e.id))
+        const back = restored.filter((e) => !present.has(e.id))
+        if (back.length === 0) return
+        set({
+          entries: [...get().entries, ...back],
+          dirty: true,
+          gcTick: get().gcTick + 1,
+        })
+      },
+      holdUndoAttachments: (ids) =>
+        set({ undoAttachmentIds: [...get().undoAttachmentIds, ...ids] }),
+      releaseUndoAttachments: (ids) => {
+        const gone = new Set(ids)
+        set({
+          undoAttachmentIds: get().undoAttachmentIds.filter(
+            (id) => !gone.has(id)
+          ),
+          gcTick: get().gcTick + 1,
+        })
+      },
 
       setYear: (year) => set({ year, ledgerPage: 1 }),
       setFileName: (fileName) => set({ fileName }),

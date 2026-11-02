@@ -87,7 +87,7 @@ export async function deleteEntry(ctx: Ctx, entry: Entry): Promise<boolean> {
   })
   if (!confirmed) return false
   useBookStore.getState().removeEntry(entry.id)
-  toast.add({ title: ctx.t("entry.deleted") })
+  offerUndo(ctx, [entry], ctx.t("entry.deleted"), ctx.t("entry.restored"))
   return true
 }
 
@@ -99,9 +99,52 @@ export async function clearAllEntries(ctx: Ctx): Promise<void> {
     cancelLabel: ctx.t("common.cancel"),
   })
   if (!confirmed) return
+  const removed = useBookStore.getState().entries
   releaseAllObjectUrls()
   useBookStore.getState().clearEntries()
-  toast.add({ title: ctx.t("settings.cleared") })
+  offerUndo(ctx, removed, ctx.t("settings.cleared"), ctx.t("settings.restored"))
+}
+
+/** How long a deletion can be undone. Long enough to read and reach the button. */
+export const UNDO_TIMEOUT_MS = 10_000
+
+/**
+ * Raise a toast with "Kumoa" for entries just deleted (§14). Their receipts
+ * stay in IndexedDB until the toast is gone, or the undo would bring back
+ * entries whose files the sweep had already removed. An undo after another
+ * bookkeeping has taken over does nothing.
+ */
+function offerUndo(
+  ctx: Ctx,
+  removed: readonly Entry[],
+  title: string,
+  restoredTitle: string
+): void {
+  const store = useBookStore.getState()
+  if (removed.length === 0) {
+    toast.add({ title })
+    return
+  }
+  const epoch = store.bookEpoch
+  const held = removed.flatMap((e) =>
+    (e.atts ?? []).flatMap((a) => (a.id ? [a.id] : []))
+  )
+  store.holdUndoAttachments(held)
+  const id = toast.add({
+    title,
+    timeout: UNDO_TIMEOUT_MS,
+    actionProps: {
+      children: ctx.t("common.undo"),
+      onClick: () => {
+        toast.close(id)
+        const now = useBookStore.getState()
+        if (now.bookEpoch !== epoch) return
+        now.restoreEntries(removed)
+        toast.add({ title: restoredTitle })
+      },
+    },
+    onRemove: () => useBookStore.getState().releaseUndoAttachments(held),
+  })
 }
 
 export function resetCategories(ctx: Ctx): void {

@@ -161,6 +161,7 @@ export const APP_DICT = {
   "common.save": ["Tallenna", "Save"],
   "common.cancel": ["Peruuta", "Cancel"],
   "common.delete": ["Poista", "Delete"],
+  "common.undo": ["Kumoa", "Undo"],
   "common.close": ["Sulje", "Close"],
 
   // --- Table chrome (§8.4) ---
@@ -448,6 +449,7 @@ export const APP_DICT = {
   "entry.saved": ["Kirjaus tallennettu.", "Entry saved."],
   "entry.changesSaved": ["Muutokset tallennettu.", "Changes saved."],
   "entry.deleted": ["Kirjaus poistettu.", "Entry deleted."],
+  "entry.restored": ["Kirjaus palautettu.", "Entry restored."],
   "entry.unknownCategory": ["Tuntematon luokka", "Unknown category"],
 
   // --- Receipts: the paper preview's labels (§8.5) and the files (§7.4) ---
@@ -754,6 +756,7 @@ export const APP_DICT = {
     "Removes every entry from this browser. Export them to CSV first if you want to keep them.",
   ],
   "settings.cleared": ["Kirjaukset tyhjennetty.", "Entries cleared."],
+  "settings.restored": ["Kirjaukset palautettu.", "Entries restored."],
 
   // --- Import and export (§7) ---
   "io.opening": ["Avataan tiedostoa…", "Opening the file…"],

@@ -709,6 +709,8 @@ The wording everywhere is about saving rather than exporting, so one set of stri
 
 Closing a file clears entries, the file name and filters, unlinks the file (§7.5), sets the bookkeeping to closed, garbage-collects receipts, and returns to the landing page.
 
+**Deleting can be undone.** Deleting an entry and clearing the entries both still ask first, then raise a toast with "Kumoa" for 10 seconds (`offerUndo` in `lib/commands/book-commands.ts`). The deleted entries' receipts stay in IndexedDB while the toast is up (`undoAttachmentIds`, which the GC sweep counts as live), or an undo would bring back entries whose files were already gone. An undo after a new, closed or opened bookkeeping has taken over does nothing (`bookEpoch`). Undo marks the book dirty, since autosave may already have written the deletion. `lib/commands/book-commands.test.ts` covers it.
+
 ### 8.12 Overview (Yleiskatsaus)
 
 The app's front page, at `/app/overview`. `/app`, "Jatka kirjanpitoa", opening a file and starting a new bookkeeping all land here. It answers three questions: how the year is going, what VAT is due and when, and what is left to do. Every widget is a summary that links into a view; nothing here edits a figure except the filed mark.
@@ -1154,7 +1156,7 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 
 ## 14. Open questions and ideas not yet done
 
-- Undo, at least for a deleted entry and for clearing the entries. Autosave (§7.5) makes a mistake reach the file within seconds, which is why it is opt-in.
+- Undo for edits. Deleting can be undone (§8.11); changing an entry cannot. Autosave (§7.5) makes a mistake reach the file within seconds, which is why it is opt-in.
 - Filing through Ilmoitin.fi, at least for the VAT return. Not before the user asks for it (§8.8).
 - Form 5 fields the app leaves out: 338 and 347, the deductible parts of depreciation (337) and interest (346), which the app takes to be the full amounts; co-operative surplus (325–328); and the additional deductions of 364, which come from fields 388 and 392 elsewhere on the return.
 - The VAT return of a business that stops trading (§6.5).
