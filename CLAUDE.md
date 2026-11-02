@@ -328,6 +328,7 @@ For the selected year, by month (net amounts):
   - `summa` uses a decimal comma with no thousands separator (`1882,50`). `alv` uses a decimal comma (`25,5`). `syotto` is `brutto` or `netto`.
   - `tosite` holds the receipt paths inside the ZIP, separated by `|`. **These are written even when exporting CSV only**, so a plain CSV still records which receipts existed and a re-import can mark them missing per §7.2. The prototype dropped them, which made a CSV-only export lossy.
   - Rows are sorted by date. The format is identical in both UI languages, so it opens directly in Finnish Excel.
+  - **A text cell that Excel would run as a formula gets a leading apostrophe.** That is `selite`, `luokka` or `tosite` starting with `=`, `+`, `-`, `@`, a tab or a carriage return. A value that already starts with apostrophes before one of those gets one more, and the import takes exactly one off, so every value round-trips. The amount and rate columns are left alone, so a negative amount stays a number. Excel may show the apostrophe in the cell.
 - **Import (be lenient):**
   - Strip a BOM. Detect the delimiter from the header line (`;`, tab or `,`, whichever splits it most). Headers are matched case-insensitively. `pvm`, `tyyppi` and `summa` are required; the rest are optional.
   - Dates are accepted as `YYYY-MM-DD` or `D.M.YYYY` and validated as real dates.

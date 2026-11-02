@@ -526,6 +526,65 @@ describe("parseCsv — skipped rows", () => {
   })
 })
 
+describe("formula guard", () => {
+  const cells = (text: string) =>
+    Papa.parse<string[]>(text.slice(1), { delimiter: ";" }).data
+
+  it.each(['=HYPERLINK("http://x")', "+358 40", "-alennus", "@SUM(A1)"])(
+    "writes %s as text, not a formula",
+    (description) => {
+      const rows = cells(serializeCsv([entry({ description })], cats))
+      expect(rows[1][1]).toBe(`'${description}`)
+    }
+  )
+
+  it("leaves ordinary text and negative amounts alone", () => {
+    const rows = cells(
+      serializeCsv(
+        [entry({ description: "Hyvitys – Oy", amount: -1250 })],
+        cats
+      )
+    )
+    expect(rows[1][1]).toBe("Hyvitys – Oy")
+    expect(rows[1][5]).toBe("-12,50")
+  })
+
+  it("guards custom category names too", () => {
+    const custom = {
+      id: "c-x",
+      line: "344-other",
+      name: "=Ohjelmistot",
+      vatRate: 25.5,
+      enabled: true,
+      custom: true,
+    }
+    const rows = cells(
+      serializeCsv(
+        [entry({ type: "expense", catId: "c-x" })],
+        indexCategories([...baseCats, custom])
+      )
+    )
+    expect(rows[1][4]).toBe("'=Ohjelmistot")
+  })
+
+  it.each(["=1+1", "-alennus", "'=already quoted", "''@two", "'plain", "'"])(
+    "round-trips %s unchanged",
+    (description) => {
+      const text = serializeCsv([entry({ description })], cats)
+      const r = ok(parseCsv(text, baseCats, createIdFactory("f")))
+      expect(r.entries[0].description).toBe(description)
+    }
+  )
+
+  it("reads a hand-written formula cell as it is", () => {
+    const text = [HEADER, "2026-01-08;=1+1;tulo;300;;10,00;25,5;brutto;"].join(
+      "\r\n"
+    )
+    const r = ok(parseCsv(text, baseCats, createIdFactory("f")))
+    expect(r.entries[0].description).toBe("=1+1")
+  })
+})
+
 describe("CSV round trip", () => {
   const roundTrip = (entries: Entry[], startCats = baseCats) => {
     const text = serializeCsv(entries, indexCategories(startCats))

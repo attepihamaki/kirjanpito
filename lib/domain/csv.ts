@@ -55,6 +55,29 @@ const MODE_TO_CSV: Readonly<Record<AmountMode, string>> = {
  * Serialize
  * ---------------------------------------------------------------------- */
 
+/**
+ * A text cell that starts with `=`, `+`, `-`, `@`, a tab or a carriage return
+ * is read by Excel as a formula, and a formula can open links or pull in
+ * other files. The export puts an apostrophe in front of such a cell, and the
+ * import takes exactly one off again. A value that already starts with
+ * apostrophes before one of those characters gets one more, so every value
+ * survives the round trip unchanged.
+ *
+ * Only the text columns go through this. The amount and the rate are written
+ * by the app, and a negative amount has to stay a number.
+ */
+const FORMULA_LEAD = /^'*[=+\-@\t\r]/
+
+function defuseFormula(value: string): string {
+  return FORMULA_LEAD.test(value) ? `'${value}` : value
+}
+
+function restoreFormula(value: string): string {
+  return value.startsWith("'") && FORMULA_LEAD.test(value)
+    ? value.slice(1)
+    : value
+}
+
 function quote(value: string): string {
   return /[;"\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value
 }
@@ -91,14 +114,14 @@ export function serializeCsv(
     lines.push(
       [
         e.date,
-        e.description.trim(),
+        defuseFormula(e.description.trim()),
         TYPE_TO_CSV[e.type],
         line ? String(line.account) : "",
-        cat ? cat.name : "",
+        defuseFormula(cat ? cat.name : ""),
         formatAmountForCsv(e.amount),
         String(e.vatRate).replace(".", ","),
         MODE_TO_CSV[e.amountMode],
-        tosite,
+        defuseFormula(tosite),
       ]
         .map(quote)
         .join(";")
@@ -289,7 +312,7 @@ export function parseCsv(
       continue
     }
 
-    const name = get("luokka")
+    const name = restoreFormula(get("luokka"))
     const accountRaw = get("tili")
     const account = /^\d+$/.test(accountRaw) ? Number(accountRaw) : null
 
@@ -316,7 +339,7 @@ export function parseCsv(
     const amountMode: AmountMode =
       modeRaw === "netto" || modeRaw === "veroton" ? "net" : "gross"
 
-    const listed = get("tosite")
+    const listed = restoreFormula(get("tosite"))
       .split("|")
       .map((p) => p.trim())
       .filter(Boolean)
@@ -331,7 +354,7 @@ export function parseCsv(
     entries.push({
       id: makeId(),
       date,
-      description: get("selite"),
+      description: restoreFormula(get("selite")),
       type,
       catId: cat.id,
       amount,
