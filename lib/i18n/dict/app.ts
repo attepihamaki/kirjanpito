@@ -103,6 +103,39 @@ export const APP_DICT = {
   ],
 
   // --- Shared by several views ---
+  // The fill-in forms for OmaVero (§8.7, §8.8).
+  "common.formShow": ["Näytettävät kohdat", "Fields to show"],
+  "common.formFill": ["Täytettävät", "To fill in"],
+  "common.formAll": ["Kaikki kohdat", "All fields"],
+  "common.formOpenOmaVero": ["Avaa OmaVero", "Open MyTax"],
+  "common.formStepInput": ["Syötä OmaVeroon", "Enter in MyTax"],
+  "common.formProgress": ["{n}/{m} kopioitu", "{n}/{m} copied"],
+  "common.formAllDone": [
+    "Kaikki kohdat kopioitu. Tarkista vielä yhteissummat.",
+    "Every field copied. Check the totals too.",
+  ],
+  "common.formStepCheck": ["Tarkista yhteissummat", "Check the totals"],
+  "common.formCheckHint": [
+    "Vertaa näitä OmaVeron lukuihin. Niiden pitää täsmätä.",
+    "Compare these with the figures in MyTax. They should match.",
+  ],
+  "common.formNotIncluded": [
+    "Mitä laskelma ei sisällä",
+    "What this does not cover",
+  ],
+  "common.formNoAmount": ["Ei summaa", "No amount"],
+  "common.formCopyField": [
+    "Kopioi kohta {code}: {v}",
+    "Copy field {code}: {v}",
+  ],
+  "common.formCopied": [
+    "Kopioitu: kohta {code}, {v}. Kopioi uudelleen",
+    "Copied: field {code}, {v}. Copy again",
+  ],
+  "common.formCopyFailed": [
+    "Kopiointi ei onnistunut. Selain ei salli leikepöydän käyttöä.",
+    "Could not copy. The browser does not allow clipboard access.",
+  ],
   "common.all": ["Kaikki", "All"],
   "common.allTypes": ["Kaikki tyypit", "All types"],
   "common.actions": ["Toiminnot", "Actions"],
@@ -486,9 +519,17 @@ export const APP_DICT = {
   ],
   "vat.otherRates": ["Muut verokannat", "Other rates"],
   "vat.otherSales": ["Muut ilmoitettavat myynnit", "Other sales to report"],
-  "vat.euSales": [
-    "Tavaroiden ja palveluiden myynti muihin EU-maihin",
-    "Sales of goods and services to other EU countries",
+  "vat.euGoodsSales": [
+    "Tavaroiden myynti muihin EU-maihin",
+    "Sales of goods to other EU countries",
+  ],
+  "vat.euServicesSales": [
+    "Palveluiden myynti muihin EU-maihin",
+    "Sales of services to other EU countries",
+  ],
+  "vat.euUnsortedSales": [
+    "EU-myynti, ei merkitty tavaraksi tai palveluksi",
+    "EU sales not marked as goods or services",
   ],
   "vat.nonEuSales": ["Myynti EU:n ulkopuolelle", "Sales outside the EU"],
   "vat.reverseChargeSales": [
@@ -498,6 +539,40 @@ export const APP_DICT = {
   "vat.note": [
     "Ostojen 0 %:n kirjaukset (esim. palkat, YEL, pankkikulut) eivät vaikuta arvonlisäveroon, joten niitä ei näytetä vähennyksissä. Tarkista luvut ennen ilmoittamista OmaVerossa.",
     "Purchases at 0% (e.g. wages, YEL, bank fees) don’t affect VAT, so they aren’t shown as deductions. Check the figures before filing in OmaVero.",
+  ],
+  "vat.sections": ["ALV-laskelman osiot", "VAT return sections"],
+  "vat.sheetTab": ["Laskelma", "Calculation"],
+  "vat.returnTab": ["Ilmoitus", "Return"],
+  "vat.returnTitle": ["Arvonlisäveroilmoitus", "VAT return"],
+  "vat.returnKicker": ["{p}, eräpäivä {d}", "{p}, due {d}"],
+  "vat.returnIntro": [
+    "Napsauta summaa, niin se kopioituu. Liitä se OmaVerossa samannimiseen kohtaan.",
+    "Click an amount to copy it. Paste it into the field with the same name in MyTax.",
+  ],
+  "vat.returnNothing": [
+    "Tällä kaudella ei ole täytettäviä summia. Jos arvonlisäverollista toimintaa ei ollut, valitse OmaVerossa ”Ei toimintaa verokaudella”.",
+    "There are no amounts to enter for this period. If there was no VAT activity, select “No activities during the tax period” in MyTax.",
+  ],
+  "vat.returnStepFile": ["Merkitse ilmoitetuksi", "Mark as filed"],
+  "vat.returnFileHint": [
+    "Kirjanpito ei näe OmaVeroa. Merkitse kausi ilmoitetuksi, kun olet lähettänyt ilmoituksen.",
+    "The bookkeeping cannot see MyTax. Mark the period as filed once you have sent the return.",
+  ],
+  "vat.returnNotClosed": [
+    "Kausi ei ole vielä päättynyt, joten luvut voivat muuttua. Eräpäivä on {d}.",
+    "The period has not ended yet, so the figures may change. The return is due {d}.",
+  ],
+  "vat.returnOtherRate": [
+    "Kaudella on myyntiä verokannalla, jolle ilmoituksessa ei ole kohtaa ({v} veroa). Se ei ole kohdissa, mutta sisältyy maksettavaan veroon. Tarkista kirjausten verokannat.",
+    "This period has sales at a rate the return has no field for ({v} of VAT). It is not in the fields, but it is included in the tax payable. Check the rates on the entries.",
+  ],
+  "vat.returnPurchases": [
+    "Kirjanpito ei erottele ostoja muista EU-maista, tuontia EU:n ulkopuolelta eikä rakentamispalvelun ja metalliromun ostoja. Jos sinulla on niitä, täytä niiden vero ja summa OmaVerossa, ja lisää vero myös vähennettävään veroon, jos saat vähentää sen. Maksettava vero muuttuu silloin.",
+    "The bookkeeping does not separate purchases from other EU countries, imports from outside the EU, or purchases of construction services and scrap metal. If you have any, enter their tax and amount in MyTax, and add the tax to the deductible tax if you may deduct it. The tax payable then changes.",
+  ],
+  "vat.returnCodes": [
+    "Numerot ovat Verohallinnon tunnukset tiedoille. Kohtien nimet ja järjestys noudattavat OmaVeron ilmoitusta.",
+    "The numbers are the Tax Administration’s codes for the fields. The names and order follow the return in MyTax.",
   ],
   // An EU, non-EU or reverse-charge sale that carries a VAT rate (§6.1).
   "vat.exemptSaleWarning": [
@@ -519,9 +594,6 @@ export const APP_DICT = {
     "Form 5, calculation of taxable income",
   ],
   "statement.form5Kicker": ["Verovuosi {y}", "Tax year {y}"],
-  "statement.form5Show": ["Näytettävät kohdat", "Fields to show"],
-  "statement.form5Filled": ["Täytettävät", "To fill in"],
-  "statement.form5All": ["Kaikki kohdat", "All fields"],
   "statement.form5Intro": [
     "Napsauta summaa, niin se kopioituu. Liitä se OmaVerossa saman numeron kohtaan.",
     "Click an amount to copy it. Paste it into the field with the same code in MyTax.",
@@ -534,35 +606,9 @@ export const APP_DICT = {
     "Kirjanpito ei täytä osuuskuntien ylijäämiä (325–328), lisävähennyksiä (364) eikä lomakkeen muita osia, kuten poistoja, ajoneuvoja ja varallisuuslaskelmaa. Ne täytetään OmaVerossa.",
     "The bookkeeping does not fill co-operative surplus (325–328), additional deductions (364) or the form’s other sections, such as depreciation, vehicles and net worth. Fill those in OmaVero.",
   ],
-  "statement.copyField": ["Kopioi kohta {code}: {v}", "Copy field {code}: {v}"],
-  "statement.copied": [
-    "Kopioitu: kohta {code}, {v}. Kopioi uudelleen",
-    "Copied: field {code}, {v}. Copy again",
-  ],
-  "statement.form5OpenOmaVero": ["Avaa OmaVero", "Open MyTax"],
-  "statement.form5StepInput": ["Syötä OmaVeroon", "Enter in MyTax"],
-  "statement.form5Progress": ["{n}/{m} kopioitu", "{n}/{m} copied"],
-  "statement.form5AllDone": [
-    "Kaikki kohdat kopioitu. Tarkista vielä yhteissummat.",
-    "Every field copied. Check the totals too.",
-  ],
   "statement.form5Nothing": [
     "Tälle vuodelle ei ole summia, jotka täytetään lomakkeelle.",
     "There are no amounts to enter on the form for this year.",
-  ],
-  "statement.form5StepCheck": ["Tarkista yhteissummat", "Check the totals"],
-  "statement.form5CheckHint": [
-    "Vertaa näitä OmaVeron lukuihin. Niiden pitää täsmätä.",
-    "Compare these with the figures in MyTax. They should match.",
-  ],
-  "statement.form5NotIncluded": [
-    "Mitä laskelma ei sisällä",
-    "What this does not cover",
-  ],
-  "statement.form5NoAmount": ["Ei summaa", "No amount"],
-  "statement.copyFailed": [
-    "Kopiointi ei onnistunut. Selain ei salli leikepöydän käyttöä.",
-    "Could not copy. The browser does not allow clipboard access.",
   ],
   "statement.revenue": ["Tuotot", "Revenue"],
   "statement.expenses": ["Elinkeinotoiminnan kulut", "Business expenses"],

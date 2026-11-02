@@ -38,7 +38,14 @@ const ROWS: readonly Row[] = [
     25.5,
   ],
   ["2026-02-20", "Työtilan vuokra, helmikuu", "expense", "343", 45000, 25.5],
-  ["2026-03-03", "Lasku 1003 – Nordic Build AB", "income", "300-eu", 320000, 0],
+  [
+    "2026-03-03",
+    "Lasku 1003 – Nordic Build AB",
+    "income",
+    "300-eu-goods",
+    320000,
+    0,
+  ],
   ["2026-03-18", "Polttoaine – Neste", "expense", "344-vehicle", 9235, 25.5],
   ["2026-03-20", "Työtilan vuokra, maaliskuu", "expense", "343", 45000, 25.5],
   [

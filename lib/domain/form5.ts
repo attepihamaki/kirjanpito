@@ -1,28 +1,9 @@
 import type { IncomeStatement } from "@/lib/domain/income-statement"
-import type { Cents, Lang } from "@/lib/domain/types"
+import type { TaxFormRow, TaxFormSection } from "@/lib/domain/tax-form"
+import type { Cents } from "@/lib/domain/types"
 
-type Label = Readonly<Record<Lang, string>>
-
-export type Form5Row =
-  | { kind: "group"; label: Label }
-  | {
-      kind: "field"
-      /** The field's code on Form 5, which OmaVero shows beside it. */
-      code: number
-      label: Label
-      value: Cents
-      /** The taxable or deductible portion of the field above it: indented. */
-      portion: boolean
-      /** 316, 355, 358 and 359: totals that check the fields above them. */
-      total: boolean
-    }
-
-export interface Form5Section {
-  /** The section number printed on the form, e.g. "2.1", or "" for none. */
-  number: string
-  title: Label
-  rows: readonly Form5Row[]
-}
+export type Form5Row = TaxFormRow
+export type Form5Section = TaxFormSection
 
 /**
  * The fields of Form 5's section 2 (tuloverolaskelma) that the bookkeeping
@@ -49,14 +30,15 @@ export function form5Sections(s: IncomeStatement): Form5Section[] {
     fi: string,
     en: string,
     value: Cents,
-    opts: { portion?: boolean; total?: boolean } = {}
+    opts: { portion?: boolean; total?: boolean; unused?: boolean } = {}
   ): Form5Row => ({
     kind: "field",
-    code,
+    code: String(code),
     label: { fi, en },
     value,
     portion: opts.portion ?? false,
     total: opts.total ?? false,
+    unused: opts.unused ?? false,
   })
   const group = (fi: string, en: string): Form5Row => ({
     kind: "group",
@@ -264,14 +246,14 @@ export function form5Sections(s: IncomeStatement): Form5Section[] {
           "Elinkeinotoiminnan tulos",
           "Business profit",
           s.resultLine === "358" ? s.resultMagnitude : 0,
-          total
+          { total: true, unused: s.resultLine !== "358" }
         ),
         field(
           359,
           "Elinkeinotoiminnan tappio",
           "Business loss",
           s.resultLine === "359" ? s.resultMagnitude : 0,
-          total
+          { total: true, unused: s.resultLine !== "359" }
         ),
       ],
     },
@@ -285,7 +267,7 @@ export function form5Values(
   const out = new Map<number, Cents>()
   for (const section of sections) {
     for (const row of section.rows) {
-      if (row.kind === "field") out.set(row.code, row.value)
+      if (row.kind === "field") out.set(Number(row.code), row.value)
     }
   }
   return out

@@ -84,6 +84,16 @@ describe("settings.json", () => {
 })
 
 describe("mergeCategories", () => {
+  it("adds defaults an older file lacks and keeps the retired one disabled", () => {
+    const old = defaultCategories()
+      .filter((c) => !c.id.startsWith("300-eu-"))
+      .map((c) => (c.id === "300-eu" ? { ...c, enabled: true } : c))
+    const byId = new Map(mergeCategories(old).map((c) => [c.id, c]))
+    expect(byId.get("300-eu-goods")?.enabled).toBe(true)
+    expect(byId.get("300-eu-services")?.enabled).toBe(true)
+    expect(byId.get("300-eu")?.enabled).toBe(false)
+  })
+
   it("keeps the chart of accounts and takes only the user's choices", () => {
     const merged = mergeCategories([
       {

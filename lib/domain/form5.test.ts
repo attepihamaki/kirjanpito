@@ -85,7 +85,7 @@ describe("form5Sections", () => {
 
   it("lists the fields in the form's order", () => {
     const codes = form5Sections(incomeStatement([], cats, 2026)).flatMap((s) =>
-      s.rows.flatMap((r) => (r.kind === "field" ? [r.code] : []))
+      s.rows.flatMap((r) => (r.kind === "field" ? [Number(r.code)] : []))
     )
     expect(codes).toEqual([
       300, 318, 301, 313, 314, 315, 319, 320, 321, 322, 323, 312, 324, 316, 317,

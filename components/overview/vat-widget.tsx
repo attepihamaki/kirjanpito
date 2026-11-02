@@ -119,7 +119,11 @@ export function VatWidget() {
 
       <p className="text-sm text-muted-foreground">
         {note}
-        {other.eu || other.nonEu || other.reverse
+        {other.euGoods ||
+        other.euServices ||
+        other.eu ||
+        other.nonEu ||
+        other.reverse
           ? ` ${f.t("overview.otherSalesToo")}`
           : ""}
       </p>

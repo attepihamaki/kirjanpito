@@ -6,7 +6,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { LangProvider } from "@/components/lang-provider"
 import { Form5View } from "@/components/statement/form5-view"
 import { StatementView } from "@/components/statement/statement-view"
-import { VatView } from "@/components/vat/vat-view"
+import { VatReturnView } from "@/components/vat/vat-return-view"
+import { VatShell } from "@/components/vat/vat-shell"
+import { VatView as VatPage } from "@/components/vat/vat-view"
 import { defaultCategories } from "@/lib/domain/accounts"
 import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { createIdFactory } from "@/lib/domain/id"
@@ -36,6 +38,15 @@ const eur = (cents: number) =>
 
 function mount(ui: React.ReactElement, lang: Lang = "fi") {
   return render(<LangProvider lang={lang}>{ui}</LangProvider>)
+}
+
+/** The calculation as it is routed, with the shell's period strip. */
+function VatView() {
+  return (
+    <VatShell>
+      <VatPage />
+    </VatShell>
+  )
 }
 
 beforeEach(() => {
@@ -86,8 +97,13 @@ describe("VatView", () => {
     mount(<VatView />)
 
     expect(
-      screen.getByText("Tavaroiden ja palveluiden myynti muihin EU-maihin")
+      screen.getByText("Tavaroiden myynti muihin EU-maihin")
     ).toBeInTheDocument()
+    expect(
+      screen.getByText("Palveluiden myynti muihin EU-maihin")
+    ).toBeInTheDocument()
+    // The row for the retired category appears only while an entry uses it.
+    expect(screen.queryByText(/ei merkitty tavaraksi/)).toBeNull()
     // The EU invoice is 3 200,00 € and the reverse-charge one 4 800,00 €.
     expect(screen.getByText(eur(320000))).toBeInTheDocument()
     expect(screen.getByText(eur(480000))).toBeInTheDocument()
@@ -254,5 +270,65 @@ describe("Form5View", () => {
     expect(
       screen.queryByRole("button", { name: /^Kopioi kohta 318:/ })
     ).toBeNull()
+  })
+})
+
+describe("VatReturnView", () => {
+  it("lists October's fields, copies an amount and marks the period filed", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    })
+    mount(
+      <VatShell>
+        <VatReturnView />
+      </VatShell>
+    )
+
+    // Only the fields with an amount, then the payable tax to check against.
+    expect(screen.getByText("25,5 %:n vero (myös 24 %)")).toBeInTheDocument()
+    expect(screen.getByText("Verokauden vähennettävä vero")).toBeInTheDocument()
+    expect(screen.queryByText("10 %:n vero")).toBeNull()
+    expect(screen.getByText("Maksettava vero")).toBeInTheDocument()
+    expect(screen.getByText(eur(36218))).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /^Kopioi kohta 308:/ })
+    ).toBeNull()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Kopioi kohta 301: 382,50" })
+    )
+    expect(writeText).toHaveBeenCalledWith("382,50")
+    expect(await screen.findByText("1/2 kopioitu")).toBeInTheDocument()
+
+    // A return is for one period, so the checklist starts over on another.
+    fireEvent.click(screen.getByRole("button", { name: /^Tammi/ }))
+    expect(await screen.findByText("0/2 kopioitu")).toBeInTheDocument()
+  })
+
+  it("offers no activity for a period with nothing to fill in", () => {
+    useBookStore.setState({ vatIndex: 8 })
+    mount(<VatReturnView />)
+    expect(screen.getByText(/Ei toimintaa verokaudella/)).toBeInTheDocument()
+  })
+
+  it("warns about a sales rate the return has no field for", () => {
+    useBookStore.setState({
+      entries: [
+        {
+          id: "x",
+          date: "2026-10-05",
+          description: "Vanha verokanta",
+          type: "income",
+          catId: "300-domestic",
+          amount: 10000,
+          vatRate: 22,
+          amountMode: "net",
+        },
+      ],
+    })
+    mount(<VatReturnView />)
+    expect(screen.getByText(/ei ole kohtaa/)).toBeInTheDocument()
   })
 })

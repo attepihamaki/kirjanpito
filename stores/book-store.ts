@@ -4,6 +4,7 @@ import { create } from "zustand"
 import { persist, type PersistStorage } from "zustand/middleware"
 
 import { defaultCategories } from "@/lib/domain/accounts"
+import { mergeCategories } from "@/lib/domain/settings-file"
 import {
   DEFAULT_LAYOUT,
   type OverviewWidget,
@@ -607,7 +608,7 @@ export const useBookStore = create<BookStore>()(
     }),
     {
       name: BOOK_STORAGE_KEY,
-      version: 2,
+      version: 3,
       storage: bookStorage,
       /*
        * Prerender must not touch localStorage; StoreHydrator rehydrates after
@@ -657,6 +658,10 @@ export const useBookStore = create<BookStore>()(
             // Storage unavailable; the language falls back to Finnish.
           }
           delete blob.lang
+        }
+        // A stored list predates the EU goods and services categories (§5).
+        if (Array.isArray(blob.cats)) {
+          blob.cats = mergeCategories(blob.cats as Category[])
         }
         return blob as unknown as PersistedBook
       },

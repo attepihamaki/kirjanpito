@@ -16,6 +16,9 @@ export interface VatSide {
 }
 
 export interface OtherSales {
+  euGoods: Cents
+  euServices: Cents
+  /** Sales on the retired EU category, neither goods nor services (§5). */
   eu: Cents
   nonEu: Cents
   reverse: Cents
@@ -85,7 +88,13 @@ export function vatReport(
 ): VatReport {
   const sales = emptySide()
   const purchases = emptySide()
-  const otherSales: OtherSales = { eu: 0, nonEu: 0, reverse: 0 }
+  const otherSales: OtherSales = {
+    euGoods: 0,
+    euServices: 0,
+    eu: 0,
+    nonEu: 0,
+    reverse: 0,
+  }
   const anomalies: VatAnomaly[] = []
 
   for (const e of entries) {
@@ -99,7 +108,7 @@ export function vatReport(
        * no Finnish sales VAT, whatever rate the entry happens to have.
        */
       const kind = cat?.kind
-      if (kind === "eu" || kind === "nonEu" || kind === "reverse") {
+      if (kind && kind !== "domestic") {
         otherSales[kind] += net
         if (vat !== 0) {
           anomalies.push({

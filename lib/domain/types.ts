@@ -11,7 +11,12 @@ export type EntryType = "income" | "expense"
 export type AmountMode = "gross" | "net"
 
 /** Classification of an income category for the VAT return (§6.1). */
-export type SalesKind = "domestic" | "eu" | "nonEu" | "reverse"
+/**
+ * "euGoods" and "euServices" are separate fields on the VAT return. "eu" is the
+ * retired category that does not say which of the two a sale was (§5).
+ */
+export type SalesKind =
+  "domestic" | "euGoods" | "euServices" | "eu" | "nonEu" | "reverse"
 
 /** Expense summary buckets, the Yhteenveto columns (§5). */
 export type Bucket =

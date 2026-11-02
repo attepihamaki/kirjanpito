@@ -172,7 +172,7 @@ interface Category {
   line: string // key of the income statement line it belongs to (see §5)
   name: string // Finnish name (custom categories: the user's name)
   vatRate: number // default VAT %
-  kind?: "domestic" | "eu" | "nonEu" | "reverse" // for income categories
+  kind?: "domestic" | "euGoods" | "euServices" | "eu" | "nonEu" | "reverse" // for income categories
   enabled: boolean // shown in the entry dialog's dropdown
   custom: boolean // user-created
 }
@@ -238,11 +238,14 @@ The table order is also the display order of the income statement. **It is not q
 | id           | Finnish                     | English                 | default VAT | kind     |
 | ------------ | --------------------------- | ----------------------- | ----------- | -------- |
 | 300-domestic | Myynti – Suomi              | Sales – Finland         | 25.5        | domestic |
-| 300-eu       | Myynti – EU                 | Sales – EU              | 0           | eu       |
+| 300-eu-goods | Myynti – EU, tavarat        | Sales – EU, goods       | 0           | euGoods  |
+| 300-eu-services | Myynti – EU, palvelut    | Sales – EU, services    | 0           | euServices |
 | 300-other    | Myynti – muut maat          | Sales – other countries | 0           | nonEu    |
 | 300-reverse  | Myynti – käänteinen verotus | Sales – reverse charge  | 0           | reverse  |
 
-**Default categories:** the four sales categories, plus one category per remaining line, with `id = line key`, `name = Finnish line name`, `vatRate = line default VAT`, and `kind = "domestic"` for income lines.
+**`300-eu`, "Myynti – EU", is retired.** The return asks for goods (311) and services (312) separately, and an entry on this category does not say which it was, so nothing moves it automatically. It stays in the list, disabled, so older entries and files keep it (`RETIRED_CATEGORY_ID`; a CSV row with that name still matches it). The VAT views show its total on a row of its own while any entry uses it, and the return's row says to change the category.
+
+**Default categories:** the six sales categories, plus one category per remaining line, with `id = line key`, `name = Finnish line name`, `vatRate = line default VAT`, and `kind = "domestic"` for income lines.
 
 **Expense summary buckets** (Yhteenveto columns): `purchases` = Ostot ja ulkopuoliset palvelut, `personnel` = Henkilöstökulut, `depreciation` = Poistot, edustuskulut ja vuokrat, `otherDeductible` = Muut vähennyskelpoiset kulut, `financial` = Rahoituskulut, `provisions` = Varausten muutokset, `nondeductible` = Vähennyskelvottomat kulut.
 
@@ -459,7 +462,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
 
 - **Keys are English**, like browser storage (§12). Nobody opens this file in Excel.
 - **Reading is lenient**, like the CSV. A missing file means defaults. A bad or unknown value is dropped on its own and the rest is kept. `version` leaves room for a migration.
-- **Categories**: the full list. A default category keeps its id, line, name and kind from the chart of accounts and takes only `enabled` and `vatRate` from the file. Custom categories come across whole. The CSV is then matched against this list, so a custom category comes back with its own id instead of being recreated from its name.
+- **Categories**: the full list. A default category keeps its id, line, name and kind from the chart of accounts and takes only `enabled` and `vatRate` from the file, and one the file does not list comes in with its defaults. `persist.migrate` runs a stored list through the same merge. Custom categories come across whole. The CSV is then matched against this list, so a custom category comes back with its own id instead of being recreated from its name.
 - **The overview layout** goes through `normalizeLayout` in `lib/domain/overview-layout.ts`: an unknown widget id is dropped and a missing one is appended at its default size, so a file from an older or newer version still opens.
 - **Language and theme** are written from the browser's own keys (§12) at save. Opening a file switches the app to them. They are preferences of the browser as much as of the book, so changing them does not mark the book dirty, and the landing page goes on using the browser's keys. The theme is applied through `Ctx.setTheme`, because only React can reach next-themes.
 - **Page sizes and autosave** are saved the same way: written at save, applied on open, never dirty.
@@ -615,6 +618,18 @@ A near full-screen modal.
 - Two tables side by side, "Myynnin arvonlisävero" and "Ostojen vähennettävä vero", with the columns Verokanta, Veroton, Vero and Yhteensä, plus a totals row.
 - A "Muut ilmoitettavat myynnit" panel, and a note explaining 0 % purchases and asking the user to check the figures before filing in OmaVero.
 
+The view has two sub-pages, as tabs shaped like the settings tabs (`SubPageTabs`). `VatShell` holds the title, the tabs and the period strip, and `useVatPeriod` gives both pages the same selected period. The routes are `VAT_ROUTES` in `lib/site.ts`.
+
+- **Laskelma** at `/app/vat`: the banner, tables and panel above.
+- **Ilmoitus** at `/app/vat/return`: the period's figures as the return's fields, on the `TaxForm` that Form 5 also uses (§8.8), in three steps: the fields with an amount as a copy checklist, the tax payable or refundable (308) to check against OmaVero, and the filed mark. `lib/domain/vat-return.ts` maps the report to the fields.
+  - The names and order follow the return in OmaVero. The codes are those of Verohallinto's data file specification VSRALVKV (version 1.10), whose check #1924 the tests run: 308 is the tax fields minus 307. OmaVero is matched by name, so the intro says so.
+  - 301 holds 25,5 % and 24 %, 302 holds 13,5 % and 14 %, 303 holds 10 %. 307 is all purchase VAT.
+  - 309 (zero-rated turnover) is line 300 sales at 0 % plus non-EU sales. Its hint says to leave out exempt sales whose purchase VAT cannot be deducted, such as healthcare, because the book cannot tell them apart. 319 is reverse-charge sales.
+  - 311 and 312 are the sales on `300-eu-goods` and `300-eu-services`. Their hints say these sales also go on the EC Sales List (yhteenvetoilmoitus). Sales on the retired `300-eu` (§5) get an extra "311/312" row, only while there are any.
+  - The book records no EU purchases, imports or reverse-charge purchases, so 304–306, 310, 313, 314, 318 and 320 stay empty. "Mitä laskelma ei sisällä" says to enter them in OmaVero and add their tax to 307 if deductible.
+  - A sales rate outside `RATES` has no field. It stays in 308 and the view warns about it.
+  - With no amounts, the checklist points to "Ei toimintaa verokaudella".
+
 ### 8.8 Income statement (Tuloslaskelma)
 
 Presented as a printable **sheet**: the `--sheet` surface (warm paper in light, the card tone in dark — see §11), a thin border, and a soft shadow. It has the title, the period, sections with totals, greyed group headings, lines with muted account numbers, and a double-ruled result line. A "Tulosta" button calls `window.print()`, and the print styles hide the chrome.
@@ -622,7 +637,7 @@ Presented as a printable **sheet**: the `--sheet` surface (warm paper in light, 
 The view has two sub-pages, as tabs shaped like the settings tabs (§8.10, `SubPageTabs` in `components/common/sub-page-tabs.tsx`). `StatementShell` holds the title, "Tulosta" and the tabs, so both pages print. The routes are `STATEMENT_ROUTES` in `lib/site.ts`.
 
 - **Laskelma** at `/app/statement`: the sheet above.
-- **Lomake 5** at `/app/statement/form5`: the same figures as Form 5's section 2, in the form's order, with its codes and its labels (`lib/domain/form5.ts`). It opens on "Täytettävät", in two steps: the fields with an amount, as a checklist with a "3/10 kopioitu" count and a progress bar, then the totals 316, 355 and 358 or 359 to check against OmaVero. The totals have no copy button. "Kaikki kohdat" shows every field in the form's order, for finding one by its place; the non-deductible expenses and the result are sections of their own. Each code sits in a box like the paper form's, filled where there is an amount to enter, and a portion (320, 322, 338, 342, 347) is indented under its field. The amount itself is the copy button: a click puts it on the clipboard as `1234,56`, with no spaces and no euro sign, and turns the button green. "Avaa OmaVero" links to vero.fi/omavero; the notes on what the app leaves out are behind "Mitä laskelma ei sisällä". The codes use Geist with tabular figures rather than a monospace, since Geist is the only face (§11). It sits on the same `--sheet` surface as the statement, so the two tabs read as one document, and its rules take `--sheet-edge`. 338 and 347 repeat 337 and 346, since the app deducts depreciation and interest in full, and a note says so. Another note names what the app does not fill: 325 to 328, 364 and the form's other sections. `lib/domain/form5.test.ts` runs Verohallinto's own check rules from the 2026 data file specification against the fields.
+- **Lomake 5** at `/app/statement/form5`: the same figures as Form 5's section 2, in the form's order, with its codes and its labels (`lib/domain/form5.ts`). It opens on "Täytettävät", in two steps: the fields with an amount, as a checklist with a "3/10 kopioitu" count and a progress bar, then the totals 316, 355 and 358 or 359 to check against OmaVero. The totals have no copy button. "Kaikki kohdat" shows every field in the form's order, for finding one by its place; the non-deductible expenses and the result are sections of their own. Each code sits in a box like the paper form's, filled where there is an amount to enter, and a portion (320, 322, 338, 342, 347) is indented under its field. The amount itself is the copy button: a click puts it on the clipboard as `1234,56`, with no spaces and no euro sign, and turns the button green. "Avaa OmaVero" links to vero.fi/omavero; the notes on what the app leaves out are behind "Mitä laskelma ei sisällä". The codes use Geist with tabular figures rather than a monospace, since Geist is the only face (§11). It sits on the same `--sheet` surface as the statement, so the two tabs read as one document, and its rules take `--sheet-edge`. The checklist itself is `TaxForm` in `components/common/tax-form.tsx`, shared with the VAT return (§8.7); `lib/domain/tax-form.ts` holds its row types and splits a form into steps. 338 and 347 repeat 337 and 346, since the app deducts depreciation and interest in full, and a note says so. Another note names what the app does not fill: 325 to 328, 364 and the form's other sections. `lib/domain/form5.test.ts` runs Verohallinto's own check rules from the 2026 data file specification against the fields.
 - An Ilmoitin.fi file is not made. That would be filing, and the app does not know the rest of the form (§1).
 
 ### 8.9 Summary (Yhteenveto)
@@ -735,7 +750,7 @@ Sixteen gross entries for 2026. **The app has no sample ledger**: there is no "K
 | 2026-01-31 | Puhelinliittymä – Elisa          | expense | 344-other    | 29.90      | 25.5    |
 | 2026-02-12 | Lasku 1002 – Virtanen            | income  | 300-domestic | 1255.00    | 25.5    |
 | 2026-02-20 | Työtilan vuokra, helmikuu        | expense | 343          | 450.00     | 25.5    |
-| 2026-03-03 | Lasku 1003 – Nordic Build AB     | income  | 300-eu       | 3200.00    | 0       |
+| 2026-03-03 | Lasku 1003 – Nordic Build AB     | income  | 300-eu-goods | 3200.00    | 0       |
 | 2026-03-18 | Polttoaine – Neste               | expense | 344-vehicle  | 92.35      | 25.5    |
 | 2026-03-20 | Työtilan vuokra, maaliskuu       | expense | 343          | 450.00     | 25.5    |
 | 2026-04-09 | Lounaspalaveri asiakkaan kanssa  | expense | 344-meeting  | 48.60      | 13.5    |
@@ -861,8 +876,9 @@ Anything that appears in two views is a component in `components/common/`, takin
 | the receipt motif            | `receipt-paper.tsx` — `ReceiptPaper` and its `Head` / `Rule` / `Row` / `Total` parts, shared by the entry preview and the landing hero |
 | landing and 404 type         | `typography.tsx` — `DisplayHeading` (`size` lg / md), `Lead`, `SectionHeading` |
 | the root of a document       | `LangRoot` in `lang-provider.tsx` — the app shell, the landing page and the 404 all start with it |
+| a form for copying into OmaVero | `tax-form.tsx`: `TaxForm` and `TaxFormStep`, for Form 5 (§8.8) and the VAT return (§8.7) |
 | sortable column headers      | `sortable-header.tsx` |
-| tabs between sub-pages       | `sub-page-tabs.tsx`, used by Asetukset and Tuloslaskelma |
+| tabs between sub-pages       | `sub-page-tabs.tsx`, used by Asetukset, Tuloslaskelma and ALV-laskelma |
 | the income and expense chart | `income-expense-chart.tsx`: `IncomeExpenseChart` and `IncomeExpenseLegend`, on the overview and Yhteenveto |
 | single-choice selects        | `option-select.tsx` |
 | page titles inside the app   | `page-header.tsx` |
@@ -905,7 +921,9 @@ app/
   app/
     layout.tsx                   AppShell + metadata.robots = noindex, nofollow
     page.tsx                     /app → /app/overview
-    overview/  ledger/  vat/  summary/
+    overview/  ledger/  summary/
+    vat/                         layout.tsx = VatShell; page.tsx = Laskelma
+      return/                    /app/vat/return (§8.7)
     statement/                   layout.tsx = StatementShell; page.tsx = Laskelma
       form5/                     /app/statement/form5 (§8.8)
     settings/                    layout.tsx = SettingsShell; page.tsx = Yleiset
@@ -1066,7 +1084,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
   Its pre-paint inline script reads that key before any of our JS runs, so a
   second source of truth would drift.
 - Both preferences used to live in the `bookkeeping` blob. `persist.migrate`
-  (now at `version: 2`) moves each into its own key and drops the field,
+  (now at `version: 3`) moves each into its own key and drops the field,
   seeding only a key that is still empty — the separate key is the newer truth.
 - IndexedDB `bookkeeping-receipts`, store `files`: receipt Blobs keyed by
   attachment id.
@@ -1121,3 +1139,4 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 - Filing through Ilmoitin.fi, at least for the VAT return. Not before the user asks for it (§8.8).
 - Form 5 fields the app leaves out: 338 and 347, the deductible parts of depreciation (337) and interest (346), which the app takes to be the full amounts; co-operative surplus (325–328); and the additional deductions of 364, which come from fields 388 and 392 elsewhere on the return.
 - The VAT return of a business that stops trading (§6.5).
+- VAT return fields the book cannot fill (§8.7): EU purchases, imports and reverse-charge purchases.

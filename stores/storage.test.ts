@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from "vitest"
 
+import { defaultCategories } from "@/lib/domain/accounts"
 import { BOOK_STORAGE_KEY, useBookStore } from "@/stores/book-store"
 import { LANG_STORAGE_KEY, useLangStore } from "@/stores/lang-store"
 
@@ -85,6 +86,24 @@ describe("persisted preferences and bookkeeping (§12)", () => {
     expect(localStorage.getItem("theme")).toBe("dark")
     expect(storedBook()?.state).not.toHaveProperty("lang")
     expect(storedBook()?.state).not.toHaveProperty("theme")
+  })
+
+  it("adds the EU goods and services categories to an older list", async () => {
+    const cats = defaultCategories()
+      .filter((c) => !c.id.startsWith("300-eu-"))
+      .map((c) => (c.id === "333" ? { ...c, vatRate: 24 } : c))
+    localStorage.setItem(
+      BOOK_STORAGE_KEY,
+      JSON.stringify({ version: 2, state: { open: true, cats } })
+    )
+
+    await useBookStore.persist.rehydrate()
+
+    const byId = new Map(useBookStore.getState().cats.map((c) => [c.id, c]))
+    expect(byId.get("300-eu-goods")?.enabled).toBe(true)
+    expect(byId.get("300-eu-services")?.enabled).toBe(true)
+    expect(byId.get("300-eu")?.enabled).toBe(false)
+    expect(byId.get("333")?.vatRate).toBe(24)
   })
 
   it("keeps the newer key when both hold a language", async () => {

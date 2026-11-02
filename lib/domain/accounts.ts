@@ -406,7 +406,7 @@ export interface SalesCategoryDef {
   kind: SalesKind
 }
 
-/** The four sales categories on line 300 (§5). */
+/** The sales categories on line 300 (§5). */
 export const SALES: readonly SalesCategoryDef[] = [
   {
     id: "300-domestic",
@@ -415,7 +415,20 @@ export const SALES: readonly SalesCategoryDef[] = [
     vatRate: 25.5,
     kind: "domestic",
   },
-  { id: "300-eu", fi: "Myynti – EU", en: "Sales – EU", vatRate: 0, kind: "eu" },
+  {
+    id: "300-eu-goods",
+    fi: "Myynti – EU, tavarat",
+    en: "Sales – EU, goods",
+    vatRate: 0,
+    kind: "euGoods",
+  },
+  {
+    id: "300-eu-services",
+    fi: "Myynti – EU, palvelut",
+    en: "Sales – EU, services",
+    vatRate: 0,
+    kind: "euServices",
+  },
   {
     id: "300-other",
     fi: "Myynti – muut maat",
@@ -430,7 +443,15 @@ export const SALES: readonly SalesCategoryDef[] = [
     vatRate: 0,
     kind: "reverse",
   },
+  { id: "300-eu", fi: "Myynti – EU", en: "Sales – EU", vatRate: 0, kind: "eu" },
 ]
+
+/**
+ * A category that no new entry should use. It stays in the list so that older
+ * entries and files keep their category, and the VAT return asks the user to
+ * sort those entries, because nothing in them says goods or services.
+ */
+export const RETIRED_CATEGORY_ID = "300-eu"
 
 /**
  * English names of the default categories, keyed by category id. Used on CSV
@@ -460,7 +481,7 @@ export const FORMER_NAMES: Readonly<Record<string, readonly string[]>> = {
   "319": ["Saadut osingot", "Dividends received"],
 }
 
-/** The 33 built-in categories: four sales plus one per remaining line. */
+/** The 35 built-in categories: six sales plus one per remaining line. */
 export function defaultCategories(): Category[] {
   const sales: Category[] = SALES.map((s) => ({
     id: s.id,
@@ -468,7 +489,7 @@ export function defaultCategories(): Category[] {
     name: s.fi,
     vatRate: s.vatRate,
     kind: s.kind,
-    enabled: true,
+    enabled: s.id !== RETIRED_CATEGORY_ID,
     custom: false,
   }))
   const rest: Category[] = LINES.filter((x) => x.key !== "300").map((x) => ({

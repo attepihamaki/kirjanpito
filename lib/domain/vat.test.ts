@@ -57,7 +57,9 @@ describe("vatReport — sample data, whole year 2026", () => {
 
   it("reports EU and reverse-charge sales separately", () => {
     expect(r.otherSales).toEqual({
-      eu: 320000,
+      euGoods: 320000,
+      euServices: 0,
+      eu: 0,
       nonEu: 0,
       reverse: 480000,
     })
@@ -147,7 +149,13 @@ describe("vatReport — exclusions", () => {
   it("excludes 0 % income on line 318 from sales VAT and other sales", () => {
     const r = vatReport([entry({ catId: "318", vatRate: 0 })], cats)
     expect(r.sales.total).toEqual({ net: 0, vat: 0 })
-    expect(r.otherSales).toEqual({ eu: 0, nonEu: 0, reverse: 0 })
+    expect(r.otherSales).toEqual({
+      euGoods: 0,
+      euServices: 0,
+      eu: 0,
+      nonEu: 0,
+      reverse: 0,
+    })
   })
 
   it("excludes 0 % expenses from purchases", () => {

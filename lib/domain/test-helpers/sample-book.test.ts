@@ -70,7 +70,7 @@ describe("sampleEntries", () => {
         "2026-03-03",
         "Lasku 1003 – Nordic Build AB",
         "income",
-        "300-eu",
+        "300-eu-goods",
         320000,
         0,
       ],

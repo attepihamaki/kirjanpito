@@ -93,7 +93,10 @@ export function summary(
       row.incomeNet += net
       totals.incomeNet += net
       const kind = cat?.kind
-      if (kind === "eu" || kind === "nonEu" || kind === "reverse") {
+      if (kind === "euGoods" || kind === "euServices" || kind === "eu") {
+        row.eu += net
+        totals.eu += net
+      } else if (kind === "nonEu" || kind === "reverse") {
         row[kind] += net
         totals[kind] += net
       } else if (cat?.line === "300") {

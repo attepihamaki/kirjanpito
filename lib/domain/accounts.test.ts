@@ -101,12 +101,14 @@ describe("RATES", () => {
 })
 
 describe("SALES", () => {
-  it("defines the four line-300 categories", () => {
+  it("defines the line-300 categories", () => {
     expect(SALES.map((s) => [s.id, s.vatRate, s.kind])).toEqual([
       ["300-domestic", 25.5, "domestic"],
-      ["300-eu", 0, "eu"],
+      ["300-eu-goods", 0, "euGoods"],
+      ["300-eu-services", 0, "euServices"],
       ["300-other", 0, "nonEu"],
       ["300-reverse", 0, "reverse"],
+      ["300-eu", 0, "eu"],
     ])
   })
 })
@@ -114,13 +116,14 @@ describe("SALES", () => {
 describe("defaultCategories", () => {
   const cats = defaultCategories()
 
-  it("returns 33 categories: four sales plus one per remaining line", () => {
-    expect(cats).toHaveLength(33)
+  it("returns 35 categories: six sales plus one per remaining line", () => {
+    expect(cats).toHaveLength(35)
     expect(cats).toHaveLength(SALES.length + LINES.length - 1)
   })
 
-  it("enables all of them and marks none custom", () => {
-    expect(cats.every((c) => c.enabled && !c.custom)).toBe(true)
+  it("enables all but the retired one and marks none custom", () => {
+    expect(cats.filter((c) => !c.enabled).map((c) => c.id)).toEqual(["300-eu"])
+    expect(cats.some((c) => c.custom)).toBe(false)
   })
 
   it("gives them unique ids", () => {

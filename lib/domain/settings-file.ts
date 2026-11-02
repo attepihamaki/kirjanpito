@@ -1,4 +1,8 @@
-import { LINE_BY_KEY, defaultCategories } from "@/lib/domain/accounts"
+import {
+  LINE_BY_KEY,
+  RETIRED_CATEGORY_ID,
+  defaultCategories,
+} from "@/lib/domain/accounts"
 import {
   normalizeLayout,
   type OverviewWidget,
@@ -53,7 +57,14 @@ export type ParsedSettings = Partial<BookSettings>
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/
 const PERIOD_KEY = /^\d{4}(-(0[1-9]|1[0-2])|-Q[1-4])?$/
-const SALES_KINDS: readonly SalesKind[] = ["domestic", "eu", "nonEu", "reverse"]
+const SALES_KINDS: readonly SalesKind[] = [
+  "domestic",
+  "euGoods",
+  "euServices",
+  "eu",
+  "nonEu",
+  "reverse",
+]
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -91,14 +102,20 @@ function parseCategory(value: unknown): Category | null {
  * Overlay the file's categories on the defaults. A default keeps its own id,
  * line, name and kind, which are the chart of accounts, and takes only the
  * user's choices from the file: whether it is enabled and its default rate.
- * Custom categories come across whole.
+ * Custom categories come across whole. A default the file does not list, which
+ * is how a newer default reaches an older file, comes in as it is. The retired
+ * category stays disabled, or an older file would offer it again.
  */
 export function mergeCategories(fromFile: readonly Category[]): Category[] {
   const byId = new Map(fromFile.map((c) => [c.id, c]))
   const defaults = defaultCategories().map((d) => {
     const own = byId.get(d.id)
     return own && !own.custom
-      ? { ...d, enabled: own.enabled, vatRate: own.vatRate }
+      ? {
+          ...d,
+          enabled: d.id !== RETIRED_CATEGORY_ID && own.enabled,
+          vatRate: own.vatRate,
+        }
       : d
   })
   const known = new Set(defaults.map((d) => d.id))
