@@ -5,6 +5,7 @@ import { CopyIcon, Trash2Icon } from "lucide-react"
 
 import { EntryTypeToggle } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
+import { Keys } from "@/components/common/keys"
 import { AttachmentGrid } from "@/components/entry/attachment-grid"
 import { ReceiptPreview } from "@/components/entry/receipt-preview"
 import { AttachmentViewer } from "@/components/receipt/receipt-viewer"
@@ -29,6 +30,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { toast } from "@/components/ui/toast"
 import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
+import { useShortcut } from "@/hooks/use-save-book"
 import { isMediaFile } from "@/hooks/use-file-drop"
 import { prepareImage } from "@/lib/browser/prep-image"
 import {
@@ -219,6 +221,8 @@ function EntryDialogForm({
   // The receipt open in the viewer on top of this dialog, if any (§8.6).
   const [viewing, setViewing] = React.useState<number | null>(null)
   const fileRef = React.useRef<HTMLInputElement>(null)
+  const dateRef = React.useRef<HTMLInputElement>(null)
+  const saveKeys = useShortcut()("Enter")
   // Read by the async PDF pre-fill, which must see the form as it is now.
   const formRef = React.useRef(form)
   React.useEffect(() => {
@@ -521,9 +525,24 @@ function EntryDialogForm({
       keepRate.current = false
       setForm(next)
       setBaseline(snapshot(next))
+      // The next receipt usually starts from its own date.
+      dateRef.current?.focus()
     } else {
       closeDialog()
     }
+  }
+
+  /*
+   * Ctrl/⌘+Enter takes the footer's main way forward (§8.5). It waits for a
+   * receipt still being stored, and leaves the viewer on top of this dialog
+   * and an open list, whose portals still bubble here, to their own keys.
+   */
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key !== "Enter" || !(event.ctrlKey || event.metaKey)) return
+    if (event.altKey || event.shiftKey || busy || viewing != null) return
+    if ((event.target as Element).closest('[role="listbox"]')) return
+    event.preventDefault()
+    void save(mode !== "edit")
   }
 
   const title =
@@ -540,7 +559,10 @@ function EntryDialogForm({
         if (!open) void requestClose()
       }}
     >
-      <DialogContent className="max-h-[92svh] overflow-y-auto sm:max-w-3xl">
+      <DialogContent
+        className="max-h-[92svh] overflow-y-auto sm:max-w-3xl"
+        onKeyDown={handleKeyDown}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {mode === "edit" && editing?.voucher ? (
@@ -556,6 +578,8 @@ function EntryDialogForm({
           multiple
           accept="image/*,.heic,.heif,application/pdf"
           className="sr-only"
+          tabIndex={-1}
+          aria-hidden="true"
           onChange={(e) => {
             const files = Array.from(e.target.files ?? [])
             e.target.value = ""
@@ -578,9 +602,10 @@ function EntryDialogForm({
                 </FieldLabel>
                 <Input
                   id="entry-date"
+                  ref={dateRef}
                   type="date"
                   value={form.date}
-                  autoFocus={mode === "copy"}
+                  autoFocus={mode !== "edit"}
                   aria-invalid={invalid("date")}
                   onChange={(e) => {
                     const date = e.target.value
@@ -659,8 +684,7 @@ function EntryDialogForm({
                   <FieldDescription className="text-warning">
                     {f.t("entry.duplicateOf", {
                       n: duplicate.voucher ?? "",
-                      d:
-                        duplicate.description || f.t("ledger.noDescription"),
+                      d: duplicate.description || f.t("ledger.noDescription"),
                     })}
                   </FieldDescription>
                 ) : null}
@@ -785,11 +809,23 @@ function EntryDialogForm({
               {f.t("common.cancel")}
             </Button>
             {mode !== "edit" ? (
-              <Button variant="secondary" onClick={() => void save(true)}>
+              <Button
+                variant="secondary"
+                aria-keyshortcuts={saveKeys.aria}
+                onClick={() => void save(true)}
+              >
                 {f.t("entry.saveAndNew")}
+                {saveKeys.label ? (
+                  <Keys className="hidden min-[900px]:inline">
+                    {saveKeys.label}
+                  </Keys>
+                ) : null}
               </Button>
             ) : null}
-            <Button onClick={() => void save(false)}>
+            <Button
+              aria-keyshortcuts={mode === "edit" ? saveKeys.aria : undefined}
+              onClick={() => void save(false)}
+            >
               {f.t("common.save")}
             </Button>
           </div>

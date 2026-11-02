@@ -1,8 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { CheckIcon, PencilIcon, PlusIcon, RotateCcwIcon } from "lucide-react"
+import { CheckIcon, PencilIcon, RotateCcwIcon } from "lucide-react"
 
+import { NewEntryButton } from "@/components/common/new-entry-button"
 import { PageHeader } from "@/components/common/page-header"
 import { Surface } from "@/components/common/surface"
 import { Button } from "@/components/ui/button"
@@ -21,11 +22,8 @@ export function OverviewView() {
   const f = useFormatters()
   const year = useBookStore((s) => s.year)
   const hasEntries = useBookStore((s) => s.entries.length > 0)
-  const openDialog = useBookStore((s) => s.openDialog)
   const setLayout = useBookStore((s) => s.setOverviewLayout)
   const [editing, setEditing] = React.useState(false)
-
-  const newEntry = () => openDialog({ kind: "entry", mode: "new" })
 
   const actions = editing ? (
     <>
@@ -49,10 +47,7 @@ export function OverviewView() {
           {f.t("overview.edit")}
         </Button>
       ) : null}
-      <Button onClick={newEntry}>
-        <PlusIcon data-icon="inline-start" />
-        {f.t("overview.newEntry")}
-      </Button>
+      <NewEntryButton />
     </>
   )
 
@@ -68,13 +63,13 @@ export function OverviewView() {
           <OverviewBoard editing={editing} />
         </OverviewDataProvider>
       ) : (
-        <EmptyOverview onNewEntry={newEntry} />
+        <EmptyOverview />
       )}
     </>
   )
 }
 
-function EmptyOverview({ onNewEntry }: { onNewEntry: () => void }) {
+function EmptyOverview() {
   const f = useFormatters()
   const steps = [
     ["overview.step1Title", "overview.step1Body"],
@@ -91,10 +86,7 @@ function EmptyOverview({ onNewEntry }: { onNewEntry: () => void }) {
         <p className="mt-2 max-w-prose text-sm text-muted-foreground">
           {f.t("overview.emptyBody")}
         </p>
-        <Button className="mt-5" onClick={onNewEntry}>
-          <PlusIcon data-icon="inline-start" />
-          {f.t("overview.newEntry")}
-        </Button>
+        <NewEntryButton className="mt-5" />
       </div>
       <ol className="flex flex-col gap-3">
         {steps.map(([title, body], i) => (

@@ -1,13 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { PlusIcon, XIcon } from "lucide-react"
+import { XIcon } from "lucide-react"
 
 import {
   SearchInput,
   TypeFilterSelect,
 } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
+import { NewEntryButton } from "@/components/common/new-entry-button"
 import { PageHeader } from "@/components/common/page-header"
 import { Surface } from "@/components/common/surface"
 import { TablePagination } from "@/components/common/table-pagination"
@@ -78,7 +79,6 @@ export function LedgerView() {
   const clearFilters = useBookStore((s) => s.clearLedgerFilters)
   const setYear = useBookStore((s) => s.setYear)
   const setMonth = useBookStore((s) => s.setMonth)
-  const openDialog = useBookStore((s) => s.openDialog)
 
   const catMap = React.useMemo(() => indexCategories(cats), [cats])
 
@@ -251,10 +251,7 @@ export function LedgerView() {
             <EmptyDescription>{f.t("ledger.emptyBody")}</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <Button onClick={() => openDialog({ kind: "entry", mode: "new" })}>
-              <PlusIcon data-icon="inline-start" />
-              {f.t("ledger.newEntry")}
-            </Button>
+            <NewEntryButton />
           </EmptyContent>
         </Empty>
       </>
@@ -266,12 +263,7 @@ export function LedgerView() {
       <PageHeader
         title={f.t("nav.ledger")}
         subtitle={periodLabel}
-        actions={
-          <Button onClick={() => openDialog({ kind: "entry", mode: "new" })}>
-            <PlusIcon data-icon="inline-start" />
-            {f.t("ledger.newEntry")}
-          </Button>
-        }
+        actions={<NewEntryButton />}
       />
       <LedgerTabs />
 

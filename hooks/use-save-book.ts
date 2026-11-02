@@ -61,7 +61,7 @@ export function useShortcut(): (key: string, shift?: boolean) => Shortcut {
     (key: string, shift = false) => {
       // Nothing until mounted: the platform is unknown while prerendering.
       if (!os) return NONE
-      const k = key.toUpperCase()
+      const k = key.length === 1 ? key.toUpperCase() : key
       const mod = shift ? "Shift+" : ""
       return {
         label: os === "mac" ? `${shift ? "⇧" : ""}⌘${k}` : `Ctrl+${mod}${k}`,

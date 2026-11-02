@@ -25,6 +25,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
+import { Keys } from "@/components/common/keys"
 import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { useDelayedFlag } from "@/hooks/use-delayed-flag"
@@ -191,27 +192,5 @@ export function FileMenu({
         </div>
       </PopoverContent>
     </Popover>
-  )
-}
-
-/**
- * A key cap on a menu row. Recessed to `--background` rather than filled with
- * `--muted`, which is what the row itself turns on hover — a muted badge would
- * dissolve into the row exactly when the pointer is on it.
- *
- * `font-sans` because the browser's preflight puts `kbd` in a mono face, and
- * Geist is the app's only one (§11). `aria-hidden` because accessible names
- * concatenate without a separator, so the row would be announced as
- * "TallennaCtrl+S"; the combination reaches assistive software through the
- * row's own `aria-keyshortcuts` instead.
- */
-function Keys({ children }: { children: React.ReactNode }) {
-  return (
-    <kbd
-      aria-hidden="true"
-      className="rounded-sm bg-background px-2 py-1 font-sans text-xs leading-none font-normal text-muted-foreground"
-    >
-      {children}
-    </kbd>
   )
 }

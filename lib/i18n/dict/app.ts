@@ -198,7 +198,6 @@ export const APP_DICT = {
 
   // --- Overview (§8.12) ---
   "overview.subtitle": ["Tilikausi {y}", "Financial year {y}"],
-  "overview.newEntry": ["Uusi kirjaus", "New entry"],
   "overview.edit": ["Muokkaa näkymää", "Edit layout"],
   "overview.done": ["Valmis", "Done"],
   "overview.reset": ["Palauta oletus", "Reset layout"],
