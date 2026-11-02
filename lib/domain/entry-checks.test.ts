@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest"
 
 import { defaultCategories } from "@/lib/domain/accounts"
-import { flaggedEntryIds } from "@/lib/domain/entry-checks"
+import {
+  duplicateOf,
+  entryWithReceipt,
+  flaggedEntryIds,
+} from "@/lib/domain/entry-checks"
 import { createIdFactory } from "@/lib/domain/id"
 import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { indexCategories, type Entry } from "@/lib/domain/types"
@@ -102,5 +106,60 @@ describe("largeAmount", () => {
     expect(
       flagged("largeAmount", [...tiny, entry({ amount: 90_000 })])
     ).toEqual([])
+  })
+})
+
+describe("duplicate", () => {
+  const receipt = { id: "a1", name: "kuitti.jpg", type: "image/jpeg", size: 1234 }
+
+  it("flags nothing in the sample book", () => {
+    expect(flagged("duplicate", sample)).toEqual([])
+  })
+
+  it("flags both entries of a pair with the same date, side and gross", () => {
+    const pair = [entry({}), entry({ id: "y", catId: "344-other" })]
+    expect(flagged("duplicate", pair).sort()).toEqual(["x", "y"])
+  })
+
+  it("compares the gross amount, however it was entered", () => {
+    const net = entry({ id: "y", amount: 7968, amountMode: "net" })
+    expect(flagged("duplicate", [entry({ amount: 10_000 }), net])).toEqual([
+      "x",
+      "y",
+    ])
+  })
+
+  it("leaves a different date, side or amount alone", () => {
+    const others = [
+      entry({ id: "a", date: "2026-10-16" }),
+      entry({ id: "b", type: "income", catId: "300-domestic" }),
+      entry({ id: "c", amount: 10_001 }),
+    ]
+    expect(flagged("duplicate", [entry({}), ...others])).toEqual([])
+  })
+
+  it("flags two entries that share a receipt file", () => {
+    const pair = [
+      entry({ atts: [receipt] }),
+      entry({ id: "y", date: "2026-10-20", atts: [{ ...receipt, id: "a2" }] }),
+    ]
+    expect(flagged("duplicate", pair).sort()).toEqual(["x", "y"])
+  })
+
+  it("ignores receipts missing from the file", () => {
+    const missing = { ...receipt, id: null, missing: true as const }
+    const pair = [
+      entry({ atts: [missing] }),
+      entry({ id: "y", date: "2026-10-20", atts: [missing] }),
+    ]
+    expect(flagged("duplicate", pair)).toEqual([])
+  })
+
+  it("finds the other entry for the dialog, never the entry itself", () => {
+    const x = entry({ atts: [receipt] })
+    expect(duplicateOf(x, [x])).toBeUndefined()
+    expect(duplicateOf({ ...x, id: "new" }, [x])).toBe(x)
+    expect(entryWithReceipt(receipt, [x], "x")).toBeUndefined()
+    expect(entryWithReceipt({ ...receipt, id: "a9" }, [x])).toBe(x)
   })
 })

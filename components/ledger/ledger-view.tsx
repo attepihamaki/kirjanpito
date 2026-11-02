@@ -48,6 +48,7 @@ const CHECK_LABEL = {
   futureDate: "ledger.futureDate",
   zeroVatSale: "ledger.zeroVatSale",
   largeAmount: "ledger.largeAmount",
+  duplicate: "ledger.duplicate",
 } as const satisfies Record<EntryCheck, string>
 
 const NO_IDS: ReadonlySet<string> = new Set()

@@ -43,6 +43,7 @@ import {
   previousEntryFrom,
   suggestCategory,
 } from "@/lib/domain/invoice-text"
+import { duplicateOf, entryWithReceipt } from "@/lib/domain/entry-checks"
 import { isPdf } from "@/lib/domain/receipt-path"
 import { isoDate, monthOf, todayIso, yearOf } from "@/lib/domain/dates"
 import { rateMismatch, rateOnDate } from "@/lib/domain/vat-rates"
@@ -195,6 +196,8 @@ function EntryDialogForm({
   const [editing] = React.useState(() =>
     entryId ? entries.find((e) => e.id === entryId) : undefined
   )
+  // The entry the duplicate hints leave out: itself, while it is edited.
+  const editingId = mode === "edit" ? editing?.id : undefined
   const [initial] = React.useState(() =>
     initialForm({ editing, mode, year, month, lastType, lastMode })
   )
@@ -328,6 +331,19 @@ function EntryDialogForm({
         }
         if (added.length) {
           setForm((prev) => ({ ...prev, atts: [...prev.atts, ...added] }))
+          // A hint only: one receipt can cover two entries on purpose.
+          const others = useBookStore.getState().entries
+          for (const att of added) {
+            const other = entryWithReceipt(att, others, editingId)
+            if (!other) continue
+            toast.add({
+              title: f.t("receipt.attachedElsewhere", {
+                n: other.voucher ?? "",
+                d: other.description || f.t("ledger.noDescription"),
+              }),
+            })
+            break
+          }
         }
         const pdf = accepted.find((file) => isPdf(file))
         if (pdf) await prefillFromPdf(pdf)
@@ -335,7 +351,7 @@ function EntryDialogForm({
         setBusy(false)
       }
     },
-    [f, prefillFromPdf]
+    [f, prefillFromPdf, editingId]
   )
 
   /*
@@ -386,6 +402,23 @@ function EntryDialogForm({
   const dirty = snapshot(form) !== baseline
   // A hint, never a block: corrections can carry an older rate (§5).
   const mismatch = rateMismatch(form.vatRate, form.date)
+  const formAmount = parseAmount(form.amount)
+  const duplicate =
+    formAmount && form.date
+      ? duplicateOf(
+          {
+            id: editingId ?? "",
+            date: form.date,
+            description: "",
+            type: form.type,
+            catId: form.catId,
+            amount: formAmount,
+            vatRate: form.vatRate,
+            amountMode: form.amountMode,
+          },
+          entries
+        )
+      : undefined
 
   /** `true` when this field is the one the error line is complaining about. */
   const invalid = (field: ErrorField) =>
@@ -615,6 +648,15 @@ function EntryDialogForm({
                   onChange={(e) => update({ amount: e.target.value })}
                   className="tabular text-right"
                 />
+                {duplicate ? (
+                  <FieldDescription className="text-warning">
+                    {f.t("entry.duplicateOf", {
+                      n: duplicate.voucher ?? "",
+                      d:
+                        duplicate.description || f.t("ledger.noDescription"),
+                    })}
+                  </FieldDescription>
+                ) : null}
               </Field>
 
               <Field>

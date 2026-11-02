@@ -387,6 +387,14 @@ export const APP_DICT = {
     "Yli kymmenen kertaa tavallinen kirjaus. Tarkista desimaalipilkun paikka.",
     "Over ten times a typical entry. Check where the decimal separator is.",
   ],
+  "overview.duplicate": [
+    pl("1 mahdollinen kaksoiskirjaus", "{n} mahdollista kaksoiskirjausta"),
+    pl("1 possible duplicate", "{n} possible duplicates"),
+  ],
+  "overview.duplicateSub": [
+    "Sama päivä ja summa tai sama tositetiedosto kuin toisella kirjauksella.",
+    "Same date and amount, or the same receipt file, as another entry.",
+  ],
   "overview.missingFiles": [
     pl("1 tosite puuttuu tiedostosta", "{n} tositetta puuttuu tiedostosta"),
     pl(
@@ -517,6 +525,7 @@ export const APP_DICT = {
     "Poikkeuksellisen suuri summa",
     "Unusually large amount",
   ],
+  "ledger.duplicate": ["Mahdollinen kaksoiskirjaus", "Possible duplicate"],
   "ledger.copyAsNew": ["Kopioi", "Copy"],
   "ledger.deleteEntry": ["Poista kirjaus", "Delete entry"],
 
@@ -540,6 +549,10 @@ export const APP_DICT = {
   "entry.rateEnded": [
     "{r} oli voimassa {d} asti. Tälle päivälle verokanta on {s}.",
     "{r} applied until {d}. The rate for this date is {s}.",
+  ],
+  "entry.duplicateOf": [
+    "Samana päivänä on jo kirjaus samalla summalla: nro {n}, {d}.",
+    "There is already an entry with this date and amount: no. {n}, {d}.",
   ],
   "entry.amountMode": ["Summa on", "Amount is"],
   "entry.saveAndNew": ["Tallenna ja uusi", "Save and add another"],
@@ -596,6 +609,10 @@ export const APP_DICT = {
   "receipt.prefilled": [
     "Tiedot luettiin PDF:stä. Tarkista ne ennen tallennusta.",
     "Details were read from the PDF. Check them before saving.",
+  ],
+  "receipt.attachedElsewhere": [
+    "Sama tiedosto on jo kirjauksessa nro {n}, {d}.",
+    "The same file is already on entry no. {n}, {d}.",
   ],
   "receipt.invoiceDescription": ["Lasku {number}", "Invoice {number}"],
   "receipt.drop": [

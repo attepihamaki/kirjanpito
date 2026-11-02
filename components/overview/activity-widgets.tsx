@@ -178,6 +178,10 @@ const CHECK_TEXT = {
     title: "overview.largeAmount",
     sub: "overview.largeAmountSub",
   },
+  duplicate: {
+    title: "overview.duplicate",
+    sub: "overview.duplicateSub",
+  },
 } as const satisfies Record<EntryCheck, { title: string; sub: string }>
 
 interface CheckItem {
