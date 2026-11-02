@@ -25,6 +25,10 @@ export const LANDING_DICT = {
   "app.themeLight": ["Vaalea teema", "Light theme"],
   "app.themeDark": ["Tumma teema", "Dark theme"],
   "file.open": ["Avaa tiedosto", "Open file"],
+  "file.openElsewhere": [
+    "Kirjanpito on auki toisessa välilehdessä.",
+    "The bookkeeping is open in another tab.",
+  ],
   "file.untitled": ["Uusi kirjanpito", "New bookkeeping"],
   "file.dirty": ["Tallentamattomia muutoksia", "Unsaved changes"],
   "ledger.entryCount": [

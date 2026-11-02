@@ -497,6 +497,12 @@ describe("parseCsv — skipped rows", () => {
     expect(r.skipped).toEqual([{ line: 5, code: "bad-date" }])
   })
 
+  /* What saving a bookkeeping with no entries writes. */
+  it("reads a header with no rows as a bookkeeping with no entries", () => {
+    const r = parseCsv(csvText(["pvm;tyyppi;summa"]), baseCats)
+    expect(r.ok && r.entries).toEqual([])
+  })
+
   it("fails with no-rows-read when every row is bad", () => {
     expect(
       parseCsv(csvText(["pvm;tyyppi;summa", "roskaa;tulo;1,00"]), baseCats)

@@ -23,6 +23,10 @@ export const APP_DICT = {
   // Short enough to fit the sidebar's brand button on one line.
   "app.tagline": ["Yhdenkertainen kirjanpito", "Single-entry bookkeeping"],
   "app.fiscalYear": ["Tilikausi", "Financial year"],
+  "app.waitingForTab": [
+    "Jatka siellä tai sulje se välilehti. Tämä välilehti avautuu silloin itsestään.",
+    "Continue there or close that tab. This tab then opens by itself.",
+  ],
   "app.toggleNav": ["Näytä tai piilota valikko", "Show or hide the menu"],
 
   "nav.overview": ["Yleiskatsaus", "Overview"],

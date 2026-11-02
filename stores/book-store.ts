@@ -227,11 +227,15 @@ export interface BookActions {
   clearEntries(): void
   setYear(year: number): void
   setFileName(name: string | null): void
-  /** Clear the dirty flag: the bookkeeping now exists in a file (§7.5). */
+  /**
+   * Record a write (§7.5). `dirty` is true when the book changed while the
+   * file was being written, so what is on disk is already behind.
+   */
   markSaved(next: {
     fileName: string | null
     fileHandle?: FileSystemFileHandle | null
     savedAt?: number | null
+    dirty?: boolean
   }): void
   /** Drop the link to the file without touching the bookkeeping (§7.5). */
   forgetFileHandle(): void
@@ -335,6 +339,7 @@ type PersistedBook = Pick<
   | "year"
   | "dirty"
   | "fileName"
+  | "savedAt"
   | "lastMode"
   | "lastType"
   | "open"
@@ -347,6 +352,9 @@ type PersistedBook = Pick<
   | "overviewLayout"
   | "autosave"
 >
+
+/** Set when a write fails: from then on memory is newer than storage. */
+let storageBehind = false
 
 /**
  * localStorage, with one rule: **only a bookkeeping creates the key.**
@@ -374,8 +382,10 @@ const bookStorage: PersistStorage<PersistedBook> = {
       const hasBook = value.state.open || value.state.entries.length > 0
       if (!hasBook && localStorage.getItem(name) === null) return
       localStorage.setItem(name, JSON.stringify(value))
+      storageBehind = false
     } catch {
       // Storage unavailable or full; the session keeps working in memory.
+      storageBehind = true
     }
   },
   removeItem: (name) => {
@@ -500,9 +510,9 @@ export const useBookStore = create<BookStore>()(
 
       setYear: (year) => set({ year, ledgerPage: 1 }),
       setFileName: (fileName) => set({ fileName }),
-      markSaved: ({ fileName, fileHandle, savedAt }) =>
+      markSaved: ({ fileName, fileHandle, savedAt, dirty = false }) =>
         set({
-          dirty: false,
+          dirty,
           fileName,
           // Downloading a copy leaves the linked file where it was.
           ...(fileHandle !== undefined ? { fileHandle } : {}),
@@ -621,6 +631,7 @@ export const useBookStore = create<BookStore>()(
         year: s.year,
         dirty: s.dirty,
         fileName: s.fileName,
+        savedAt: s.savedAt,
         lastMode: s.lastMode,
         lastType: s.lastType,
         open: s.open,
@@ -668,3 +679,12 @@ export const useBookStore = create<BookStore>()(
     }
   )
 )
+
+/**
+ * Pick up what another tab wrote before this one took over the bookkeeping
+ * (§12). Skipped when this tab's own last write failed, since storage then
+ * holds an older book than memory does.
+ */
+export function syncBookFromStorage(): void {
+  if (!storageBehind) void useBookStore.persist.rehydrate()
+}

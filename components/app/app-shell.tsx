@@ -12,11 +12,18 @@ import { EntryDialog } from "@/components/entry/entry-dialog"
 import { Overlay } from "@/components/common/overlay"
 import { ReceiptViewer } from "@/components/receipt/receipt-viewer"
 import { LangRoot, useT } from "@/components/lang-provider"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { toast } from "@/components/ui/toast"
 import { useBeforeUnload } from "@/hooks/use-before-unload"
 import { useCommandCtx } from "@/hooks/use-commands"
+import { useDelayedFlag } from "@/hooks/use-delayed-flag"
 import { useFileDrop, isBookFile, isMediaFile } from "@/hooks/use-file-drop"
 import { useReceiptGc } from "@/hooks/use-receipt-gc"
 import { useAppShortcuts } from "@/hooks/use-app-shortcuts"
@@ -26,9 +33,10 @@ import {
   pickAndOpenFile,
   restoreFileHandle,
 } from "@/lib/commands/io-commands"
+import { claimTab } from "@/lib/browser/tab-lock"
 import { LANDING } from "@/lib/site"
 import { cn } from "@/lib/utils"
-import { useBookStore } from "@/stores/book-store"
+import { syncBookFromStorage, useBookStore } from "@/stores/book-store"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -42,19 +50,32 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const hydrated = useBookStore((s) => s.hydrated)
   const open = useBookStore((s) => s.open)
   const router = useRouter()
+  /*
+   * §12: one tab at a time holds the bookkeeping. A tab that has to wait takes
+   * over by itself when the other one closes, with what that tab last stored.
+   */
+  const [claimed, setClaimed] = React.useState(false)
+  const waiting = useDelayedFlag(hydrated && !claimed)
 
-  useReceiptGc()
-  useBeforeUnload()
+  React.useEffect(() => {
+    if (!hydrated) return
+    return claimTab(() => {
+      syncBookFromStorage()
+      setClaimed(true)
+    })
+  }, [hydrated])
+
+  useReceiptGc(claimed)
 
   /*
    * §7.5: the link to the opened file lives in IndexedDB, not in the store's
    * localStorage blob, so it is put back by hand once the book has rehydrated.
-   * Keyed on `hydrated` alone — a bookkeeping opened later in this session
+   * Keyed on the claim alone — a bookkeeping opened later in this session
    * carries its own handle, and re-running here would hand it the last one.
    */
   React.useEffect(() => {
-    if (hydrated) void restoreFileHandle()
-  }, [hydrated])
+    if (claimed) void restoreFileHandle()
+  }, [claimed])
 
   /*
    * §8.1: with no bookkeeping open, every app route sends the user to the
@@ -62,11 +83,27 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
    * "closed" and would otherwise bounce everyone.
    */
   React.useEffect(() => {
-    if (hydrated && !open) router.replace(LANDING)
-  }, [hydrated, open, router])
+    if (claimed && !open) router.replace(LANDING)
+  }, [claimed, open, router])
 
-  if (!hydrated || !open) return <AppSkeleton />
+  // Only once it has really had to wait: the claim is normally over at once.
+  if (waiting) return <OpenInAnotherTab />
+  if (!claimed || !open) return <AppSkeleton />
   return <HydratedShell>{children}</HydratedShell>
+}
+
+function OpenInAnotherTab() {
+  const t = useT()
+  return (
+    <div className="grid min-h-svh place-items-center p-4">
+      <Empty>
+        <EmptyHeader>
+          <EmptyTitle>{t("file.openElsewhere")}</EmptyTitle>
+          <EmptyDescription>{t("app.waitingForTab")}</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    </div>
+  )
 }
 
 function HydratedShell({ children }: { children: React.ReactNode }) {
@@ -98,6 +135,8 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
     () => openDialog({ kind: "export" }),
     [openDialog]
   )
+
+  useBeforeUnload()
 
   // Stable callbacks: the shortcut listener is rebound whenever they change.
   useAppShortcuts({ onOpenFile: pickFile, onExport: openExportDialog })

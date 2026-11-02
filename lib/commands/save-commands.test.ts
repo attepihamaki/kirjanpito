@@ -214,6 +214,41 @@ describe("saving back to the opened file", () => {
    * Writing moves the file's timestamp, so without following it the app would
    * mistake its own save for an outside edit and question the next one.
    */
+  it("keeps a change made while the file was being written", async () => {
+    const handle = fakeHandle("kirjanpito.zip")
+    stubPickers(null)
+    linkZip(handle)
+    handle.createWritable.mockImplementationOnce(async () => ({
+      write: async (blob: Blob) => {
+        handle.written.push(blob)
+        useBookStore.getState().removeEntry("e1")
+      },
+      close: async () => {
+        handle.lastModified += 1000
+      },
+      abort: async () => {},
+    }))
+
+    await saveBook(ctx, "kirjanpito")
+
+    expect(handle.written).toHaveLength(1)
+    expect(useBookStore.getState().dirty).toBe(true)
+  })
+
+  /* Deleting the last entry has to reach the file as well. */
+  it("saves a book whose last entry was deleted", async () => {
+    const handle = fakeHandle("kirjanpito.zip")
+    stubPickers(null)
+    linkZip(handle)
+    useBookStore.getState().removeEntry("e1")
+
+    await saveBook(ctx, "kirjanpito")
+
+    const zip = await unzipped(handle.written[0])
+    expect(zip?.csvText.trim().split("\r\n")).toHaveLength(1)
+    expect(useBookStore.getState().dirty).toBe(false)
+  })
+
   it("follows the file's timestamp so a second save is not questioned", async () => {
     const handle = fakeHandle("kirjanpito.zip")
     stubPickers(null)
@@ -260,10 +295,12 @@ describe("downloading a copy", () => {
     expect(useBookStore.getState().fileName).toBe("kirjanpito.zip")
   })
 
-  it("writes a bare CSV only when asked to", async () => {
+  /* The receipts and the settings are not in it, so it is not a saved book. */
+  it("leaves the dirty flag alone after a bare CSV", async () => {
     await exportBook(ctx, "kirjanpito", true)
 
-    expect(useBookStore.getState().fileName).toBe("kirjanpito.csv")
+    expect(useBookStore.getState().dirty).toBe(true)
+    expect(useBookStore.getState().fileName).toBeNull()
   })
 
   /*

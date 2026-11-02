@@ -408,10 +408,19 @@ asks anything (below).
   the file's modification time as of the last read or write; if the file's own
   timestamp has moved since, saving asks first (§8.11). Writing moves that
   timestamp, so the baseline follows it or the app would mistake its own save
-  for someone else's edit.
-- **Downloading a copy clears the dirty flag only when no file is linked.**
-  With one, the copy says nothing about that file, and claiming otherwise
-  would let the user close a bookkeeping whose own file is still stale.
+  for someone else's edit. `savedAt` is persisted with the book, so the check
+  also holds after a reload.
+- **Downloading a copy clears the dirty flag only when no file is linked,
+  and never for a bare CSV.** With a linked file, the copy says nothing about
+  that file, and claiming otherwise would let the user close a bookkeeping
+  whose own file is still stale. A bare CSV leaves out the receipts and the
+  settings, and closing would then delete those receipts without a question.
+- **A change made during a write keeps the book dirty.** Packing and writing
+  take time and the UI stays usable, so `markSaved` compares the state the file
+  was built from with the state now. Autosave then runs again.
+- **A book with no entries can be saved.** Deleting the last entry has to reach
+  the file too, so only a book that is empty and clean has nothing to save. Its
+  CSV is the header alone, which opens as an empty bookkeeping.
 - **Leaving a bookkeeping unlinks the file**, in the store *and* in IndexedDB
   (`unlinkFile` in `lib/commands/book-commands.ts`). The stored handle outlives
   a reload, so a new book that skipped this would find the old file waiting and
@@ -694,7 +703,7 @@ Use one shared `AlertDialog`-based `confirm()` helper, with a title, a message, 
 | Navigate away from Settings            | the new-category name is filled    | same as above, with the category message                                  |
 | Browser tab close (`beforeunload`)     | any of the above dirty states      | the browser's native prompt                                               |
 
-**Dirty bookkeeping** means the entries or the book's settings changed since the last read or write of a file. It is set by any add, edit or delete, by a category change, and by the VAT period, a filed mark or the overview layout (§7.6), and cleared by opening a file, by saving to the linked one, and by downloading a copy **only when no file is linked** (§7.5).
+**Dirty bookkeeping** means the entries or the book's settings changed since the last read or write of a file. It is set by any add, edit or delete, by a category change, and by the VAT period, a filed mark or the overview layout (§7.6), and cleared by opening a file, by saving to the linked one, and by downloading a ZIP **only when no file is linked** (§7.5). A book with no entries asks too: deleting the last one still left the file behind.
 
 The wording everywhere is about saving rather than exporting, so one set of strings covers both ways of keeping the work. The row above that highlights this: the close confirmation is the same sentence whether the user saves to their own file or downloads a copy.
 
@@ -1059,7 +1068,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
 
 - localStorage `bookkeeping` — exported as `BOOK_STORAGE_KEY` from
   `stores/book-store.ts`, so nothing hard-codes the string twice:
-  `{ entries, cats, year, dirty, fileName, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, vatPeriod, bookStart, vatFiled, overviewLayout, autosave }`.
+  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, vatPeriod, bookStart, vatFiled, overviewLayout, autosave }`.
   The book's settings are kept twice: here, as the working buffer, and in the
   file's `settings.json` (§7.6), as the record. A reload restores them from
   here; opening a file replaces them from there.
@@ -1095,6 +1104,16 @@ before any file is open, and must not read or write `bookkeeping` to get it.
   `AppShell` restores it by hand once the book has rehydrated, and both ways
   of leaving a bookkeeping delete it.
 - **sessionStorage is not used.**
+- **One tab at a time holds the bookkeeping.** localStorage and IndexedDB are
+  shared between tabs while the store is per tab, so a second tab would
+  overwrite the first one's entries and its receipt sweep would delete the
+  first one's receipts. `AppShell` holds the Web Lock `bookkeeping-app`
+  (`lib/browser/tab-lock.ts`) for as long as it is mounted. A second app tab
+  shows a notice, runs no sweep and no autosave, and takes over by itself when
+  the lock frees, reloading what the first tab stored. The landing page holds
+  no lock, so it stays readable, but it refuses to open or start a bookkeeping
+  while another tab holds one. Where the browser has no Web Locks the guard is
+  simply absent.
 
 `stores/storage.test.ts` covers all of this: the landing-page visit that
 stores nothing, the close that keeps the page sizes, and both migrations.

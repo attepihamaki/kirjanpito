@@ -16,14 +16,17 @@ import { useBookStore } from "@/stores/book-store"
  * bumps `gcTick`. This effect reads the state that is already committed, so
  * saved entries and in-flight drafts are both current. Mount once, in the app
  * shell.
+ *
+ * A sweep deletes every receipt this tab does not know about, so it runs only
+ * in the tab that holds the bookkeeping (§12): `enabled` is that claim.
  */
-export function useReceiptGc() {
+export function useReceiptGc(enabled: boolean) {
   const gcTick = useBookStore((s) => s.gcTick)
   const hydrated = useBookStore((s) => s.hydrated)
   const running = React.useRef(false)
 
   React.useEffect(() => {
-    if (!hydrated || !isReceiptStorageSupported()) return
+    if (!enabled || !hydrated || !isReceiptStorageSupported()) return
 
     // Debounced, so "Tallenna ja uusi" ten times runs one sweep.
     const timer = setTimeout(async () => {
@@ -44,5 +47,5 @@ export function useReceiptGc() {
     }, 250)
 
     return () => clearTimeout(timer)
-  }, [gcTick, hydrated])
+  }, [enabled, gcTick, hydrated])
 }

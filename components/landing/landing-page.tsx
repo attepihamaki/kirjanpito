@@ -302,7 +302,7 @@ function HeroCta({
         <p className="text-sm text-muted-foreground">
           {fileName ?? f.t("file.untitled")},{" "}
           {f.t("ledger.entryCount", { n: entries.length })}
-          {dirty && entries.length ? `. ${f.t("file.dirty")}.` : ""}
+          {dirty ? `. ${f.t("file.dirty")}.` : ""}
         </p>
       ) : (
         <DropTile

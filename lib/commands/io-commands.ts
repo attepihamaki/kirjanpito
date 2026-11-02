@@ -48,7 +48,7 @@ import { SKIP_CODE_KEYS } from "@/lib/i18n/messages"
 import { APP_ROUTES } from "@/lib/site"
 import { confirm } from "@/lib/ui/confirm"
 import type { Ctx } from "@/lib/commands/ctx"
-import { guardDirty } from "@/lib/commands/book-commands"
+import { guardDirty, refuseIfOpenElsewhere } from "@/lib/commands/book-commands"
 import { useBookStore } from "@/stores/book-store"
 import { useLangStore } from "@/stores/lang-store"
 
@@ -121,6 +121,7 @@ export async function openFile(
    * interleave two `replaceBook` calls and leave a mixed bookkeeping.
    */
   if (useBookStore.getState().importing) return
+  if (await refuseIfOpenElsewhere(ctx)) return
   if (!(await guardDirty(ctx, true))) return
 
   const isZip =
@@ -375,6 +376,35 @@ interface BookFile {
   name: string
   blob: Blob
   isZip: boolean
+  /** The state it was built from, to tell whether it is still current. */
+  version: BookVersion
+}
+
+/**
+ * Everything whose change marks the book dirty (§8.11). Store actions replace
+ * these rather than mutate them, so comparing identities is enough.
+ */
+function bookVersion() {
+  const s = useBookStore.getState()
+  return [
+    s.entries,
+    s.cats,
+    s.vatPeriod,
+    s.bookStart,
+    s.vatFiled,
+    s.overviewLayout,
+  ] as const
+}
+
+type BookVersion = ReturnType<typeof bookVersion>
+
+/**
+ * Whether the book has moved on from what was written. Packing and writing
+ * take time and leave the UI usable, so a change made meanwhile is not in the
+ * file and the book has to stay dirty.
+ */
+function changedSince(version: BookVersion): boolean {
+  return bookVersion().some((part, i) => part !== version[i])
 }
 
 /** Everything `settings.json` holds, as the app stands right now (§7.6). */
@@ -398,6 +428,7 @@ async function buildBookFile(
   csvOnly: boolean
 ): Promise<BookFile> {
   const { entries, cats } = useBookStore.getState()
+  const version = bookVersion()
   const name = cleanFileName(baseName) || "kirjanpito"
   const paths = buildReceiptPaths(entries)
   /*
@@ -416,6 +447,7 @@ async function buildBookFile(
       name: `${name}.csv`,
       blob: new Blob([csvText], { type: CSV_MIME }),
       isZip,
+      version,
     }
   }
 
@@ -440,6 +472,7 @@ async function buildBookFile(
     name: `${name}.zip`,
     blob: new Blob([bytes as BlobPart], { type: ZIP_MIME }),
     isZip,
+    version,
   }
 }
 
@@ -450,16 +483,17 @@ function baseOf(fileName: string): string {
 
 /**
  * Download a copy (§7.3). This never touches the linked file, so it clears
- * the dirty flag only when there is no linked file to go stale — otherwise
- * the dot would claim the user's bookkeeping was written when it was not.
+ * the dirty flag only when there is no linked file to go stale, or the dot
+ * would claim the user's bookkeeping was written when it was not. A bare CSV
+ * never clears it: the receipts and the settings are not in that file.
  */
 export async function exportBook(
   ctx: Ctx,
   baseName: string,
   csvOnly: boolean
 ): Promise<void> {
-  const { entries, fileHandle } = useBookStore.getState()
-  if (!entries.length) {
+  const { entries, dirty, fileHandle } = useBookStore.getState()
+  if (!entries.length && !dirty) {
     toast.add({ title: ctx.t("io.nothingToExport") })
     return
   }
@@ -467,7 +501,12 @@ export async function exportBook(
   try {
     const file = await buildBookFile(baseName, csvOnly)
     saveBlob(file.blob, file.name)
-    if (!fileHandle) useBookStore.getState().markSaved({ fileName: file.name })
+    if (!fileHandle && !csvOnly) {
+      useBookStore.getState().markSaved({
+        fileName: file.name,
+        dirty: changedSince(file.version),
+      })
+    }
     toast.add({ title: ctx.t("io.exported", { f: file.name }) })
   } catch (error) {
     console.error(error)
@@ -486,7 +525,8 @@ export async function exportBook(
  */
 export async function saveBook(ctx: Ctx, suggestedBase: string): Promise<void> {
   const state = useBookStore.getState()
-  if (!state.entries.length) {
+  // A dirty book with no entries still differs from its file: the last one was deleted.
+  if (!state.entries.length && !state.dirty) {
     toast.add({ title: ctx.t("io.nothingToExport") })
     return
   }
@@ -506,6 +546,7 @@ export async function saveBook(ctx: Ctx, suggestedBase: string): Promise<void> {
       fileName: handle.name,
       fileHandle: handle,
       savedAt: await lastModified(handle),
+      dirty: changedSince(file.version),
     })
     await rememberHandle(handle)
     // A save that could ask is what autosave was waiting for.
@@ -585,7 +626,7 @@ export async function autosaveBook(ctx: Ctx): Promise<boolean> {
   const state = useBookStore.getState()
   const handle = state.fileHandle
   if (!state.autosave || state.autosavePaused || !state.dirty) return false
-  if (state.saving || state.importing || !state.entries.length) return false
+  if (state.saving || state.importing) return false
 
   const pause = () => {
     useBookStore.getState().setAutosavePaused(true)
@@ -610,6 +651,7 @@ export async function autosaveBook(ctx: Ctx): Promise<boolean> {
       fileName: handle.name,
       fileHandle: handle,
       savedAt: await lastModified(handle),
+      dirty: changedSince(file.version),
     })
     return true
   } catch (error) {

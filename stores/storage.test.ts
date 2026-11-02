@@ -106,6 +106,17 @@ describe("persisted preferences and bookkeeping (§12)", () => {
     expect(byId.get("333")?.vatRate).toBe(24)
   })
 
+  /*
+   * The guard against outside edits compares against it (§7.5), so a reload
+   * must not turn it off.
+   */
+  it("keeps the linked file's timestamp across a reload", () => {
+    useBookStore.getState().newBook(2026)
+    useBookStore.getState().markSaved({ fileName: "k.zip", savedAt: 1234 })
+
+    expect(storedBook()?.state.savedAt).toBe(1234)
+  })
+
   it("keeps the newer key when both hold a language", async () => {
     localStorage.setItem(LANG_STORAGE_KEY, "fi")
     localStorage.setItem(

@@ -2,6 +2,7 @@ import { toast } from "@/components/ui/toast"
 
 import { releaseAllObjectUrls } from "@/lib/browser/object-urls"
 import { rememberHandle } from "@/lib/browser/file-handle"
+import { heldByAnotherTab } from "@/lib/browser/tab-lock"
 import type { Entry } from "@/lib/domain/types"
 import { LANDING, APP_ROUTES } from "@/lib/site"
 import { confirm } from "@/lib/ui/confirm"
@@ -32,8 +33,7 @@ export async function guardDirty(
   ctx: Ctx,
   replacing: boolean
 ): Promise<boolean> {
-  const { dirty, entries } = useBookStore.getState()
-  if (!dirty || entries.length === 0) return true
+  if (!useBookStore.getState().dirty) return true
   return confirm({
     title: replacing
       ? ctx.t("confirm.replaceTitle")
@@ -48,7 +48,18 @@ export async function guardDirty(
   })
 }
 
+/**
+ * Refuse to replace the bookkeeping while another tab has it open (§12): that
+ * tab would overwrite the new book in storage and delete its receipts.
+ */
+export async function refuseIfOpenElsewhere(ctx: Ctx): Promise<boolean> {
+  if (!(await heldByAnotherTab())) return false
+  toast.add({ title: ctx.t("file.openElsewhere") })
+  return true
+}
+
 export async function startNewBook(ctx: Ctx): Promise<void> {
+  if (await refuseIfOpenElsewhere(ctx)) return
   if (!(await guardDirty(ctx, false))) return
   releaseAllObjectUrls()
   await unlinkFile()

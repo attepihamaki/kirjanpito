@@ -14,10 +14,9 @@ import { useBookStore } from "@/stores/book-store"
  */
 export function useBeforeUnload() {
   const dirty = useBookStore((s) => s.dirty)
-  const entries = useBookStore((s) => s.entries.length)
   const catFormName = useBookStore((s) => s.catFormName)
 
-  const shouldWarn = (dirty && entries > 0) || catFormName.trim() !== ""
+  const shouldWarn = dirty || catFormName.trim() !== ""
 
   React.useEffect(() => {
     if (!shouldWarn) return

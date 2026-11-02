@@ -344,7 +344,13 @@ export function parseCsv(
     if (latestYear == null || y > latestYear) latestYear = y
   }
 
-  if (!entries.length) return { ok: false, code: "no-rows-read", skipped }
+  /*
+   * Rows that were all bad are a failure. No rows at all is a bookkeeping with
+   * no entries, which saving one writes.
+   */
+  if (!entries.length && skipped.length) {
+    return { ok: false, code: "no-rows-read", skipped }
+  }
 
   return {
     ok: true,
