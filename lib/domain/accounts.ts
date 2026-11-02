@@ -26,6 +26,12 @@ export interface AccountLine {
   /** Line 341: only half is deducted, as Form 5's field 342 (§6.3). */
   halfDeductible: boolean
   /**
+   * Lines whose VAT the buyer cannot deduct: entertainment (AVL 114 § 1 mom.
+   * 3 kohta) and the non-deductible expenses 365–367. Such a cost is booked
+   * at its gross amount with 0 % VAT, so the tax stays part of the cost.
+   */
+  noVatDeduction: boolean
+  /**
    * Dividends: the percentage that is taxable business income, which Form 5
    * asks for as 320 (of 319) and 322 (of 321). Null on every other line (§6.3).
    */
@@ -376,6 +382,7 @@ function l(
     nondeductible,
     taxExempt: key === "317",
     halfDeductible: key === "341",
+    noVatDeduction: key === "341" || nondeductible,
     taxableShare: TAXABLE_SHARE[key] ?? null,
   }
 }

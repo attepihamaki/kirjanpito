@@ -182,6 +182,10 @@ const CHECK_TEXT = {
     title: "overview.duplicate",
     sub: "overview.duplicateSub",
   },
+  vatNotDeductible: {
+    title: "overview.vatNotDeductible",
+    sub: "overview.vatNotDeductibleSub",
+  },
 } as const satisfies Record<EntryCheck, { title: string; sub: string }>
 
 interface CheckItem {

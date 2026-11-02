@@ -1,3 +1,4 @@
+import { LINE_BY_KEY } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
 import type { Attachment, CategoryMap, Entry } from "@/lib/domain/types"
 import { rateMismatch } from "@/lib/domain/vat-rates"
@@ -14,6 +15,7 @@ export type EntryCheck =
   | "zeroVatSale"
   | "largeAmount"
   | "duplicate"
+  | "vatNotDeductible"
 
 export const ENTRY_CHECKS: readonly EntryCheck[] = [
   "noReceipt",
@@ -22,6 +24,7 @@ export const ENTRY_CHECKS: readonly EntryCheck[] = [
   "zeroVatSale",
   "largeAmount",
   "duplicate",
+  "vatNotDeductible",
 ]
 
 /**
@@ -72,6 +75,19 @@ export function entryWithReceipt(
   return entries.find(
     (e) => e.id !== exceptId && e.atts?.some((a) => fileKey(a) === key)
   )
+}
+
+/**
+ * Whether an expense carries VAT on a line whose VAT cannot be deducted
+ * (`AccountLine.noVatDeduction`). Its VAT would count as purchase VAT.
+ */
+export function vatNotDeductible(
+  entry: Pick<Entry, "type" | "catId" | "vatRate">,
+  cats: CategoryMap
+): boolean {
+  const cat = cats.get(entry.catId)
+  const line = cat && LINE_BY_KEY.get(cat.line)
+  return entry.type === "expense" && entry.vatRate > 0 && !!line?.noVatDeduction
 }
 
 /** How many times the type's median an amount has to be to stand out. */
@@ -142,6 +158,8 @@ export function flaggedEntryIds(
       }
       return out
     }
+    case "vatNotDeductible":
+      return ids((e) => vatNotDeductible(e, cats))
     case "duplicate": {
       /*
        * Entries that share their figures, or a receipt file, with another

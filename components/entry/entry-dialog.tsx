@@ -43,7 +43,11 @@ import {
   previousEntryFrom,
   suggestCategory,
 } from "@/lib/domain/invoice-text"
-import { duplicateOf, entryWithReceipt } from "@/lib/domain/entry-checks"
+import {
+  duplicateOf,
+  entryWithReceipt,
+  vatNotDeductible,
+} from "@/lib/domain/entry-checks"
 import { isPdf } from "@/lib/domain/receipt-path"
 import { isoDate, monthOf, todayIso, yearOf } from "@/lib/domain/dates"
 import { rateMismatch, rateOnDate } from "@/lib/domain/vat-rates"
@@ -58,6 +62,7 @@ import type {
   Entry,
   EntryType,
 } from "@/lib/domain/types"
+import { indexCategories } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
 
 interface FormState {
@@ -372,6 +377,7 @@ function EntryDialogForm({
     return () => registerDropTarget(null)
   }, [addFiles, registerDropTarget])
 
+  const catMap = React.useMemo(() => indexCategories(cats), [cats])
   const typeCats = React.useMemo(() => {
     return (
       cats
@@ -402,6 +408,7 @@ function EntryDialogForm({
   const dirty = snapshot(form) !== baseline
   // A hint, never a block: corrections can carry an older rate (§5).
   const mismatch = rateMismatch(form.vatRate, form.date)
+  const noDeduction = vatNotDeductible(form, catMap)
   const formAmount = parseAmount(form.amount)
   const duplicate =
     formAmount && form.date
@@ -686,6 +693,13 @@ function EntryDialogForm({
                           d: f.date(mismatch.until),
                           s: f.rate(mismatch.suggested),
                         })}
+                  </FieldDescription>
+                ) : null}
+                {noDeduction ? (
+                  <FieldDescription className="text-warning">
+                    {selectedCat?.line === "341"
+                      ? f.t("entry.vatNotDeductible341")
+                      : f.t("entry.vatNotDeductible")}
                   </FieldDescription>
                 ) : null}
               </Field>

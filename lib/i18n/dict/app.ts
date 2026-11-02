@@ -395,6 +395,20 @@ export const APP_DICT = {
     "Sama päivä ja summa tai sama tositetiedosto kuin toisella kirjauksella.",
     "Same date and amount, or the same receipt file, as another entry.",
   ],
+  "overview.vatNotDeductible": [
+    pl(
+      "1 kulu, jonka arvonlisävero ei ole vähennettävää",
+      "{n} kulua, joiden arvonlisävero ei ole vähennettävää"
+    ),
+    pl(
+      "1 expense whose VAT can’t be deducted",
+      "{n} expenses whose VAT can’t be deducted"
+    ),
+  ],
+  "overview.vatNotDeductibleSub": [
+    "Edustuskulujen ja vähennyskelvottomien kulujen vero lasketaan nyt ostojen veroksi. Kirjaa ne 0 %:lla.",
+    "VAT on entertainment and non-deductible expenses is now counted as purchase VAT. Book them at 0 %.",
+  ],
   "overview.missingFiles": [
     pl("1 tosite puuttuu tiedostosta", "{n} tositetta puuttuu tiedostosta"),
     pl(
@@ -526,6 +540,10 @@ export const APP_DICT = {
     "Unusually large amount",
   ],
   "ledger.duplicate": ["Mahdollinen kaksoiskirjaus", "Possible duplicate"],
+  "ledger.vatNotDeductible": [
+    "ALV ei vähennettävää",
+    "VAT not deductible",
+  ],
   "ledger.copyAsNew": ["Kopioi", "Copy"],
   "ledger.deleteEntry": ["Poista kirjaus", "Delete entry"],
 
@@ -553,6 +571,14 @@ export const APP_DICT = {
   "entry.duplicateOf": [
     "Samana päivänä on jo kirjaus samalla summalla: nro {n}, {d}.",
     "There is already an entry with this date and amount: no. {n}, {d}.",
+  ],
+  "entry.vatNotDeductible341": [
+    "Edustuskulujen arvonlisäveroa ei saa vähentää (AVL 114 §). Kirjaa verollinen summa 0 %:n verokannalla, niin vero jää osaksi kulua.",
+    "VAT on entertainment can’t be deducted (VAT Act 114 §). Book the amount including VAT at 0 %, so the tax stays part of the cost.",
+  ],
+  "entry.vatNotDeductible": [
+    "Vähennyskelvottoman kulun arvonlisäveroa ei voi vähentää. Kirjaa verollinen summa 0 %:n verokannalla, niin vero jää osaksi kulua.",
+    "VAT on a non-deductible expense can’t be deducted. Book the amount including VAT at 0 %, so the tax stays part of the cost.",
   ],
   "entry.amountMode": ["Summa on", "Amount is"],
   "entry.saveAndNew": ["Tallenna ja uusi", "Save and add another"],

@@ -163,3 +163,25 @@ describe("duplicate", () => {
     expect(entryWithReceipt({ ...receipt, id: "a9" }, [x])).toBe(x)
   })
 })
+
+describe("vatNotDeductible", () => {
+  it("flags entertainment and non-deductible expenses that carry VAT", () => {
+    const rows = ["341", "365", "366", "367"].map((catId) =>
+      entry({ id: catId, catId, vatRate: 25.5 })
+    )
+    expect(flagged("vatNotDeductible", [...sample, ...rows])).toEqual([
+      "341",
+      "365",
+      "366",
+      "367",
+    ])
+  })
+
+  it("leaves them alone at 0 %, and other lines with VAT", () => {
+    const rows = [
+      entry({ id: "a", catId: "341", vatRate: 0 }),
+      entry({ id: "b", catId: "344-meeting", vatRate: 13.5 }),
+    ]
+    expect(flagged("vatNotDeductible", rows)).toEqual([])
+  })
+})
