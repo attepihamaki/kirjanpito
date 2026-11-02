@@ -12,6 +12,7 @@ import {
 import {
   AutosaveNote,
   FileStatus,
+  StorageNote,
   StatusDot,
   useFileStatusText,
 } from "@/components/app/file-status"
@@ -118,6 +119,7 @@ export function FileMenu({
           </span>
           <FileStatus />
           <AutosaveNote />
+          <StorageNote />
         </div>
 
         <Separator />

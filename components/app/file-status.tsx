@@ -2,6 +2,7 @@
 
 import { useT } from "@/components/lang-provider"
 import { useCanSaveToFile } from "@/hooks/use-save-book"
+import { useStorageBehind } from "@/hooks/use-storage-warning"
 import { cn } from "@/lib/utils"
 import { useBookStore } from "@/stores/book-store"
 
@@ -60,6 +61,16 @@ export function AutosaveNote() {
     <p className="text-xs text-muted-foreground">
       {state === "on" ? t("file.autosaveOn") : t("file.autosavePaused")}
     </p>
+  )
+}
+
+/** One line under the save status when the browser could not store the work. */
+export function StorageNote() {
+  const t = useT()
+  const behind = useStorageBehind()
+  if (!behind) return null
+  return (
+    <p className="text-xs text-muted-foreground">{t("file.storageNote")}</p>
   )
 }
 

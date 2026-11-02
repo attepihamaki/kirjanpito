@@ -28,6 +28,7 @@ import { useFileDrop, isBookFile, isMediaFile } from "@/hooks/use-file-drop"
 import { useReceiptGc } from "@/hooks/use-receipt-gc"
 import { useAppShortcuts } from "@/hooks/use-app-shortcuts"
 import { useAutosave } from "@/hooks/use-autosave"
+import { useStorageWarning } from "@/hooks/use-storage-warning"
 import {
   openFile,
   pickAndOpenFile,
@@ -141,6 +142,7 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
   // Stable callbacks: the shortcut listener is rebound whenever they change.
   useAppShortcuts({ onOpenFile: pickFile, onExport: openExportDialog })
   useAutosave()
+  useStorageWarning()
 
   const handleDrop = React.useCallback(
     (

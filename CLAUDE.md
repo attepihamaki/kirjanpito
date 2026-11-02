@@ -1126,7 +1126,7 @@ data is orphaned; the user re-opens their exported CSV or ZIP. This was a
 deliberate choice over writing a one-shot copy step — the exported file is the
 real copy of the bookkeeping, and the browser is only a working buffer (§1).
 
-Wrap all storage access in try/catch, and render correctly when storage is empty or unavailable.
+Wrap all storage access in try/catch, and render correctly when storage is empty or unavailable. **A failed write is shown, not swallowed.** Private browsing, blocked site data or a full quota leave the book in memory only, so `useStorageWarning` raises a toast that stays until a write succeeds again, the file menu adds a line under the save status (`StorageNote`), and closing the tab asks even when the book is saved to its file, because a reload would bring back the older book that storage still holds. `test/storage-warning.test.tsx` covers it.
 
 ---
 

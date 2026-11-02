@@ -57,6 +57,22 @@ export const APP_DICT = {
     "Automaattinen tallennus odottaa. Tallenna kerran itse.",
     "Autosave is waiting. Save once yourself.",
   ],
+  /*
+   * Shown when a write to localStorage fails (§12): private browsing,
+   * blocked site data or a full quota. Only the file keeps the work then.
+   */
+  "file.storageTitle": [
+    "Selain ei pysty säilyttämään työtä",
+    "The browser can’t keep your work",
+  ],
+  "file.storageMessage": [
+    "Muutokset ovat vain tällä sivulla. Tallenna tai lataa kirjanpito tiedostoksi, ennen kuin suljet sivun.",
+    "Your changes exist only on this page. Save or download the bookkeeping before you close it.",
+  ],
+  "file.storageNote": [
+    "Selain ei säilytä muutoksia. Vain tiedosto pitää ne tallessa.",
+    "The browser isn’t keeping your changes. Only the file does.",
+  ],
   "file.openShort": ["Avaa", "Open"],
   "file.close": ["Sulje tiedosto", "Close file"],
   "file.closed": ["Tiedosto suljettu.", "File closed."],

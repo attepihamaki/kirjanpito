@@ -372,6 +372,26 @@ type PersistedBook = Pick<
 
 /** Set when a write fails: from then on memory is newer than storage. */
 let storageBehind = false
+const storageBehindListeners = new Set<() => void>()
+
+function setStorageBehind(next: boolean): void {
+  if (next === storageBehind) return
+  storageBehind = next
+  for (const listener of storageBehindListeners) listener()
+}
+
+/**
+ * Whether the last write to localStorage failed, so a reload would bring
+ * back an older book than the one on screen. For `useSyncExternalStore`.
+ */
+export function isStorageBehind(): boolean {
+  return storageBehind
+}
+
+export function subscribeStorageBehind(listener: () => void): () => void {
+  storageBehindListeners.add(listener)
+  return () => storageBehindListeners.delete(listener)
+}
 
 /**
  * localStorage, with one rule: **only a bookkeeping creates the key.**
@@ -399,10 +419,13 @@ const bookStorage: PersistStorage<PersistedBook> = {
       const hasBook = value.state.open || value.state.entries.length > 0
       if (!hasBook && localStorage.getItem(name) === null) return
       localStorage.setItem(name, JSON.stringify(value))
-      storageBehind = false
+      setStorageBehind(false)
     } catch {
-      // Storage unavailable or full; the session keeps working in memory.
-      storageBehind = true
+      /*
+       * Storage unavailable or full. The session keeps working in memory,
+       * and useStorageWarning tells the user that only a file keeps it.
+       */
+      setStorageBehind(true)
     }
   },
   removeItem: (name) => {
