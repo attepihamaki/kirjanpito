@@ -272,7 +272,7 @@ The table order is also the display order of the income statement. **It is not q
 The period is a month, a quarter or the whole year, within the selected financial year.
 
 - **Sales VAT** (income entries):
-  - Entries whose category kind is `eu`, `muutmaat` or `kaanteinen` are **not** part of sales VAT. Their net amounts are reported separately under "Muut ilmoitettavat myynnit": sales to other EU countries, sales outside the EU, and reverse-charge sales (construction services and scrap metal).
+  - Entries whose category kind is `euGoods`, `euServices`, `eu`, `nonEu` or `reverse` are **not** part of sales VAT. Their net amounts are reported separately under "Muut ilmoitettavat myynnit": sales to other EU countries, sales outside the EU, and reverse-charge sales (construction services and scrap metal).
   - Other income entries with rate > 0 are grouped by rate (25.5, 24, 14, 13.5, 10). Rates not in the list go to "Muut verokannat".
   - Income entries at 0 % are included (in the 0 % row) **only if their category is on line 300**. 0 % income on lines 301–324 (grants, dividends, interest and so on) isn't VAT-relevant and is left out.
 - **Purchase VAT** (expense entries): entries with rate > 0, grouped by rate. 0 % expenses (wages, YEL, bank fees) are not shown, and the 0 % row is hidden in the purchases table.
@@ -299,7 +299,7 @@ For the selected month (or the whole year): income net total, expense net total,
 
 For the selected year, by month (net amounts):
 
-- A bar chart of income versus expenses per month, with year totals in the legend.
+- A mirrored chart of income and expenses per month, with the year totals in the panel heading (§8.9).
 - A sales table: total sales (line 300 only), then columns Finland 25.5 / 24 / 14 / 13.5 / 10 / 0 %, EU, other countries, reverse charge, and "Muut tulot" (income on lines 301–324). Totals row.
 - An expenses table: total, then one column per bucket. Totals row.
 
@@ -517,7 +517,7 @@ row of nav tabs — is gone.
   - Brand: a "K" mark, "Kirjanpito", and the subtitle "Yhdenkertainen kirjanpito" — shortened from the prototype's "Toiminimen yhdenkertainen kirjanpito", which could not fit the button without truncating. The two lines need `leading-tight`: at the default leading they are 36 px and the `size="lg"` button's content box is 32. Links to the landing page.
   - Navigation with icons: Yleiskatsaus, Kirjanpito, ALV-laskelma, Tuloslaskelma, Yhteenveto, Asetukset.
   - **Nothing below the navigation.** The sidebar is the brand and the six views; the §1 disclaimer lives on the landing page and in the report notes, and the brand row is the route back to the landing page and its FAQ.
-  - **15 rem wide**, one step under shadcn's 16 rem, which the five short labels do not need. `app-skeleton.tsx` draws the same width, so nothing shifts on rehydrate. The mobile sheet keeps its own 18 rem: it is an overlay on a phone, not a column beside the content.
+  - **15 rem wide**, one step under shadcn's 16 rem, which the six short labels do not need. `app-skeleton.tsx` draws the same width, so nothing shifts on rehydrate. The mobile sheet keeps its own 18 rem: it is an overlay on a phone, not a column beside the content.
   - ≥ 900 px it collapses to a 3 rem icon rail; below 900 px it is a sheet, and tapping a link closes it. **Everything in it is a menu row**, so collapsing loses only the words — there is nothing here that needs a second rendering to survive the rail.
   - The expanded / collapsed state is `sidebarOpen` in the store (§12), **not** shadcn's `sidebar_state` cookie: nothing is server-rendered, so a cookie could never be read back.
 - **Top bar** (`components/app/app-topbar.tsx`), laid out like FormBox's `AppHeader`: `h-14`, `gap-2`, `px-4 lg:px-6`, sticky, and **no rule below it** — the sidebar's border already separates the chrome from the page, and a second line only boxed the content in. It holds only what is the same on every view: a panel icon on the left that collapses the sidebar (≥ 900 px) or opens it as a sheet (< 900 px), and, pushed right, the theme toggle, the language picker and the file menu. The panel icon is hand-rolled rather than shadcn's `SidebarTrigger`, which hard-codes an English screen-reader label.
@@ -551,7 +551,7 @@ row of nav tabs — is gone.
   - Dropping a CSV or ZIP opens it. A full-screen overlay says "Pudota CSV- tai ZIP-tiedosto avataksesi sen".
   - While the entry dialog is open, dropped images and PDFs are attached to it instead, and the dialog gets a dashed outline.
   - Dropping media while no dialog is open starts a new entry with the files attached. A PDF among them pre-fills the form (§8.5).
-- **Reading a file shows progress, but only once it is slow** (§7.2). `importing` in the store is raised for the whole of `openFile`, and `hooks/use-delayed-flag.ts` turns it into a visible state **after `BUSY_DELAY_MS` (400 ms)**: the file menu's trigger icon and its "Avaa tiedosto" row become spinners, "Vie tiedosto" is disabled, and `components/app/import-overlay.tsx` covers the page with "Avataan tiedostoa…". A plain CSV opens in a few milliseconds and never reaches the delay, so nothing flickers; a ZIP of receipts does, and used to leave the UI silent for seconds. The overlay is **blocking**, unlike the drop overlay — the import is about to replace the whole bookkeeping. Both the app and the landing page render it, because a file can be picked from either and the drop overlay vanishes the instant the file lands. `importing` also guards re-entry: a second file dropped mid-import is ignored rather than interleaving two `replaceBook` calls.
+- **Reading a file shows progress, but only once it is slow** (§7.2). `importing` in the store is raised for the whole of `openFile`, and `hooks/use-delayed-flag.ts` turns it into a visible state **after `BUSY_DELAY_MS` (400 ms)**: the file menu's trigger icon and its "Avaa tiedosto" row become spinners, "Lataa tiedosto" is disabled, and `components/app/import-overlay.tsx` covers the page with "Avataan tiedostoa…". A plain CSV opens in a few milliseconds and never reaches the delay, so nothing flickers; a ZIP of receipts does, and used to leave the UI silent for seconds. The overlay is **blocking**, unlike the drop overlay — the import is about to replace the whole bookkeeping. Both the app and the landing page render it, because a file can be picked from either and the drop overlay vanishes the instant the file lands. `importing` also guards re-entry: a second file dropped mid-import is ignored rather than interleaving two `replaceBook` calls.
 
 ### 8.3 Landing page
 
@@ -576,7 +576,7 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
 - Header: "Kirjanpito", the period ("Koko vuosi 2026" or "Lokakuu 2026"), and a primary "Uusi kirjaus" button.
 - **Month chips:** Kaikki plus Tammi…Joulu, with entry counts. Empty months are greyed. The selected chip is filled in the primary colour. Each chip is shaped exactly like a default `Button` — **36 px tall** and the button radius (§11) — so the chip row and the toolbar below it read as one scale and one shape.
 - **Totals cards** (§6.2): three cards side by side, each a bare `Panel`, stacking to one column under 640 px. One bar with dividers made the three figures read as a single row of a table; they are three separate answers.
-- **Toolbar:** three controls of the same shape, left to right, and nothing pushed to the right-hand end. It is **hidden, together with the table, on a period that holds no entries at all** — the page then shows "Ei kirjauksia: Lokakuu 2026." A row of controls that cannot change the result reads as if the filters were what emptied the page. The filters keep their values while hidden and come back with the next period that has rows.
+- **Toolbar:** four controls of the same shape, left to right, and nothing pushed to the right-hand end. It is **hidden, together with the table, on a period that holds no entries at all** — the page then shows "Ei kirjauksia: Lokakuu 2026." A row of controls that cannot change the result reads as if the filters were what emptied the page. The filters keep their values while hidden and come back with the next period that has rows.
   - Search over description and category, or an exact voucher number. It is a **fixed 20 rem box**, not one that grows into the row: the queries are a word or two, and a field stretched across the toolbar reads as the page's main control.
   - **A search also reports where else it matches.** Under the toolbar, "Osumia myös muualla:" lists the other years with a match as buttons, "2025 (2)", newest first (`searchHitsElsewhere` in `stores/selectors.ts`). With one month on screen the selected year is listed too, for its other months. A button opens that whole year, keeps the search and clears the other filters, so the count is what the user then sees. The list stays out of the way until there is a search, and the table and totals remain one year's, since voucher numbers and totals only mean something within a year.
   - A type filter (Kaikki tyypit / Tulot / Kulut) as a **select**, like the category filter beside it. A segmented control would be the one control here shaped unlike the others, and it grows with the language. `EntryTypeToggle` (§8.5, §8.10) stays segmented because it is a form field, not a filter.
@@ -862,7 +862,7 @@ The aim is a calm, Nordic, functional tool. The one bold element is the **paper 
 > `bg-primary/10` instead, which gives both themes what the prototype spells
 > out as two hex values.
 >
-> **Nine variables were added** on `:root` and `.dark`, because the theme has no
+> **Ten variables were added** on `:root` and `.dark`, because the theme has no
 > equivalent and its nearest colours already mean something else — `--primary` is
 > the call-to-action fill and `--destructive` means "error", not "expense":
 >
@@ -872,7 +872,7 @@ The aim is a calm, Nordic, functional tool. The one bold element is the **paper 
 > | `--expense` / `--expense-subtle`                  | expense amounts, the Kulu segment, row edge, expense bars        |
 > | `--paper` / `--paper-foreground` / `--paper-edge` | the receipt motif: the entry dialog preview and the landing hero |
 > | `--sheet` / `--sheet-edge`                        | the income statement and the landing's CSV sample                |
-> | `--warning`                                       | the amber "Muutoksia, joita ei ole viety" status dot             |
+> | `--warning`                                       | the amber "Tallentamattomia muutoksia" status dot             |
 >
 > They are exposed through `@theme inline` as `--color-income`, `--color-expense`
 > and so on, so they work as `bg-income`, `text-expense`, `bg-paper`.
@@ -904,7 +904,7 @@ The prototype split them, and the app follows:
 
 ### Suggested shadcn/ui mapping
 
-Sidebar → shadcn's `Sidebar` (with `Sheet`, `Tooltip` and `hooks/use-mobile.ts`), in `components/app/app-sidebar.tsx`. It was hand-written and the shadcn one deleted while the sidebar was a static panel; §8.2's collapse-to-icons and mobile sheet are exactly the machinery it provides, so it came back — the local edits are the 900 px breakpoint, the `md` row size and the 15 rem width. Language picker → `DropdownMenu`. File menu → `Popover`, not `DropdownMenu`: it holds a year `Select`, and a select inside a menu fights the menu's own keyboard handling. Buttons → `Button` (variants default, outline, ghost, destructive). Segmented controls → `ToggleGroup`. Selects → `Select`. Entry, export and viewer dialogs → `Dialog`. Confirmations → `AlertDialog`. Tables → `Table`, hand-composed (see §2). Pagination → `components/common/table-pagination.tsx` ("Rows per page", "Page 1 of 2", «‹›»). Field errors → `FieldError` from `components/ui/field.tsx` — never a hand-rolled `<p className="text-sm text-destructive">`, and never without `aria-invalid` on the field the message is about. Toasts → `components/ui/toast.tsx` (see §2). FAQ → `Accordion`. Checkboxes → `Checkbox`. Inputs → `Input`. Chart → Recharts, used directly in `summary-view.tsx`; shadcn's `Chart` wrapper was removed. Use the shadcn/ui skill for component usage.
+Sidebar → shadcn's `Sidebar` (with `Sheet`, `Tooltip` and `hooks/use-mobile.ts`), in `components/app/app-sidebar.tsx`. It was hand-written and the shadcn one deleted while the sidebar was a static panel; §8.2's collapse-to-icons and mobile sheet are exactly the machinery it provides, so it came back — the local edits are the 900 px breakpoint, the `md` row size and the 15 rem width. Language picker → `DropdownMenu`. File menu → `Popover`, not `DropdownMenu`: it holds a year `Select`, and a select inside a menu fights the menu's own keyboard handling. Buttons → `Button` (variants default, outline, ghost, destructive). Segmented controls → `ToggleGroup`. Selects → `Select`. Entry, export and viewer dialogs → `Dialog`. Confirmations → `AlertDialog`. Tables → `Table`, hand-composed (see §2). Pagination → `components/common/table-pagination.tsx` ("Rows per page", "Page 1 of 2", «‹›»). Field errors → `FieldError` from `components/ui/field.tsx` — never a hand-rolled `<p className="text-sm text-destructive">`, and never without `aria-invalid` on the field the message is about. Toasts → `components/ui/toast.tsx` (see §2). FAQ → `Accordion`. Checkboxes → `Checkbox`. Inputs → `Input`. Chart → Recharts, used directly in `income-expense-chart.tsx` and `result-widget.tsx`; shadcn's `Chart` wrapper was removed. Use the shadcn/ui skill for component usage.
 
 ### One source of truth per element
 
@@ -927,9 +927,11 @@ Anything that appears in two views is a component in `components/common/`, takin
 | the root of a document       | `LangRoot` in `lang-provider.tsx` — the app shell, the landing page and the 404 all start with it |
 | a form for copying into OmaVero | `tax-form.tsx`: `TaxForm` and `TaxFormStep`, for Form 5 (§8.8) and the VAT return (§8.7) |
 | sortable column headers      | `sortable-header.tsx` |
-| tabs between sub-pages       | `sub-page-tabs.tsx`, used by Asetukset, Tuloslaskelma and ALV-laskelma |
+| tabs between sub-pages       | `sub-page-tabs.tsx`, used by Kirjanpito, Asetukset, Tuloslaskelma and ALV-laskelma |
 | the income and expense chart | `income-expense-chart.tsx`: `IncomeExpenseChart` and `IncomeExpenseLegend`, on the overview and Yhteenveto |
 | single-choice selects        | `option-select.tsx` |
+| a key cap on a button or row | `keys.tsx` |
+| the "Uusi kirjaus" button    | `new-entry-button.tsx` |
 | page titles inside the app   | `page-header.tsx` |
 | the header and footer outside the app shell | `site-chrome.tsx` |
 
@@ -1135,7 +1137,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
   Its pre-paint inline script reads that key before any of our JS runs, so a
   second source of truth would drift.
 - Both preferences used to live in the `bookkeeping` blob. `persist.migrate`
-  (now at `version: 3`) moves each into its own key and drops the field,
+  (`version: 3`; the store is now at 4, §4) moves each into its own key and drops the field,
   seeding only a key that is still empty — the separate key is the newer truth.
 - IndexedDB `bookkeeping-receipts`, store `files`: receipt Blobs keyed by
   attachment id.
@@ -1174,7 +1176,7 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 
 1. Domain modules with no React: types, the chart of accounts and default categories, money and format helpers, `calc`, VAT report, income statement, summary, CSV parse and serialize, path and slug building, and ZIP pack and unpack. **Unit-test these first** (Vitest), including the reference figures in §10 and comparisons with the Excel's monthly sheets.
 2. A store with persistence (localStorage and IndexedDB), the open/dirty/year/language/theme state, and the i18n dictionary.
-3. The shell (sidebar, mobile top bar), routing, and the theme and language switches.
+3. The shell (sidebar, top bar), routing, and the theme and language switches.
 4. The ledger with the data table (sort, filter, paginate), the entry dialog, and the confirmation helper.
 5. Import and export (CSV and ZIP), the export dialog, and drag and drop.
 6. Receipts: attach, IndexedDB storage, thumbnails, the viewer with PDF.js, and garbage collection.
@@ -1198,6 +1200,6 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 
 - Undo for edits. Deleting can be undone (§8.11); changing an entry cannot. Autosave (§7.5) makes a mistake reach the file within seconds, which is why it is opt-in.
 - Filing through Ilmoitin.fi, at least for the VAT return. Not before the user asks for it (§8.8).
-- Form 5 fields the app leaves out: 338 and 347, the deductible parts of depreciation (337) and interest (346), which the app takes to be the full amounts; co-operative surplus (325–328); and the additional deductions of 364, which come from fields 388 and 392 elsewhere on the return.
+- Form 5 fields the app does not work out: 338 and 347, the deductible parts of depreciation (337) and interest (346), which it fills with the full amounts (§8.8); co-operative surplus (325–328); and the additional deductions of 364, which come from fields 388 and 392 elsewhere on the return.
 - The VAT return of a business that stops trading (§6.5).
 - VAT return fields the book cannot fill (§8.7): EU purchases, imports and reverse-charge purchases.

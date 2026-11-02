@@ -21,42 +21,57 @@ into a Finnish form.
 ## The file is the database
 
 There is **no backend, no account and no database**. You open your bookkeeping
-from a file, work on it, and export it back to a file.
+from a file, work on it, and write it back to a file.
 
-- Without receipts, that file is a **CSV** — semicolon-separated, UTF-8 with a
-  BOM, so it opens directly in a Finnish Excel.
-- With receipts attached, it is a **ZIP**: the same CSV plus the receipt files,
-  in folders by year and month.
+- The file is a **ZIP**: the entries as a CSV, a `settings.json` with everything
+  else that belongs to the bookkeeping, and the receipt files in folders by year
+  and month. The CSV is semicolon-separated, UTF-8 with a BOM, so it opens
+  directly in a Finnish Excel.
+- A bare **CSV** can still be opened, and downloaded on request, but it holds the
+  entries only.
+- On Chromium browsers the app saves straight back to the file you opened, by
+  hand or with opt-in autosave. Elsewhere you download a copy.
 
-Between exports the work is kept in the browser — entries and settings in
-`localStorage`, receipt files in IndexedDB — so reloading the page loses
-nothing. The exported file is your real copy; the browser is a working buffer.
+Between saves the work is kept in the browser, with entries and settings in
+`localStorage` and receipt files in IndexedDB, so reloading the page loses
+nothing. The file on disk is your real copy; the browser is a working buffer.
 
 Nothing is ever uploaded. The site is static files, and there is no server to
 send anything to.
 
 ## What it does
 
-- **Ledger** — entries by month, searchable and filterable, sortable on every
-  column, with the net / VAT / gross split calculated per entry.
+- **Overview** — the year's result, the next VAT return and its due date, a
+  monthly chart, and a checklist of what to look at: possible duplicates, entries
+  without a receipt, VAT that cannot be deducted, the VAT registration limit and
+  closed years to store away.
+- **Ledger** — entries by month with voucher numbers, searchable across years and
+  filterable, sortable on every column, with the net / VAT / gross split
+  calculated per entry. Rows can be recategorised or deleted in bulk, and a delete
+  can be undone. `N` starts an entry and `Ctrl`/`⌘`+`Enter` saves it.
+- **Journal and general ledger** — the entries by date and by account, as
+  printable sheets.
 - **Receipts** — several images or PDFs per entry, stored in IndexedDB, with a
   viewer that does zoom, rotate, multi-page PDFs and save-the-original. Large
   images are downscaled to 2000 px on the long edge before storage.
-- **VAT return** — sales and purchase VAT by rate for a month, quarter or year,
-  ending in the amount payable or refundable. EU, non-EU and reverse-charge
-  sales are reported separately rather than counted as VAT-bearing.
+- **VAT return** — sales and purchase VAT by rate for your filing period, ending
+  in the amount payable or refundable, and the same figures as the return's fields
+  to copy into OmaVero. EU, non-EU and reverse-charge sales are reported separately
+  rather than counted as VAT-bearing. A change to a period marked as filed says how
+  to correct the return.
 - **Income statement** — the full chart of accounts for form 5, laid out as a
-  printable sheet.
+  printable sheet, and the figures in the form's own order to copy into OmaVero.
 - **Summary** — income against expenses per month, with sales by type and
   expenses by group.
-- **Settings** — the category list, each with a default VAT rate, plus your own
-  custom categories.
+- **Settings** — the VAT filing period, the month the book began, autosave, and the
+  category list, each with a default VAT rate, plus your own custom categories.
 
 Money is stored as integer cents throughout, never as floats.
 
 ## Running it
 
-Node 24, which is what CI builds with.
+Node 24, which is what CI builds with and what `.nvmrc` pins. `next dev` fails on
+a Node 27 pre-release with `rawHeaders.hasOwnProperty is not a function`.
 
 ```bash
 npm install
@@ -84,15 +99,17 @@ components/
   ui/                shadcn/ui primitives. Only the ones actually imported.
   common/            Shared pieces: Panel, Money, OptionSelect, the receipt
                      paper motif, pagination, table headers.
-  app/               The shell — sidebar, top bar, file box, year select.
-  landing/ ledger/ entry/ receipt/ vat/ statement/ summary/ settings/ export/
+  app/               The shell: sidebar, top bar and the file menu, which holds
+                     the year select.
+  landing/ overview/ ledger/ entry/ receipt/ vat/ statement/ summary/ settings/
+  export/
                      One directory per view.
 lib/
   domain/            Pure TypeScript, no React: the chart of accounts, money,
                      dates, per-entry calculation, the VAT report, the income
                      statement, the summary, CSV, ZIP, receipt paths.
   i18n/              The message dictionary and the formatters.
-  commands/          User intents (open, export, save entry, clear…).
+  commands/          User intents (open, save, download, delete, clear…).
   browser/           Everything that touches a browser API: IndexedDB, pdf.js,
                      image downscaling, object URLs, downloads.
   site.ts            Base path, canonical URL, the indexing switch, routes.
@@ -213,6 +230,6 @@ The app replaces an Excel workbook, and was built from an HTML prototype.
 Neither is in the repository — they are source material rather than part of the
 project — but `CLAUDE.md` carries everything taken from them: the domain rules,
 the chart of accounts, the file formats, the design system and the reasoning
-behind the decisions above. That includes the four bugs found in the workbook's
+behind the decisions above. That includes the bugs found in the workbook's
 formulas, which the app deliberately does not reproduce. It is the place to look
 before changing behaviour.
