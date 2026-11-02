@@ -33,7 +33,7 @@ export function AppTopbar({
   const { toggleSidebar } = useSidebar()
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 bg-background/95 backdrop-blur">
+    <header className="print-hidden sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 bg-background/95 backdrop-blur">
       <div className="flex w-full items-center gap-2 px-4 lg:px-6">
         {/* Not shadcn's SidebarTrigger: that one hard-codes an English
             screen-reader label. */}

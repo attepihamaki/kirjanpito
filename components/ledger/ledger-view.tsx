@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/common/page-header"
 import { Surface } from "@/components/common/surface"
 import { TablePagination } from "@/components/common/table-pagination"
 import { LedgerTable } from "@/components/ledger/ledger-table"
+import { LedgerTabs } from "@/components/ledger/ledger-tabs"
 import { MonthChips } from "@/components/ledger/month-chips"
 import { TotalsCards } from "@/components/ledger/totals-cards"
 import { Button } from "@/components/ui/button"
@@ -182,6 +183,7 @@ export function LedgerView() {
     return (
       <>
         <PageHeader title={f.t("nav.ledger")} subtitle={periodLabel} />
+        <LedgerTabs />
         <Empty>
           <EmptyHeader>
             <EmptyTitle>{f.t("ledger.emptyTitle")}</EmptyTitle>
@@ -210,6 +212,7 @@ export function LedgerView() {
           </Button>
         }
       />
+      <LedgerTabs />
 
       <div className="flex flex-col gap-4">
         <MonthChips />

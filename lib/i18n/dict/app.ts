@@ -442,6 +442,27 @@ export const APP_DICT = {
     "Search description, category or number",
   ],
   "ledger.colDate": ["Päivämäärä", "Date"],
+  "ledger.colAccount": ["Tili", "Account"],
+  "ledger.sections": ["Kirjanpidon osiot", "Bookkeeping sections"],
+  "ledger.entriesTab": ["Kirjaukset", "Entries"],
+  "ledger.journalTab": ["Päiväkirja", "Journal"],
+  "ledger.accountsTab": ["Pääkirja", "General ledger"],
+  "ledger.journalTitle": ["Päiväkirja {y}", "Journal {y}"],
+  "ledger.accountsTitle": ["Pääkirja {y}", "General ledger {y}"],
+  "ledger.journalSub": [
+    "kirjaukset aikajärjestyksessä",
+    "entries in date order",
+  ],
+  "ledger.accountsSub": ["kirjaukset tileittäin", "entries by account"],
+  "ledger.incomeTotal": ["Tulot yhteensä", "Total income"],
+  "ledger.expenseTotal": ["Menot yhteensä", "Total expenses"],
+  "ledger.noEntriesYear": ["Ei kirjauksia vuonna {y}.", "No entries in {y}."],
+  "ledger.print": ["Tulosta", "Print"],
+  /* KPL 2:10, checked on Finlex. */
+  "ledger.retention": [
+    "Säilytä päiväkirja ja pääkirja vähintään 10 vuotta tilikauden päättymisestä ja tositteet vähintään 6 vuotta sen vuoden lopusta, jona tilikausi päättyi (kirjanpitolaki 2:10).",
+    "Keep the journal and the general ledger for at least 10 years from the end of the financial year, and the vouchers for at least 6 years from the end of the year in which it ended (Accounting Act 2:10).",
+  ],
   /* The voucher number (tositenumero, §4); "tosite" alone is the receipt file. */
   "ledger.colVoucher": ["Nro", "No."],
   "ledger.colDescription": ["Selite", "Description"],

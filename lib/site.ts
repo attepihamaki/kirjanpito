@@ -72,6 +72,16 @@ export const APP_ROUTES = {
 export type AppRoute = (typeof APP_ROUTES)[keyof typeof APP_ROUTES]
 
 /**
+ * The bookkeeping view's sub-pages (§8.4): the entries, and the journal and
+ * general ledger that KPL 2:4 asks for, as printable sheets.
+ */
+export const LEDGER_ROUTES = {
+  entries: APP_ROUTES.ledger,
+  journal: `${APP_ROUTES.ledger}/journal`,
+  accounts: `${APP_ROUTES.ledger}/accounts`,
+} as const
+
+/**
  * The settings sub-pages (§8.10). The general page is the settings route
  * itself, so a link to Asetukset lands on it.
  */

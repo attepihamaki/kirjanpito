@@ -4,6 +4,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { LangProvider } from "@/components/lang-provider"
+import { GeneralLedgerView, JournalView } from "@/components/ledger/books-view"
 import { Form5View } from "@/components/statement/form5-view"
 import { StatementView } from "@/components/statement/statement-view"
 import { VatReturnView } from "@/components/vat/vat-return-view"
@@ -330,5 +331,36 @@ describe("VatReturnView", () => {
     })
     mount(<VatReturnView />)
     expect(screen.getByText(/ei ole kohtaa/)).toBeInTheDocument()
+  })
+})
+
+describe("journal and general ledger (§8.4)", () => {
+  it("prints the journal by month with the year's totals", () => {
+    mount(<JournalView />)
+    expect(
+      screen.getByRole("heading", { name: "Päiväkirja 2026" })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("columnheader", { name: "Lokakuu" })
+    ).toBeInTheDocument()
+    const income = screen.getByRole("row", { name: /Tulot yhteensä/ })
+    expect(flattenSpaces(income.textContent ?? "")).toContain(eur(1_250_000))
+    expect(screen.getByText(/kirjanpitolaki 2:10/)).toBeInTheDocument()
+  })
+
+  it("prints the general ledger by account", () => {
+    mount(<GeneralLedgerView />)
+    expect(
+      screen.getByRole("heading", { name: "Pääkirja 2026" })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("columnheader", { name: /343s*Vuokrat/ })
+    ).toBeInTheDocument()
+  })
+
+  it("says so when the year has no entries", () => {
+    useBookStore.setState({ year: 2025 })
+    mount(<JournalView />)
+    expect(screen.getByText("Ei kirjauksia vuonna 2025.")).toBeInTheDocument()
   })
 })

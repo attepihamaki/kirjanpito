@@ -271,9 +271,14 @@
   }
 }
 
-/* §8.8: the income statement prints as a bare sheet. */
+/*
+ * §8.8: the income statement, the journal and the general ledger print as a
+ * bare sheet, without the sidebar and the top bar.
+ */
 @media print {
-  .print-hidden {
+  .print-hidden,
+  [data-slot="sidebar"],
+  [data-slot="sidebar-gap"] {
     display: none !important;
   }
   .print-sheet {

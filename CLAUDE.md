@@ -595,6 +595,10 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
   - Responsive: the category column is hidden under 1240 px. Under 560 px, the type, net, VAT and actions columns are hidden (tap the row to edit); the signed gross is what still tells income from expense there.
 - **Pagination:** the row count ("16 kirjausta") at the left-hand end, and at the right "Rivejä sivulla" with a 10/25/50/100 select (default 10), "Sivu 1 / 2", and first / previous / next / last icon buttons. The strip reads as "what you are looking at" / "how to move through it", which is why the count lives here rather than in the toolbar. The page resets to 1 when filters, sorting or the month change. It sits **inside the table's surface**, as the categories table places it (§8.10) — `ledger-table.tsx` renders the table alone and the view composes the `Surface` around both. `TablePagination` owns that strip, its padding and the rule above it: the table body drops the last row's own bottom border, which in a table that ends its surface would land on the surface's edge. **It is always shown**, even on a single page: the rows-per-page select is how the page length is set, so hiding the row until the list outgrows that length would hide the only control that changes it.
 - **Empty state** (open but no entries): "Ei vielä kirjauksia" with "Uusi kirjaus" and "Avaa tiedosto".
+- **Päiväkirja and Pääkirja.** The view has three tabs (`LedgerTabs`, routes `LEDGER_ROUTES` in `lib/site.ts`): Kirjaukset at `/app/ledger`, Päiväkirja at `/app/ledger/journal` and Pääkirja at `/app/ledger/accounts`. The Accounting Act asks that entries can be viewed "aikajärjestyksessä ja asiajärjestyksessä" (KPL 2:4, checked on Finlex), and these two are that, for the selected year (`lib/domain/books.ts`, `components/ledger/books-view.tsx`).
+  - The journal lists the year by month, in date and then voucher order, with the account number, expenses as negative, and income and expense totals.
+  - The general ledger lists the same entries by account in chart-of-accounts order (§5), only accounts that have entries, each with its total. A category is shown under the description unless it has the account's own name.
+  - Both are printable sheets on the `--sheet` surface with a "Tulosta" button, like the income statement (§8.8), and end with the retention rule of KPL 2:10: the books for 10 years from the end of the financial year, the vouchers for 6 years from the end of the year it ended in.
 
 ### 8.5 Entry dialog (Uusi kirjaus / Muokkaa kirjausta / Kopio kirjaus)
 
@@ -659,7 +663,7 @@ The view has two sub-pages, as tabs shaped like the settings tabs (`SubPageTabs`
 
 ### 8.8 Income statement (Tuloslaskelma)
 
-Presented as a printable **sheet**: the `--sheet` surface (warm paper in light, the card tone in dark — see §11), a thin border, and a soft shadow. It has the title, the period, sections with totals, greyed group headings, lines with muted account numbers, and a double-ruled result line. A "Tulosta" button calls `window.print()`, and the print styles hide the chrome.
+Presented as a printable **sheet**: the `--sheet` surface (warm paper in light, the card tone in dark — see §11), a thin border, and a soft shadow. It has the title, the period, sections with totals, greyed group headings, lines with muted account numbers, and a double-ruled result line. A "Tulosta" button calls `window.print()`, and the print styles hide the chrome: `.print-hidden`, which the top bar carries, and the sidebar by its `data-slot`.
 
 The view has two sub-pages, as tabs shaped like the settings tabs (§8.10, `SubPageTabs` in `components/common/sub-page-tabs.tsx`). `StatementShell` holds the title, "Tulosta" and the tabs, so both pages print. The routes are `STATEMENT_ROUTES` in `lib/site.ts`.
 
@@ -953,7 +957,9 @@ app/
   app/
     layout.tsx                   AppShell + metadata.robots = noindex, nofollow
     page.tsx                     /app → /app/overview
-    overview/  ledger/  summary/
+    overview/  summary/
+    ledger/                      page.tsx = Kirjaukset
+      journal/  accounts/        Päiväkirja, Pääkirja (§8.4)
     vat/                         layout.tsx = VatShell; page.tsx = Laskelma
       return/                    /app/vat/return (§8.7)
     statement/                   layout.tsx = StatementShell; page.tsx = Laskelma
