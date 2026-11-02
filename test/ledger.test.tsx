@@ -350,6 +350,66 @@ describe("the period slice drives the totals, not the filters", () => {
   })
 })
 
+describe("a search that also matches elsewhere (§8.4)", () => {
+  beforeEach(() => {
+    loadSampleIntoStore()
+    useBookStore.setState((s) => ({
+      ledgerCheck: "all",
+      entries: [
+        ...s.entries,
+        {
+          id: "old",
+          voucher: 1,
+          date: "2025-05-05",
+          description: "Työtilan vuokra, toukokuu",
+          type: "expense",
+          catId: "343",
+          amount: 40_000,
+          vatRate: 25.5,
+          amountMode: "gross",
+        },
+      ],
+    }))
+  })
+
+  it("lists nothing without a search", () => {
+    mount(<LedgerView />)
+    expect(screen.queryByText("Osumia myös muualla:")).toBeNull()
+  })
+
+  it("opens the other year, keeping the search and clearing the rest", async () => {
+    const user = userEvent.setup()
+    useBookStore.setState({ ledgerType: "income", ledgerQuery: "vuokra" })
+    mount(<LedgerView />)
+    expect(
+      screen.getByText("Ei kirjauksia valituilla suodattimilla.")
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", { name: "Näytä vuosi 2025, 1 osuma" })
+    )
+
+    const s = useBookStore.getState()
+    expect(s.year).toBe(2025)
+    expect(s.ledgerQuery).toBe("vuokra")
+    expect(s.ledgerType).toBe("all")
+    expect(screen.getByText("Työtilan vuokra, toukokuu")).toBeInTheDocument()
+  })
+
+  it("lists the selected year for its other months", async () => {
+    const user = userEvent.setup()
+    useBookStore.setState({ month: 2, ledgerQuery: "vuokra" })
+    mount(<LedgerView />)
+
+    await user.click(
+      screen.getByRole("button", { name: "Näytä vuosi 2026, 2 osumaa" })
+    )
+
+    expect(useBookStore.getState().month).toBe(0)
+    expect(screen.getByText("Työtilan vuokra, huhtikuu")).toBeInTheDocument()
+  })
+})
+
 describe("selecting rows for a bulk action (§8.4)", () => {
   beforeEach(loadSampleIntoStore)
 

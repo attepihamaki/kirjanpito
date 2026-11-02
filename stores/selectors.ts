@@ -92,6 +92,22 @@ function ledgerValue(
   }
 }
 
+/** Search over the voucher number, the description and the category (§8.4). */
+function matchesQuery(
+  e: Entry,
+  needle: string,
+  cats: ReadonlyMap<string, Category>,
+  lang: Lang
+): boolean {
+  const cat = cats.get(e.catId)
+  const name = cat ? categoryName(cat, lang) : ""
+  return (
+    String(e.voucher) === needle ||
+    e.description.toLowerCase().includes(needle) ||
+    name.toLowerCase().includes(needle)
+  )
+}
+
 export function filterAndSortEntries(
   entries: readonly Entry[],
   cats: ReadonlyMap<string, Category>,
@@ -105,14 +121,7 @@ export function filterAndSortEntries(
     if (filters.type !== "all" && e.type !== filters.type) return false
     if (filters.catId !== "all" && e.catId !== filters.catId) return false
     if (filters.flagged && !filters.flagged.has(e.id)) return false
-    if (!needle) return true
-    const cat = cats.get(e.catId)
-    const name = cat ? categoryName(cat, lang) : ""
-    return (
-      String(e.voucher) === needle ||
-      e.description.toLowerCase().includes(needle) ||
-      name.toLowerCase().includes(needle)
-    )
+    return !needle || matchesQuery(e, needle, cats, lang)
   })
 
   const { key, dir } = filters.sort ?? LEDGER_SORT_DEFAULT
@@ -126,6 +135,40 @@ export function filterAndSortEntries(
     // Date ascending is the stable tiebreaker, so equal keys keep a sane order.
     return (cmp || a.date.localeCompare(b.date)) * dir
   })
+}
+
+export interface SearchHits {
+  year: number
+  count: number
+}
+
+/**
+ * Where a search also matches outside the period on screen (§8.4), by year
+ * with the newest first. The selected year is listed only when a single month
+ * is on screen, for the matches in its other months. The other filters do not
+ * apply: going to a year clears them, so the count is what the user then sees.
+ */
+export function searchHitsElsewhere(
+  entries: readonly Entry[],
+  cats: ReadonlyMap<string, Category>,
+  query: string,
+  year: number,
+  month: number,
+  lang: Lang
+): SearchHits[] {
+  const needle = query.trim().toLowerCase()
+  if (!needle) return []
+  const counts = new Map<number, number>()
+  for (const e of entries) {
+    const y = yearOf(e.date)
+    const onScreen =
+      y === year && (month === 0 || Number(e.date.slice(5, 7)) === month)
+    if (onScreen || !matchesQuery(e, needle, cats, lang)) continue
+    counts.set(y, (counts.get(y) ?? 0) + 1)
+  }
+  return [...counts]
+    .map(([y, count]) => ({ year: y, count }))
+    .sort((a, b) => b.year - a.year)
 }
 
 export function categorySide(cat: Category) {

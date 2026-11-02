@@ -549,6 +549,11 @@ export const APP_DICT = {
   "ledger.colNet": ["Veroton", "Net"],
   "ledger.colGross": ["Verollinen", "Gross"],
   "ledger.noDescription": ["Ei selitettä", "No description"],
+  "ledger.hitsElsewhere": ["Osumia myös muualla:", "Also found elsewhere:"],
+  "ledger.hitsInYear": [
+    pl("Näytä vuosi {y}, 1 osuma", "Näytä vuosi {y}, {n} osumaa"),
+    pl("Show {y}, 1 match", "Show {y}, {n} matches"),
+  ],
   "ledger.noMatch": [
     "Ei kirjauksia valituilla suodattimilla.",
     "No entries match the filters.",

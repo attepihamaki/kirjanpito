@@ -38,6 +38,7 @@ import {
   entriesInPeriod,
   filterAndSortEntries,
   paginate,
+  searchHitsElsewhere,
   usedCategoryIds,
 } from "@/stores/selectors"
 import { useBookStore, type CheckFilter } from "@/stores/book-store"
@@ -75,6 +76,8 @@ export function LedgerView() {
   const setPage = useBookStore((s) => s.setLedgerPage)
   const setSize = useBookStore((s) => s.setLedgerSize)
   const clearFilters = useBookStore((s) => s.clearLedgerFilters)
+  const setYear = useBookStore((s) => s.setYear)
+  const setMonth = useBookStore((s) => s.setMonth)
   const openDialog = useBookStore((s) => s.openDialog)
 
   const catMap = React.useMemo(() => indexCategories(cats), [cats])
@@ -132,6 +135,19 @@ export function LedgerView() {
       f.collator,
     ]
   )
+
+  const hitsElsewhere = React.useMemo(
+    () => searchHitsElsewhere(entries, catMap, query, year, month, f.lang),
+    [entries, catMap, query, year, month, f.lang]
+  )
+
+  /** Open a year on the search, with nothing else narrowing what it finds. */
+  const showHits = (hitYear: number) => {
+    clearFilters()
+    setQuery(query)
+    setYear(hitYear)
+    setMonth(0)
+  }
 
   const totals = React.useMemo(
     () => ledgerTotals(periodEntries, catMap),
@@ -311,6 +327,27 @@ export function LedgerView() {
                 </Button>
               ) : null}
             </div>
+
+            {hitsElsewhere.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                <span>{f.t("ledger.hitsElsewhere")}</span>
+                {hitsElsewhere.map((hit) => (
+                  <Button
+                    key={hit.year}
+                    variant="outline"
+                    size="sm"
+                    className="tabular"
+                    aria-label={f.t("ledger.hitsInYear", {
+                      n: hit.count,
+                      y: hit.year,
+                    })}
+                    onClick={() => showHits(hit.year)}
+                  >
+                    {hit.year} ({hit.count})
+                  </Button>
+                ))}
+              </div>
+            ) : null}
 
             {view.total === 0 ? (
               <Empty>
