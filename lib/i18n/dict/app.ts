@@ -939,8 +939,8 @@ export const APP_DICT = {
   "settings.saving": ["Tallennus", "Saving"],
   "settings.autosave": ["Tallenna automaattisesti", "Save automatically"],
   "settings.autosaveHint": [
-    "Kirjanpito tallentuu avattuun tiedostoon muutama sekunti jokaisen muutoksen jälkeen. Kumoamista ei ole, joten poistettu kirjaus poistuu myös tiedostosta. Jos selain kysyisi jotain, tallennus odottaa, kunnes tallennat kerran itse.",
-    "The bookkeeping is saved to the opened file a few seconds after each change. There is no undo, so a deleted entry is gone from the file too. If the browser would have to ask anything, autosave waits until you save once yourself.",
+    "Kirjanpito tallentuu avattuun tiedostoon muutama sekunti jokaisen muutoksen jälkeen. Poiston voi kumota ilmoituksesta 10 sekunnin ajan, ja palautus tallentuu samalla tavalla. Kirjauksen muokkausta ei voi kumota, eikä tiedostoon jää aiempia versioita. Jos selain kysyisi jotain, tallennus odottaa, kunnes tallennat kerran itse.",
+    "The bookkeeping is saved to the opened file a few seconds after each change. You can undo a delete from its notification for 10 seconds, and the restored entry is saved the same way. Edits to an entry can’t be undone, and the file keeps no earlier versions. If the browser would have to ask anything, autosave waits until you save once yourself.",
   ],
   "settings.addCategory": ["Lisää oma luokka", "Add a category"],
   "settings.line": ["Tuloslaskelman rivi", "Income statement line"],

@@ -394,8 +394,8 @@ On browsers with the File System Access API the app writes the bookkeeping
 back to the file it was opened from, so the user does not have to download a
 copy to keep their work. **Saving is an explicit action by default.** A
 handle's write permission reverts to "prompt" on reload and re-granting it
-needs a user gesture, there is no undo and no version history, and packing a
-ZIP of receipts is not instant. Autosave exists, but it is opt-in and it never
+needs a user gesture, an edit cannot be undone (only a delete can, §8.11) and
+the file has no version history, and packing a ZIP of receipts is not instant. Autosave exists, but it is opt-in and it never
 asks anything (below).
 
 - **`lib/browser/file-handle.ts` is the only module that touches the API.** It
@@ -700,7 +700,7 @@ On **Yleiset**:
 
 - **"ALV-ilmoitusjakso"** comes first: a segmented Kuukausi / Neljännesvuosi / Vuosi. It sets `vatPeriod` (§6.5), which the overview's due dates and the VAT view follow. Changing it keeps the VAT view on the same part of the year: October becomes Q4.
 - **"Kirjanpidon aloitus"**: the month the business began, as a month select ("Ensimmäisestä kirjauksesta" or a month) and, once a month is chosen, a year select. It sets `bookStart` (§6.5). Unset, returns are counted from the first entry.
-- **"Tallennus"**, only where the browser can write to a file: the "Tallenna automaattisesti" checkbox (§7.5), with a description that says there is no undo.
+- **"Tallennus"**, only where the browser can write to a file: the "Tallenna automaattisesti" checkbox (§7.5), with a description that says what can be undone: a delete for 10 seconds (§8.11), an edit not at all.
 - **"Tyhjennä kirjaukset"**, last, as a `variant="destructive"` panel with "Tyhjennä" (`destructive`) on the footer. It deletes all entries (with a confirmation) and leaves the bookkeeping open but empty.
 
 On **Luokat**:
