@@ -24,6 +24,12 @@ import {
 } from "@/components/ui/empty"
 import { useFormatters } from "@/components/lang-provider"
 import { categoryName } from "@/lib/domain/accounts"
+import { todayIso } from "@/lib/domain/dates"
+import {
+  ENTRY_CHECKS,
+  flaggedEntryIds,
+  type EntryCheck,
+} from "@/lib/domain/entry-checks"
 import { indexCategories } from "@/lib/domain/types"
 import { ledgerTotals } from "@/lib/domain/vat"
 import {
@@ -33,6 +39,14 @@ import {
   usedCategoryIds,
 } from "@/stores/selectors"
 import { useBookStore, type CheckFilter } from "@/stores/book-store"
+
+const CHECK_LABEL = {
+  noReceipt: "ledger.withoutReceipt",
+  rateMismatch: "ledger.rateMismatch",
+  futureDate: "ledger.futureDate",
+  zeroVatSale: "ledger.zeroVatSale",
+  largeAmount: "ledger.largeAmount",
+} as const satisfies Record<EntryCheck, string>
 
 export function LedgerView() {
   const f = useFormatters()
@@ -68,6 +82,23 @@ export function LedgerView() {
     [entries, year, month]
   )
 
+  /*
+   * Checked against the whole year, not the month on screen: a large amount
+   * stands out against the year's entries, not against a handful (§8.4).
+   */
+  const flagged = React.useMemo(
+    () =>
+      checkFilter === "all"
+        ? null
+        : flaggedEntryIds(
+            checkFilter,
+            entriesInPeriod(entries, year, 0),
+            catMap,
+            todayIso()
+          ),
+    [checkFilter, entries, year, catMap]
+  )
+
   const filtered = React.useMemo(
     () =>
       filterAndSortEntries(
@@ -77,7 +108,7 @@ export function LedgerView() {
           query,
           type: typeFilter,
           catId: catFilter,
-          check: checkFilter,
+          flagged,
           sort,
         },
         f.lang,
@@ -89,7 +120,7 @@ export function LedgerView() {
       query,
       typeFilter,
       catFilter,
-      checkFilter,
+      flagged,
       sort,
       f.lang,
       f.collator,
@@ -214,8 +245,10 @@ export function LedgerView() {
               <OptionSelect
                 options={[
                   { value: "all", label: f.t("ledger.checkAll") },
-                  { value: "noReceipt", label: f.t("ledger.withoutReceipt") },
-                  { value: "rateMismatch", label: f.t("ledger.rateMismatch") },
+                  ...ENTRY_CHECKS.map((check) => ({
+                    value: check,
+                    label: f.t(CHECK_LABEL[check]),
+                  })),
                 ]}
                 value={checkFilter}
                 onChange={(value) => setCheck(value as CheckFilter)}

@@ -4,6 +4,7 @@ import { create } from "zustand"
 import { persist, type PersistStorage } from "zustand/middleware"
 
 import { defaultCategories } from "@/lib/domain/accounts"
+import type { EntryCheck } from "@/lib/domain/entry-checks"
 import { mergeCategories } from "@/lib/domain/settings-file"
 import {
   DEFAULT_LAYOUT,
@@ -27,11 +28,8 @@ export const BOOK_STORAGE_KEY = "bookkeeping"
 export type { PageSize }
 export type MonthFilter = number // 0 = whole year, 1-12 = that month
 export type TypeFilter = "all" | EntryType
-/**
- * Entries that need a second look (§8.4): no receipt file to show, or a VAT
- * rate that does not fit the entry's date.
- */
-export type CheckFilter = "all" | "noReceipt" | "rateMismatch"
+/** Entries that need a second look (§8.4), by the checks in `entry-checks.ts`. */
+export type CheckFilter = "all" | EntryCheck
 
 export interface SortState<K extends string> {
   key: K

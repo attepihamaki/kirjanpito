@@ -32,7 +32,11 @@ import { useCanSaveToFile, useSaveBook } from "@/hooks/use-save-book"
 import { calcEntry } from "@/lib/domain/calc"
 import { monthOf } from "@/lib/domain/dates"
 import { daysBetween } from "@/lib/domain/vat-deadline"
-import { rateMismatch } from "@/lib/domain/vat-rates"
+import {
+  ENTRY_CHECKS,
+  flaggedEntryIds,
+  type EntryCheck,
+} from "@/lib/domain/entry-checks"
 import { APP_ROUTES } from "@/lib/site"
 import { cn } from "@/lib/utils"
 import { useBookStore, type CheckFilter } from "@/stores/book-store"
@@ -156,6 +160,26 @@ export function RecentWidget() {
 
 type CheckTone = "warn" | "crit" | "ok" | "info"
 
+const CHECK_TEXT = {
+  noReceipt: {
+    title: "overview.withoutReceipt",
+    sub: "overview.withoutReceiptSub",
+  },
+  rateMismatch: {
+    title: "overview.rateMismatch",
+    sub: "overview.rateMismatchSub",
+  },
+  futureDate: { title: "overview.futureDate", sub: "overview.futureDateSub" },
+  zeroVatSale: {
+    title: "overview.zeroVatSale",
+    sub: "overview.zeroVatSaleSub",
+  },
+  largeAmount: {
+    title: "overview.largeAmount",
+    sub: "overview.largeAmountSub",
+  },
+} as const satisfies Record<EntryCheck, { title: string; sub: string }>
+
 interface CheckItem {
   key: string
   tone: CheckTone
@@ -254,40 +278,22 @@ export function ChecksWidget() {
     }
   }
 
-  const without = data.yearEntries.filter((e) => !hasReceipt(e)).length
-  if (without) {
+  for (const check of ENTRY_CHECKS) {
+    const n = flaggedEntryIds(
+      check,
+      data.yearEntries,
+      data.catMap,
+      data.today
+    ).size
+    if (!n) continue
+    const text = CHECK_TEXT[check]
     items.push({
-      key: "without",
+      key: check,
       tone: "warn",
-      title: f.t("overview.withoutReceipt", { n: without }),
-      sub: f.t("overview.withoutReceiptSub"),
+      title: f.t(text.title, { n }),
+      sub: f.t(text.sub),
       action: (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => showInLedger("noReceipt")}
-        >
-          {f.t("overview.showThem")}
-        </Button>
-      ),
-    })
-  }
-
-  const wrongRate = data.yearEntries.filter((e) =>
-    rateMismatch(e.vatRate, e.date)
-  ).length
-  if (wrongRate) {
-    items.push({
-      key: "rate",
-      tone: "warn",
-      title: f.t("overview.rateMismatch", { n: wrongRate }),
-      sub: f.t("overview.rateMismatchSub"),
-      action: (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => showInLedger("rateMismatch")}
-        >
+        <Button variant="ghost" size="sm" onClick={() => showInLedger(check)}>
           {f.t("overview.showThem")}
         </Button>
       ),

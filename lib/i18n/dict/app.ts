@@ -349,6 +349,36 @@ export const APP_DICT = {
     "Esimerkiksi 25,5 % ennen 1.9.2024. Korjaukset voivat olla tarkoituksella vanhalla verokannalla.",
     "For example 25.5% before 1 Sep 2024. Corrections can carry an older rate on purpose.",
   ],
+  "overview.futureDate": [
+    pl(
+      "1 kirjaus on päivätty tulevaisuuteen",
+      "{n} kirjausta on päivätty tulevaisuuteen"
+    ),
+    pl("1 entry is dated in the future", "{n} entries are dated in the future"),
+  ],
+  "overview.futureDateSub": [
+    "Tarkista vuosi ja kuukausi.",
+    "Check the year and the month.",
+  ],
+  "overview.zeroVatSale": [
+    pl(
+      "1 kotimaan myynti ilman arvonlisäveroa",
+      "{n} kotimaan myyntiä ilman arvonlisäveroa"
+    ),
+    pl("1 domestic sale without VAT", "{n} domestic sales without VAT"),
+  ],
+  "overview.zeroVatSaleSub": [
+    "Muussa kotimaan myynnissä on veroa. Tarkista, että tämä myynti on verotonta.",
+    "Your other domestic sales carry VAT. Check that this sale is exempt.",
+  ],
+  "overview.largeAmount": [
+    pl("1 poikkeuksellisen suuri summa", "{n} poikkeuksellisen suurta summaa"),
+    pl("1 unusually large amount", "{n} unusually large amounts"),
+  ],
+  "overview.largeAmountSub": [
+    "Yli kymmenen kertaa tavallinen kirjaus. Tarkista desimaalipilkun paikka.",
+    "Over ten times a typical entry. Check where the decimal separator is.",
+  ],
   "overview.missingFiles": [
     pl("1 tosite puuttuu tiedostosta", "{n} tositetta puuttuu tiedostosta"),
     pl(
@@ -430,6 +460,15 @@ export const APP_DICT = {
   "ledger.rateMismatch": [
     "Verokanta ei vastaa päivää",
     "Rate doesn’t fit the date",
+  ],
+  "ledger.futureDate": ["Päivä tulevaisuudessa", "Date in the future"],
+  "ledger.zeroVatSale": [
+    "Kotimaan myynti ilman ALV:tä",
+    "Domestic sale without VAT",
+  ],
+  "ledger.largeAmount": [
+    "Poikkeuksellisen suuri summa",
+    "Unusually large amount",
   ],
   "ledger.copyAsNew": ["Kopioi", "Copy"],
   "ledger.deleteEntry": ["Poista kirjaus", "Delete entry"],
