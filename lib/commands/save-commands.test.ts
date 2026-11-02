@@ -7,13 +7,21 @@ import {
   openFile,
   saveBook,
 } from "@/lib/commands/io-commands"
+import { getReceipt } from "@/lib/browser/receipt-store"
 import { defaultCategories } from "@/lib/domain/accounts"
-import { unpackZip } from "@/lib/domain/zip"
+import type { Attachment } from "@/lib/domain/types"
+import { packZip, unpackZip } from "@/lib/domain/zip"
+import { registerConfirmHandler } from "@/lib/ui/confirm"
 import { createAppT } from "@/lib/i18n/messages"
 import { useBookStore } from "@/stores/book-store"
 import type { Ctx } from "@/lib/commands/ctx"
 
 /* Saving the bookkeeping back to the file it was opened from (§7.5). */
+
+vi.mock("@/lib/browser/receipt-store", async (original) => {
+  const actual = await original<typeof import("@/lib/browser/receipt-store")>()
+  return { ...actual, getReceipt: vi.fn(actual.getReceipt) }
+})
 
 const ctx: Ctx = { t: createAppT("fi"), navigate: vi.fn() }
 
@@ -411,5 +419,149 @@ describe("autosave", () => {
     await saveBook(ctx, "kirjanpito")
 
     expect(useBookStore.getState().autosavePaused).toBe(false)
+  })
+})
+
+describe("receipts the browser does not hold", () => {
+  const PATH = "tositteet/2026/01/kuitti.jpg"
+  const bytes = new TextEncoder().encode("kuitti")
+  const missing: Attachment = {
+    id: null,
+    name: "kuitti.jpg",
+    type: "",
+    size: 0,
+    missing: true,
+    path: PATH,
+  }
+  const gone: Attachment = {
+    id: "a-gone",
+    name: "kuitti.jpg",
+    type: "image/jpeg",
+    size: 6,
+  }
+
+  /** A linked ZIP on disk that holds the receipt at `PATH`, or none at all. */
+  async function zipOnDisk(att: Attachment, withReceipt: boolean) {
+    const handle = fakeHandle("kirjanpito.zip")
+    const data = await packZip({
+      csvName: "kirjanpito.csv",
+      csvText: CSV,
+      paths: new Map(withReceipt ? [["x#0", PATH]] : []),
+      attachmentIds: new Map([["x#0", "x"]]),
+      read: async () => bytes,
+      settingsText: "{}",
+    })
+    handle.getFile.mockImplementation(
+      async () =>
+        new File([data as BlobPart], handle.name, {
+          lastModified: handle.lastModified,
+        })
+    )
+    linkZip(handle)
+    useBookStore.setState({ entries: [{ ...sample(), atts: [att] }] })
+    return handle
+  }
+
+  beforeEach(() => {
+    vi.unstubAllGlobals()
+    stubPickers(null)
+    registerConfirmHandler(null)
+    useBookStore.setState({
+      autosave: false,
+      autosavePaused: false,
+      saving: false,
+    })
+  })
+
+  it("keeps a missing receipt in the file it overwrites", async () => {
+    const handle = await zipOnDisk(missing, true)
+
+    await saveBook(ctx, "kirjanpito")
+
+    expect(handle.written).toHaveLength(1)
+    const saved = await unzipped(handle.written[0])
+    expect(new TextDecoder().decode(saved?.files.get(PATH))).toBe("kuitti")
+  })
+
+  it("does not ask about a receipt the file never held", async () => {
+    const handle = await zipOnDisk(missing, false)
+    const asked = vi.fn(async () => false)
+    registerConfirmHandler(asked)
+
+    await saveBook(ctx, "kirjanpito")
+
+    expect(asked).not.toHaveBeenCalled()
+    expect(handle.written).toHaveLength(1)
+  })
+
+  it("asks before saving without a stored receipt it cannot find", async () => {
+    const handle = await zipOnDisk(gone, false)
+    const asked = vi.fn(async () => false)
+    registerConfirmHandler(asked)
+
+    await saveBook(ctx, "kirjanpito")
+
+    expect(asked).toHaveBeenCalledOnce()
+    expect(handle.written).toHaveLength(0)
+    expect(useBookStore.getState().dirty).toBe(true)
+  })
+
+  it("saves anyway when the user says so", async () => {
+    const handle = await zipOnDisk(gone, false)
+    registerConfirmHandler(async () => true)
+
+    await saveBook(ctx, "kirjanpito")
+
+    expect(handle.written).toHaveLength(1)
+  })
+
+  it("makes autosave stop rather than drop one", async () => {
+    const handle = await zipOnDisk(gone, false)
+    useBookStore.setState({ autosave: true })
+
+    expect(await autosaveBook(ctx)).toBe(false)
+    expect(handle.written).toHaveLength(0)
+    expect(useBookStore.getState().autosavePaused).toBe(true)
+  })
+
+  it("autosaves a missing receipt the file can keep", async () => {
+    const handle = await zipOnDisk(missing, true)
+    useBookStore.setState({ autosave: true })
+
+    expect(await autosaveBook(ctx)).toBe(true)
+    const saved = await unzipped(handle.written[0])
+    expect(new TextDecoder().decode(saved?.files.get(PATH))).toBe("kuitti")
+  })
+
+  /*
+   * The picker needs a recent user gesture, so it comes before the packing,
+   * which is also what spares a user who cancels from waiting for it.
+   */
+  it("asks for the file before reading any receipt", async () => {
+    vi.mocked(getReceipt).mockClear()
+    useBookStore.setState({
+      open: true,
+      entries: [{ ...sample(), atts: [gone] }],
+      dirty: true,
+      fileName: null,
+      fileHandle: null,
+      savedAt: null,
+    })
+
+    await saveBook(ctx, "kirjanpito")
+
+    expect(window.showSaveFilePicker).toHaveBeenCalledOnce()
+    expect(getReceipt).not.toHaveBeenCalled()
+  })
+
+  it("asks for write permission before reading any receipt", async () => {
+    vi.mocked(getReceipt).mockClear()
+    const handle = await zipOnDisk(gone, false)
+    handle.permission = "denied"
+
+    await saveBook(ctx, "kirjanpito")
+
+    expect(getReceipt).not.toHaveBeenCalled()
+    expect(handle.written).toHaveLength(0)
   })
 })

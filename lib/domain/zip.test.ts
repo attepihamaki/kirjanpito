@@ -14,6 +14,7 @@ import {
   dirOf,
   findCsvEntry,
   packZip,
+  receiptReader,
   resolveReceipt,
   unpackZip,
 } from "@/lib/domain/zip"
@@ -272,5 +273,59 @@ describe("full ZIP round trip", () => {
       "tositteet/2026/01/2026-01-15_osto-k-rauta-tarvikkeet_2.pdf",
       "tositteet/2026/10/2026-10-28_lasku-1005.pdf",
     ])
+  })
+})
+
+describe("carrying receipts from the file being replaced", () => {
+  const PATH = "tositteet/2026/01/lasku.pdf"
+  const packed = (over: Partial<Parameters<typeof packZip>[0]> = {}) =>
+    packZip({
+      csvName: "kirjanpito.csv",
+      csvText: "pvm;tyyppi;summa\r\n",
+      paths: new Map([["e#0", PATH]]),
+      attachmentIds: new Map(),
+      read: async () => null,
+      settingsText: SETTINGS_TEXT,
+      ...over,
+    })
+  const bytes = enc.encode("kuitti")
+
+  it("finds a receipt by the path the CSV lists it under", async () => {
+    const old = await packed({
+      attachmentIds: new Map([["e#0", "a1"]]),
+      read: async () => bytes,
+    })
+    const read = await receiptReader(old)
+    expect(await read(PATH)).toEqual(bytes)
+    expect(await read("tositteet/ei-ole.pdf")).toBeNull()
+  })
+
+  it("keeps a receipt this browser does not hold", async () => {
+    const unpacked = await unpackZip(await packed({ carry: async () => bytes }))
+    expect(unpacked?.files.get(PATH)).toEqual(bytes)
+  })
+
+  it("prefers the stored bytes over the old file's", async () => {
+    const stored = enc.encode("uusi")
+    const unpacked = await unpackZip(
+      await packed({
+        attachmentIds: new Map([["e#0", "a1"]]),
+        read: async () => stored,
+        carry: async () => bytes,
+      })
+    )
+    expect(unpacked?.files.get(PATH)).toEqual(stored)
+  })
+
+  it("reports a stored receipt it could not write, not a missing one", async () => {
+    const lost: string[] = []
+    await packed({ onLost: (key) => lost.push(key) })
+    expect(lost).toEqual([])
+
+    await packed({
+      attachmentIds: new Map([["e#0", "a1"]]),
+      onLost: (key) => lost.push(key),
+    })
+    expect(lost).toEqual(["e#0"])
   })
 })

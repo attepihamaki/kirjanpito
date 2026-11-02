@@ -57,6 +57,15 @@ export const LANDING_DICT = {
     "Open bookkeeping you exported earlier and pick up where you left off.",
   ],
 
+  "landing.dropHere": [
+    "Pudota CSV- tai ZIP-tiedosto avataksesi sen",
+    "Drop a CSV or ZIP file to open it",
+  ],
+  "landing.dropNotBook": [
+    "Tässä voi avata vain CSV- tai ZIP-tiedoston.",
+    "Only a CSV or ZIP file can be opened here.",
+  ],
+
   "landing.salesTax": ["Myynnin vero", "VAT on sales"],
   "landing.buyTax": ["Ostojen vero", "VAT on purchases"],
   "landing.due": ["Maksettava", "Payable"],

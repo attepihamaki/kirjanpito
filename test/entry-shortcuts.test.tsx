@@ -14,6 +14,19 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }))
 
+/* Holds a receipt in preparation for as long as a test wants. */
+const preparing = vi.hoisted(() => ({
+  release: (() => {}) as () => void,
+}))
+
+vi.mock("@/lib/browser/prep-image", () => ({
+  prepareImage: (file: File) =>
+    new Promise((resolve) => {
+      preparing.release = () =>
+        resolve({ blob: file, name: file.name, type: file.type })
+    }),
+}))
+
 const original: Entry = {
   id: "a",
   voucher: 1,
@@ -26,7 +39,11 @@ const original: Entry = {
   amountMode: "gross",
 }
 
-function mount(mode: "new" | "edit" | "copy", entryId?: string) {
+function mount(
+  mode: "new" | "edit" | "copy",
+  entryId?: string,
+  files?: File[]
+) {
   useBookStore.setState({
     open: true,
     hydrated: true,
@@ -35,7 +52,7 @@ function mount(mode: "new" | "edit" | "copy", entryId?: string) {
     year: 2026,
     month: 0,
     vatFiled: {},
-    dialog: { kind: "entry", mode, entryId },
+    dialog: { kind: "entry", mode, entryId, files },
   })
   render(
     <LangProvider lang="fi">
@@ -90,5 +107,45 @@ describe("Ctrl+Enter in the entry dialog", () => {
     press({})
 
     expect(useBookStore.getState().entries).toHaveLength(1)
+  })
+})
+
+describe("a receipt still being stored (§8.5)", () => {
+  const receipt = () => new File(["x"], "kuitti.jpg", { type: "image/jpeg" })
+
+  beforeEach(() => {
+    useBookStore.setState({ dialog: { kind: "none" }, draftAttachmentIds: [] })
+  })
+
+  it("holds back every way of saving until it is in the form", async () => {
+    mount("copy", "a", [receipt()])
+
+    const save = screen.getByRole("button", { name: "Tallenna" })
+    const saveAndNew = screen.getByRole("button", { name: /Tallenna ja uusi/ })
+    expect(save).toBeDisabled()
+    expect(saveAndNew).toBeDisabled()
+    press({ ctrlKey: true })
+    expect(useBookStore.getState().entries).toHaveLength(1)
+
+    preparing.release()
+
+    await waitFor(() => expect(save).toBeEnabled())
+    press({ ctrlKey: true })
+    await waitFor(() => expect(useBookStore.getState().entries).toHaveLength(2))
+    expect(useBookStore.getState().entries[1].atts).toHaveLength(1)
+  })
+
+  it("is protected from the sweep from before its bytes are stored", async () => {
+    mount("new", undefined, [receipt()])
+    preparing.release()
+
+    await waitFor(() =>
+      expect(useBookStore.getState().draftAttachmentIds).toHaveLength(1)
+    )
+    const [id] = useBookStore.getState().draftAttachmentIds
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Tallenna" })).toBeEnabled()
+    )
+    expect(useBookStore.getState().draftAttachmentIds).toEqual([id])
   })
 })

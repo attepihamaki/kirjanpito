@@ -198,7 +198,7 @@ if amountMode == "net":  net = amount; vat = round(net * rate / 100);           
 else (gross):            gross = amount; vat = round(gross * rate / (100 + rate)); net = gross - vat
 ```
 
-All in cents with `Math.round`.
+All in cents. `roundCents` rounds a half away from zero rather than up, as `Math.round` does, so a credit note is the exact opposite of its sale: 1,00 € net at 25,5 % carries 0,26 € of VAT and −1,00 € carries −0,26 €.
 
 ---
 
@@ -340,11 +340,11 @@ For the selected year, by month (net amounts):
   - Rows are sorted by date, then by voucher number. The format is identical in both UI languages, so it opens directly in Finnish Excel.
   - **A text cell that Excel would run as a formula gets a leading apostrophe.** That is `selite`, `luokka` or `tosite` starting with `=`, `+`, `-`, `@`, a tab or a carriage return. A value that already starts with apostrophes before one of those gets one more, and the import takes exactly one off, so every value round-trips. The amount and rate columns are left alone, so a negative amount stays a number. Excel may show the apostrophe in the cell.
 - **Import (be lenient):**
-  - Strip a BOM. Detect the delimiter from the header line (`;`, tab or `,`, whichever splits it most). Headers are matched case-insensitively. `pvm`, `tyyppi` and `summa` are required; the rest are optional.
+  - `decodeCsv` reads the bytes: a UTF-16 BOM decides, then strict UTF-8, then windows-1252, which is what Excel's plain "CSV (semicolon delimited)" writes. Strip a BOM. Detect the delimiter from the header line (`;`, tab or `,`, whichever splits it most). Headers are matched case-insensitively. `pvm`, `tyyppi` and `summa` are required; the rest are optional.
   - Dates are accepted as `YYYY-MM-DD` or `D.M.YYYY` and validated as real dates.
   - `tositenro` (or `tositenumero`) is optional. A positive whole number is kept; a missing, malformed or repeated one is numbered when the book opens (§4), so an older file without the column opens with its entries numbered by date.
   - Amounts may contain spaces, NBSP, `€` and a Unicode minus. If both `,` and `.` appear, the last one is the decimal separator. A lone comma is a decimal comma, except in English mode when the value matches a thousands pattern such as `1,234`.
-  - `syotto` values `netto` or `veroton` mean net; anything else means gross. An empty `alv` uses the category default.
+  - `syotto` values `netto` or `veroton` mean net; anything else means gross. An empty `alv` uses the category default, and so does one that is not a number from 0 up to 100 (`isVatRate`).
   - Category matching: same account number and side, and the name matches the Finnish name or the English default name (case-insensitive). If no name is given, the first category on that account is used. If there's no match but the account number exists, a **custom category** is created with that name. If the account is unknown, the entry is booked to 301 (income) or 344-other (expense) with a warning.
   - Invalid rows (bad date, type or amount) are skipped. A toast summarises: N entries imported, new categories, receipts imported, missing or rejected, and the first skipped rows.
   - After import, the selected year is the latest year found in the file.
@@ -384,7 +384,7 @@ The download dialog lets the user edit the base name, with a fixed extension sho
 - Images: if the long edge is ≤ 2000 px, the file is ≤ 1.5 MB and the type is JPEG/PNG/WebP, the original is kept. Otherwise it is redrawn onto a white canvas with the long edge at 2000 px and saved as JPEG at quality 0.85, with the extension renamed to `.jpg`. If the browser can't decode it (e.g. HEIC outside Safari), the original is kept and the preview shows the file name instead.
 - PDFs are stored as they are.
 - Stored in IndexedDB: database `bookkeeping-receipts`, object store `files`, key = attachment id, value = Blob. (The prototype used `kirjanpito-tositteet`; see §12.)
-- **Garbage collection:** after saving or deleting entries, closing the file, importing, or closing the entry dialog, delete IndexedDB files that no entry (and no open dialog) references. Revoke object URLs of removed thumbnails.
+- **Garbage collection:** after saving or deleting entries, closing the file, importing, or closing the entry dialog, delete IndexedDB files that no entry (and no open dialog) references. Revoke object URLs of removed thumbnails. **A receipt being added counts as referenced before its bytes are written:** the entry dialog registers its id first, and the sweep waits while `importing` is up, since an import's receipts belong to no entry until the whole file is read.
 
 ---
 
@@ -416,6 +416,8 @@ asks anything (below).
   then on. Otherwise it writes in place. `createWritable` streams into a swap
   file that the browser moves into place on `close`, so a failure part-way
   through leaves the file on disk untouched.
+- **The file is settled before the ZIP is packed.** The permission prompt and the save picker both need a recent user gesture, which packing can outlast, and a user who backs out should not have to wait for it.
+- **Saving never drops a receipt from the file it replaces without asking.** A receipt this browser does not hold, because storing it failed when the file was opened, is copied across from the ZIP being replaced, found by its path (`carryFrom` in `io-commands.ts`). What is left is a stored receipt whose bytes are gone from IndexedDB and from that path: `saveBook` asks first (`confirm.receiptsLost*`), autosave pauses without writing, and a download says so in a toast.
 - **A file changed outside the app is not overwritten blind.** `savedAt` holds
   the file's modification time as of the last read or write; if the file's own
   timestamp has moved since, saving asks first (§8.11). Writing moves that
@@ -560,7 +562,7 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
 1. **Hero.**
    - Headline "Toiminimen kirjanpito, joka mahtuu yhteen tiedostoon." and a lead paragraph.
    - Calls to action:
-     - Closed state: "Aloita uusi kirjanpito" and "Avaa tiedosto", plus a dashed drop zone ("Pudota CSV- tai ZIP-tiedosto tähän…").
+     - Closed state: "Aloita uusi kirjanpito" and "Avaa tiedosto", plus a dashed drop zone ("Pudota CSV- tai ZIP-tiedosto tähän…"). A file can be dropped anywhere on the page, with the same overlay as in the app (`useFileDrop`), and anything but a CSV or ZIP gets a toast.
      - Open state: "Jatka kirjanpitoa" (to the overview) and "Avaa tiedosto", with a meta line showing the file name, the number of entries and the unsaved-changes status.
    - Visual: two overlapping, slightly rotated paper receipts on a soft accent panel. One is an expense receipt, the other the October VAT calculation ending in "Maksettava 617,18 €". On small screens only the VAT receipt is shown.
 2. **"Tositteesta veroilmoitukseen neljässä vaiheessa".** Four numbered steps: open or start, record receipts (including attaching), check the figures, export (a ZIP organised by year and month).
@@ -633,6 +635,7 @@ A two-column modal. On mobile the columns stack.
 - **Defaults for a new entry:** if a month is selected, its date (today's day, capped at 28). Otherwise today if the year matches, else 1.1. of the selected year. The type and amount mode are the last ones used.
 - **Validation:** a valid date, a non-zero amount and a chosen category are required. Error texts: "Anna päivämäärä.", "Anna summa, esim. 124,50.", "Valitse luokka." The error is held as `{ field, message }` where `field` is the `FormState` key: one `FieldError` line shows the message, and the field it names carries `aria-invalid` (the category select takes it through `OptionSelect`'s `invalid` prop). Editing that field clears the error, rather than leaving a complaint under a corrected value until the next save.
 - **Pre-fill from a PDF:** adding an invoice PDF to an untouched form (no amount, no description) reads its text layer and fills the date, a description "Lasku {nro} – {myyjä} – {first row}" (whichever parts it found), the total as a gross amount and the VAT rate. A previous entry naming the same seller supplies the type and category; failing that, `suggestCategory` picks an expense category from words in the seller's name and the rows, falling back to 333. The seller is the company name printed beside a business ID, which is often only in the footer. A rate read this way survives picking a category. `lib/domain/invoice-text.ts` does the reading and is pure; `extractPdfText` in `lib/browser/pdf.ts` feeds it. The virtual barcode, when printed, wins over any labelled total or due date. A scanned PDF has no text layer and pre-fills nothing; there is no OCR.
+- **Nothing saves while a receipt is being stored:** "Tallenna" and "Tallenna ja uusi" are disabled and `Ctrl`/`⌘`+`Enter` waits, because the receipt is not in the form yet.
 - **Tallenna ja uusi** saves, keeps the date, resets the rest for the next entry, and puts the focus back on the date.
 - **`Ctrl`/`⌘`+`Enter`** saves from any field: "Tallenna ja uusi" in the new and copy modes, where its button shows the key cap, and "Tallenna" when editing. It waits while a receipt is still being stored. A new or copied entry opens with the focus on the date, so a month's receipts can be entered from the keyboard alone.
 - **Copy as new** (from a row or from the edit dialog): opens a new entry with every field copied **except receipts**. The date becomes today if the year matches, and the date field gets focus. The title is "Kopio kirjaus".

@@ -90,6 +90,21 @@ export const APP_DICT = {
     "The file {f} has been changed outside this app since it was opened. Saving will overwrite those changes.",
   ],
   "confirm.overwriteConfirm": ["Korvaa", "Overwrite"],
+  "confirm.receiptsLostTitle": [
+    "Jätetäänkö tositteet pois?",
+    "Leave the receipts out?",
+  ],
+  "confirm.receiptsLostMessage": [
+    pl(
+      "1 tosite ei löydy selaimesta eikä tiedostosta {f}. Tallennus jättää sen pois, ja jos se on tiedostossa toisella nimellä, se katoaa sieltä.",
+      "{n} tositetta ei löydy selaimesta eikä tiedostosta {f}. Tallennus jättää ne pois, ja jos ne ovat tiedostossa toisella nimellä, ne katoavat sieltä."
+    ),
+    pl(
+      "1 receipt isn’t in this browser or in the file {f}. Saving leaves it out, and if the file holds it under another name, it is lost from there.",
+      "{n} receipts aren’t in this browser or in the file {f}. Saving leaves them out, and if the file holds them under other names, they are lost from there."
+    ),
+  ],
+  "confirm.receiptsLostConfirm": ["Tallenna silti", "Save anyway"],
   "confirm.deleteTitle": ["Poistetaanko kirjaus?", "Delete this entry?"],
   "confirm.deleteManyTitle": [
     pl("Poistetaanko 1 kirjaus?", "Poistetaanko {n} kirjausta?"),
@@ -1071,6 +1086,16 @@ export const APP_DICT = {
     "Nothing to export. Add some entries first.",
   ],
   "io.exporting": ["Pakataan tositteita…", "Packing receipts…"],
+  "io.receiptsLost": [
+    pl(
+      "1 tosite puuttuu selaimesta, joten se jää tästä tiedostosta pois.",
+      "{n} tositetta puuttuu selaimesta, joten ne jäävät tästä tiedostosta pois."
+    ),
+    pl(
+      "1 receipt is missing from this browser, so this file leaves it out.",
+      "{n} receipts are missing from this browser, so this file leaves them out."
+    ),
+  ],
   "io.exported": ["Ladattu tiedostoon {f}.", "Downloaded as {f}."],
 
   // --- Saving back to the opened file (§7.5) ---

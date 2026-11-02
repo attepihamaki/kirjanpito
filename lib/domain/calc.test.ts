@@ -124,3 +124,13 @@ describe("the sixteen sample entries", () => {
     }
   )
 })
+
+describe("a credit note", () => {
+  it("cancels its sale to the cent", () => {
+    const sale = calcEntry({ amount: 100, vatRate: 25.5, amountMode: "net" })
+    const credit = calcEntry({ amount: -100, vatRate: 25.5, amountMode: "net" })
+    expect(sale.vat).toBe(26)
+    expect(credit.vat).toBe(-26)
+    expect(credit.gross).toBe(-sale.gross)
+  })
+})

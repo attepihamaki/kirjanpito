@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/app/theme-toggle"
 import { BusyButton } from "@/components/common/busy-button"
 import { ButtonLink } from "@/components/common/button-link"
 import { DropTile } from "@/components/common/drop-tile"
+import { Overlay } from "@/components/common/overlay"
 import { SiteFooter, SiteHeader } from "@/components/common/site-chrome"
 import { Pill } from "@/components/common/pill"
 import { Surface } from "@/components/common/surface"
@@ -25,9 +26,11 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
+import { toast } from "@/components/ui/toast"
 import { LangRoot, useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { useDelayedFlag } from "@/hooks/use-delayed-flag"
+import { isBookFile, useFileDrop } from "@/hooks/use-file-drop"
 /*
  * From csv-header, not csv: that module pulls in papaparse, which has no
  * business in the landing page bundle. csv-header has no dependencies.
@@ -72,8 +75,38 @@ function LandingBody() {
     if (!(await io.pickAndOpenFile(ctx))) inputRef.current?.click()
   }
 
+  // §8.3: a file can be dropped anywhere on the page, not only on the tile.
+  const handleDrop = React.useCallback(
+    (
+      files: File[],
+      handleFor: (file: File) => Promise<FileSystemFileHandle | null>
+    ) => {
+      const book = files.find(isBookFile)
+      if (!book) {
+        toast.add({ title: f.t("landing.dropNotBook") })
+        return
+      }
+      void Promise.all([
+        handleFor(book),
+        import("@/lib/commands/io-commands"),
+      ]).then(([handle, io]) => io.openFile(ctx, book, handle))
+    },
+    [ctx, f]
+  )
+  const dragging = useFileDrop({ onDropFiles: handleDrop })
+
   return (
     <div className="flex min-h-svh flex-col">
+      {dragging ? (
+        // Not blocking: a blocking scrim would swallow the drop itself.
+        <Overlay blocking={false}>
+          <div className="rounded-xl border-2 border-dashed border-primary px-8 py-6 text-center">
+            <p className="font-heading text-lg font-medium">
+              {f.t("landing.dropHere")}
+            </p>
+          </div>
+        </Overlay>
+      ) : null}
       <input
         ref={inputRef}
         type="file"

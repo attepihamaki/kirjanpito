@@ -11,7 +11,12 @@ import {
 import { CSV_HEADER, CSV_HEADER_LINE } from "@/lib/domain/csv-header"
 import { parseCsvDate, yearOf } from "@/lib/domain/dates"
 import { uid } from "@/lib/domain/id"
-import { formatAmountForCsv, parseAmount, parseRate } from "@/lib/domain/money"
+import {
+  formatAmountForCsv,
+  isVatRate,
+  parseAmount,
+  parseRate,
+} from "@/lib/domain/money"
 import { isVoucherNumber } from "@/lib/domain/voucher"
 import {
   attachmentKey,
@@ -145,6 +150,34 @@ export type DetectedDelimiter = ";" | "\t" | ","
 const CANDIDATES: readonly DetectedDelimiter[] = [";", "\t", ","]
 
 const stripBom = (text: string) => text.replace(/^﻿/, "")
+
+/**
+ * The text of a CSV file, whatever Excel saved it as. Its "CSV UTF-8" option
+ * writes UTF-8 with a BOM and "Unicode Text" writes UTF-16, but plain "CSV
+ * (semicolon delimited)" writes the Windows code page, where ä and ö are not
+ * valid UTF-8. So: a UTF-16 BOM decides, then strict UTF-8, then windows-1252.
+ */
+export function decodeCsv(bytes: Uint8Array): string {
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) {
+    return new TextDecoder("utf-16le").decode(bytes)
+  }
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) {
+    return new TextDecoder("utf-16be").decode(bytes)
+  }
+  try {
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(
+      bytes
+    )
+  } catch {
+    return new TextDecoder("windows-1252").decode(bytes)
+  }
+}
+
+/** The rate in the `alv` column, or null when it is not a usable one. */
+function parseRateCell(cell: string): number | null {
+  const rate = parseRate(cell)
+  return rate != null && isVatRate(rate) ? rate : null
+}
 
 /**
  * Detect the delimiter by parsing the header row at each candidate and
@@ -330,7 +363,7 @@ export function parseCsv(
       byId,
       makeId,
       warnings,
-      rateHint: parseRate(get("alv")),
+      rateHint: parseRateCell(get("alv")),
     })
     if (resolved.created) newCategoryCount++
     const cat = resolved.cat
@@ -338,7 +371,7 @@ export function parseCsv(
     const rateRaw = get("alv")
     // "" means "use the category default"; "0" is an explicit zero.
     const vatRate =
-      rateRaw === "" ? cat.vatRate : (parseRate(rateRaw) ?? cat.vatRate)
+      rateRaw === "" ? cat.vatRate : (parseRateCell(rateRaw) ?? cat.vatRate)
 
     const modeRaw = get("syotto").toLowerCase()
     const amountMode: AmountMode =

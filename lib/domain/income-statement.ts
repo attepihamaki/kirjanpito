@@ -1,6 +1,7 @@
 import { LINES, type AccountLine } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
 import { yearOf } from "@/lib/domain/dates"
+import { roundCents } from "@/lib/domain/money"
 import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
 
 export interface StatementLine {
@@ -116,7 +117,7 @@ function countedPart(line: AccountLine, net: Cents): Cents {
   if (line.halfDeductible) return Math.trunc(net / 2) + 0
   // Rounded: Form 5 only requires 320 ≤ 319 and 322 ≤ 321.
   if (line.taxableShare != null) {
-    return Math.round((net * line.taxableShare) / 100) + 0
+    return roundCents((net * line.taxableShare) / 100)
   }
   return net
 }

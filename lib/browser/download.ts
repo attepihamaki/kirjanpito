@@ -19,7 +19,3 @@ export function saveText(text: string, filename: string, type: string): void {
 export async function fileToUint8Array(file: Blob): Promise<Uint8Array> {
   return new Uint8Array(await file.arrayBuffer())
 }
-
-export function readFileAsText(file: Blob): Promise<string> {
-  return file.text()
-}

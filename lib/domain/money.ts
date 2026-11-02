@@ -6,14 +6,17 @@ export const NBSP = " "
 export const MINUS = "−"
 
 /**
- * `Math.round` with negative zero normalised away.
+ * Round to whole cents, half away from zero, so a credit note is the exact
+ * opposite of its sale: 25,5 % of 1,00 € is 0,26 € and of −1,00 € is −0,26 €.
+ * `Math.round` alone rounds a half upwards and would give −0,25 €, leaving a
+ * cent behind in the VAT return.
  *
- * `Math.round(-1 * 25.5 / 125.5)` is `-0`, `Object.is(-0, 0)` is false, and
- * `formatMoney(-0)` would render "−0,00 €". Every rounding in the domain goes
- * through this.
+ * Negative zero is normalised away: `formatMoney(-0)` would render "−0,00 €".
+ * Every rounding in the domain goes through this.
  */
 export function roundCents(n: number): Cents {
-  return Math.round(n) + 0
+  const rounded = Math.round(Math.abs(n))
+  return (n < 0 ? -rounded : rounded) + 0
 }
 
 const eur = new Intl.NumberFormat("fi-FI", {
@@ -106,6 +109,15 @@ export function parseRate(input: string | null | undefined): number | null {
   if (!t || !/^-?\d*\.?\d+$/.test(t)) return null
   const n = parseFloat(t)
   return Number.isFinite(n) ? n : null
+}
+
+/**
+ * A VAT rate the calculations can work with: from 0 up to, not including, 100.
+ * A negative rate would divide by zero at −100 % and turn the totals to
+ * `Infinity`.
+ */
+export function isVatRate(rate: number): boolean {
+  return rate >= 0 && rate < 100
 }
 
 /** Sum integer cents without ever leaving integer arithmetic. */

@@ -236,9 +236,17 @@ function EntryDialogForm({
    */
   const keepRate = React.useRef(mode !== "new")
 
-  // Keep freshly attached receipts alive through a GC sweep (§7.4).
+  /*
+   * Keep freshly attached receipts alive through a GC sweep (§7.4). One still
+   * being added is in `pendingIds`: it is registered before its bytes reach
+   * IndexedDB, and stays registered until the form holds it.
+   */
+  const pendingIds = React.useRef(new Set<string>())
   React.useEffect(() => {
-    setDraftIds(form.atts.map((a) => a.id).filter((id): id is string => !!id))
+    setDraftIds([
+      ...form.atts.map((a) => a.id).filter((id): id is string => !!id),
+      ...pendingIds.current,
+    ])
   }, [form.atts, setDraftIds])
 
   /**
@@ -325,6 +333,8 @@ function EntryDialogForm({
         for (const file of accepted) {
           const prepared = await prepareImage(file)
           const id = `a-${uid()}`
+          pendingIds.current.add(id)
+          setDraftIds([...useBookStore.getState().draftAttachmentIds, id])
           try {
             await putReceipt(id, prepared.blob)
             added.push({
@@ -335,10 +345,12 @@ function EntryDialogForm({
             })
           } catch {
             // Never record an attachment we failed to store.
+            pendingIds.current.delete(id)
             toast.add({ title: f.t("receipt.noStorage") })
           }
         }
         if (added.length) {
+          for (const att of added) pendingIds.current.delete(att.id as string)
           setForm((prev) => ({ ...prev, atts: [...prev.atts, ...added] }))
           // A hint only: one receipt can cover two entries on purpose.
           const others = useBookStore.getState().entries
@@ -360,7 +372,7 @@ function EntryDialogForm({
         setBusy(false)
       }
     },
-    [f, prefillFromPdf, editingId]
+    [f, prefillFromPdf, editingId, setDraftIds]
   )
 
   /*
@@ -495,6 +507,11 @@ function EntryDialogForm({
   }
 
   const save = async (andNew: boolean) => {
+    /*
+     * A receipt still being stored is not in the form yet: saving now would
+     * leave it out, and "Tallenna ja uusi" would attach it to the next entry.
+     */
+    if (busy) return
     const entry = validate()
     if (!entry) return
 
@@ -539,7 +556,7 @@ function EntryDialogForm({
    */
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key !== "Enter" || !(event.ctrlKey || event.metaKey)) return
-    if (event.altKey || event.shiftKey || busy || viewing != null) return
+    if (event.altKey || event.shiftKey || viewing != null) return
     if ((event.target as Element).closest('[role="listbox"]')) return
     event.preventDefault()
     void save(mode !== "edit")
@@ -811,6 +828,7 @@ function EntryDialogForm({
             {mode !== "edit" ? (
               <Button
                 variant="secondary"
+                disabled={busy}
                 aria-keyshortcuts={saveKeys.aria}
                 onClick={() => void save(true)}
               >
@@ -823,6 +841,7 @@ function EntryDialogForm({
               </Button>
             ) : null}
             <Button
+              disabled={busy}
               aria-keyshortcuts={mode === "edit" ? saveKeys.aria : undefined}
               onClick={() => void save(false)}
             >

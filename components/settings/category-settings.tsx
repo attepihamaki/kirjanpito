@@ -36,7 +36,7 @@ import { useCommandCtx } from "@/hooks/use-commands"
 import { resetCategories } from "@/lib/commands/book-commands"
 import { LINES, categoryName } from "@/lib/domain/accounts"
 import { uid } from "@/lib/domain/id"
-import { parseRate } from "@/lib/domain/money"
+import { isVatRate, parseRate } from "@/lib/domain/money"
 import type { Category, EntryType } from "@/lib/domain/types"
 import {
   categoryAccount,
@@ -102,7 +102,7 @@ function AddCategoryForm() {
       return
     }
     const parsed = rate.trim() === "" ? 0 : parseRate(rate)
-    if (parsed == null || parsed < 0 || parsed >= 100) {
+    if (parsed == null || !isVatRate(parsed)) {
       setError({ field: "rate", message: f.t("settings.vatInvalid") })
       return
     }
@@ -370,7 +370,7 @@ function RateInput({ cat }: { cat: Category }) {
 
   const commit = () => {
     const parsed = parseRate(draft)
-    if (parsed == null || parsed < 0 || parsed >= 100) {
+    if (parsed == null || !isVatRate(parsed)) {
       setDraft(asText(cat.vatRate))
       toast.add({ title: f.t("settings.vatInvalid") })
       return

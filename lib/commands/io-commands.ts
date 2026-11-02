@@ -1,11 +1,7 @@
 import { toast } from "@/components/ui/toast"
 
 import { releaseAllObjectUrls } from "@/lib/browser/object-urls"
-import {
-  fileToUint8Array,
-  readFileAsText,
-  saveBlob,
-} from "@/lib/browser/download"
+import { fileToUint8Array, saveBlob } from "@/lib/browser/download"
 import {
   hasWritePermission,
   isFileHandleSupported,
@@ -23,7 +19,12 @@ import {
   putReceipt,
 } from "@/lib/browser/receipt-store"
 import { readStoredTheme } from "@/lib/browser/theme"
-import { parseCsv, serializeCsv, type ImportSuccess } from "@/lib/domain/csv"
+import {
+  decodeCsv,
+  parseCsv,
+  serializeCsv,
+  type ImportSuccess,
+} from "@/lib/domain/csv"
 import { CSV_HEADER_LINE } from "@/lib/domain/csv-header"
 import { uid } from "@/lib/domain/id"
 import {
@@ -43,7 +44,13 @@ import {
   type ParsedSettings,
 } from "@/lib/domain/settings-file"
 import { normalizeLayout } from "@/lib/domain/overview-layout"
-import { dirOf, packZip, resolveReceipt, unpackZip } from "@/lib/domain/zip"
+import {
+  dirOf,
+  packZip,
+  receiptReader,
+  resolveReceipt,
+  unpackZip,
+} from "@/lib/domain/zip"
 import { SKIP_CODE_KEYS } from "@/lib/i18n/messages"
 import { APP_ROUTES } from "@/lib/site"
 import { confirm } from "@/lib/ui/confirm"
@@ -184,7 +191,7 @@ async function importCsv(
   file: File,
   handle: FileSystemFileHandle | null
 ): Promise<boolean> {
-  const text = await readFileAsText(file)
+  const text = decodeCsv(await fileToUint8Array(file))
   const result = parseCsv(text, useBookStore.getState().cats, uid)
   if (!result.ok) {
     toast.add({ title: failureMessage(ctx, result) })
@@ -379,6 +386,8 @@ interface BookFile {
   isZip: boolean
   /** The state it was built from, to tell whether it is still current. */
   version: BookVersion
+  /** Stored receipts that could not be written into this file. */
+  lostReceipts: number
 }
 
 /**
@@ -426,13 +435,42 @@ function currentSettingsText(): string {
   })
 }
 
+/**
+ * Reads receipts out of the ZIP a save is about to replace, so one this browser
+ * does not hold stays in the file (§7.5): it may have run out of room when the
+ * file was opened. The file is read only if a receipt turns out to need it.
+ */
+function carryFrom(
+  source: FileSystemFileHandle | null
+): ((path: string) => Promise<Uint8Array | null>) | undefined {
+  if (!source?.name.toLowerCase().endsWith(".zip")) return undefined
+  let reader: Promise<(path: string) => Promise<Uint8Array | null>> | undefined
+  return async (path) => {
+    reader ??= source
+      .getFile()
+      .then(fileToUint8Array)
+      .then(receiptReader)
+      .catch((error: unknown) => {
+        // Gone, unreadable or not a ZIP: there is nothing in it to keep.
+        console.warn("Could not read the file being replaced", error)
+        return async () => null
+      })
+    return (await reader)(path)
+  }
+}
+
+function bookFileName(baseName: string, csvOnly: boolean): string {
+  return `${cleanFileName(baseName) || "kirjanpito"}${csvOnly ? ".csv" : ".zip"}`
+}
+
 async function buildBookFile(
   baseName: string,
-  csvOnly: boolean
+  csvOnly: boolean,
+  source: FileSystemFileHandle | null = null
 ): Promise<BookFile> {
   const { entries, cats } = useBookStore.getState()
   const version = bookVersion()
-  const name = cleanFileName(baseName) || "kirjanpito"
+  const name = bookFileName(baseName, csvOnly)
   const paths = buildReceiptPaths(entries)
   /*
    * Paths are always written, so a CSV-only export still records which
@@ -447,10 +485,11 @@ async function buildBookFile(
 
   if (!isZip) {
     return {
-      name: `${name}.csv`,
+      name,
       blob: new Blob([csvText], { type: CSV_MIME }),
       isZip,
       version,
+      lostReceipts: 0,
     }
   }
 
@@ -460,8 +499,9 @@ async function buildBookFile(
       if (a.id) attachmentIds.set(attachmentKey(e.id, i), a.id)
     }
   }
+  let lostReceipts = 0
   const bytes = await packZip({
-    csvName: `${name}.csv`,
+    csvName: bookFileName(baseName, true),
     csvText,
     paths,
     attachmentIds,
@@ -470,12 +510,17 @@ async function buildBookFile(
       return blob ? new Uint8Array(await blob.arrayBuffer()) : null
     },
     settingsText: currentSettingsText(),
+    carry: carryFrom(source),
+    onLost: () => {
+      lostReceipts += 1
+    },
   })
   return {
-    name: `${name}.zip`,
+    name,
     blob: new Blob([bytes as BlobPart], { type: ZIP_MIME }),
     isZip,
     version,
+    lostReceipts,
   }
 }
 
@@ -502,7 +547,10 @@ export async function exportBook(
   }
 
   try {
-    const file = await buildBookFile(baseName, csvOnly)
+    const file = await buildBookFile(baseName, csvOnly, fileHandle)
+    if (file.lostReceipts) {
+      toast.add({ title: ctx.t("io.receiptsLost", { n: file.lostReceipts }) })
+    }
     saveBlob(file.blob, file.name)
     if (!fileHandle && !csvOnly) {
       useBookStore.getState().markSaved({
@@ -537,12 +585,28 @@ export async function saveBook(ctx: Ctx, suggestedBase: string): Promise<void> {
 
   useBookStore.getState().setSaving(true)
   try {
-    const file = await buildBookFile(
-      state.fileName ? baseOf(state.fileName) : suggestedBase,
-      false
-    )
-    const handle = await handleToWrite(ctx, file)
+    /*
+     * The handle comes first. The permission prompt and the save picker both
+     * need a recent user gesture, which packing a ZIP of receipts can outlast,
+     * and a user who backs out should not have to wait for the packing.
+     */
+    const base = state.fileName ? baseOf(state.fileName) : suggestedBase
+    const handle = await handleToWrite(ctx, bookFileName(base, false))
     if (!handle) return
+
+    const file = await buildBookFile(base, false, state.fileHandle)
+    if (file.lostReceipts && handle === state.fileHandle) {
+      const goAhead = await confirm({
+        title: ctx.t("confirm.receiptsLostTitle"),
+        message: ctx.t("confirm.receiptsLostMessage", {
+          n: file.lostReceipts,
+          f: handle.name,
+        }),
+        confirmLabel: ctx.t("confirm.receiptsLostConfirm"),
+        cancelLabel: ctx.t("common.cancel"),
+      })
+      if (!goAhead) return
+    }
 
     await writeFile(handle, file.blob)
     useBookStore.getState().markSaved({
@@ -573,18 +637,15 @@ export async function saveBook(ctx: Ctx, suggestedBase: string): Promise<void> {
  */
 async function handleToWrite(
   ctx: Ctx,
-  file: BookFile
+  zipName: string
 ): Promise<FileSystemFileHandle | null> {
   const { fileHandle, fileName, savedAt } = useBookStore.getState()
-  const pick = () => pickFileToSave(file.name, file.isZip)
+  const pick = () => pickFileToSave(zipName, true)
 
   if (!fileHandle) return pick()
 
-  const sameShape = fileHandle.name
-    .toLowerCase()
-    .endsWith(file.isZip ? ".zip" : ".csv")
-  if (!sameShape) {
-    toast.add({ title: ctx.t("io.shapeChanged", { f: file.name }) })
+  if (!fileHandle.name.toLowerCase().endsWith(".zip")) {
+    toast.add({ title: ctx.t("io.shapeChanged", { f: zipName }) })
     return pick()
   }
 
@@ -648,7 +709,9 @@ export async function autosaveBook(ctx: Ctx): Promise<boolean> {
     }
     if (state.savedAt !== null && onDisk !== state.savedAt) return pause()
 
-    const file = await buildBookFile(baseOf(handle.name), false)
+    const file = await buildBookFile(baseOf(handle.name), false, handle)
+    // A manual save can ask about this. Nothing unattended may drop a receipt.
+    if (file.lostReceipts) return pause()
     await writeFile(handle, file.blob)
     useBookStore.getState().markSaved({
       fileName: handle.name,

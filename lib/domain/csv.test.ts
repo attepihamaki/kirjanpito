@@ -5,6 +5,7 @@ import { defaultCategories } from "@/lib/domain/accounts"
 import {
   CSV_HEADER,
   detectDelimiter,
+  decodeCsv,
   parseCsv,
   serializeCsv,
   type ImportSuccess,
@@ -345,6 +346,37 @@ describe("parseCsv — leniency", () => {
       )
     )
     expect(r.entries[0].vatRate).toBe(25.5)
+  })
+
+  it.each(["-100", "100", "150"])(
+    "falls back to the category default when alv is %s",
+    (rate) => {
+      const r = ok(
+        parseCsv(
+          csvText([
+            "pvm;tyyppi;tili;luokka;summa;alv",
+            `2026-01-08;kulu;333;Ostot ja varastojen muutokset;100,00;${rate}`,
+          ]),
+          baseCats
+        )
+      )
+      expect(r.entries[0].vatRate).toBe(25.5)
+    }
+  )
+
+  it("does not give a new category an impossible rate", () => {
+    const r = ok(
+      parseCsv(
+        csvText([
+          "pvm;tyyppi;tili;luokka;summa;alv",
+          "2026-01-08;kulu;344;Pilvipalvelut;100,00;-100",
+        ]),
+        baseCats
+      )
+    )
+    expect(r.categories.find((c) => c.name === "Pilvipalvelut")?.vatRate).toBe(
+      25.5
+    )
   })
 
   it("honours an explicit zero rate rather than the default", () => {
@@ -779,5 +811,40 @@ describe("CSV round trip", () => {
     expect(canonicalImported(r.entries, indexCategories(r.categories))).toEqual(
       canonical(sample, cats)
     )
+  })
+})
+
+describe("decodeCsv", () => {
+  const TEXT = "Työtilan vuokra – äö"
+
+  it("reads UTF-8, with or without a BOM", () => {
+    const bytes = new TextEncoder().encode(TEXT)
+    expect(decodeCsv(bytes)).toBe(TEXT)
+    expect(decodeCsv(new Uint8Array([0xef, 0xbb, 0xbf, ...bytes]))).toBe(
+      `\ufeff${TEXT}`
+    )
+  })
+
+  it("reads the Windows code page Excel's plain CSV is saved in", () => {
+    const bytes = Uint8Array.from(
+      [...TEXT].map((c) => (c === "–" ? 0x96 : c.charCodeAt(0)))
+    )
+    expect(decodeCsv(bytes)).toBe(TEXT)
+  })
+
+  it("reads UTF-16 in both byte orders", () => {
+    const units = [...TEXT].map((c) => c.charCodeAt(0))
+    const le = units.flatMap((u) => [u & 0xff, u >> 8])
+    const be = units.flatMap((u) => [u >> 8, u & 0xff])
+    expect(decodeCsv(new Uint8Array([0xff, 0xfe, ...le]))).toBe(TEXT)
+    expect(decodeCsv(new Uint8Array([0xfe, 0xff, ...be]))).toBe(TEXT)
+  })
+
+  it("lets an Excel file match the standard categories", () => {
+    const text =
+      "pvm;tyyppi;tili;luokka;summa\n8.1.2026;kulu;336;Eläke- ja henkilösivukulut;1,00\n"
+    const bytes = Uint8Array.from([...text].map((c) => c.charCodeAt(0)))
+    const r = parseCsv(decodeCsv(bytes), defaultCategories())
+    expect(r.ok && r.newCategoryCount).toBe(0)
   })
 })

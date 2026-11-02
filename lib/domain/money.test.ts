@@ -10,6 +10,7 @@ import {
   NBSP,
   parseAmount,
   parseRate,
+  isVatRate,
   roundCents,
   sumCents,
 } from "@/lib/domain/money"
@@ -164,5 +165,22 @@ describe("sumCents", () => {
   it("sums and normalises negative zero", () => {
     expect(sumCents([100, -40, 5])).toBe(65)
     expect(Object.is(sumCents([]), 0)).toBe(true)
+  })
+})
+
+describe("rounding a negative half", () => {
+  it("mirrors the positive one", () => {
+    expect(roundCents(25.5)).toBe(26)
+    expect(roundCents(-25.5)).toBe(-26)
+  })
+})
+
+describe("isVatRate", () => {
+  it.each([0, 10, 25.5, 99.9])("accepts %s", (rate) => {
+    expect(isVatRate(rate)).toBe(true)
+  })
+
+  it.each([-100, -0.5, 100, 150])("refuses %s", (rate) => {
+    expect(isVatRate(rate)).toBe(false)
   })
 })

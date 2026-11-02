@@ -1,15 +1,21 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { LandingPage } from "@/components/landing/landing-page"
+import { openFile } from "@/lib/commands/io-commands"
 import { useBookStore } from "@/stores/book-store"
 import { useLangStore } from "@/stores/lang-store"
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   usePathname: () => "/",
+}))
+
+vi.mock("@/lib/commands/io-commands", () => ({
+  openFile: vi.fn(async () => {}),
+  pickAndOpenFile: vi.fn(async () => true),
 }))
 
 describe("landing page", () => {
@@ -47,5 +53,43 @@ describe("landing page", () => {
     await user.click(en)
 
     expect(useLangStore.getState().lang).toBe("en")
+  })
+})
+
+describe("dropping a file on the landing page (§8.3)", () => {
+  const drop = (file: File) =>
+    fireEvent.drop(window, {
+      dataTransfer: { types: ["Files"], files: [file], items: [] },
+    })
+
+  beforeEach(() => {
+    vi.mocked(openFile).mockClear()
+    useBookStore.setState({ hydrated: true, open: false })
+    useLangStore.setState({ hydrated: true, lang: "fi" })
+  })
+
+  it("opens a CSV or ZIP", async () => {
+    render(<LandingPage />)
+    const file = new File(["x"], "kirjanpito.zip")
+    drop(file)
+
+    await waitFor(() => expect(openFile).toHaveBeenCalledOnce())
+    expect(vi.mocked(openFile).mock.calls[0][1]).toBe(file)
+  })
+
+  it("shows where to drop while a file is dragged over", () => {
+    render(<LandingPage />)
+    fireEvent.dragEnter(window, { dataTransfer: { types: ["Files"] } })
+
+    expect(
+      screen.getByText("Pudota CSV- tai ZIP-tiedosto avataksesi sen")
+    ).toBeVisible()
+  })
+
+  it("does not try to open anything else", () => {
+    render(<LandingPage />)
+    drop(new File(["x"], "kuitti.jpg"))
+
+    expect(openFile).not.toHaveBeenCalled()
   })
 })

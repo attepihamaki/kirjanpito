@@ -3,6 +3,7 @@ import {
   RETIRED_CATEGORY_ID,
   defaultCategories,
 } from "@/lib/domain/accounts"
+import { isVatRate } from "@/lib/domain/money"
 import {
   normalizeLayout,
   type OverviewWidget,
@@ -85,9 +86,7 @@ function parseCategory(value: unknown): Category | null {
   if (typeof id !== "string" || !id) return null
   if (typeof line !== "string" || !LINE_BY_KEY.has(line)) return null
   if (typeof name !== "string" || !name.trim()) return null
-  if (typeof vatRate !== "number" || !(vatRate >= 0 && vatRate < 100)) {
-    return null
-  }
+  if (typeof vatRate !== "number" || !isVatRate(vatRate)) return null
   if (typeof enabled !== "boolean") return null
   const cat: Category = {
     id,
