@@ -16,6 +16,10 @@ import { pl, type Dict } from "@/lib/i18n/t"
  */
 export const LANDING_DICT = {
   "app.name": ["Kirjanpito", "Bookkeeping"],
+  "app.documentTitle": [
+    "Kirjanpito – toiminimen yhdenkertainen kirjanpito",
+    "Bookkeeping – single-entry bookkeeping for sole traders",
+  ],
   "app.language": ["Kieli", "Language"],
   "app.theme": ["Teema", "Theme"],
   /*

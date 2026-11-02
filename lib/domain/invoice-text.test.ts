@@ -234,3 +234,61 @@ describe("seller, rows and category", () => {
     expect(suggestCategory({ ...base, vendor: null })).toBeNull()
   })
 })
+
+describe("reading the invoice date among other dates", () => {
+  const date = (text: string) => parseInvoiceText(text).date
+
+  it.each([
+    ["Eräpäivämäärä 15.2.2026\nLaskun päivämäärä 15.1.2026"],
+    ["Toimituspäivämäärä 3.1.2026\nLaskun päivämäärä 15.1.2026"],
+    ["Due date 15.2.2026\nInvoice date 15.1.2026"],
+    ["Delivery date 3.1.2026\nInvoice date 15.1.2026"],
+    ["Eräpäivämäärä 15.2.2026\nPäiväys 15.1.2026"],
+    ["Due date 15.2.2026\nDate 15.1.2026"],
+  ])("takes the invoice date from %j", (text) => {
+    expect(date(text)).toBe("2026-01-15")
+  })
+
+  it("still reads a bare label with a due date after it on the line", () => {
+    expect(date("Päiväys 15.1.2026 Eräpäivä 15.2.2026")).toBe("2026-01-15")
+  })
+})
+
+describe("reading the total", () => {
+  const amount = (text: string) => parseInvoiceText(text).amount
+
+  it("does not read palvelut as a mention of VAT", () => {
+    expect(amount("Palvelut yhteensä 500,00")).toBe(50_000)
+  })
+
+  it("still skips a line about the VAT itself", () => {
+    expect(amount("ALV yhteensä 25,50\nYhteensä 125,50")).toBe(12_550)
+  })
+
+  it.each([
+    ["Yhteensä -124,00"],
+    ["Yhteensä −124,00"],
+    ["Yhteensä 124,00-"],
+    ["Yhteensä 124,00−"],
+  ])("keeps the sign of a credit note in %j", (text) => {
+    expect(amount(text)).toBe(-12_400)
+  })
+
+  it("prefers a credit note's total to a zero left to pay", () => {
+    expect(amount("Yhteensä -124,00\nMaksettava 0,00")).toBe(-12_400)
+  })
+
+  it("does not read a hyphen after a word as a sign", () => {
+    expect(amount("Summa-124,00")).toBe(12_400)
+  })
+
+  it("takes the total of a seller without VAT", () => {
+    expect(amount("Yhteensä 100,00 ALV 0 %")).toBe(10_000)
+  })
+
+  it("prefers the gross total to a subtotal at 0 %", () => {
+    expect(
+      amount("Yhteensä alv 0 % 100,00\nYhteensä sis. alv 25,5 % 125,50")
+    ).toBe(12_550)
+  })
+})

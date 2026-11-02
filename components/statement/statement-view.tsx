@@ -85,7 +85,10 @@ export function StatementView() {
             {f.t("nav.statement")}
           </h2>
           <p className="tabular text-sm text-muted-foreground">
-            1.1.{year} – 31.12.{year}
+            {f.t("overview.range", {
+              a: f.date(`${year}-01-01`),
+              b: f.date(`${year}-12-31`),
+            })}
           </p>
         </header>
 

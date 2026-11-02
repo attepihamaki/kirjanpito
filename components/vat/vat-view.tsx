@@ -132,6 +132,7 @@ function RateTable({
             <TableHead>{f.t("common.rate")}</TableHead>
             <TableHead className="text-right">{f.t("ledger.colNet")}</TableHead>
             <TableHead className="text-right">{f.t("common.vat")}</TableHead>
+            <TableHead className="text-right">{f.t("common.total")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -144,6 +145,9 @@ function RateTable({
               <TableCell className="text-right">
                 <Money cents={bucket.vat} />
               </TableCell>
+              <TableCell className="text-right">
+                <Money cents={bucket.net + bucket.vat} />
+              </TableCell>
             </TableRow>
           ))}
           {side.other.net !== 0 || side.other.vat !== 0 ? (
@@ -154,6 +158,9 @@ function RateTable({
               </TableCell>
               <TableCell className="text-right">
                 <Money cents={side.other.vat} />
+              </TableCell>
+              <TableCell className="text-right">
+                <Money cents={side.other.net + side.other.vat} />
               </TableCell>
             </TableRow>
           ) : null}
@@ -166,6 +173,9 @@ function RateTable({
             </TableCell>
             <TableCell className="text-right font-medium">
               <Money cents={side.total.vat} />
+            </TableCell>
+            <TableCell className="text-right font-medium">
+              <Money cents={side.total.net + side.total.vat} />
             </TableCell>
           </TableRow>
         </TableFooter>

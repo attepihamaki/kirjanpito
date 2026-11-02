@@ -57,7 +57,9 @@ export function useT() {
 }
 
 /**
- * Keeps `document.documentElement.lang` in step with the stored preference.
+ * Keeps `document.documentElement.lang` and the document title in step with
+ * the stored preference (§9). The Finnish title is whatever the page's own
+ * metadata set, which is kept for switching back.
  *
  * The attribute is set imperatively rather than rendered: the JSX prop in
  * HtmlShell is a literal that never changes, so React has nothing to revert.
@@ -66,10 +68,16 @@ export function useT() {
 export function LangHtmlAttr() {
   const lang = useLangStore((s) => s.lang)
   const hydrated = useLangStore((s) => s.hydrated)
+  const t = useT()
+  const finnishTitle = React.useRef<string | null>(null)
 
   React.useEffect(() => {
-    if (hydrated) document.documentElement.lang = lang
-  }, [lang, hydrated])
+    if (!hydrated) return
+    document.documentElement.lang = lang
+    finnishTitle.current ??= document.title
+    document.title =
+      lang === "en" ? t("app.documentTitle") : finnishTitle.current
+  }, [lang, hydrated, t])
 
   return null
 }

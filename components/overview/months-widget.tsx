@@ -39,7 +39,11 @@ export function MonthsWidget() {
       <dl className="grid grid-cols-2 gap-3 border-t pt-4 text-sm @xl:grid-cols-4">
         <Stat
           label={f.t("overview.bestMonth")}
-          value={`${f.month(best)} · ${f.money(results[best])}`}
+          value={
+            data.yearEntries.length
+              ? `${f.month(best)} · ${f.money(results[best])}`
+              : "–"
+          }
         />
         <Stat
           label={f.t("overview.avgIncome")}

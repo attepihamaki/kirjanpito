@@ -139,15 +139,16 @@ function findBarcode(lines: readonly string[]) {
 
 /*
  * An amount with exactly two decimals, optionally grouped by spaces, dots
- * or commas.
+ * or commas, and signed by a minus on either side, as a credit note prints it.
+ * A hyphen right after a word is not a sign: "ALV-25,50" is positive.
  * The lookarounds keep "12.10" out of "12.10.2026".
  */
 const AMOUNT_RE =
-  /(?<![\d.,])-?(?:\d{1,3}(?:[  .,]\d{3})+|\d+)[.,]\d{2}(?![.,]?\d)/g
+  /(?<![\d.,])(?:(?<!\p{L})[-−])?(?:\d{1,3}(?:[  .,]\d{3})+|\d+)[.,]\d{2}(?![.,]?\d)(?:[-−](?!\d))?/gu
 
 function amountsIn(line: string): Cents[] {
   return [...line.matchAll(AMOUNT_RE)]
-    .map((m) => parseAmount(m[0]))
+    .map((m) => parseAmount(m[0].replace(/^(.+)[-−]$/, "-$1")))
     .filter((c): c is Cents => c != null)
 }
 
@@ -156,25 +157,50 @@ const TOTAL_LABEL =
 
 /** Lines about net sums or the VAT itself, which also say "yhteensä". */
 const NOT_GROSS =
-  /veroton|ilman\s*alv|alv\s*0\s*%|netto|subtotal|välisumma|excl|before tax/i
-const MENTIONS_VAT = /alv|vat|arvonlisävero|(?<!\p{L})vero(?!\p{L})|tax/iu
+  /veroton|ilman\s*alv|netto|subtotal|välisumma|excl|before tax/i
+/** A net subtotal on most invoices, but the total of a seller without VAT. */
+const ZERO_VAT = /alv\s*0\s*%/i
+/** Whole words, or "palvelut" would read as a mention of "alv". */
+const MENTIONS_VAT =
+  /(?<!\p{L})(alv|vat|arvonlisävero\p{L}*|vero(t|kanta)?|tax(es)?)(?!\p{L})/iu
 const INCLUDES_VAT = /sis\.?|sisältäen|incl|including|verollinen/i
 
 /**
- * The largest amount on a line labelled as a total, skipping the net and VAT
- * subtotals. A label with no amount beside it takes the amount on the next
- * line, where a table puts it.
+ * The largest amount, by size, on a total line that `accept` lets through, so
+ * a credit note's total wins over its "Maksettava 0,00". A label with no amount
+ * beside it takes the amount on the next line, where a table puts it.
  */
-function findTotal(lines: readonly string[]): Cents | null {
+function largestTotal(
+  lines: readonly string[],
+  accept: (line: string) => boolean
+): Cents | null {
   let best: Cents | null = null
   lines.forEach((line, i) => {
-    if (!TOTAL_LABEL.test(line) || NOT_GROSS.test(line)) return
-    if (MENTIONS_VAT.test(line) && !INCLUDES_VAT.test(line)) return
+    if (!TOTAL_LABEL.test(line) || !accept(line)) return
     let found = amountsIn(line)
     if (!found.length && i + 1 < lines.length) found = amountsIn(lines[i + 1])
-    for (const c of found) if (best == null || c > best) best = c
+    for (const c of found) {
+      if (best == null || Math.abs(c) > Math.abs(best)) best = c
+    }
   })
   return best
+}
+
+/**
+ * The total including VAT, skipping the net and VAT subtotals. With no such
+ * line, a total marked as 0 % VAT is what a seller without VAT charges.
+ */
+function findTotal(lines: readonly string[]): Cents | null {
+  return (
+    largestTotal(
+      lines,
+      (line) =>
+        !NOT_GROSS.test(line) &&
+        !ZERO_VAT.test(line) &&
+        (!MENTIONS_VAT.test(line) || INCLUDES_VAT.test(line))
+    ) ??
+    largestTotal(lines, (line) => ZERO_VAT.test(line) && !NOT_GROSS.test(line))
+  )
 }
 
 /* -------------------------------------------------------------------------
@@ -229,10 +255,8 @@ const OTHER_DATE_LABEL =
   /toimitus|delivery|jakso|period|tilaus|order|viivästys|alkaen|voimassa/i
 const INVOICE_DATE_STRICT =
   /laskun\s*(?:pvm|päiväys|päivämäärä)|laskupäivä|laskutuspäivä|invoice\s*date|issue\s*date|date\s*of\s*issue/i
-const INVOICE_DATE_LABEL = new RegExp(
-  String.raw`${INVOICE_DATE_STRICT.source}|päiväys|päivämäärä|(?<!\p{L})pvm|(?<!\p{L})date`,
-  "iu"
-)
+/** A date label that names no kind of date, unless a word before it does. */
+const ANY_DATE_LABEL = /päiväys|päivämäärä|(?<!\p{L})pvm|(?<!\p{L})date/iu
 
 /**
  * The date that a label on line `i` points at: the first date after the
@@ -276,12 +300,25 @@ const DUE_DATE_STOP = new RegExp(
 )
 
 /**
- * The date beside the first invoice-date label, else the first date in the
- * text that is not on a due or delivery line.
+ * The date beside a label that says invoice date, else beside a bare "Päiväys"
+ * or "Date", else the first date in the text that is not on a due or delivery
+ * line. "Eräpäivämäärä" and "Due date" hold a bare label too, so the words
+ * before it in its cell are checked.
  */
 function findDate(lines: readonly string[]): string | null {
   for (let i = 0; i < lines.length; i++) {
-    const date = dateForLabel(lines, i, INVOICE_DATE_LABEL, INVOICE_DATE_STOP)
+    const date = dateForLabel(lines, i, INVOICE_DATE_STRICT, INVOICE_DATE_STOP)
+    if (date) return date
+  }
+  for (let i = 0; i < lines.length; i++) {
+    const m = ANY_DATE_LABEL.exec(lines[i])
+    if (!m) continue
+    const cell = lines[i]
+      .slice(0, m.index + m[0].length)
+      .split("\t")
+      .at(-1)
+    if (cell && (DUE_LABEL.test(cell) || OTHER_DATE_LABEL.test(cell))) continue
+    const date = dateForLabel(lines, i, ANY_DATE_LABEL, INVOICE_DATE_STOP)
     if (date) return date
   }
   for (const line of lines) {

@@ -566,6 +566,16 @@ export async function exportBook(
 }
 
 /**
+ * Whether another bookkeeping has taken over since `epoch`. A save leaves the
+ * UI usable, so a file can be opened or closed while one is under way. From
+ * then on the save must not write the new book into the old file, and must not
+ * link the old file to the new book, or the next save would overwrite it.
+ */
+function replacedSince(epoch: number): boolean {
+  return useBookStore.getState().bookEpoch !== epoch
+}
+
+/**
  * Write the bookkeeping back to the file it was opened from (§7.5), asking
  * for a file when there is none yet, when its shape has changed, or when it
  * has gone missing. Must be called from a user gesture: both the write
@@ -592,7 +602,7 @@ export async function saveBook(ctx: Ctx, suggestedBase: string): Promise<void> {
      */
     const base = state.fileName ? baseOf(state.fileName) : suggestedBase
     const handle = await handleToWrite(ctx, bookFileName(base, false))
-    if (!handle) return
+    if (!handle || replacedSince(state.bookEpoch)) return
 
     const file = await buildBookFile(base, false, state.fileHandle)
     if (file.lostReceipts && handle === state.fileHandle) {
@@ -607,8 +617,10 @@ export async function saveBook(ctx: Ctx, suggestedBase: string): Promise<void> {
       })
       if (!goAhead) return
     }
+    if (replacedSince(state.bookEpoch)) return
 
     await writeFile(handle, file.blob)
+    if (replacedSince(state.bookEpoch)) return
     useBookStore.getState().markSaved({
       fileName: handle.name,
       fileHandle: handle,
@@ -708,11 +720,14 @@ export async function autosaveBook(ctx: Ctx): Promise<boolean> {
       return pause()
     }
     if (state.savedAt !== null && onDisk !== state.savedAt) return pause()
+    if (replacedSince(state.bookEpoch)) return false
 
     const file = await buildBookFile(baseOf(handle.name), false, handle)
     // A manual save can ask about this. Nothing unattended may drop a receipt.
     if (file.lostReceipts) return pause()
+    if (replacedSince(state.bookEpoch)) return false
     await writeFile(handle, file.blob)
+    if (replacedSince(state.bookEpoch)) return false
     useBookStore.getState().markSaved({
       fileName: handle.name,
       fileHandle: handle,

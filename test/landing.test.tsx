@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -53,6 +53,26 @@ describe("landing page", () => {
     await user.click(en)
 
     expect(useLangStore.getState().lang).toBe("en")
+  })
+})
+
+describe("the document title (§9)", () => {
+  it("follows the language, and comes back", () => {
+    document.title = "Kirjanpito"
+    useBookStore.setState({ hydrated: true })
+    useLangStore.setState({ hydrated: true, lang: "en" })
+    render(<LandingPage />)
+    expect(document.title).toBe(
+      "Bookkeeping – single-entry bookkeeping for sole traders"
+    )
+    act(() => useLangStore.setState({ lang: "fi" }))
+  })
+
+  it("leaves the page's own Finnish title alone", () => {
+    document.title = "Sivun oma otsikko"
+    useLangStore.setState({ hydrated: true, lang: "fi" })
+    render(<LandingPage />)
+    expect(document.title).toBe("Sivun oma otsikko")
   })
 })
 

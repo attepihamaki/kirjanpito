@@ -8,6 +8,7 @@ import { indexCategories } from "@/lib/domain/types"
 import { vatReport } from "@/lib/domain/vat"
 import {
   bookStartDate,
+  periodContaining,
   periodStatus,
   vatPeriods,
   type VatPeriodStatus,
@@ -26,23 +27,28 @@ export function useVatPeriod() {
   const cats = useBookStore((s) => s.cats)
   const year = useBookStore((s) => s.year)
   const mode = useBookStore((s) => s.vatPeriod)
-  const index = useBookStore((s) => s.vatIndex)
+  const picked = useBookStore((s) => s.vatIndex)
   const bookStart = useBookStore((s) => s.bookStart)
   const vatFiled = useBookStore((s) => s.vatFiled)
   const today = todayIso()
+  /*
+   * One index for the title, the figures and the filed mark, so they can never
+   * be about different periods.
+   */
+  const count = mode === "month" ? 12 : mode === "quarter" ? 4 : 1
+  const index = Math.min(
+    count,
+    Math.max(1, picked ?? periodContaining(mode, today).index)
+  )
 
   const catMap = React.useMemo(() => indexCategories(cats), [cats])
 
   const period: Period = React.useMemo(() => {
     if (mode === "year") return { kind: "year", year }
     if (mode === "quarter") {
-      return {
-        kind: "quarter",
-        year,
-        quarter: Math.min(4, Math.max(1, index)) as 1 | 2 | 3 | 4,
-      }
+      return { kind: "quarter", year, quarter: index as 1 | 2 | 3 | 4 }
     }
-    return { kind: "month", year, month: Math.min(12, Math.max(1, index)) }
+    return { kind: "month", year, month: index }
   }, [mode, index, year])
 
   const report = React.useMemo(

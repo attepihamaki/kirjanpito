@@ -1,6 +1,5 @@
 "use client"
 
-import { MINUS } from "@/lib/domain/money"
 import type { Cents } from "@/lib/domain/types"
 import { useFormatters } from "@/components/lang-provider"
 import { cn } from "@/lib/utils"
@@ -18,7 +17,10 @@ export function Money({
   cents: Cents
   /** Colour the amount as income or expense. */
   tone?: "income" | "expense" | "muted"
-  /** Prefix a minus sign, for expense rows shown as negative. */
+  /**
+   * Show the amount as negative, for expense rows. A refund, already negative,
+   * then reads as positive.
+   */
   signed?: boolean
   className?: string
 }) {
@@ -35,8 +37,7 @@ export function Money({
         className
       )}
     >
-      {signed && !zero ? MINUS : ""}
-      {f.money(cents)}
+      {f.money(signed ? -cents : cents)}
     </span>
   )
 }

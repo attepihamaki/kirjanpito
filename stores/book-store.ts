@@ -83,22 +83,16 @@ function nextSort<K extends string>(
 /**
  * Carries the VAT view's month or quarter across a change of filing period,
  * so the view stays on the same part of the year rather than jumping to its
- * start. The year period has no index, so the old one is kept for later.
+ * start. A year has no index to carry, so from there it follows today again.
  */
 function clampVatIndex(
-  index: number,
+  index: number | null,
   from: VatPeriodKind,
   to: VatPeriodKind
-): number {
-  if (to === "year" || from === to) return index
-  if (to === "quarter") {
-    return from === "month"
-      ? Math.min(Math.max(1, Math.ceil(index / 3)), 4)
-      : Math.min(Math.max(1, index), 4)
-  }
-  return from === "quarter"
-    ? Math.min(Math.max(1, index * 3 - 2), 12)
-    : Math.min(Math.max(1, index), 12)
+): number | null {
+  if (index === null || from === to) return index
+  if (to === "year") return null
+  return to === "quarter" ? Math.ceil(index / 3) : index * 3 - 2
 }
 
 export type DialogState =
@@ -196,8 +190,12 @@ export interface BookState {
   catType: TypeFilter
   catSort: SortState<CatSortKey> | null
   catPage: number
-  /** The month or quarter the VAT view shows, in the filing period (§6.5). */
-  vatIndex: number
+  /**
+   * The month or quarter picked in the VAT view (§6.5), or null for the period
+   * today falls in. Null rather than a number worked out at startup, because
+   * the filing period it is an index of is not known until the store rehydrates.
+   */
+  vatIndex: number | null
   dialog: DialogState
   /** Receipt ids held by the open entry dialog, protected from GC (§7.4). */
   draftAttachmentIds: string[]
@@ -360,7 +358,7 @@ function initialState(): BookState {
     catType: "all",
     catSort: null,
     catPage: 1,
-    vatIndex: new Date().getMonth() + 1,
+    vatIndex: null,
     dialog: { kind: "none" },
     draftAttachmentIds: [],
     undoAttachmentIds: [],

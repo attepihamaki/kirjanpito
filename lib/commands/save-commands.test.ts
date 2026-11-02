@@ -565,3 +565,120 @@ describe("receipts the browser does not hold", () => {
     expect(handle.written).toHaveLength(0)
   })
 })
+
+describe("another book taking over during a save (§7.5)", () => {
+  const OTHER_CSV =
+    "pvm;selite;tyyppi;tili;luokka;summa;alv\n2026-02-01;Toinen;kulu;333;;1,00;0\n"
+
+  /** A linked ZIP whose write waits until the test lets it finish. */
+  function slowZip() {
+    const handle = fakeHandle("kirjanpito.zip")
+    let finish = () => {}
+    const gate = new Promise<void>((resolve) => {
+      finish = resolve
+    })
+    handle.createWritable.mockImplementation(async () => ({
+      write: async (blob: Blob) => {
+        await gate
+        handle.written.push(blob)
+      },
+      close: async () => {
+        handle.lastModified += 1000
+      },
+      abort: async () => {},
+    }))
+    linkZip(handle)
+    return { handle, finish }
+  }
+
+  const tick = () => new Promise((resolve) => setTimeout(resolve, 20))
+
+  beforeEach(() => {
+    vi.unstubAllGlobals()
+    stubPickers(null)
+    registerConfirmHandler(async () => true)
+    useBookStore.setState({
+      autosave: false,
+      autosavePaused: false,
+      saving: false,
+      importing: false,
+    })
+  })
+
+  it("leaves a file opened meanwhile linked to itself", async () => {
+    const { handle, finish } = slowZip()
+    const other = fakeHandle("toinen.csv")
+
+    const saving = saveBook(ctx, "kirjanpito")
+    await tick()
+    await openFile(
+      ctx,
+      new File([OTHER_CSV], other.name, { lastModified: 5000 }),
+      asHandle(other)
+    )
+    finish()
+    await saving
+
+    const state = useBookStore.getState()
+    expect(state.fileHandle).toBe(asHandle(other))
+    expect(state.fileName).toBe("toinen.csv")
+    expect(state.savedAt).toBe(5000)
+    expect(state.entries[0].description).toBe("Toinen")
+    // The old book reached its own file before the new one took over.
+    const saved = await unzipped(handle.written[0])
+    expect(saved?.csvText).toContain("Lasku")
+  })
+
+  it("does not link a closed book's file again", async () => {
+    const { finish } = slowZip()
+
+    const saving = saveBook(ctx, "kirjanpito")
+    await tick()
+    useBookStore.getState().closeBook()
+    finish()
+    await saving
+
+    const state = useBookStore.getState()
+    expect(state.fileHandle).toBeNull()
+    expect(state.fileName).toBeNull()
+    expect(state.dirty).toBe(false)
+  })
+
+  it("holds for autosave too", async () => {
+    const { finish } = slowZip()
+    const other = fakeHandle("toinen.csv")
+    useBookStore.setState({ autosave: true })
+
+    const saving = autosaveBook(ctx)
+    await tick()
+    await openFile(
+      ctx,
+      new File([OTHER_CSV], other.name, { lastModified: 5000 }),
+      asHandle(other)
+    )
+    finish()
+
+    expect(await saving).toBe(false)
+    expect(useBookStore.getState().fileHandle).toBe(asHandle(other))
+  })
+
+  it("does not write a new book into the old file", async () => {
+    const handle = fakeHandle("kirjanpito.zip")
+    linkZip(handle)
+    let grant: (permission: PermissionState) => void = () => {}
+    handle.queryPermission.mockImplementation(
+      () =>
+        new Promise<PermissionState>((resolve) => {
+          grant = resolve
+        })
+    )
+
+    const saving = saveBook(ctx, "kirjanpito")
+    await tick()
+    useBookStore.getState().newBook(2026)
+    grant("granted")
+    await saving
+
+    expect(handle.written).toHaveLength(0)
+  })
+})

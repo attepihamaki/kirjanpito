@@ -39,15 +39,15 @@ import { useBookStore } from "@/stores/book-store"
 
 /**
  * The open file and everything that acts on it (§8.2), at the right-hand end
- * of the top bar: a button naming the file, opening a popover with the
+ * of the top bar: a button opening a popover with the
  * financial year, the save status and the file actions.
  *
  * The year lives here rather than beside the navigation because it is read out
  * of the file: the popover is the one place that answers "which bookkeeping,
  * which year, and is it saved".
  *
- * The trigger is the only control in the bar that is not an icon — it carries
- * the file's name, which is the one piece of state the user needs at a glance.
+ * The trigger is an icon like the rest of the bar, with the file's name in its
+ * accessible name and tooltip, and a dot for the save status.
  */
 export function FileMenu({
   onOpenFile,

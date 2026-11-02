@@ -51,6 +51,7 @@ export function IncomeExpenseChart({
   const f = useFormatters()
   const router = useRouter()
   const setMonth = useBookStore((s) => s.setMonth)
+  const clearFilters = useBookStore((s) => s.clearLedgerFilters)
 
   const rows = summary.months
   const data: MonthDatum[] = rows.map((r, i) => ({
@@ -60,7 +61,9 @@ export function IncomeExpenseChart({
     expense: -r.expenseNet / 100,
   }))
 
+  // Old filters left in place could hide the month's rows.
   const openMonth = (m: number) => {
+    clearFilters()
     setMonth(m)
     router.push(APP_ROUTES.ledger)
   }
