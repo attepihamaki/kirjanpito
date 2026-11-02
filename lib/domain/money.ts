@@ -75,7 +75,9 @@ export function formatFileSize(bytes: number, lang: Lang): string {
  * comma is always a decimal comma, whatever the UI language, so the same file
  * parses identically in Finnish and English.
  *
- * Returns null when the input is not a number.
+ * Returns null when the input is not a number, or has more than two decimals.
+ * "1,234" could mean 1,23 € or 1 234 €, and a guess would be silently wrong by
+ * a factor of a thousand, so it is refused.
  */
 export function parseAmount(input: string | null | undefined): Cents | null {
   if (input == null) return null
@@ -95,7 +97,7 @@ export function parseAmount(input: string | null | undefined): Cents | null {
     t = t.replace(",", ".")
   }
 
-  if (!/^-?\d*\.?\d+$/.test(t)) return null
+  if (!/^-?\d*\.?\d+$/.test(t) || /\.\d{3,}$/.test(t)) return null
   return roundCents(parseFloat(t) * 100)
 }
 
@@ -118,11 +120,4 @@ export function parseRate(input: string | null | undefined): number | null {
  */
 export function isVatRate(rate: number): boolean {
   return rate >= 0 && rate < 100
-}
-
-/** Sum integer cents without ever leaving integer arithmetic. */
-export function sumCents(values: Iterable<Cents>): Cents {
-  let total = 0
-  for (const v of values) total += v
-  return total + 0
 }

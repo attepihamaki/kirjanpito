@@ -2,11 +2,8 @@
 
 import * as React from "react"
 
-import { collectLiveIds } from "@/lib/domain/gc"
-import {
-  gcReceipts,
-  isReceiptStorageSupported,
-} from "@/lib/browser/receipt-store"
+import { sweepReceipts } from "@/lib/commands/book-commands"
+import { isReceiptStorageSupported } from "@/lib/browser/receipt-store"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -39,24 +36,8 @@ export function useReceiptGc(enabled: boolean) {
     const timer = setTimeout(async () => {
       if (running.current) return
       running.current = true
-      try {
-        await gcReceipts(() => {
-          const state = useBookStore.getState()
-          if (state.importing) return null
-          return collectLiveIds(state.entries, [
-            ...state.draftAttachmentIds,
-            ...state.undoAttachmentIds,
-          ])
-        })
-      } catch (error) {
-        /*
-         * A failed sweep leaks a blob, which is harmless. It must never
-         * surface as a user-facing error.
-         */
-        console.warn("Receipt garbage collection failed", error)
-      } finally {
-        running.current = false
-      }
+      await sweepReceipts()
+      running.current = false
     }, 250)
 
     return () => clearTimeout(timer)

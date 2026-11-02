@@ -10,8 +10,10 @@ export default defineConfig({
     },
   },
   test: {
-    // The domain layer is pure TypeScript and needs no DOM. Component tests
-    // opt in per file with `// @vitest-environment jsdom`.
+    /*
+     * The domain layer is pure TypeScript and needs no DOM. Component tests
+     * opt in per file with `// @vitest-environment jsdom`.
+     */
     environment: "node",
     globals: false,
     include: ["lib/**/*.test.ts", "stores/**/*.test.ts", "test/**/*.test.tsx"],

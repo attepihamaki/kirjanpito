@@ -2,7 +2,12 @@ import { toast } from "@/components/ui/toast"
 
 import { releaseAllObjectUrls } from "@/lib/browser/object-urls"
 import { rememberHandle } from "@/lib/browser/file-handle"
+import {
+  gcReceipts,
+  isReceiptStorageSupported,
+} from "@/lib/browser/receipt-store"
 import { heldByAnotherTab } from "@/lib/browser/tab-lock"
+import { collectLiveIds } from "@/lib/domain/gc"
 import type { Entry } from "@/lib/domain/types"
 import { LANDING, APP_ROUTES } from "@/lib/site"
 import { confirm } from "@/lib/ui/confirm"
@@ -26,6 +31,30 @@ import { useBookStore } from "@/stores/book-store"
 async function unlinkFile(): Promise<void> {
   useBookStore.getState().forgetFileHandle()
   await rememberHandle(null)
+}
+
+/**
+ * Delete the receipts nothing refers to (§7.4). It waits out an import: receipts
+ * going into IndexedDB belong to no entry until the whole file has been read.
+ */
+export async function sweepReceipts(): Promise<void> {
+  if (!isReceiptStorageSupported()) return
+  try {
+    await gcReceipts(() => {
+      const state = useBookStore.getState()
+      if (state.importing) return null
+      return collectLiveIds(state.entries, [
+        ...state.draftAttachmentIds,
+        ...state.undoAttachmentIds,
+      ])
+    })
+  } catch (error) {
+    /*
+     * A failed sweep leaks a blob, which is harmless. It must never surface as
+     * a user-facing error.
+     */
+    console.warn("Receipt garbage collection failed", error)
+  }
 }
 
 /** Ask before discarding unsaved changes (§8.11). False aborts. */
@@ -72,6 +101,11 @@ export async function closeBook(ctx: Ctx): Promise<void> {
   releaseAllObjectUrls()
   await unlinkFile()
   useBookStore.getState().closeBook()
+  /*
+   * Now rather than through useReceiptGc, whose wait is cut short as the app
+   * shell unmounts: a closed book's receipts do not stay in the browser.
+   */
+  void sweepReceipts()
   toast.add({ title: ctx.t("file.closed") })
   ctx.navigate(LANDING)
 }
@@ -119,7 +153,7 @@ export async function clearAllEntries(ctx: Ctx): Promise<void> {
 export const UNDO_TIMEOUT_MS = 10_000
 
 /**
- * Raise a toast with "Kumoa" for entries just deleted (§14). Their receipts
+ * Raise a toast with "Kumoa" for entries just deleted (§8.11). Their receipts
  * stay in IndexedDB until the toast is gone, or the undo would bring back
  * entries whose files the sweep had already removed. An undo after another
  * bookkeeping has taken over does nothing.
@@ -136,6 +170,7 @@ export function offerUndo(
     return
   }
   const epoch = store.bookEpoch
+  const catsAtDelete = store.cats
   const held = removed.flatMap((e) =>
     (e.atts ?? []).flatMap((a) => (a.id ? [a.id] : []))
   )
@@ -149,6 +184,13 @@ export function offerUndo(
         toast.close(id)
         const now = useBookStore.getState()
         if (now.bookEpoch !== epoch) return
+        // A custom category with no entries left can be deleted in the meantime.
+        const used = new Set(removed.map((e) => e.catId))
+        const present = new Set(now.cats.map((c) => c.id))
+        const gone = catsAtDelete.filter(
+          (c) => used.has(c.id) && !present.has(c.id)
+        )
+        if (gone.length) now.setCategories([...now.cats, ...gone])
         now.restoreEntries(removed)
         toast.add({ title: restoredTitle })
       },

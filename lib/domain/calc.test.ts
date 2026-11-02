@@ -134,3 +134,15 @@ describe("a credit note", () => {
     expect(credit.gross).toBe(-sale.gross)
   })
 })
+
+describe("a rate the calculations cannot use", () => {
+  it.each([-100, -5, 100, 150])("treats %s as no VAT", (vatRate) => {
+    expect(calcEntry({ amount: 10_000, vatRate, amountMode: "gross" })).toEqual(
+      {
+        net: 10_000,
+        vat: 0,
+        gross: 10_000,
+      }
+    )
+  })
+})

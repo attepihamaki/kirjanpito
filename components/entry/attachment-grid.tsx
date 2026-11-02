@@ -14,6 +14,21 @@ import { isPdf } from "@/lib/domain/receipt-path"
 import type { Attachment } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
 
+/*
+ * Rendered PDF pages, by receipt id. Reopening an entry should not open and
+ * render its PDFs again, and a receipt's bytes never change under its id. The
+ * oldest goes first once there are more than a dialog or two's worth.
+ */
+const PDF_THUMBNAILS_KEPT = 50
+const pdfThumbnails = new Map<string, string>()
+
+function rememberPdfThumbnail(id: string, url: string): void {
+  pdfThumbnails.set(id, url)
+  if (pdfThumbnails.size > PDF_THUMBNAILS_KEPT) {
+    pdfThumbnails.delete(pdfThumbnails.keys().next().value as string)
+  }
+}
+
 /** A 3:4 thumbnail, cropped to the top. */
 function Thumb({
   att,
@@ -25,7 +40,9 @@ function Thumb({
   onRemove: () => void
 }) {
   const f = useFormatters()
-  const [url, setUrl] = React.useState<string | null>(null)
+  const [url, setUrl] = React.useState<string | null>(() =>
+    att.id && isPdf(att) ? (pdfThumbnails.get(att.id) ?? null) : null
+  )
   const [failed, setFailed] = React.useState(false)
   const pdf = isPdf(att)
 
@@ -38,6 +55,7 @@ function Thumb({
      */
     let acquired = false
     const id = att.id
+    if (pdf && pdfThumbnails.has(id)) return
 
     void (async () => {
       try {
@@ -50,6 +68,7 @@ function Thumb({
         if (pdf) {
           const { renderPdfThumbnail } = await import("@/lib/browser/pdf")
           const dataUrl = await renderPdfThumbnail(blob)
+          rememberPdfThumbnail(id, dataUrl)
           if (cancelled) return
           setUrl(dataUrl)
           return
@@ -88,6 +107,11 @@ function Thumb({
             src={url}
             alt={att.name}
             className="size-full object-cover object-top"
+            // A HEIC outside Safari is stored but cannot be drawn (§7.4).
+            onError={() => {
+              setUrl(null)
+              setFailed(true)
+            }}
           />
         ) : failed ? (
           /* An undecodable image or PDF falls back to naming the file. */
@@ -121,7 +145,7 @@ function Thumb({
         size="icon-xs"
         aria-label={f.t("receipt.remove")}
         onClick={onRemove}
-        className="absolute top-1 right-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+        className="absolute top-1 right-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100"
       >
         <XIcon />
       </Button>

@@ -36,7 +36,7 @@ type PdfDoc = Awaited<ReturnType<typeof import("@/lib/browser/pdf").loadPdf>>
 type Status =
   | { kind: "loading" }
   | { kind: "missing"; path?: string }
-  | { kind: "error" }
+  | { kind: "error"; blob: Blob | null }
   | { kind: "image"; bitmap: ImageBitmap; blob: Blob }
   | { kind: "pdf"; doc: PdfDoc; pages: number; blob: Blob }
 
@@ -128,8 +128,10 @@ function ViewerBody({
         if (!cancelled) setStatus({ kind: "missing", path: att.path })
         return
       }
+      // Outside the try: a file that cannot be shown can still be saved (§8.6).
+      let blob: Blob | undefined
       try {
-        const blob = await getReceipt(att.id)
+        blob = await getReceipt(att.id)
         if (cancelled) return
         if (!blob) {
           setStatus({ kind: "missing", path: att.path })
@@ -152,7 +154,7 @@ function ViewerBody({
           setStatus({ kind: "image", bitmap, blob })
         }
       } catch {
-        if (!cancelled) setStatus({ kind: "error" })
+        if (!cancelled) setStatus({ kind: "error", blob: blob ?? null })
       }
     })()
 
@@ -219,32 +221,38 @@ function ViewerBody({
       const w = swapped ? size.height : size.width
       const h = swapped ? size.width : size.height
       const fit = Math.min(available.width / w, available.height / h)
-      await renderPdfPage(status.doc.doc, page, canvas, {
+      const drawn = await renderPdfPage(status.doc.doc, page, canvas, {
         scale: fit * zoom * dpr,
         rotation,
       })
+      if (!drawn) return
       canvas.style.width = `${Math.round(w * fit * zoom)}px`
       canvas.style.height = `${Math.round(h * fit * zoom)}px`
     }
   }, [status, zoom, rotation, page])
 
-  React.useEffect(() => {
-    void draw()
+  // The document may be closed by the time a draw gets to it.
+  const drawSafely = React.useCallback(() => {
+    draw().catch((error: unknown) => console.warn("Could not draw", error))
   }, [draw])
+
+  React.useEffect(() => {
+    drawSafely()
+  }, [drawSafely])
 
   // Redraw on resize, debounced.
   React.useEffect(() => {
     let timer: ReturnType<typeof setTimeout>
     const onResize = () => {
       clearTimeout(timer)
-      timer = setTimeout(() => void draw(), 120)
+      timer = setTimeout(drawSafely, 120)
     }
     window.addEventListener("resize", onResize)
     return () => {
       clearTimeout(timer)
       window.removeEventListener("resize", onResize)
     }
-  }, [draw])
+  }, [drawSafely])
 
   const go = React.useCallback(
     (delta: number) => {
@@ -276,7 +284,9 @@ function ViewerBody({
   }, [go])
 
   const blob =
-    status.kind === "image" || status.kind === "pdf" ? status.blob : null
+    status.kind === "image" || status.kind === "pdf" || status.kind === "error"
+      ? status.blob
+      : null
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -401,17 +411,22 @@ function ViewerBody({
           </div>
         </div>
 
+        {/*
+         * The children centre themselves with `m-auto`. Centring from here
+         * would push a zoomed receipt past the top and left edges, where
+         * scrolling cannot reach it.
+         */}
         <div
           ref={stageRef}
-          className="flex min-h-0 flex-1 items-center justify-center overflow-auto rounded-md bg-muted p-4"
+          className="flex min-h-0 flex-1 overflow-auto rounded-md bg-muted p-4"
         >
           {status.kind === "loading" ? (
-            <span className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="m-auto flex items-center gap-2 text-sm text-muted-foreground">
               <Spinner />
               {f.t("viewer.loading")}
             </span>
           ) : status.kind === "missing" ? (
-            <div className="text-center">
+            <div className="m-auto text-center">
               <p className="font-medium">{f.t("receipt.missing")}</p>
               {status.path ? (
                 <p className="mt-1 text-xs break-all text-muted-foreground">
@@ -420,11 +435,11 @@ function ViewerBody({
               ) : null}
             </div>
           ) : status.kind === "error" ? (
-            <div className="max-w-sm text-center">
+            <div className="m-auto max-w-sm text-center">
               <p className="text-sm">{f.t("viewer.noPreview")}</p>
             </div>
           ) : (
-            <canvas ref={canvasRef} className="max-w-none" />
+            <canvas ref={canvasRef} className="m-auto max-w-none shrink-0" />
           )}
         </div>
       </DialogContent>

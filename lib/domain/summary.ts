@@ -143,15 +143,16 @@ export function monthFigures(
   cats: CategoryMap,
   year: number
 ): MonthFigures {
+  const yearEntries = entries.filter((e) => yearOf(e.date) === year)
   const months = Array.from({ length: 12 }, (_, i) =>
-    filterPeriod(entries, { kind: "month", year, month: i + 1 })
+    filterPeriod(yearEntries, { kind: "month", year, month: i + 1 })
   )
   const toDate = [
     0,
     ...months.map(
       (_, i) =>
         incomeStatement(
-          entries.filter((e) => monthOf(e.date) <= i + 1),
+          yearEntries.filter((e) => monthOf(e.date) <= i + 1),
           cats,
           year
         ).result

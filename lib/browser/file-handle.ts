@@ -9,7 +9,8 @@ import { createStore, del, get, set, type UseStore } from "idb-keyval"
  * handle at all — so a handle is always optional and `isFileHandleSupported`
  * gates every part of the UI that mentions saving. The second: a handle's
  * write permission reverts to "prompt" on reload, and re-granting it needs a
- * user gesture, which is why saving is an explicit action and never automatic.
+ * user gesture, which is why autosave is opt-in and stops at anything it would
+ * have to ask (§7.5).
  */
 
 /** The handle database, kept apart from the receipts one (§12). */
@@ -150,10 +151,6 @@ export async function pickFileToSave(
   }
 }
 
-/**
- * Ask for write permission, prompting if it has not been granted yet. Must be
- * called from a user gesture, or the browser refuses the prompt outright.
- */
 /** Whether the handle may be written without asking: no prompt is shown. */
 export async function hasWritePermission(
   handle: FileSystemFileHandle
@@ -165,6 +162,10 @@ export async function hasWritePermission(
   }
 }
 
+/**
+ * Ask for write permission, prompting if it has not been granted yet. Must be
+ * called from a user gesture, or the browser refuses the prompt outright.
+ */
 export async function requestWritePermission(
   handle: FileSystemFileHandle
 ): Promise<boolean> {

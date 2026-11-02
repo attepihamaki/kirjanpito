@@ -69,7 +69,7 @@ describe("storage warning", () => {
   it("warns once a write fails, and again on closing the tab", () => {
     mount()
     breakStorage()
-    act(() => useBookStore.setState({ ledgerPage: 3 }))
+    act(() => useBookStore.setState({ ledgerSize: 25 }))
 
     expect(isStorageBehind()).toBe(true)
     expect(add).toHaveBeenCalledTimes(1)
@@ -83,17 +83,17 @@ describe("storage warning", () => {
   it("does not repeat the toast for every failed write", () => {
     mount()
     breakStorage()
-    act(() => useBookStore.setState({ ledgerPage: 3 }))
-    act(() => useBookStore.setState({ ledgerPage: 4 }))
+    act(() => useBookStore.setState({ ledgerSize: 25 }))
+    act(() => useBookStore.setState({ ledgerSize: 50 }))
     expect(add).toHaveBeenCalledTimes(1)
   })
 
   it("takes the warning down when a write succeeds again", () => {
     mount()
     const broken = breakStorage()
-    act(() => useBookStore.setState({ ledgerPage: 3 }))
+    act(() => useBookStore.setState({ ledgerSize: 25 }))
     broken.mockRestore()
-    act(() => useBookStore.setState({ ledgerPage: 4 }))
+    act(() => useBookStore.setState({ ledgerSize: 50 }))
 
     expect(isStorageBehind()).toBe(false)
     expect(close).toHaveBeenCalledWith("storage")

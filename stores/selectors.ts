@@ -132,8 +132,15 @@ export function filterAndSortEntries(
       typeof av === "number" && typeof bv === "number"
         ? av - bv
         : collator.compare(String(av), String(bv))
-    // Date ascending is the stable tiebreaker, so equal keys keep a sane order.
-    return (cmp || a.date.localeCompare(b.date)) * dir
+    /*
+     * Equal keys stay in book order, whichever way the column runs: by date,
+     * then by voucher number, as the CSV and the journal have them.
+     */
+    return (
+      cmp * dir ||
+      a.date.localeCompare(b.date) ||
+      (a.voucher ?? 0) - (b.voucher ?? 0)
+    )
   })
 }
 

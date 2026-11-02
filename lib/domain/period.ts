@@ -19,21 +19,3 @@ export function inPeriod(e: Pick<Entry, "date">, p: Period): boolean {
 export function filterPeriod(entries: readonly Entry[], p: Period): Entry[] {
   return entries.filter((e) => inPeriod(e, p))
 }
-
-/** Human-readable range, for the income statement header. */
-export function periodRange(p: Period): { from: string; to: string } {
-  if (p.kind === "month") {
-    const last = new Date(Date.UTC(p.year, p.month, 0)).getUTCDate()
-    const mm = String(p.month).padStart(2, "0")
-    return { from: `${p.year}-${mm}-01`, to: `${p.year}-${mm}-${last}` }
-  }
-  if (p.kind === "quarter") {
-    const [a, b] = quarterMonths(p.quarter)
-    const last = new Date(Date.UTC(p.year, b, 0)).getUTCDate()
-    return {
-      from: `${p.year}-${String(a).padStart(2, "0")}-01`,
-      to: `${p.year}-${String(b).padStart(2, "0")}-${last}`,
-    }
-  }
-  return { from: `${p.year}-01-01`, to: `${p.year}-12-31` }
-}

@@ -70,7 +70,17 @@ export async function recategorizeEntries(
         toast.close(id)
         const now = useBookStore.getState()
         if (now.bookEpoch !== epoch) return
-        now.updateEntries(changed)
+        /*
+         * Only the category goes back. An entry edited since keeps that edit,
+         * and one moved again since stays where the user put it.
+         */
+        const before = new Map(changed.map((e) => [e.id, e.catId]))
+        now.updateEntries(
+          now.entries.flatMap((e) => {
+            const old = before.get(e.id)
+            return old && e.catId === catId ? [{ ...e, catId: old }] : []
+          })
+        )
         toast.add({ title: ctx.t("entry.recategorizeUndone") })
       },
     },

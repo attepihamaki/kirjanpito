@@ -8,6 +8,7 @@ import {
   quarterMonths,
   todayIso,
   yearOf,
+  lastCompleteMonth,
 } from "@/lib/domain/dates"
 
 describe("isoDate", () => {
@@ -102,5 +103,17 @@ describe("quarterMonths", () => {
     [4, [10, 12]],
   ] as const)("maps Q%i", (q, expected) => {
     expect(quarterMonths(q)).toEqual(expected)
+  })
+})
+
+describe("lastCompleteMonth", () => {
+  it.each([
+    [2025, "2026-11-02", 12],
+    [2026, "2026-11-02", 10],
+    [2026, "2026-12-05", 11],
+    [2026, "2026-01-05", 0],
+    [2027, "2026-11-02", 0],
+  ])("for %i on %s is %i", (year, today, month) => {
+    expect(lastCompleteMonth(year, today)).toBe(month)
   })
 })

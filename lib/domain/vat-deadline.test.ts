@@ -10,6 +10,8 @@ import {
   periodStatus,
   vatPeriods,
   vatTimeline,
+  filedKeys,
+  filedOn,
 } from "@/lib/domain/vat-deadline"
 
 describe("bankHolidays", () => {
@@ -192,5 +194,49 @@ describe("vatTimeline", () => {
 
   it("is empty for a book with no entries", () => {
     expect(vatTimeline("month", null, "2026-10-31", {})).toEqual([])
+  })
+})
+
+describe("filed marks made in another filing period (§6.5)", () => {
+  const q = (kind: "month" | "quarter" | "year", index: number) =>
+    vatPeriods(kind, 2026)[index - 1]
+
+  it("lets three filed months cover their quarter", () => {
+    const filed = {
+      "2026-01": "2026-03-12",
+      "2026-02": "2026-04-12",
+      "2026-03": "2026-05-12",
+    }
+    expect(periodStatus(q("quarter", 1), "2026-11-02", filed)).toBe("filed")
+    expect(filedOn(q("quarter", 1), filed)).toBe("2026-05-12")
+    expect(filedKeys(q("quarter", 1), filed)).toHaveLength(3)
+  })
+
+  it("does not let two filed months cover a quarter", () => {
+    const filed = { "2026-01": "2026-03-12", "2026-02": "2026-04-12" }
+    expect(periodStatus(q("quarter", 1), "2026-11-02", filed)).toBe("overdue")
+    expect(filedOn(q("quarter", 1), filed)).toBeNull()
+  })
+
+  it("lets a filed quarter cover its months", () => {
+    const filed = { "2026-Q1": "2026-05-12" }
+    expect(periodStatus(q("month", 2), "2026-11-02", filed)).toBe("filed")
+    expect(periodStatus(q("month", 4), "2026-11-02", filed)).toBe("overdue")
+  })
+
+  it("lets a filed year cover everything in it", () => {
+    const filed = { "2026": "2027-02-28" }
+    expect(periodStatus(q("quarter", 3), "2027-11-02", filed)).toBe("filed")
+    expect(periodStatus(q("month", 12), "2027-11-02", filed)).toBe("filed")
+  })
+
+  it("adds a year up from its quarters", () => {
+    const filed = {
+      "2026-Q1": "a",
+      "2026-Q2": "b",
+      "2026-Q3": "c",
+      "2026-Q4": "d",
+    }
+    expect(filedKeys(q("year", 1), filed)).toHaveLength(4)
   })
 })

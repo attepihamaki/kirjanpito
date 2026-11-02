@@ -15,7 +15,6 @@ import {
   findCsvEntry,
   packZip,
   receiptReader,
-  resolveReceipt,
   unpackZip,
 } from "@/lib/domain/zip"
 
@@ -105,7 +104,7 @@ describe("packZip", () => {
     const unpacked = (await unpackZip(await packZip(packInputs(entries))))!
     expect(unpacked.csvPath).toBe("kirjanpito_2026-10-24.csv")
     expect(unpacked.settingsText).toBe(SETTINGS_TEXT)
-    expect([...unpacked.files.keys()]).toEqual([
+    expect(unpacked.otherFiles).toEqual([
       "tositteet/2026/10/2026-10-28_lasku-1005.pdf",
     ])
   })
@@ -150,13 +149,13 @@ describe("packZip", () => {
       read: async () => null,
     })
     const unpacked = (await unpackZip(bytes))!
-    expect(unpacked.files.size).toBe(0)
+    expect(unpacked.otherFiles.length).toBe(0)
   })
 
   it("skips an attachment with no stored id", async () => {
     const entries = [entry({ atts: [att({ id: null, name: "x.pdf" })] })]
     const unpacked = (await unpackZip(await packZip(packInputs(entries))))!
-    expect(unpacked.files.size).toBe(0)
+    expect(unpacked.otherFiles.length).toBe(0)
   })
 })
 
@@ -166,7 +165,9 @@ describe("unpackZip", () => {
     const input = packInputs(entries)
     const unpacked = (await unpackZip(await packZip(input)))!
     expect(unpacked.csvText).toBe(input.csvText)
-    expect([...unpacked.files.values()][0]).toEqual(enc.encode("bytes-a1"))
+    expect(await unpacked.readReceipt(unpacked.otherFiles[0])).toEqual(
+      enc.encode("bytes-a1")
+    )
   })
 
   it("returns null for an archive with no CSV", async () => {
@@ -182,26 +183,34 @@ describe("unpackZip", () => {
   })
 })
 
-describe("resolveReceipt", () => {
-  const files = new Map([
-    ["kirjanpito/tositteet/2026/01/a.jpg", enc.encode("nested")],
-    ["tositteet/2026/01/b.jpg", enc.encode("root")],
-  ])
+describe("readReceipt", () => {
+  const archive = (csvName: string, path: string) =>
+    packZip({
+      csvName,
+      csvText: "pvm;tyyppi;summa\r\n",
+      paths: new Map([["e#0", path]]),
+      attachmentIds: new Map([["e#0", "a1"]]),
+      read: async () => enc.encode("kuitti"),
+      settingsText: SETTINGS_TEXT,
+    })
 
-  it("resolves relative to the CSV's folder", () => {
-    expect(
-      resolveReceipt(files, "kirjanpito/", "tositteet/2026/01/a.jpg")
-    ).toEqual(enc.encode("nested"))
+  it("resolves relative to the CSV's folder", async () => {
+    const bytes = await archive("kirjanpito/data.csv", "kirjanpito/a.jpg")
+    const unpacked = (await unpackZip(bytes))!
+    expect(await unpacked.readReceipt("a.jpg")).toEqual(enc.encode("kuitti"))
   })
 
-  it("falls back to the archive root", () => {
-    expect(
-      resolveReceipt(files, "kirjanpito/", "tositteet/2026/01/b.jpg")
-    ).toEqual(enc.encode("root"))
+  it("falls back to the archive root", async () => {
+    const bytes = await archive("kirjanpito/data.csv", "tositteet/a.jpg")
+    const unpacked = (await unpackZip(bytes))!
+    expect(await unpacked.readReceipt("tositteet/a.jpg")).toEqual(
+      enc.encode("kuitti")
+    )
   })
 
-  it("returns null for a path that is not there", () => {
-    expect(resolveReceipt(files, "", "tositteet/nope.jpg")).toBeNull()
+  it("returns null for a path that is not there", async () => {
+    const unpacked = (await unpackZip(await archive("data.csv", "a.jpg")))!
+    expect(await unpacked.readReceipt("tositteet/nope.jpg")).toBeNull()
   })
 })
 
@@ -228,10 +237,8 @@ describe("full ZIP round trip", () => {
     const imported = ok(
       parseCsv(unpacked.csvText, baseCats, createIdFactory("r"))
     )
-    const csvDir = dirOf(unpacked.csvPath)
-
-    const resolved = imported.entries.flatMap((e) =>
-      e.paths.map((p) => resolveReceipt(unpacked.files, csvDir, p))
+    const resolved = await Promise.all(
+      imported.entries.flatMap((e) => e.paths.map(unpacked.readReceipt))
     )
     expect(resolved).toHaveLength(3)
     expect(resolved.every(Boolean)).toBe(true)
@@ -252,9 +259,7 @@ describe("full ZIP round trip", () => {
       parseCsv(unpacked.csvText, baseCats, createIdFactory("r"))
     )
     const first = imported.entries[0].paths[0]
-    expect(
-      resolveReceipt(unpacked.files, dirOf(unpacked.csvPath), first)
-    ).toEqual(enc.encode("bytes-a1"))
+    expect(await unpacked.readReceipt(first)).toEqual(enc.encode("bytes-a1"))
   })
 
   /*
@@ -302,7 +307,7 @@ describe("carrying receipts from the file being replaced", () => {
 
   it("keeps a receipt this browser does not hold", async () => {
     const unpacked = await unpackZip(await packed({ carry: async () => bytes }))
-    expect(unpacked?.files.get(PATH)).toEqual(bytes)
+    expect(await unpacked?.readReceipt(PATH)).toEqual(bytes)
   })
 
   it("prefers the stored bytes over the old file's", async () => {
@@ -314,18 +319,25 @@ describe("carrying receipts from the file being replaced", () => {
         carry: async () => bytes,
       })
     )
-    expect(unpacked?.files.get(PATH)).toEqual(stored)
+    expect(await unpacked?.readReceipt(PATH)).toEqual(stored)
   })
 
-  it("reports a stored receipt it could not write, not a missing one", async () => {
-    const lost: string[] = []
-    await packed({ onLost: (key) => lost.push(key) })
-    expect(lost).toEqual([])
-
+  it("reports a listed receipt with no bytes, stored or not", async () => {
+    const absent: string[] = []
+    await packed({ onAbsent: (key) => absent.push(key) })
     await packed({
       attachmentIds: new Map([["e#0", "a1"]]),
-      onLost: (key) => lost.push(key),
+      onAbsent: (key) => absent.push(key),
     })
-    expect(lost).toEqual(["e#0"])
+    expect(absent).toEqual(["e#0", "e#0"])
+  })
+
+  it("does not report a receipt it carried over", async () => {
+    const absent: string[] = []
+    await packed({
+      carry: async () => bytes,
+      onAbsent: (key) => absent.push(key),
+    })
+    expect(absent).toEqual([])
   })
 })

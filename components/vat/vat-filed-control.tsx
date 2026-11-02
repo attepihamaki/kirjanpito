@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { useFormatters } from "@/components/lang-provider"
 import { useVatPeriod } from "@/hooks/use-vat-period"
 import { todayIso } from "@/lib/domain/dates"
+import { filedKeys, filedOn } from "@/lib/domain/vat-deadline"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -34,14 +35,19 @@ export function VatFiledControl() {
     <div className="flex flex-col items-start gap-2 text-sm min-[560px]:items-end">
       <span className="text-muted-foreground">
         {status === "filed"
-          ? f.t("vat.filedOn", { d: f.date(vatFiled[current.key]) })
+          ? f.t("vat.filedOn", { d: f.date(filedOn(current, vatFiled) ?? "") })
           : f.t("vat.dueDate", { d: f.date(current.due) })}
       </span>
       {status === "filed" ? (
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setVatFiled(current.key, null)}
+          onClick={() => {
+            // The mark may have been made in another filing period (§6.5).
+            for (const key of filedKeys(current, vatFiled)) {
+              setVatFiled(key, null)
+            }
+          }}
         >
           {f.t("vat.unmarkFiled")}
         </Button>

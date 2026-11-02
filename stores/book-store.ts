@@ -116,9 +116,8 @@ export interface BookState {
   dirty: boolean
   /**
    * The file this bookkeeping was last opened from or exported to, **with
-   * its extension** (`kirjanpito_2026-10-24.zip`), for display only (§7.3).
-   * Null until there has been one. The export dialog deliberately does not
-   * seed its default from this.
+   * its extension** (`kirjanpito_2026-10-24.zip`), for display and for the
+   * name the download dialog suggests (§7.3). Null until there has been one.
    */
   fileName: string | null
   lastMode: AmountMode
@@ -148,7 +147,6 @@ export interface BookState {
 
   // ---- ephemeral ----
   hydrated: boolean
-  storageAvailable: boolean
   /**
    * A file is being read. Opening a plain CSV is over in milliseconds, but a
    * ZIP has to be unpacked, decoded and written to IndexedDB receipt by
@@ -162,7 +160,7 @@ export interface BookState {
    * can't be — no File System Access API, or the file arrived through an
    * `<input>` or a drop, neither of which yields a handle. Never persisted to
    * localStorage: a handle is not JSON. It lives in IndexedDB instead and
-   * `StoreHydrator` puts it back.
+   * `AppShell` puts it back.
    */
   fileHandle: FileSystemFileHandle | null
   /**
@@ -201,7 +199,7 @@ export interface BookState {
   draftAttachmentIds: string[]
   /**
    * Receipt ids of deleted entries that an undo toast can still bring back,
-   * protected from GC until the toast is gone (§14).
+   * protected from GC until the toast is gone (§8.11).
    */
   undoAttachmentIds: string[]
   /**
@@ -258,7 +256,6 @@ export interface BookActions {
   holdUndoAttachments(ids: readonly string[]): void
   releaseUndoAttachments(ids: readonly string[]): void
   setYear(year: number): void
-  setFileName(name: string | null): void
   /**
    * Record a write (§7.5). `dirty` is true when the book changed while the
    * file was being written, so what is on disk is already behind.
@@ -341,7 +338,6 @@ function initialState(): BookState {
     autosave: false,
 
     hydrated: false,
-    storageAvailable: true,
     importing: false,
     fileHandle: null,
     savedAt: null,
@@ -391,6 +387,22 @@ type PersistedBook = Pick<
   | "autosave"
 >
 
+/**
+ * What was last written, to skip a write that would change nothing. The store
+ * calls `setItem` on every state change, a keystroke in a search box included,
+ * and most of those touch nothing that is persisted. Store actions replace
+ * these fields rather than mutate them, so comparing identities is enough.
+ */
+let lastWritten: PersistedBook | null = null
+
+function unchanged(next: PersistedBook): boolean {
+  const last = lastWritten
+  if (!last) return false
+  return (Object.keys(next) as (keyof PersistedBook)[]).every(
+    (key) => next[key] === last[key]
+  )
+}
+
 /** Set when a write fails: from then on memory is newer than storage. */
 let storageBehind = false
 const storageBehindListeners = new Set<() => void>()
@@ -437,9 +449,12 @@ const bookStorage: PersistStorage<PersistedBook> = {
   },
   setItem: (name, value) => {
     try {
+      // A failed write has to be retried even if the state went back.
+      if (!storageBehind && unchanged(value.state)) return
       const hasBook = value.state.open || value.state.entries.length > 0
       if (!hasBook && localStorage.getItem(name) === null) return
       localStorage.setItem(name, JSON.stringify(value))
+      lastWritten = value.state
       setStorageBehind(false)
     } catch {
       /*
@@ -495,6 +510,8 @@ export const useBookStore = create<BookStore>()(
           ...unlinked,
           open: true,
           entries: [],
+          // Custom categories and changed rates belong to the old file (§7.6).
+          cats: defaultCategories(),
           year,
           dirty: false,
           /*
@@ -515,6 +532,7 @@ export const useBookStore = create<BookStore>()(
           ...unlinked,
           open: false,
           entries: [],
+          cats: defaultCategories(),
           dirty: false,
           bookStart: null,
           vatFiled: {},
@@ -631,7 +649,6 @@ export const useBookStore = create<BookStore>()(
       },
 
       setYear: (year) => set({ year, ledgerPage: 1 }),
-      setFileName: (fileName) => set({ fileName }),
       markSaved: ({ fileName, fileHandle, savedAt, dirty = false }) =>
         set({
           dirty,

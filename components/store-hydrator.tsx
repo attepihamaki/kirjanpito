@@ -21,16 +21,14 @@ export function StoreHydrator() {
   React.useEffect(() => {
     useLangStore.getState().hydrate()
 
-    let available = true
     try {
       void useBookStore.persist.rehydrate()
     } catch {
-      available = false
+      // Storage is blocked: the store keeps its defaults, and works in memory.
     }
 
     const state = useBookStore.getState()
     useBookStore.getState().setHydrated({
-      storageAvailable: available,
       /*
        * §8.1: when the flag was never stored, a bookkeeping is open if there
        * are entries.

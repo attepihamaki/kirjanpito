@@ -6,13 +6,16 @@ import { SETTINGS_FILE_NAME } from "@/lib/domain/settings-file"
 /**
  * ZIP packing and unpacking (§7.2).
  *
- * Deliberately `Uint8Array` in and out, never `Blob`: that keeps this module
- * pure enough to unit-test in plain Node. The Blob boundary lives in
- * `lib/browser`.
+ * Bytes in and out, so this module can be unit-tested in plain Node. The one
+ * exception is a receipt `ReceiptReader` hands over as a `Blob`, which JSZip
+ * reads as it writes the archive, so that a year's receipts do not all have to
+ * be in memory at once.
  */
 
 /** Reads a receipt's bytes out of storage. Returns null when unavailable. */
-export type ReceiptReader = (attachmentId: string) => Promise<Uint8Array | null>
+export type ReceiptReader = (
+  attachmentId: string
+) => Promise<Uint8Array | Blob | null>
 
 export interface PackInput {
   /** File name of the CSV inside the archive, e.g. "kirjanpito_2026-10-24.csv". */
@@ -30,8 +33,8 @@ export interface PackInput {
    * not hold (§7.5). Without it, such a receipt is left out.
    */
   carry?: (path: string) => Promise<Uint8Array | null>
-  /** Told about a stored receipt that was neither readable nor carried over. */
-  onLost?: (key: string) => void
+  /** Told about each listed receipt that ended up with no bytes in the ZIP. */
+  onAbsent?: (key: string) => void
 }
 
 export async function packZip(input: PackInput): Promise<Uint8Array> {
@@ -48,7 +51,7 @@ export async function packZip(input: PackInput): Promise<Uint8Array> {
     const bytes =
       (id ? await input.read(id) : null) ?? (await input.carry?.(path)) ?? null
     if (bytes) zip.file(path, bytes, { compression: "STORE" })
-    else if (id) input.onLost?.(key)
+    else input.onAbsent?.(key)
   }
 
   return zip.generateAsync({ type: "uint8array" })
@@ -59,8 +62,24 @@ export interface UnpackedZip {
   csvText: string
   /** `settings.json` beside the CSV, or at the root; null when there is none. */
   settingsText: string | null
-  /** Every other file, by path: the receipts. */
-  files: ReadonlyMap<string, Uint8Array>
+  /** The path of every other file: the receipts. */
+  otherFiles: readonly string[]
+  /**
+   * A receipt's bytes by the path the CSV lists it under (§7.2). Read on demand,
+   * so unpacking a large archive does not hold all of it twice, and a file no
+   * entry lists is never decompressed.
+   */
+  readReceipt: ReceiptLookup
+}
+
+export type ReceiptLookup = (path: string) => Promise<Uint8Array | null>
+
+/** Relative to the CSV's folder, falling back to the archive root. */
+function lookupIn(zip: JSZip, csvDir: string): ReceiptLookup {
+  return async (path) => {
+    const file = zip.file(csvDir + path) ?? zip.file(path)
+    return file ? file.async("uint8array") : null
+  }
 }
 
 /** The shallowest `.csv` in the archive, ignoring `__MACOSX`. */
@@ -91,47 +110,35 @@ export async function unpackZip(data: Uint8Array): Promise<UnpackedZip | null> {
     ? await zip.files[settingsPath].async("string")
     : null
 
-  const files = new Map<string, Uint8Array>()
-  for (const name of names) {
-    if (name === csvPath || name === settingsPath) continue
-    if (name.split("/").includes("__MACOSX")) continue
-    files.set(name, await zip.files[name].async("uint8array"))
-  }
+  const otherFiles = names.filter(
+    (name) =>
+      name !== csvPath &&
+      name !== settingsPath &&
+      !name.split("/").includes("__MACOSX")
+  )
 
-  return { csvPath, csvText, settingsText, files }
+  return {
+    csvPath,
+    csvText,
+    settingsText,
+    otherFiles,
+    readReceipt: lookupIn(zip, csvDir),
+  }
 }
 
 /**
  * Look up receipts in an existing ZIP by the path its CSV lists them under,
  * relative to the CSV's folder or the archive root (§7.2).
  */
-export async function receiptReader(
-  data: Uint8Array
-): Promise<(path: string) => Promise<Uint8Array | null>> {
+export async function receiptReader(data: Uint8Array): Promise<ReceiptLookup> {
   const zip = await JSZip.loadAsync(data)
   const names = Object.keys(zip.files).filter((n) => !zip.files[n].dir)
   const csvPath = findCsvEntry(names)
-  const csvDir = csvPath ? dirOf(csvPath) : ""
-  return async (path) => {
-    const file = zip.file(csvDir + path) ?? zip.file(path)
-    return file ? file.async("uint8array") : null
-  }
+  return lookupIn(zip, csvPath ? dirOf(csvPath) : "")
 }
 
 /** The folder the CSV sits in, with a trailing slash — "" at the root. */
 export function dirOf(csvPath: string): string {
   const i = csvPath.lastIndexOf("/")
   return i < 0 ? "" : csvPath.slice(0, i + 1)
-}
-
-/**
- * Resolve a `tosite` path relative to the CSV's folder, falling back to the
- * archive root (§7.2).
- */
-export function resolveReceipt(
-  files: ReadonlyMap<string, Uint8Array>,
-  csvDir: string,
-  path: string
-): Uint8Array | null {
-  return files.get(csvDir + path) ?? files.get(path) ?? null
 }

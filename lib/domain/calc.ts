@@ -1,4 +1,4 @@
-import { roundCents } from "@/lib/domain/money"
+import { isVatRate, roundCents } from "@/lib/domain/money"
 import type { Cents, Entry } from "@/lib/domain/types"
 
 export interface EntryAmounts {
@@ -19,7 +19,9 @@ type CalcInput = Pick<Entry, "amount" | "vatRate" | "amountMode">
  * value and its meaning are both preserved.
  */
 export function calcEntry(e: CalcInput): EntryAmounts {
-  const rate = Number(e.vatRate) || 0
+  // A file or browser may hold a rate that import would refuse today.
+  const stored = Number(e.vatRate) || 0
+  const rate = isVatRate(stored) ? stored : 0
   if (e.amountMode === "net") {
     const net = e.amount
     const vat = roundCents((net * rate) / 100)

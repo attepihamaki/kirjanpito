@@ -12,7 +12,6 @@ import {
   parseRate,
   isVatRate,
   roundCents,
-  sumCents,
 } from "@/lib/domain/money"
 
 describe("Intl availability", () => {
@@ -104,10 +103,16 @@ describe("parseAmount", () => {
     expect(parseAmount(input)).toBe(expected)
   })
 
-  // "1,234" is one euro twenty-three, never 1234.
   it("treats a lone comma as a decimal comma regardless of language", () => {
-    expect(parseAmount("1,234")).toBe(123)
+    expect(parseAmount("1,23")).toBe(123)
   })
+
+  it.each(["1,234", "1.234", "12,345", "0,001", "1 234,567"])(
+    "refuses %j, which could be off by a factor of a thousand",
+    (input) => {
+      expect(parseAmount(input)).toBeNull()
+    }
+  )
 
   it.each(["", "   ", "abc", "1,2,3", "--5"])("rejects %j", (input) => {
     expect(parseAmount(input)).toBeNull()
@@ -158,13 +163,6 @@ describe("formatFileSize", () => {
 
   it("never reports zero kilobytes", () => {
     expect(formatFileSize(1, "fi")).toBe(`1${NBSP}kt`)
-  })
-})
-
-describe("sumCents", () => {
-  it("sums and normalises negative zero", () => {
-    expect(sumCents([100, -40, 5])).toBe(65)
-    expect(Object.is(sumCents([]), 0)).toBe(true)
   })
 })
 

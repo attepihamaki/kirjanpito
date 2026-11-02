@@ -54,8 +54,10 @@ function fakeHandle(name: string, lastModified = 1000) {
       write: async (blob: Blob) => {
         written.push(blob)
       },
-      // A real write moves the file's modification time, and the guard
-      // against outside edits only works if the app follows it.
+      /*
+       * A real write moves the file's modification time, and the guard
+       * against outside edits only works if the app follows it.
+       */
       close: async () => {
         handle.lastModified += 1000
       },
@@ -480,7 +482,9 @@ describe("receipts the browser does not hold", () => {
 
     expect(handle.written).toHaveLength(1)
     const saved = await unzipped(handle.written[0])
-    expect(new TextDecoder().decode(saved?.files.get(PATH))).toBe("kuitti")
+    expect(new TextDecoder().decode((await saved?.readReceipt(PATH))!)).toBe(
+      "kuitti"
+    )
   })
 
   it("does not ask about a receipt the file never held", async () => {
@@ -530,7 +534,9 @@ describe("receipts the browser does not hold", () => {
 
     expect(await autosaveBook(ctx)).toBe(true)
     const saved = await unzipped(handle.written[0])
-    expect(new TextDecoder().decode(saved?.files.get(PATH))).toBe("kuitti")
+    expect(new TextDecoder().decode((await saved?.readReceipt(PATH))!)).toBe(
+      "kuitti"
+    )
   })
 
   /*

@@ -184,6 +184,39 @@ export function bookStartDate(
   return startMonth ? `${startMonth}-01` : firstEntryDate
 }
 
+/**
+ * The filed marks that together cover `p`, or none if any month of it is
+ * uncovered. A mark counts whatever period it was made in, so changing how
+ * often VAT is filed does not turn returns already filed back into overdue
+ * ones: three filed months cover their quarter, and a filed quarter covers its
+ * months.
+ */
+export function filedKeys(
+  p: VatPeriod,
+  filed: Readonly<Record<string, string>>
+): string[] {
+  const keys = new Set<string>()
+  for (let m = monthOf(p.from); m <= monthOf(p.to); m++) {
+    const key = [
+      `${p.year}-${pad2(m)}`,
+      `${p.year}-Q${Math.ceil(m / 3)}`,
+      String(p.year),
+    ].find((k) => filed[k])
+    if (!key) return []
+    keys.add(key)
+  }
+  return [...keys]
+}
+
+/** The latest date among the marks covering `p`, or null if it is not filed. */
+export function filedOn(
+  p: VatPeriod,
+  filed: Readonly<Record<string, string>>
+): string | null {
+  const dates = filedKeys(p, filed).map((k) => filed[k])
+  return dates.length ? dates.sort().at(-1)! : null
+}
+
 export function periodStatus(
   p: VatPeriod,
   today: string,
@@ -193,7 +226,7 @@ export function periodStatus(
   if (start && p.to < start) return "before"
   if (today < p.from) return "future"
   if (today <= p.to) return "open"
-  if (filed[p.key]) return "filed"
+  if (filedKeys(p, filed).length) return "filed"
   return today > p.due ? "overdue" : "due"
 }
 

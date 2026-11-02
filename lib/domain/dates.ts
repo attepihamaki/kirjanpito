@@ -160,6 +160,16 @@ export function todayIso(now: Date = new Date()): string {
   return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`
 }
 
+/**
+ * The last month of `year` that has ended by `today`: 12 for a past year, 0
+ * for a future one and for January of the current one.
+ */
+export function lastCompleteMonth(year: number, today: string): number {
+  const thisYear = yearOf(today)
+  if (year < thisYear) return 12
+  return year > thisYear ? 0 : monthOf(today) - 1
+}
+
 /** Inclusive first and last month of a quarter: 1 → [1, 3]. */
 export function quarterMonths(q: 1 | 2 | 3 | 4): readonly [number, number] {
   return [q * 3 - 2, q * 3]

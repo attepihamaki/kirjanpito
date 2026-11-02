@@ -44,13 +44,7 @@ import {
   type ParsedSettings,
 } from "@/lib/domain/settings-file"
 import { normalizeLayout } from "@/lib/domain/overview-layout"
-import {
-  dirOf,
-  packZip,
-  receiptReader,
-  resolveReceipt,
-  unpackZip,
-} from "@/lib/domain/zip"
+import { packZip, receiptReader, unpackZip } from "@/lib/domain/zip"
 import { SKIP_CODE_KEYS } from "@/lib/i18n/messages"
 import { APP_ROUTES } from "@/lib/site"
 import { confirm } from "@/lib/ui/confirm"
@@ -252,7 +246,6 @@ async function importZip(
     return false
   }
 
-  const csvDir = dirOf(unpacked.csvPath)
   const canStore = isReceiptStorageSupported()
   let imported = 0
   let missing = 0
@@ -261,9 +254,7 @@ async function importZip(
   for (const { paths, ...entry } of result.entries) {
     const atts: Attachment[] = []
     for (const path of paths) {
-      const bytes = canStore
-        ? resolveReceipt(unpacked.files, csvDir, path)
-        : null
+      const bytes = canStore ? await unpacked.readReceipt(path) : null
       if (!bytes) {
         missing += 1
         atts.push(missingAttachment(path))
@@ -386,7 +377,9 @@ interface BookFile {
   isZip: boolean
   /** The state it was built from, to tell whether it is still current. */
   version: BookVersion
-  /** Stored receipts that could not be written into this file. */
+  /** Receipts the CSV lists that are not in this file. */
+  absentReceipts: number
+  /** Those of them this browser was supposed to hold. */
   lostReceipts: number
 }
 
@@ -489,6 +482,7 @@ async function buildBookFile(
       blob: new Blob([csvText], { type: CSV_MIME }),
       isZip,
       version,
+      absentReceipts: 0,
       lostReceipts: 0,
     }
   }
@@ -499,20 +493,19 @@ async function buildBookFile(
       if (a.id) attachmentIds.set(attachmentKey(e.id, i), a.id)
     }
   }
+  let absentReceipts = 0
   let lostReceipts = 0
   const bytes = await packZip({
     csvName: bookFileName(baseName, true),
     csvText,
     paths,
     attachmentIds,
-    read: async (id) => {
-      const blob = await getReceipt(id)
-      return blob ? new Uint8Array(await blob.arrayBuffer()) : null
-    },
+    read: async (id) => (await getReceipt(id)) ?? null,
     settingsText: currentSettingsText(),
     carry: carryFrom(source),
-    onLost: () => {
-      lostReceipts += 1
+    onAbsent: (key) => {
+      absentReceipts += 1
+      if (attachmentIds.has(key)) lostReceipts += 1
     },
   })
   return {
@@ -520,6 +513,7 @@ async function buildBookFile(
     blob: new Blob([bytes as BlobPart], { type: ZIP_MIME }),
     isZip,
     version,
+    absentReceipts,
     lostReceipts,
   }
 }
@@ -548,8 +542,8 @@ export async function exportBook(
 
   try {
     const file = await buildBookFile(baseName, csvOnly, fileHandle)
-    if (file.lostReceipts) {
-      toast.add({ title: ctx.t("io.receiptsLost", { n: file.lostReceipts }) })
+    if (file.absentReceipts) {
+      toast.add({ title: ctx.t("io.receiptsLost", { n: file.absentReceipts }) })
     }
     saveBlob(file.blob, file.name)
     if (!fileHandle && !csvOnly) {

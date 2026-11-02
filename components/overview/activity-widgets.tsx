@@ -30,7 +30,7 @@ import {
 } from "@/components/overview/overview-data"
 import { useCanSaveToFile, useSaveBook } from "@/hooks/use-save-book"
 import { calcEntry } from "@/lib/domain/calc"
-import { monthOf } from "@/lib/domain/dates"
+import { lastCompleteMonth, monthOf } from "@/lib/domain/dates"
 import { daysBetween } from "@/lib/domain/vat-deadline"
 import {
   ENTRY_CHECKS,
@@ -246,6 +246,16 @@ export function ChecksWidget() {
     router.push(APP_ROUTES.ledger)
   }
 
+  const checkCounts = React.useMemo(
+    () =>
+      ENTRY_CHECKS.map((check) => ({
+        check,
+        n: flaggedEntryIds(check, data.yearEntries, data.catMap, data.today)
+          .size,
+      })),
+    [data.yearEntries, data.catMap, data.today]
+  )
+
   const items: CheckItem[] = []
   const name = fileName ?? f.t("file.untitled")
   items.push(
@@ -305,13 +315,7 @@ export function ChecksWidget() {
     }
   }
 
-  for (const check of ENTRY_CHECKS) {
-    const n = flaggedEntryIds(
-      check,
-      data.yearEntries,
-      data.catMap,
-      data.today
-    ).size
+  for (const { check, n } of checkCounts) {
     if (!n) continue
     const text = CHECK_TEXT[check]
     items.push({
@@ -377,7 +381,7 @@ export function ChecksWidget() {
    * the start month set in Settings was never meant to have entries.
    */
   const used = new Set(data.yearEntries.map((e) => monthOf(e.date)))
-  const lastComplete = data.elapsedMonths === 12 ? 12 : data.elapsedMonths - 1
+  const lastComplete = lastCompleteMonth(data.year, data.today)
   const emptyMonths: string[] = []
   for (let m = Math.min(...used); m <= lastComplete; m++) {
     const key = `${data.year}-${String(m).padStart(2, "0")}`

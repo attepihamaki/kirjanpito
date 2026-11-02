@@ -10,6 +10,7 @@
 import type {
   PDFDocumentProxy,
   PDFPageProxy,
+  RenderTask,
 } from "pdfjs-dist/types/src/display/api"
 
 import { layoutTextRuns, toTextRun } from "@/lib/domain/invoice-text"
@@ -69,13 +70,31 @@ export async function loadPdf(blob: Blob): Promise<PdfHandle> {
   }
 }
 
+/*
+ * pdf.js throws if a canvas gets a second render before the first ends, and
+ * zooming or resizing asks for one at any moment. Only the newest request for a
+ * canvas goes ahead; it cancels the render under way.
+ */
+const latestRequest = new WeakMap<HTMLCanvasElement, object>()
+const running = new WeakMap<HTMLCanvasElement, RenderTask>()
+
+/** False when a newer request for the canvas took over. */
 export async function renderPdfPage(
   doc: PDFDocumentProxy,
   pageNumber: number,
   canvas: HTMLCanvasElement,
   options: { scale: number; rotation: number }
-): Promise<void> {
+): Promise<boolean> {
+  const request = {}
+  latestRequest.set(canvas, request)
   const page: PDFPageProxy = await doc.getPage(pageNumber)
+  const previous = running.get(canvas)
+  if (previous) {
+    previous.cancel()
+    await previous.promise.catch(() => {})
+  }
+  if (latestRequest.get(canvas) !== request) return false
+
   const viewport = page.getViewport({
     scale: options.scale,
     rotation: options.rotation,
@@ -83,10 +102,20 @@ export async function renderPdfPage(
   canvas.width = Math.max(1, Math.floor(viewport.width))
   canvas.height = Math.max(1, Math.floor(viewport.height))
   const context = canvas.getContext("2d")
-  if (!context) return
+  if (!context) return false
   context.fillStyle = "#ffffff"
   context.fillRect(0, 0, canvas.width, canvas.height)
-  await page.render({ canvas, canvasContext: context, viewport }).promise
+  const task = page.render({ canvas, canvasContext: context, viewport })
+  running.set(canvas, task)
+  try {
+    await task.promise
+    return true
+  } catch (error) {
+    if ((error as Error).name === "RenderingCancelledException") return false
+    throw error
+  } finally {
+    if (running.get(canvas) === task) running.delete(canvas)
+  }
 }
 
 export async function pdfPageSize(

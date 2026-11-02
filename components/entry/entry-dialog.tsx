@@ -456,19 +456,20 @@ function EntryDialogForm({
     setError((prev) => (prev && prev.field in patch ? null : prev))
   }
 
-  const requestClose = async () => {
-    if (!dirty) {
-      closeDialog()
-      return
-    }
+  /** True when nothing typed would be lost, or the user lets it go. */
+  const confirmDiscard = async () => {
+    if (!dirty) return true
     const { confirm } = await import("@/lib/ui/confirm")
-    const discard = await confirm({
+    return confirm({
       title: f.t("confirm.discardTitle"),
       message: f.t("confirm.discardEntry"),
       confirmLabel: f.t("confirm.discardConfirm"),
       cancelLabel: f.t("confirm.keepEditing"),
     })
-    if (discard) closeDialog()
+  }
+
+  const requestClose = async () => {
+    if (await confirmDiscard()) closeDialog()
   }
 
   const validate = (): Entry | null => {
@@ -768,9 +769,8 @@ function EntryDialogForm({
             <FieldError>{error?.message}</FieldError>
           </FieldGroup>
 
-          {/* The prototype's `.receipt-wrap`: the paper sits on a sunken
-              surface, which is what tells it apart now that it carries no
-              border of its own. */}
+          {/* The paper sits on a sunken surface, which is what tells it
+              apart: it carries no border of its own. */}
           <div className="flex flex-col gap-4 rounded-lg bg-muted/60 p-4">
             <ReceiptPreview
               date={form.date}
@@ -807,13 +807,16 @@ function EntryDialogForm({
               </Button>
               <Button
                 variant="outline"
-                onClick={() =>
-                  openDialog({
-                    kind: "entry",
-                    mode: "copy",
-                    entryId: editing.id,
-                  })
-                }
+                onClick={async () => {
+                  // A copy is of the saved entry, not of what is typed here.
+                  if (await confirmDiscard()) {
+                    openDialog({
+                      kind: "entry",
+                      mode: "copy",
+                      entryId: editing.id,
+                    })
+                  }
+                }}
               >
                 <CopyIcon data-icon="inline-start" />
                 {f.t("ledger.copyAsNew")}

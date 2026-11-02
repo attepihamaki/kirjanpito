@@ -12,10 +12,6 @@ export function saveBlob(blob: Blob, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 10_000)
 }
 
-export function saveText(text: string, filename: string, type: string): void {
-  saveBlob(new Blob([text], { type }), filename)
-}
-
 export async function fileToUint8Array(file: Blob): Promise<Uint8Array> {
   return new Uint8Array(await file.arrayBuffer())
 }

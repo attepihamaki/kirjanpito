@@ -79,8 +79,10 @@ export function useAppShortcuts({
       const { open, importing, saving, dialog } = useBookStore.getState()
       if (!open || importing || saving || dialog.kind !== "none") return
 
-      // Ctrl+O: open. The browser's own open dialog is close enough in
-      // intent that losing the preventDefault would not be a disaster.
+      /*
+       * Ctrl+O: open. The browser's own open dialog is close enough in intent
+       * that losing the preventDefault would not be a disaster.
+       */
       if (key === "o") {
         if (event.shiftKey) return
         event.preventDefault()

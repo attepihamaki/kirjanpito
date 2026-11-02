@@ -3,6 +3,7 @@ import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
 import { vatReport } from "@/lib/domain/vat"
 import {
   asPeriod,
+  filedOn,
   periodContaining,
   type VatPeriod,
   type VatPeriodKind,
@@ -78,7 +79,7 @@ export function filedPeriodChanges(
   const touched = new Map<string, VatPeriod>()
   const mark = (e: Entry) => {
     const p = periodContaining(kind, e.date)
-    if (filed[p.key]) touched.set(p.key, p)
+    if (filedOn(p, filed)) touched.set(p.key, p)
   }
 
   const afterById = new Map(after.map((e) => [e.id, e]))
@@ -111,7 +112,7 @@ export function filedPeriodChanges(
     if (!anyChanged) continue
     changes.push({
       period,
-      filedOn: filed[period.key],
+      filedOn: filedOn(period, filed) as string,
       taxDelta: next.due - old.due,
       baseChanged,
     })
