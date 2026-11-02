@@ -7,6 +7,7 @@ import { Money, ZeroDash } from "@/components/common/money"
 import { Pill } from "@/components/common/pill"
 import { SortableHeader } from "@/components/common/sortable-header"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Table,
   TableBody,
@@ -38,9 +39,15 @@ import { useBookStore, type LedgerSortKey } from "@/stores/book-store"
 export function LedgerTable({
   rows,
   cats,
+  selected,
+  onSelect,
 }: {
   rows: readonly Entry[]
   cats: ReadonlyMap<string, Category>
+  /** Ids of the rows picked for a bulk action (§8.4). */
+  selected: ReadonlySet<string>
+  /** Add the ids to the selection, or take them out. */
+  onSelect: (ids: readonly string[], on: boolean) => void
 }) {
   const f = useFormatters()
   const ctx = useCommandCtx()
@@ -71,6 +78,19 @@ export function LedgerTable({
     <Table density="comfortable">
       <TableHeader>
         <TableRow>
+          {/* Bulk actions are a desk job; on a phone a row opens on tap. */}
+          <TableHead className="hidden w-px min-[560px]:table-cell">
+            <Checkbox
+              checked={rows.length > 0 && rows.every((r) => selected.has(r.id))}
+              aria-label={f.t("ledger.selectPage")}
+              onCheckedChange={(checked) =>
+                onSelect(
+                  rows.map((r) => r.id),
+                  checked === true
+                )
+              }
+            />
+          </TableHead>
           {header(
             "voucher",
             f.t("ledger.colVoucher"),
@@ -115,6 +135,8 @@ export function LedgerTable({
             key={entry.id}
             entry={entry}
             cat={cats.get(entry.catId)}
+            selected={selected.has(entry.id)}
+            onSelect={(on) => onSelect([entry.id], on)}
             onEdit={() =>
               openDialog({ kind: "entry", mode: "edit", entryId: entry.id })
             }
@@ -135,6 +157,8 @@ export function LedgerTable({
 function LedgerRow({
   entry,
   cat,
+  selected,
+  onSelect,
   onEdit,
   onCopy,
   onDelete,
@@ -142,6 +166,8 @@ function LedgerRow({
 }: {
   entry: Entry
   cat: Category | undefined
+  selected: boolean
+  onSelect: (on: boolean) => void
   onEdit: () => void
   onCopy: () => void
   onDelete: () => void
@@ -163,7 +189,23 @@ function LedgerRow({
         }
       }}
       className="focus-ring cursor-pointer"
+      data-state={selected ? "selected" : undefined}
     >
+      {/* Its own cell, so a click on the box does not open the entry. */}
+      <TableCell
+        className="hidden min-[560px]:table-cell"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <Checkbox
+          checked={selected}
+          aria-label={f.t("ledger.selectRow", {
+            x: entry.description || f.t("ledger.noDescription"),
+          })}
+          onCheckedChange={(checked) => onSelect(checked === true)}
+        />
+      </TableCell>
+
       <TableCell className="tabular hidden text-right text-muted-foreground min-[560px]:table-cell">
         {entry.voucher}
       </TableCell>

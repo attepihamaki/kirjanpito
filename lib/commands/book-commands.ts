@@ -124,7 +124,7 @@ export const UNDO_TIMEOUT_MS = 10_000
  * entries whose files the sweep had already removed. An undo after another
  * bookkeeping has taken over does nothing.
  */
-function offerUndo(
+export function offerUndo(
   ctx: Ctx,
   removed: readonly Entry[],
   title: string,

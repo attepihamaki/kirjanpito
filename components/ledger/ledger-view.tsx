@@ -11,6 +11,7 @@ import { OptionSelect } from "@/components/common/option-select"
 import { PageHeader } from "@/components/common/page-header"
 import { Surface } from "@/components/common/surface"
 import { TablePagination } from "@/components/common/table-pagination"
+import { BulkBar } from "@/components/ledger/bulk-bar"
 import { LedgerTable } from "@/components/ledger/ledger-table"
 import { LedgerTabs } from "@/components/ledger/ledger-tabs"
 import { MonthChips } from "@/components/ledger/month-chips"
@@ -48,6 +49,8 @@ const CHECK_LABEL = {
   zeroVatSale: "ledger.zeroVatSale",
   largeAmount: "ledger.largeAmount",
 } as const satisfies Record<EntryCheck, string>
+
+const NO_IDS: ReadonlySet<string> = new Set()
 
 export function LedgerView() {
   const f = useFormatters()
@@ -159,6 +162,46 @@ export function LedgerView() {
       ...usedCats.map((c) => ({ value: c.id, label: f.catName(c) })),
     ],
     [usedCats, f]
+  )
+
+  /*
+   * The rows picked for a bulk action (§8.4). The selection belongs to the
+   * period and filters it was made under, so changing either starts over and
+   * the bar never acts on rows that are no longer listed.
+   */
+  const selectionKey = JSON.stringify([
+    year,
+    month,
+    query,
+    typeFilter,
+    catFilter,
+    checkFilter,
+  ])
+  const [pick, setPick] = React.useState<{
+    key: string
+    ids: ReadonlySet<string>
+  }>({ key: "", ids: NO_IDS })
+  const picked = pick.key === selectionKey ? pick.ids : NO_IDS
+  const selectedEntries = React.useMemo(
+    () => filtered.filter((e) => picked.has(e.id)),
+    [filtered, picked]
+  )
+  const select = React.useCallback(
+    (ids: readonly string[], on: boolean) => {
+      setPick((prev) => {
+        const next = new Set(prev.key === selectionKey ? prev.ids : NO_IDS)
+        for (const id of ids) {
+          if (on) next.add(id)
+          else next.delete(id)
+        }
+        return { key: selectionKey, ids: next }
+      })
+    },
+    [selectionKey]
+  )
+  const clearPicked = React.useCallback(
+    () => setPick({ key: selectionKey, ids: NO_IDS }),
+    [selectionKey]
   )
 
   const view = paginate(filtered, page, size)
@@ -282,20 +325,30 @@ export function LedgerView() {
               </Empty>
             ) : (
               // `overflow-hidden` so the table's square corners stay inside the card's.
-              <Surface className="overflow-hidden">
-                <LedgerTable rows={view.rows} cats={catMap} />
-                {/* Always shown, as in the categories table: the rows-per-page
+              <>
+                {selectedEntries.length > 0 ? (
+                  <BulkBar selected={selectedEntries} onDone={clearPicked} />
+                ) : null}
+                <Surface className="overflow-hidden">
+                  <LedgerTable
+                    rows={view.rows}
+                    cats={catMap}
+                    selected={picked}
+                    onSelect={select}
+                  />
+                  {/* Always shown, as in the categories table: the rows-per-page
                     control is how the page length is set, so it cannot appear
                     only once the list has outgrown the current length. */}
-                <TablePagination
-                  page={view.page}
-                  pages={view.pages}
-                  size={size}
-                  count={f.t("ledger.entryCount", { n: view.total })}
-                  onPageChange={setPage}
-                  onSizeChange={setSize}
-                />
-              </Surface>
+                  <TablePagination
+                    page={view.page}
+                    pages={view.pages}
+                    size={size}
+                    count={f.t("ledger.entryCount", { n: view.total })}
+                    onPageChange={setPage}
+                    onSizeChange={setSize}
+                  />
+                </Surface>
+              </>
             )}
           </>
         )}

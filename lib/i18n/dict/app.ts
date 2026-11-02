@@ -91,6 +91,14 @@ export const APP_DICT = {
   ],
   "confirm.overwriteConfirm": ["Korvaa", "Overwrite"],
   "confirm.deleteTitle": ["Poistetaanko kirjaus?", "Delete this entry?"],
+  "confirm.deleteManyTitle": [
+    pl("Poistetaanko 1 kirjaus?", "Poistetaanko {n} kirjausta?"),
+    pl("Delete 1 entry?", "Delete {n} entries?"),
+  ],
+  "confirm.deleteManyMessage": [
+    "Valitut kirjaukset poistetaan. Voit perua poiston heti sen jälkeen.",
+    "The selected entries will be deleted. You can undo it right after.",
+  ],
   "confirm.deleteMessage": [
     "Kirjaus ”{x}” poistetaan.",
     "The entry “{x}” will be deleted.",
@@ -442,6 +450,22 @@ export const APP_DICT = {
     "Search description, category or number",
   ],
   "ledger.colDate": ["Päivämäärä", "Date"],
+  "ledger.selectRow": ["Valitse kirjaus {x}", "Select entry {x}"],
+  "ledger.selectPage": [
+    "Valitse sivun kirjaukset",
+    "Select the entries on this page",
+  ],
+  "ledger.selected": [
+    pl("1 valittu", "{n} valittu"),
+    pl("1 selected", "{n} selected"),
+  ],
+  "ledger.bulkCategory": ["Vaihda luokka", "Change category"],
+  "ledger.bulkMixed": [
+    "Luokan voi vaihtaa, kun valitut ovat kaikki tuloja tai kaikki kuluja.",
+    "To change the category, select only income or only expenses.",
+  ],
+  "ledger.bulkDelete": ["Poista valitut", "Delete selected"],
+  "ledger.bulkClear": ["Poista valinta", "Clear selection"],
   "ledger.colAccount": ["Tili", "Account"],
   "ledger.sections": ["Kirjanpidon osiot", "Bookkeeping sections"],
   "ledger.entriesTab": ["Kirjaukset", "Entries"],
@@ -528,6 +552,16 @@ export const APP_DICT = {
   "entry.saved": ["Kirjaus tallennettu.", "Entry saved."],
   "entry.changesSaved": ["Muutokset tallennettu.", "Changes saved."],
   "entry.deleted": ["Kirjaus poistettu.", "Entry deleted."],
+  "entry.deletedMany": [
+    pl("1 kirjaus poistettu.", "{n} kirjausta poistettu."),
+    pl("1 entry deleted.", "{n} entries deleted."),
+  ],
+  "entry.restoredMany": ["Kirjaukset palautettu.", "Entries restored."],
+  "entry.recategorized": [
+    pl("Luokka vaihdettu 1 kirjaukseen.", "Luokka vaihdettu {n} kirjaukseen."),
+    pl("Category changed on 1 entry.", "Category changed on {n} entries."),
+  ],
+  "entry.recategorizeUndone": ["Luokat palautettu.", "Categories restored."],
   "entry.restored": ["Kirjaus palautettu.", "Entry restored."],
   "entry.unknownCategory": ["Tuntematon luokka", "Unknown category"],
 

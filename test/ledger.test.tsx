@@ -349,3 +349,60 @@ describe("the period slice drives the totals, not the filters", () => {
     expect(screen.getByText(eur(before.expenseNet))).toBeInTheDocument()
   })
 })
+
+describe("selecting rows for a bulk action (§8.4)", () => {
+  beforeEach(loadSampleIntoStore)
+
+  const box = (description: string) =>
+    screen.getByRole("checkbox", { name: `Valitse kirjaus ${description}` })
+
+  it("shows the bar with the count once rows are picked", async () => {
+    const user = userEvent.setup()
+    mount(<LedgerView />)
+    expect(screen.queryByRole("region", { name: /valittu/ })).toBeNull()
+
+    await user.click(box("Työtilan vuokra, helmikuu"))
+    await user.click(box("Työtilan vuokra, maaliskuu"))
+
+    const bar = screen.getByRole("region", { name: "2 valittu" })
+    expect(
+      within(bar).getByRole("combobox", { name: "Vaihda luokka" })
+    ).toBeInTheDocument()
+    expect(
+      within(bar).getByRole("button", { name: "Poista valitut" })
+    ).toBeInTheDocument()
+  })
+
+  it("offers no category for a mix of income and expenses", async () => {
+    const user = userEvent.setup()
+    mount(<LedgerView />)
+
+    await user.click(box("Lasku 1002 – Virtanen"))
+    await user.click(box("Työtilan vuokra, helmikuu"))
+
+    const bar = screen.getByRole("region", { name: "2 valittu" })
+    expect(within(bar).queryByRole("combobox")).toBeNull()
+    expect(
+      within(bar).getByText(/kaikki tuloja tai kaikki kuluja/)
+    ).toBeTruthy()
+  })
+
+  it("picks the whole page from the header", async () => {
+    const user = userEvent.setup()
+    mount(<LedgerView />)
+
+    await user.click(
+      screen.getByRole("checkbox", { name: "Valitse sivun kirjaukset" })
+    )
+    expect(screen.getByRole("region", { name: "10 valittu" })).toBeTruthy()
+  })
+
+  it("starts over when the month changes", async () => {
+    const user = userEvent.setup()
+    mount(<LedgerView />)
+
+    await user.click(box("Työtilan vuokra, helmikuu"))
+    await user.click(screen.getByRole("button", { name: /^Helmi/ }))
+    expect(screen.queryByRole("region", { name: /valittu/ })).toBeNull()
+  })
+})

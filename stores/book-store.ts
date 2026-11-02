@@ -241,6 +241,13 @@ export interface BookActions {
   }): void
   upsertEntry(entry: Entry): void
   removeEntry(id: string): void
+  /** Remove several entries at once (§8.4). */
+  removeEntries(ids: readonly string[]): void
+  /**
+   * Replace entries by id. An id no longer in the book is skipped, so an
+   * undo cannot bring back an entry deleted since.
+   */
+  updateEntries(updated: readonly Entry[]): void
   clearEntries(): void
   /** Put deleted entries back. Ids already present are skipped. */
   restoreEntries(entries: readonly Entry[]): void
@@ -555,6 +562,28 @@ export const useBookStore = create<BookStore>()(
           dirty: true,
           gcTick: get().gcTick + 1,
         }),
+
+      removeEntries: (ids) => {
+        const gone = new Set(ids)
+        set({
+          entries: get().entries.filter((e) => !gone.has(e.id)),
+          dirty: true,
+          gcTick: get().gcTick + 1,
+        })
+      },
+
+      updateEntries: (updated) => {
+        const byId = new Map(updated.map((e) => [e.id, e]))
+        const entries = get().entries.map((e) => {
+          const next = byId.get(e.id)
+          return next ? keepVoucher(next, e) : e
+        })
+        set({
+          entries: [...assignVouchers(entries)],
+          dirty: true,
+          gcTick: get().gcTick + 1,
+        })
+      },
 
       clearEntries: () =>
         set({

@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { toast } from "@/components/ui/toast"
 import { clearAllEntries, deleteEntry } from "@/lib/commands/book-commands"
+import {
+  deleteEntries,
+  recategorizeEntries,
+} from "@/lib/commands/bulk-commands"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
 import type { Ctx } from "@/lib/commands/ctx"
 import { defaultCategories } from "@/lib/domain/accounts"
@@ -160,5 +164,61 @@ describe("changes to a filed period", () => {
     vi.mocked(confirm).mockResolvedValueOnce(false)
     expect(await confirmFiledChange(after)).toBe(false)
     expect(confirm).toHaveBeenCalledOnce()
+  })
+})
+
+describe("bulk actions (§8.4)", () => {
+  const pick = (...dates: string[]) =>
+    useBookStore.getState().entries.filter((e) => dates.includes(e.date))
+
+  beforeEach(() => {
+    vi.mocked(confirm).mockClear()
+    useBookStore.setState({ vatFiled: {} })
+  })
+
+  it("deletes the selected entries and brings them back on undo", async () => {
+    const chosen = pick("2026-02-20", "2026-03-20")
+    expect(await deleteEntries(ctx, chosen)).toBe(true)
+    expect(vi.mocked(confirm).mock.calls[0][0].title).toBe(
+      "Poistetaanko 2 kirjausta?"
+    )
+    expect(useBookStore.getState().entries).toHaveLength(14)
+
+    clickUndo()
+    expect(useBookStore.getState().entries).toHaveLength(16)
+    expect(pick("2026-02-20", "2026-03-20")).toEqual(chosen)
+  })
+
+  it("moves the selected entries to another category, keeping their rates", async () => {
+    const chosen = pick("2026-02-20", "2026-03-20")
+    expect(await recategorizeEntries(ctx, chosen, "333")).toBe(true)
+
+    const moved = pick("2026-02-20", "2026-03-20")
+    expect(moved.map((e) => e.catId)).toEqual(["333", "333"])
+    expect(moved.map((e) => e.vatRate)).toEqual([25.5, 25.5])
+    expect(moved.map((e) => e.voucher)).toEqual(chosen.map((e) => e.voucher))
+
+    clickUndo()
+    expect(pick("2026-02-20", "2026-03-20").map((e) => e.catId)).toEqual([
+      "343",
+      "343",
+    ])
+  })
+
+  it("asks before moving entries of a filed period, and stops on cancel", async () => {
+    useBookStore.setState({ vatFiled: { "2026-02": "2026-04-12" } })
+    vi.mocked(confirm).mockResolvedValueOnce(false)
+    // A Finnish sale moved to EU goods leaves the sales VAT (§6.1).
+    const sale = pick("2026-02-12")
+
+    expect(await recategorizeEntries(ctx, sale, "300-eu-goods")).toBe(false)
+    expect(confirm).toHaveBeenCalledOnce()
+    expect(pick("2026-02-12")[0].catId).toBe("300-domestic")
+  })
+
+  it("does nothing for entries already in the category", async () => {
+    expect(await recategorizeEntries(ctx, pick("2026-02-20"), "343")).toBe(
+      false
+    )
   })
 })
