@@ -422,6 +422,26 @@ export const APP_DICT = {
     "Vuosi {y} merkitty tallessa olevaksi.",
     "Year {y} marked as stored.",
   ],
+  "overview.threshold": [
+    "Liikevaihto {y}: {a} / {l}",
+    "Turnover {y}: {a} / {l}",
+  ],
+  "overview.thresholdSub": [
+    "Myynneissäsi ei ole arvonlisäveroa. Arvonlisäverovelvollisuus alkaa, kun kalenterivuoden liikevaihto ylittää {l}.",
+    "Your sales carry no VAT. VAT liability starts when a calendar year’s turnover exceeds {l}.",
+  ],
+  "overview.thresholdNearSub": [
+    "Raja lähestyy. Verovelvollisuus alkaa päivästä, jona {l} ylittyy, joten ilmoittaudu ajoissa.",
+    "The limit is close. VAT liability starts on the day turnover exceeds {l}, so register in good time.",
+  ],
+  "overview.thresholdOver": [
+    "Liikevaihto ylitti arvonlisäverorajan {d}",
+    "Turnover exceeded the VAT limit on {d}",
+  ],
+  "overview.thresholdOverSub": [
+    "Verovelvollisuus alkaa tästä päivästä, ja rajan ylittävä myynti on verollista. Ilmoittaudu arvonlisäverovelvolliseksi, jos et ole jo tehnyt niin. Raja on {l} kalenterivuodessa.",
+    "VAT liability starts on this date, and the sale that exceeds the limit is taxable. Register for VAT if you haven’t yet. The limit is {l} per calendar year.",
+  ],
   "overview.missingFiles": [
     pl("1 tosite puuttuu tiedostosta", "{n} tositetta puuttuu tiedostosta"),
     pl(

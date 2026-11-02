@@ -41,6 +41,7 @@ import { APP_ROUTES } from "@/lib/site"
 import { cn } from "@/lib/utils"
 import { toast } from "@/components/ui/toast"
 import { retentionDates, yearsToArchive } from "@/lib/domain/retention"
+import { VAT_THRESHOLD, vatThreshold } from "@/lib/domain/vat-threshold"
 import { useBookStore, type CheckFilter } from "@/stores/book-store"
 import { hasReceipt } from "@/stores/selectors"
 
@@ -324,6 +325,37 @@ export function ChecksWidget() {
         </Button>
       ),
     })
+  }
+
+  const threshold = vatThreshold(data.entries, data.catMap, data.today)
+  if (threshold) {
+    const figures = {
+      a: f.money(threshold.turnover),
+      l: f.money(VAT_THRESHOLD),
+      y: threshold.year,
+    }
+    items.push(
+      threshold.exceededOn
+        ? {
+            key: "vatThreshold",
+            tone: "crit",
+            title: f.t("overview.thresholdOver", {
+              d: f.date(threshold.exceededOn),
+            }),
+            sub: f.t("overview.thresholdOverSub", figures),
+          }
+        : {
+            key: "vatThreshold",
+            tone: threshold.level === "near" ? "warn" : "info",
+            title: f.t("overview.threshold", figures),
+            sub: f.t(
+              threshold.level === "near"
+                ? "overview.thresholdNearSub"
+                : "overview.thresholdSub",
+              figures
+            ),
+          }
+    )
   }
 
   const missing = data.yearEntries.reduce(
