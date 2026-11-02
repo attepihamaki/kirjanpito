@@ -70,7 +70,10 @@ export function ConfirmDialogHost() {
         <AlertDialogHeader>
           <AlertDialogTitle>{options?.title ?? ""}</AlertDialogTitle>
           {options?.message ? (
-            <AlertDialogDescription>{options.message}</AlertDialogDescription>
+            // A message may hold several paragraphs, split by blank lines.
+            <AlertDialogDescription className="whitespace-pre-line">
+              {options.message}
+            </AlertDialogDescription>
           ) : null}
         </AlertDialogHeader>
         <AlertDialogFooter>

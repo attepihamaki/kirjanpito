@@ -698,7 +698,8 @@ Use one shared `AlertDialog`-based `confirm()` helper, with a title, a message, 
 | Start new bookkeeping                  | unsaved changes                    | same as above                                                             |
 | Open a file over the current one       | unsaved changes                    | "Korvataanko avoin kirjanpito?" / "Korvaa"                                |
 | Save over a file edited elsewhere      | its timestamp moved since we read it | "Korvataanko tiedosto?" / "Korvaa"                                      |
-| Delete an entry (row or dialog)        | always                             | "Poistetaanko kirjaus?" / "Poista"                                        |
+| Delete an entry (row or dialog)        | always                             | "Poistetaanko kirjaus?" / "Poista", plus a paragraph per filed period it changes |
+| Save an entry                          | it changes a period marked as filed | "Muutetaanko ilmoitettua kautta?" / "Tallenna silti"                     |
 | Clear all entries                      | always                             | "Tyhjennetäänkö kirjaukset?" / "Tyhjennä"                                 |
 | Close the entry dialog (Peruuta / Esc) | form differs from its snapshot     | "Hylätäänkö muutokset?" / "Hylkää muutokset", cancel = "Jatka muokkausta" |
 | Navigate away from Settings            | the new-category name is filled    | same as above, with the category message                                  |
@@ -709,6 +710,8 @@ Use one shared `AlertDialog`-based `confirm()` helper, with a title, a message, 
 The wording everywhere is about saving rather than exporting, so one set of strings covers both ways of keeping the work. The row above that highlights this: the close confirmation is the same sentence whether the user saves to their own file or downloads a copy.
 
 Closing a file clears entries, the file name and filters, unlinks the file (§7.5), sets the bookkeeping to closed, garbage-collects receipts, and returns to the landing page.
+
+**A change to a filed period says how to correct the return.** `filedPeriodChanges` in `lib/domain/filed-changes.ts` builds each touched period's return before and after the change and compares the fields, so a new description, a receipt or an entry no field counts (a 0 % grant) asks nothing. For each period that does change, the confirmation names it, the date it was marked, and how much the tax payable goes up or down. It then gives Vero's fix (vero.fi, "Miten arvonlisäveroilmoituksen tietoja korjataan?"): a replacement return (korvaava ilmoitus) for the period in OmaVero, or, when only the tax fields change and by at most 500 €, the next return instead (`fitsNextReturn`). A change to EU, reverse-charge or 0 % sales always needs the replacement. The filed mark stays as it was, since the user decides when the correction is made. `lib/commands/filed-commands.ts` holds the wording and is loaded on demand by `deleteEntry`, because `book-commands.ts` is in the landing bundle.
 
 **Deleting can be undone.** Deleting an entry and clearing the entries both still ask first, then raise a toast with "Kumoa" for 10 seconds (`offerUndo` in `lib/commands/book-commands.ts`). The deleted entries' receipts stay in IndexedDB while the toast is up (`undoAttachmentIds`, which the GC sweep counts as live), or an undo would bring back entries whose files were already gone. An undo after a new, closed or opened bookkeeping has taken over does nothing (`bookEpoch`). Undo marks the book dirty, since autosave may already have written the deletion. `lib/commands/book-commands.test.ts` covers it.
 

@@ -516,6 +516,41 @@ export const APP_DICT = {
   "vat.quarterShort": ["{q}. nelj.", "Q{q}"],
   "vat.filed": ["Ilmoitettu", "Filed"],
   "vat.filedOn": ["Merkitty ilmoitetuksi {d}", "Marked as filed on {d}"],
+  /*
+   * A change to an entry in a period already marked as filed (§8.11). The
+   * fixes follow Vero's instructions for correcting a VAT return: a
+   * replacement return for the period, or the next return when only the tax
+   * changes and by at most 500 €.
+   */
+  "vat.filedChangeTitle": [
+    "Muutetaanko ilmoitettua kautta?",
+    "Change a filed period?",
+  ],
+  "vat.filedChangeMarked": [
+    "{p} on merkitty ilmoitetuksi {d}.",
+    "{p} was marked as filed on {d}.",
+  ],
+  "vat.filedChangeTaxUp": [
+    "Maksettava vero kasvaa {x}.",
+    "The tax payable goes up by {x}.",
+  ],
+  "vat.filedChangeTaxDown": [
+    "Maksettava vero pienenee {x}.",
+    "The tax payable goes down by {x}.",
+  ],
+  "vat.filedChangeTaxSame": [
+    "Vero ei muutu, mutta ilmoitetut luvut muuttuvat.",
+    "The tax stays the same, but the reported figures change.",
+  ],
+  "vat.filedChangeFixNext": [
+    "Korjaa ero seuraavalla ilmoituksella tai anna kaudelle korvaava ilmoitus OmaVerossa.",
+    "Correct the difference on your next return, or file a replacement return for the period in OmaVero.",
+  ],
+  "vat.filedChangeFixReplace": [
+    "Anna kaudelle korvaava ilmoitus OmaVerossa.",
+    "File a replacement return for the period in OmaVero.",
+  ],
+  "vat.filedChangeSave": ["Tallenna silti", "Save anyway"],
   "vat.overdue": ["Myöhässä", "Overdue"],
   "vat.dueShort": ["Erä {d}", "Due {d}"],
   "vat.dueDate": ["Eräpäivä {d}", "Due {d}"],

@@ -27,7 +27,6 @@ import {
   type TimelinePeriod,
   type VatPeriod,
 } from "@/lib/domain/vat-deadline"
-import type { Formatters } from "@/lib/i18n/create-formatters"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -114,13 +113,7 @@ export function useOverviewData(): OverviewData {
   return value
 }
 
-/** "Syyskuu 2026", "3. neljännes 2026" or "Vuosi 2026". */
-export function periodLabel(f: Formatters, p: VatPeriod): string {
-  if (p.kind === "month") return `${f.month(p.index - 1)} ${p.year}`
-  if (p.kind === "quarter")
-    return f.t("vat.quarterN", { q: p.index, y: p.year })
-  return f.t("vat.yearN", { y: p.year })
-}
+export { periodLabel } from "@/lib/i18n/period-label"
 
 /** The VAT return for one period, and how many entries it was built from. */
 export function periodVat(data: OverviewData, p: VatPeriod) {

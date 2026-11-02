@@ -77,11 +77,21 @@ export async function closeBook(ctx: Ctx): Promise<void> {
 }
 
 export async function deleteEntry(ctx: Ctx, entry: Entry): Promise<boolean> {
+  // Loaded on demand: the landing page imports this module (§11b).
+  const { filedChangeNotice } = await import("@/lib/commands/filed-commands")
+  const filed = filedChangeNotice(
+    useBookStore.getState().entries.filter((e) => e.id !== entry.id)
+  )
+  const message = ctx.t("confirm.deleteMessage", {
+    x: entry.description || ctx.t("ledger.noDescription"),
+  })
   const confirmed = await confirm({
     title: ctx.t("confirm.deleteTitle"),
-    message: ctx.t("confirm.deleteMessage", {
-      x: entry.description || ctx.t("ledger.noDescription"),
-    }),
+    message: filed
+      ? `${message}
+
+${filed}`
+      : message,
     confirmLabel: ctx.t("common.delete"),
     cancelLabel: ctx.t("common.cancel"),
   })

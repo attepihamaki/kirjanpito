@@ -48,6 +48,7 @@ import { rateMismatch, rateOnDate } from "@/lib/domain/vat-rates"
 import { uid } from "@/lib/domain/id"
 import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
 import { deleteEntry } from "@/lib/commands/book-commands"
+import { confirmFiledChange } from "@/lib/commands/filed-commands"
 import { categoryAccount, categorySide } from "@/stores/selectors"
 import type {
   AmountMode,
@@ -448,9 +449,15 @@ function EntryDialogForm({
     }
   }
 
-  const save = (andNew: boolean) => {
+  const save = async (andNew: boolean) => {
     const entry = validate()
     if (!entry) return
+
+    const entries = useBookStore.getState().entries
+    const after = entries.some((e) => e.id === entry.id)
+      ? entries.map((e) => (e.id === entry.id ? entry : e))
+      : [...entries, entry]
+    if (!(await confirmFiledChange(after))) return
 
     upsertEntry(entry)
     setLastDefaults({ mode: form.amountMode, type: form.type })
@@ -716,11 +723,13 @@ function EntryDialogForm({
               {f.t("common.cancel")}
             </Button>
             {mode !== "edit" ? (
-              <Button variant="secondary" onClick={() => save(true)}>
+              <Button variant="secondary" onClick={() => void save(true)}>
                 {f.t("entry.saveAndNew")}
               </Button>
             ) : null}
-            <Button onClick={() => save(false)}>{f.t("common.save")}</Button>
+            <Button onClick={() => void save(false)}>
+              {f.t("common.save")}
+            </Button>
           </div>
         </DialogFooter>
 

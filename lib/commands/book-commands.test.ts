@@ -3,15 +3,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { toast } from "@/components/ui/toast"
 import { clearAllEntries, deleteEntry } from "@/lib/commands/book-commands"
+import { confirmFiledChange } from "@/lib/commands/filed-commands"
 import type { Ctx } from "@/lib/commands/ctx"
 import { defaultCategories } from "@/lib/domain/accounts"
 import { createIdFactory } from "@/lib/domain/id"
 import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { collectLiveIds } from "@/lib/domain/gc"
 import { createAppT } from "@/lib/i18n/messages"
+import { confirm } from "@/lib/ui/confirm"
 import { useBookStore } from "@/stores/book-store"
 
-/* Undoing a deleted entry or a cleared bookkeeping (§8.11). */
+/** Intl puts no-break spaces in money; the expectations use plain ones. */
+const flat = (s: string | undefined) => (s ?? "").replace(/[  ]/g, " ")
+
+/* Undoing a deletion, and warning about filed periods (§8.11). */
 
 vi.mock("@/lib/ui/confirm", () => ({ confirm: vi.fn(async () => true) }))
 
@@ -111,5 +116,48 @@ describe("clearAllEntries", () => {
     useBookStore.setState({ entries: [] })
     await clearAllEntries(ctx)
     expect(raised.every((o) => !o.actionProps)).toBe(true)
+  })
+})
+
+describe("changes to a filed period", () => {
+  const october = () =>
+    useBookStore.getState().entries.find((e) => e.date === "2026-10-28")!
+
+  beforeEach(() => {
+    vi.mocked(confirm).mockClear()
+    useBookStore.setState({ vatPeriod: "month", vatFiled: {} })
+  })
+
+  it("adds what a delete does to a filed return to its confirmation", async () => {
+    useBookStore.setState({ vatFiled: { "2026-10": "2026-12-14" } })
+    await deleteEntry(ctx, october())
+
+    const message = flat(vi.mocked(confirm).mock.calls[0][0].message)
+    expect(message).toContain(
+      "Lokakuu 2026 on merkitty ilmoitetuksi 14.12.2026."
+    )
+    expect(message).toContain("Maksettava vero pienenee 382,50 €.")
+    expect(message).toContain("seuraavalla ilmoituksella")
+  })
+
+  it("keeps the plain confirmation when no filed period changes", async () => {
+    await deleteEntry(ctx, october())
+    const message = vi.mocked(confirm).mock.calls[0][0].message ?? ""
+    expect(message).not.toContain("ilmoitetuksi")
+  })
+
+  it("asks before saving into a filed period, and only then", async () => {
+    const edited = { ...october(), amount: 100 }
+    const after = useBookStore
+      .getState()
+      .entries.map((e) => (e.id === edited.id ? edited : e))
+
+    expect(await confirmFiledChange(after)).toBe(true)
+    expect(confirm).not.toHaveBeenCalled()
+
+    useBookStore.setState({ vatFiled: { "2026-10": "2026-12-14" } })
+    vi.mocked(confirm).mockResolvedValueOnce(false)
+    expect(await confirmFiledChange(after)).toBe(false)
+    expect(confirm).toHaveBeenCalledOnce()
   })
 })
