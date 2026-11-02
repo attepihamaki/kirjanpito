@@ -4,7 +4,9 @@ import { create } from "zustand"
 import { persist, type PersistStorage } from "zustand/middleware"
 
 import { defaultCategories } from "@/lib/domain/accounts"
+import type { AssetOpening } from "@/lib/domain/assets"
 import type { EntryCheck } from "@/lib/domain/entry-checks"
+import type { RecurringEntry } from "@/lib/domain/recurring"
 import { mergeCategories } from "@/lib/domain/settings-file"
 import { assignVouchers, keepVoucher } from "@/lib/domain/voucher"
 import {
@@ -106,6 +108,8 @@ export type DialogState =
     }
   | { kind: "viewer"; entryId: string; index: number }
   | { kind: "export" }
+  /** Add a month's recurring entries (§8.5). `month` is `"2026-10"`. */
+  | { kind: "recurring"; month: string }
 
 export interface BookState {
   // ---- persisted (CLAUDE.md §12) ----
@@ -144,6 +148,10 @@ export interface BookState {
   overviewLayout: OverviewWidget[]
   /** Save to the linked file a moment after each change (§7.5). Opt-in. */
   autosave: boolean
+  /** Monthly templates (§8.5). Saved in settings.json. */
+  recurring: RecurringEntry[]
+  /** The balance the asset register starts from (§8.8). Saved in settings.json. */
+  assetOpening: AssetOpening | null
 
   // ---- ephemeral ----
   hydrated: boolean
@@ -235,6 +243,8 @@ export interface BookActions {
       bookStart?: string | null
       vatFiled?: Record<string, string>
       yearsArchived?: Record<string, string>
+      recurring?: RecurringEntry[]
+      assetOpening?: AssetOpening | null
       overviewLayout?: OverviewWidget[]
       autosave?: boolean
       ledgerSize?: PageSize
@@ -242,6 +252,8 @@ export interface BookActions {
     }
   }): void
   upsertEntry(entry: Entry): void
+  /** Add several new entries at once, numbered after the book's own (§4). */
+  addEntries(entries: readonly Entry[]): void
   removeEntry(id: string): void
   /** Remove several entries at once (§8.4). */
   removeEntries(ids: readonly string[]): void
@@ -282,6 +294,9 @@ export interface BookActions {
   setOverviewLayout(layout: OverviewWidget[]): void
   setAutosave(on: boolean): void
   setAutosavePaused(paused: boolean): void
+  upsertRecurring(template: RecurringEntry): void
+  removeRecurring(id: string): void
+  setAssetOpening(opening: AssetOpening | null): void
 
   upsertCategory(category: Category): void
   removeCategory(id: string): void
@@ -336,6 +351,8 @@ function initialState(): BookState {
     yearsArchived: {},
     overviewLayout: DEFAULT_LAYOUT.map((w) => ({ ...w })),
     autosave: false,
+    recurring: [],
+    assetOpening: null,
 
     hydrated: false,
     importing: false,
@@ -385,6 +402,8 @@ type PersistedBook = Pick<
   | "yearsArchived"
   | "overviewLayout"
   | "autosave"
+  | "recurring"
+  | "assetOpening"
 >
 
 /**
@@ -521,6 +540,8 @@ export const useBookStore = create<BookStore>()(
           bookStart: null,
           vatFiled: {},
           yearsArchived: {},
+          recurring: [],
+          assetOpening: null,
           undoAttachmentIds: [],
           bookEpoch: get().bookEpoch + 1,
           gcTick: get().gcTick + 1,
@@ -537,6 +558,8 @@ export const useBookStore = create<BookStore>()(
           bookStart: null,
           vatFiled: {},
           yearsArchived: {},
+          recurring: [],
+          assetOpening: null,
           dialog: { kind: "none" },
           draftAttachmentIds: [],
           undoAttachmentIds: [],
@@ -562,6 +585,8 @@ export const useBookStore = create<BookStore>()(
           bookStart: s.bookStart ?? null,
           vatFiled: s.vatFiled ?? {},
           yearsArchived: s.yearsArchived ?? {},
+          recurring: s.recurring ?? [],
+          assetOpening: s.assetOpening ?? null,
           overviewLayout: s.overviewLayout ?? get().overviewLayout,
           autosave: s.autosave ?? get().autosave,
           autosavePaused: false,
@@ -584,6 +609,13 @@ export const useBookStore = create<BookStore>()(
           gcTick: get().gcTick + 1,
         })
       },
+
+      addEntries: (added) =>
+        set({
+          entries: [...assignVouchers([...get().entries, ...added])],
+          dirty: true,
+          gcTick: get().gcTick + 1,
+        }),
 
       removeEntry: (id) =>
         set({
@@ -690,6 +722,19 @@ export const useBookStore = create<BookStore>()(
       },
       setOverviewLayout: (overviewLayout) =>
         set({ overviewLayout, dirty: true }),
+      upsertRecurring: (template) => {
+        const recurring = [...get().recurring]
+        const i = recurring.findIndex((r) => r.id === template.id)
+        if (i >= 0) recurring[i] = template
+        else recurring.push(template)
+        set({ recurring, dirty: true })
+      },
+      removeRecurring: (id) =>
+        set({
+          recurring: get().recurring.filter((r) => r.id !== id),
+          dirty: true,
+        }),
+      setAssetOpening: (assetOpening) => set({ assetOpening, dirty: true }),
       /*
        * A preference, like the language: it travels in settings.json but
        * turning it on or off does not change the bookkeeping.
@@ -712,8 +757,11 @@ export const useBookStore = create<BookStore>()(
         set({ cats: get().cats.filter((c) => c.id !== id), dirty: true }),
       setCategories: (cats) => set({ cats, dirty: true }),
       resetCategories: () => {
-        // Keep custom categories that entries still reference (§8.10).
-        const used = new Set(get().entries.map((e) => e.catId))
+        // Keep custom categories still in use (§8.10).
+        const used = new Set([
+          ...get().entries.map((e) => e.catId),
+          ...get().recurring.map((r) => r.catId),
+        ])
         const keep = get().cats.filter((c) => c.custom && used.has(c.id))
         set({
           cats: [...defaultCategories(), ...keep],
@@ -763,7 +811,7 @@ export const useBookStore = create<BookStore>()(
     }),
     {
       name: BOOK_STORAGE_KEY,
-      version: 4,
+      version: 5,
       storage: bookStorage,
       /*
        * Prerender must not touch localStorage; StoreHydrator rehydrates after
@@ -789,6 +837,8 @@ export const useBookStore = create<BookStore>()(
         yearsArchived: s.yearsArchived,
         overviewLayout: s.overviewLayout,
         autosave: s.autosave,
+        recurring: s.recurring,
+        assetOpening: s.assetOpening,
       }),
       migrate: (persisted) => {
         const blob = (persisted ?? {}) as Record<string, unknown>
@@ -820,7 +870,7 @@ export const useBookStore = create<BookStore>()(
         if (Array.isArray(blob.entries)) {
           blob.entries = assignVouchers(blob.entries as Entry[])
         }
-        // A stored list predates the EU goods and services categories (§5).
+        // A stored list may predate a default category (§5).
         if (Array.isArray(blob.cats)) {
           blob.cats = mergeCategories(blob.cats as Category[])
         }

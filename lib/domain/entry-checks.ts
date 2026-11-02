@@ -124,7 +124,11 @@ export function flaggedEntryIds(
 
   switch (check) {
     case "noReceipt":
-      return ids((e) => !hasReceipt(e))
+      // Depreciation and line 354 are calculated: they have no receipt to file.
+      return ids((e) => {
+        const line = cats.get(e.catId)?.line
+        return line !== "337" && line !== "354" && !hasReceipt(e)
+      })
     case "rateMismatch":
       return ids((e) => rateMismatch(e.vatRate, e.date) !== null)
     case "futureDate":

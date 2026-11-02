@@ -27,6 +27,7 @@ import {
   type MonthRow,
 } from "@/lib/domain/summary"
 import { indexCategories } from "@/lib/domain/types"
+import { yearComparison, type CompareRow } from "@/lib/domain/year-compare"
 import { BUCKET_KEYS } from "@/lib/i18n/messages"
 import { cn } from "@/lib/utils"
 import { useBookStore } from "@/stores/book-store"
@@ -37,11 +38,12 @@ export function SummaryView() {
   const cats = useBookStore((s) => s.cats)
   const year = useBookStore((s) => s.year)
 
-  const { data, figures } = React.useMemo(() => {
+  const { data, figures, compare } = React.useMemo(() => {
     const catMap = indexCategories(cats)
     return {
       data: summary(entries, catMap, year),
       figures: monthFigures(entries, catMap, year),
+      compare: yearComparison(entries, catMap, year),
     }
   }, [entries, cats, year])
 
@@ -114,28 +116,73 @@ export function SummaryView() {
           rows={data.months}
           totals={data.totals}
         />
+
+        {compare ? (
+          <WideTable<CompareRow>
+            title={f.t("summary.compareTitle", { y: compare.previous })}
+            columns={[
+              {
+                key: "income",
+                label: f.t("summary.compareIncome", { y: year }),
+                get: (r) => r.income,
+              },
+              {
+                key: "incomePrev",
+                label: f.t("summary.compareIncome", { y: compare.previous }),
+                get: (r) => r.incomePrev,
+              },
+              {
+                key: "expense",
+                label: f.t("summary.compareExpense", { y: year }),
+                get: (r) => r.expense,
+              },
+              {
+                key: "expensePrev",
+                label: f.t("summary.compareExpense", { y: compare.previous }),
+                get: (r) => r.expensePrev,
+              },
+              {
+                key: "result",
+                label: f.t("summary.compareResult", { y: year }),
+                get: (r) => r.result,
+              },
+              {
+                key: "resultPrev",
+                label: f.t("summary.compareResult", { y: compare.previous }),
+                get: (r) => r.resultPrev,
+              },
+              {
+                key: "change",
+                label: f.t("summary.compareChange"),
+                get: (r) => r.result - r.resultPrev,
+              },
+            ]}
+            rows={compare.months}
+            totals={compare.totals}
+          />
+        ) : null}
       </div>
     </>
   )
 }
 
-interface Column {
+interface Column<R> {
   key: string
   label: string
-  get: (row: MonthRow) => number
+  get: (row: R) => number
 }
 
 /** Wide tables scroll horizontally with a sticky first column (§8.9). */
-function WideTable({
+function WideTable<R extends { month: number } = MonthRow>({
   title,
   columns,
   rows,
   totals,
 }: {
   title: string
-  columns: Column[]
-  rows: readonly MonthRow[]
-  totals: MonthRow
+  columns: Column<R>[]
+  rows: readonly R[]
+  totals: R
 }) {
   const f = useFormatters()
 

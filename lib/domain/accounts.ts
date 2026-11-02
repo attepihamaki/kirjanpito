@@ -36,6 +36,11 @@ export interface AccountLine {
    * asks for as 320 (of 319) and 322 (of 321). Null on every other line (§6.3).
    */
   taxableShare: number | null
+  /**
+   * Fixed asset purchases and sales (§5): not on the income statement or Form
+   * 5, since the cost is deducted as depreciation, but on the VAT return.
+   */
+  capital: boolean
 }
 
 /**
@@ -360,6 +365,41 @@ export const LINES: readonly AccountLine[] = [
   ),
 ]
 
+/**
+ * Machinery and equipment, in and out (§8.8). Kept out of `LINES`, which is
+ * the income statement. The account is the usual balance sheet one, because
+ * the CSV needs a number and Form 5 has none for these.
+ */
+export const CAPITAL_LINES: readonly AccountLine[] = [
+  {
+    ...l(
+      "asset-purchase",
+      1100,
+      "expense",
+      "Käyttöomaisuuden hankinta",
+      "Purchase of fixed assets",
+      null,
+      25.5
+    ),
+    capital: true,
+  },
+  {
+    ...l(
+      "asset-sale",
+      1100,
+      "income",
+      "Käyttöomaisuuden myynti",
+      "Sale of fixed assets",
+      null,
+      25.5
+    ),
+    capital: true,
+  },
+]
+
+/** Every line a category can sit on: the statement's, then the two above. */
+export const ALL_LINES: readonly AccountLine[] = [...LINES, ...CAPITAL_LINES]
+
 function l(
   key: string,
   account: number,
@@ -384,6 +424,7 @@ function l(
     halfDeductible: key === "341",
     noVatDeduction: key === "341" || nondeductible,
     taxableShare: TAXABLE_SHARE[key] ?? null,
+    capital: false,
   }
 }
 
@@ -391,7 +432,7 @@ function l(
 export const LINE_KEYS: readonly string[] = LINES.map((x) => x.key)
 
 export const LINE_BY_KEY: ReadonlyMap<string, AccountLine> = new Map(
-  LINES.map((x) => [x.key, x])
+  ALL_LINES.map((x) => [x.key, x])
 )
 
 /** Expense summary buckets, in Yhteenveto column order. */
@@ -467,7 +508,7 @@ export const RETIRED_CATEGORY_ID = "300-eu"
 export const DEFAULT_EN_NAMES: Readonly<Record<string, string>> =
   Object.fromEntries([
     ...SALES.map((s) => [s.id, s.en]),
-    ...LINES.filter((x) => x.key !== "300").map((x) => [x.key, x.name.en]),
+    ...ALL_LINES.filter((x) => x.key !== "300").map((x) => [x.key, x.name.en]),
   ])
 
 /**
@@ -488,7 +529,7 @@ export const FORMER_NAMES: Readonly<Record<string, readonly string[]>> = {
   "319": ["Saadut osingot", "Dividends received"],
 }
 
-/** The 35 built-in categories: six sales plus one per remaining line. */
+/** The 37 built-in categories: six sales plus one per remaining line. */
 export function defaultCategories(): Category[] {
   const sales: Category[] = SALES.map((s) => ({
     id: s.id,
@@ -499,15 +540,17 @@ export function defaultCategories(): Category[] {
     enabled: s.id !== RETIRED_CATEGORY_ID,
     custom: false,
   }))
-  const rest: Category[] = LINES.filter((x) => x.key !== "300").map((x) => ({
-    id: x.key,
-    line: x.key,
-    name: x.name.fi,
-    vatRate: x.vatRate,
-    ...(x.side === "income" ? { kind: "domestic" as const } : {}),
-    enabled: true,
-    custom: false,
-  }))
+  const rest: Category[] = ALL_LINES.filter((x) => x.key !== "300").map(
+    (x) => ({
+      id: x.key,
+      line: x.key,
+      name: x.name.fi,
+      vatRate: x.vatRate,
+      ...(x.side === "income" ? { kind: "domestic" as const } : {}),
+      enabled: true,
+      custom: false,
+    })
+  )
   return [...sales, ...rest]
 }
 

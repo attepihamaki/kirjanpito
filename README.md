@@ -48,7 +48,8 @@ send anything to.
 - **Ledger** — entries by month with voucher numbers, searchable across years and
   filterable, sortable on every column, with the net / VAT / gross split
   calculated per entry. Rows can be recategorised or deleted in bulk, and a delete
-  can be undone. `N` starts an entry and `Ctrl`/`⌘`+`Enter` saves it.
+  can be undone. `N` starts an entry and `Ctrl`/`⌘`+`Enter` saves it. An entry
+  can repeat monthly, and a month's repeating entries are added with one click.
 - **Journal and general ledger** — the entries by date and by account, as
   printable sheets.
 - **Receipts** — several images or PDFs per entry, stored in IndexedDB, with a
@@ -61,6 +62,8 @@ send anything to.
   to correct the return.
 - **Income statement** — the full chart of accounts for form 5, laid out as a
   printable sheet, and the figures in the form's own order to copy into OmaVero.
+  Beside it, a register of machinery and equipment with the year's depreciation,
+  and calculators for mileage, per diems and the home office deduction.
 - **Summary** — income against expenses per month, with sales by type and
   expenses by group.
 - **Settings** — the VAT filing period, the month the book began, autosave, and the

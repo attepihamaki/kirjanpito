@@ -33,6 +33,8 @@ export function useAutosave() {
   const yearsArchived = useBookStore((s) => s.yearsArchived)
   const vatPeriod = useBookStore((s) => s.vatPeriod)
   const layout = useBookStore((s) => s.overviewLayout)
+  const recurring = useBookStore((s) => s.recurring)
+  const assetOpening = useBookStore((s) => s.assetOpening)
 
   React.useEffect(() => {
     if (!canSave || !autosave || paused || !dirty || !linked || busy) return
@@ -55,5 +57,7 @@ export function useAutosave() {
     yearsArchived,
     vatPeriod,
     layout,
+    recurring,
+    assetOpening,
   ])
 }

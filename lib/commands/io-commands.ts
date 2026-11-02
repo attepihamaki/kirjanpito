@@ -348,6 +348,8 @@ function applyImport(
           bookStart: settings.bookStart,
           vatFiled: settings.vatFiled,
           yearsArchived: settings.yearsArchived,
+          recurring: settings.recurring,
+          assetOpening: settings.assetOpening,
           overviewLayout: settings.overviewLayout,
           autosave: settings.autosave,
           ledgerSize: settings.pageSize?.ledger,
@@ -397,6 +399,8 @@ function bookVersion() {
     s.vatFiled,
     s.yearsArchived,
     s.overviewLayout,
+    s.recurring,
+    s.assetOpening,
   ] as const
 }
 
@@ -425,6 +429,8 @@ function currentSettingsText(): string {
     autosave: s.autosave,
     categories: s.cats,
     pageSize: { ledger: s.ledgerSize, categories: s.ctSize },
+    recurring: s.recurring,
+    assetOpening: s.assetOpening,
   })
 }
 

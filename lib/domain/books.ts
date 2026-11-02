@@ -1,4 +1,4 @@
-import { LINES, LINE_BY_KEY, type AccountLine } from "@/lib/domain/accounts"
+import { ALL_LINES, LINE_BY_KEY, type AccountLine } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
 import { monthOf, yearOf } from "@/lib/domain/dates"
 import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
@@ -59,6 +59,7 @@ export interface JournalMonth {
 
 export interface Journal {
   months: JournalMonth[]
+  /** Fixed assets stay out of both totals, so they match the statement (§5). */
   income: Totals
   expense: Totals
 }
@@ -76,7 +77,9 @@ export function journal(
     const month = monthOf(row.entry.date)
     if (months.at(-1)?.month !== month) months.push({ month, rows: [] })
     months[months.length - 1].rows.push(row)
-    add(row.entry.type === "income" ? income : expense, row)
+    if (!row.line?.capital) {
+      add(row.entry.type === "income" ? income : expense, row)
+    }
   }
   return { months, income, expense }
 }
@@ -108,5 +111,5 @@ export function generalLedger(
     account.rows.push(row)
     add(account.totals, row)
   }
-  return LINES.flatMap((line) => byLine.get(line.key) ?? [])
+  return ALL_LINES.flatMap((line) => byLine.get(line.key) ?? [])
 }

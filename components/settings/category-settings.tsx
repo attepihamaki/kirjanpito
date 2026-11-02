@@ -210,7 +210,13 @@ function CategoryTable() {
   const upsertCategory = useBookStore((s) => s.upsertCategory)
   const removeCategory = useBookStore((s) => s.removeCategory)
 
-  const usedIds = React.useMemo(() => usedCategoryIds(entries), [entries])
+  const recurring = useBookStore((s) => s.recurring)
+  // A monthly template books to its category later, so it counts as using it.
+  const usedIds = React.useMemo(
+    () =>
+      new Set([...usedCategoryIds(entries), ...recurring.map((r) => r.catId)]),
+    [entries, recurring]
+  )
 
   const rows = React.useMemo(() => {
     const needle = query.trim().toLowerCase()

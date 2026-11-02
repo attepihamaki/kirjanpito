@@ -16,6 +16,7 @@ import { BulkBar } from "@/components/ledger/bulk-bar"
 import { LedgerTable } from "@/components/ledger/ledger-table"
 import { LedgerTabs } from "@/components/ledger/ledger-tabs"
 import { MonthChips } from "@/components/ledger/month-chips"
+import { RecurringNotice } from "@/components/ledger/recurring-dialog"
 import { TotalsCards } from "@/components/ledger/totals-cards"
 import { Button } from "@/components/ui/button"
 import {
@@ -269,6 +270,7 @@ export function LedgerView() {
 
       <div className="flex flex-col gap-4">
         <MonthChips />
+        <RecurringNotice />
         <TotalsCards totals={totals} />
 
         {periodEmpty ? (

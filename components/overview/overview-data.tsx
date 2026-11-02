@@ -15,6 +15,10 @@ import {
   type Summary,
 } from "@/lib/domain/summary"
 import {
+  sameTimeLastYear,
+  type SameTimeLastYear,
+} from "@/lib/domain/year-compare"
+import {
   indexCategories,
   type CategoryMap,
   type Entry,
@@ -49,6 +53,8 @@ export interface OverviewData {
   statement: IncomeStatement
   /** VAT and result for each month of the year, January first. */
   months: MonthFigures
+  /** The year before up to the same day, or null with no entries for it (§8.12). */
+  lastYear: SameTimeLastYear | null
   /** The month the bookkeeping began, from Settings, or null. */
   bookStart: string | null
   timeline: readonly TimelinePeriod[]
@@ -79,17 +85,19 @@ export function OverviewDataProvider({
       (min, e) => (min === null || e.date < min ? e.date : min),
       null
     )
+    const through = year === thisYear ? today : `${year}-12-31`
     return {
       entries,
       catMap,
       year,
       today,
-      through: year === thisYear ? today : `${year}-12-31`,
+      through,
       elapsedMonths,
       yearEntries,
       summary: summary(entries, catMap, year),
       statement: incomeStatement(entries, catMap, year),
       months: monthFigures(entries, catMap, year),
+      lastYear: sameTimeLastYear(entries, catMap, year, through),
       bookStart,
       timeline: vatTimeline(
         vatPeriod,

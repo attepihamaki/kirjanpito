@@ -10,8 +10,8 @@ import { STATEMENT_ROUTES } from "@/lib/site"
 
 /**
  * The title, the print button and the sub-page tabs shared by the income
- * statement and its Form 5 view (§8.8). Both pages print as a bare sheet, so
- * all of this is hidden on paper.
+ * statement's views (§8.8). All of them print without it: this is hidden on
+ * paper.
  */
 export function StatementShell({ children }: { children: React.ReactNode }) {
   const t = useT()
@@ -34,6 +34,8 @@ export function StatementShell({ children }: { children: React.ReactNode }) {
           tabs={[
             { href: STATEMENT_ROUTES.sheet, label: t("statement.sheetTab") },
             { href: STATEMENT_ROUTES.form5, label: t("statement.form5Tab") },
+            { href: STATEMENT_ROUTES.assets, label: t("assets.tab") },
+            { href: STATEMENT_ROUTES.deductions, label: t("deductions.tab") },
           ]}
         />
       </div>

@@ -255,6 +255,8 @@ The table order is also the display order of the income statement. **It is not q
 
 **`300-eu`, "Myynti – EU", is retired.** The return asks for goods (311) and services (312) separately, and an entry on this category does not say which it was, so nothing moves it automatically. It stays in the list, disabled, so older entries and files keep it (`RETIRED_CATEGORY_ID`; a CSV row with that name still matches it). The VAT views show its total on a row of its own while any entry uses it, and the return's row says to change the category.
 
+**Fixed assets are off the statement.** `CAPITAL_LINES` holds two more lines, both on account 1100: `asset-purchase` "Käyttöomaisuuden hankinta" (expense) and `asset-sale` "Käyttöomaisuuden myynti" (income), each at 25,5 %. Their VAT goes on the VAT return like any other entry's, but they are neither income nor an expense: the income statement, Form 5, the summary and the ledger's totals cards all leave them out, and the journal's totals too, though its rows and the general ledger list them. The cost reaches the result as depreciation (§8.8). `LINES` stays the statement's 30 lines, and `ALL_LINES` is what a category can sit on. Custom categories cannot be added to these two.
+
 **Default categories:** the six sales categories, plus one category per remaining line, with `id = line key`, `name = Finnish line name`, `vatRate = line default VAT`, and `kind = "domestic"` for income lines.
 
 **Expense summary buckets** (Yhteenveto columns): `purchases` = Ostot ja ulkopuoliset palvelut, `personnel` = Henkilöstökulut, `depreciation` = Poistot, edustuskulut ja vuokrat, `otherDeductible` = Muut vähennyskelpoiset kulut, `financial` = Rahoituskulut, `provisions` = Varausten muutokset, `nondeductible` = Vähennyskelvottomat kulut.
@@ -302,6 +304,7 @@ For the selected year, by month (net amounts):
 - A mirrored chart of income and expenses per month, with the year totals in the panel heading (§8.9).
 - A sales table: total sales (line 300 only), then columns Finland 25.5 / 24 / 14 / 13.5 / 10 / 0 %, EU, other countries, reverse charge, and "Muut tulot" (income on lines 301–324). Totals row.
 - An expenses table: total, then one column per bucket. Totals row.
+- With entries in the year before, a comparison table: income, expenses and result of both years by month, the change in the result, and a totals row whose results are the two statements' (`yearComparison`).
 
 ### 6.5 VAT reporting periods and due dates
 
@@ -482,7 +485,9 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
   "overview": { "layout": [{ "id": "result", "size": "L", "hidden": false }] },
   "categories": [{ "id": "333", "line": "333", "name": "Ostot ja varastojen muutokset", "vatRate": 25.5, "enabled": true, "custom": false }],
   "autosave": false,
-  "pageSize": { "ledger": 10, "categories": 25 }
+  "pageSize": { "ledger": 10, "categories": 25 },
+  "recurring": [{ "id": "r1", "description": "Vuokra", "type": "expense", "catId": "343", "amount": 45000, "vatRate": 25.5, "amountMode": "gross", "day": 20, "from": "2026-02" }],
+  "assetOpening": { "year": 2026, "amount": 300000 }
 }
 ```
 
@@ -492,7 +497,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
 - **The overview layout** goes through `normalizeLayout` in `lib/domain/overview-layout.ts`: an unknown widget id is dropped and a missing one is appended at its default size, so a file from an older or newer version still opens.
 - **Language and theme** are written from the browser's own keys (§12) at save. Opening a file switches the app to them. They are preferences of the browser as much as of the book, so changing them does not mark the book dirty, and the landing page goes on using the browser's keys. The theme is applied through `Ctx.setTheme`, because only React can reach next-themes.
 - **Page sizes and autosave** are saved the same way: written at save, applied on open, never dirty.
-- **The VAT period, the start month, the filed marks, the archived years, the layout and the categories do mark the book dirty**, since the file no longer matches.
+- **The VAT period, the start month, the filed marks, the archived years, the layout, the categories, the recurring templates and the asset opening balance do mark the book dirty**, since the file no longer matches.
 - A plain CSV has no settings. Opening one starts with no filed marks and no start month, and keeps the rest as it was.
 - `lib/domain/settings-file.test.ts` covers the round trip and the lenient reading; `lib/commands/io-commands.test.ts` covers opening a ZIP with settings.
 
@@ -638,6 +643,7 @@ A two-column modal. On mobile the columns stack.
 - **Validation:** a valid date, a non-zero amount and a chosen category are required. Error texts: "Anna päivämäärä.", "Anna summa, esim. 124,50.", "Valitse luokka." The error is held as `{ field, message }` where `field` is the `FormState` key: one `FieldError` line shows the message, and the field it names carries `aria-invalid` (the category select takes it through `OptionSelect`'s `invalid` prop). Editing that field clears the error, rather than leaving a complaint under a corrected value until the next save.
 - **Pre-fill from a PDF:** adding an invoice PDF to an untouched form (no amount, no description) reads its text layer and fills the date, a description "Lasku {nro} – {myyjä} – {first row}" (whichever parts it found), the total as a gross amount and the VAT rate. A previous entry naming the same seller supplies the type and category; failing that, `suggestCategory` picks an expense category from words in the seller's name and the rows, falling back to 333. The seller is the company name printed beside a business ID, which is often only in the footer. A rate read this way survives picking a category. `lib/domain/invoice-text.ts` does the reading and is pure; `extractPdfText` in `lib/browser/pdf.ts` feeds it. The virtual barcode, when printed, wins over any labelled total or due date. A credit note keeps its minus, wherever it is printed, and its total is the largest amount by size. An amount like "2 123,00" reads as 2 123,00 €, since a quantity beside a price in the same text run cannot be told from a thousands separator. A scanned PDF has no text layer and pre-fills nothing; there is no OCR.
 - **Nothing saves while a receipt is being stored:** "Tallenna" and "Tallenna ja uusi" are disabled and `Ctrl`/`⌘`+`Enter` waits, because the receipt is not in the form yet.
+- **Toista joka kuukausi** keeps the entry as a monthly template (`lib/domain/recurring.ts`), in `settings.json` as `recurring`. Nothing books itself. When a month lacks a template's entry, the ledger shows a line for the selected month, or this month on the current year's whole-year view, and the overview's checklist has a row for this calendar month; both open a dialog that lists them, ticked, and adds them with an undo. **Whether a month has its entry is read from the entries, not stored**: the same side, category and description count, so a changed amount still counts, a deleted entry comes due again, and it survives the CSV. The date is the template's day, or the month's last day, and the rate follows it (§5). A template is monthly only. Unticking the box on an edited entry removes its template, and Asetukset, Toistuvat lists them with the amount and day editable.
 - **Tallenna ja uusi** saves, keeps the date, resets the rest for the next entry, and puts the focus back on the date.
 - **`Ctrl`/`⌘`+`Enter`** saves from any field: "Tallenna ja uusi" in the new and copy modes, where its button shows the key cap, and "Tallenna" when editing. It waits while a receipt is still being stored. A new or copied entry opens with the focus on the date, so a month's receipts can be entered from the keyboard alone.
 - **Copy as new** (from a row or from the edit dialog): opens a new entry with every field copied **except receipts**. The date becomes today if the year matches, and the date field gets focus. The title is "Kopio kirjaus".
@@ -688,6 +694,8 @@ The view has two sub-pages, as tabs shaped like the settings tabs (§8.10, `SubP
 
 - **Laskelma** at `/app/statement`: the sheet above.
 - **Lomake 5** at `/app/statement/form5`: the same figures as Form 5's section 2, in the form's order, with its codes and its labels (`lib/domain/form5.ts`). It opens on "Täytettävät", in two steps: the fields with an amount, as a checklist with a "3/10 kopioitu" count and a progress bar, then the totals 316, 355 and 358 or 359 to check against OmaVero. The totals have no copy button. "Kaikki kohdat" shows every field in the form's order, for finding one by its place; the non-deductible expenses and the result are sections of their own. Each code sits in a box like the paper form's, filled where there is an amount to enter, and a portion (320, 322, 338, 342, 347) is indented under its field. The amount itself is the copy button: a click puts it on the clipboard as `1234,56`, with no spaces and no euro sign, and turns the button green. "Avaa OmaVero" links to vero.fi/omavero; the notes on what the app leaves out are behind "Mitä laskelma ei sisällä". The codes use Geist with tabular figures rather than a monospace, since Geist is the only face (§11). It sits on the same `--sheet` surface as the statement, so the two tabs read as one document, and its rules take `--sheet-edge`. The checklist itself is `TaxForm` in `components/common/tax-form.tsx`, shared with the VAT return (§8.7); `lib/domain/tax-form.ts` holds its row types and splits a form into steps. 338 and 347 repeat 337 and 346, since the app deducts depreciation and interest in full, and a note says so. Another note names what the app does not fill: 325 to 328, 364 and the form's other sections. `lib/domain/form5.test.ts` runs Verohallinto's own check rules from the 2026 data file specification against the fields.
+- **Poistot** at `/app/statement/assets`: the register of machinery and equipment (`lib/domain/assets.ts`), one pool as EVL 30 § has it. A purchase is an entry on `asset-purchase` and a sale one on `asset-sale` (§5), so each keeps its voucher number and receipt, and the only thing stored is an opening balance for older assets (`assetOpening` in `settings.json`). Each year: opening + purchases − sales is the base; the maximum is 25 % of it, or all of it at 1 200 € or less; **depreciation is whatever the year's entries on line 337 add up to**, so a year with none carries the whole balance forward. "Kirjaa poisto" adds such an entry, the maximum by default, and less is allowed. A sale above the balance gets a warning that the excess is taxable income. Buildings and other classes are not handled, and the raised 50 % rate of 2020 to 2025 is not either. Rules from vero.fi, "Poistot ja pienhankinnat".
+- **Vähennykset** at `/app/statement/deductions`: calculators that book an entry on line 354 (`lib/domain/deductions.ts`), since these are deductible outside the books. Mileage and per diems are the additional deduction: the year's tax-free amount minus the actual costs already booked, zero if those are higher (Vero, "Liikkeen- ja ammatinharjoittajien sekä maataloudenharjoittajien matkakustannusten vähentäminen"). Booked car costs start from `344-vehicle`, which can only lower the figure. The home office deduction is one of three yearly tiers. **The amounts are a table per year, added by hand from Vero's decisions**: travel for 2024 to 2027, home office for 2025 and 2026. A year with none says so and offers no calculator. Passenger and trailer additions and foreign per diems are left out. An entry calculated for a year is dated today within that year and otherwise 31.12. Line 337 and 354 entries are exempt from the "no receipt" check (§8.4).
 - An Ilmoitin.fi file is not made. That would be filing, and the app does not know the rest of the form (§1).
 
 ### 8.9 Summary (Yhteenveto)
@@ -700,6 +708,7 @@ Every section is a `Panel` (§11). The page is split into two sub-pages, so the 
 
 - **Yleiset** at `/app/settings`: the VAT period, the start month, saving, and clearing the entries.
 - **Luokat** at `/app/settings/categories`: the add form, the categories table, and restoring the defaults.
+- **Toistuvat** at `/app/settings/recurring`: the monthly templates (§8.5).
 
 `app/app/settings/layout.tsx` renders `SettingsShell` (`components/settings/settings-shell.tsx`): the page title and a row of tab links shaped like the month chips (§8.4). The current tab is `bg-muted` with `aria-current="page"`, not filled with the primary colour, because it marks a place rather than a filter. The routes are `SETTINGS_ROUTES` in `lib/site.ts`. The sidebar keeps Asetukset lit on any path below it. The new-category name lives in the store (`catFormName`), so it survives switching tabs.
 
@@ -724,9 +733,9 @@ On **Luokat**:
 - **Categories table:**
   - Search and a type filter in the panel's heading row; the category count sits at the left of the pagination strip, as the entry count does on the ledger (§8.4).
   - Sortable columns: Käytössä (checkbox), Tyyppi (badge), Tili, Nimi, and Oletus ALV % (an inline input that commits on change and shows a toast). They cycle in three states as on the ledger (§8.4); with none chosen the rows are in Tili order.
-  - Delete is only offered for custom categories that no entry uses.
+  - Delete is only offered for custom categories that no entry or recurring template uses.
   - Pagination with a default of 25 rows, laid out as on the ledger (§8.4).
-- **"Oletusluokat"**, under the table: a description of what restoring does, and "Palauta oletusluokat" (`outline`) on the footer. It restores the defaults and keeps custom categories that are in use. It is reversible and routine, so it sits beside the table it changes; clearing the entries is not, so it is on the other page in its own destructive panel.
+- **"Oletusluokat"**, under the table: a description of what restoring does, and "Palauta oletusluokat" (`outline`) on the footer. It restores the defaults and keeps custom categories that an entry or a recurring template uses. It is reversible and routine, so it sits beside the table it changes; clearing the entries is not, so it is on the other page in its own destructive panel.
 
 ### 8.11 Confirmations and unsaved-change rules (apply everywhere)
 
@@ -761,7 +770,7 @@ The app's front page, at `/app/overview`. `/app`, "Jatka kirjanpitoa", opening a
 
 - **`components/overview/`.** `overview-data.tsx` computes everything once, in a context, from the selected year: the summary, the income statement, VAT per month, and the VAT timeline from today (§6.5). The widgets read it.
 - **Widgets**, in their default order and size:
-  - **Tulos** (wide): line 358 or 359 from 1.1. to today, or to 31.12. for a past year; the formula line; a sparkline of the cumulative result; the entry count, the profit margin and the year's VAT. Links to Tuloslaskelma.
+  - **Tulos** (wide): line 358 or 359 from 1.1. to today, or to 31.12. for a past year; the formula line; a sparkline of the cumulative result; the entry count, the profit margin and the year's VAT. With entries in the year before, also its result to the same date and its same month, beside this year's (`sameTimeLastYear` in `lib/domain/year-compare.ts`), so part of a year is never set against all of the last. Links to Tuloslaskelma.
   - **Seuraava ALV-ilmoitus**: the next period not yet filed, its amount as payable, refundable or "Nollailmoitus", a due-date row with the weekday and a days-left pill (amber at 14 days or fewer, red with "pv myöhässä" once overdue), a note when EU or reverse-charge sales must be reported too, and the period after it. "Merkitse ilmoitetuksi" for a closed period, with "Peru" right after. Links to ALV-laskelma on that period.
   - **Kuukaudet** (wide, two rows tall): `IncomeExpenseChart`, shared with Yhteenveto. Net income above the axis and net expenses below it, one axis. **The bars are mirrored on purpose**: the income green and expense red fail a deuteranopia check side by side (ΔE 5.3 light, 3.5 dark, against 8), and position gives the two series a difference every reader sees. A hover gives the month's income, expenses, VAT and result, the result by the income statement's rules (`monthFigures` in `summary.ts`), so the months add up to 358; a click opens the ledger on that month. Four figures under it: the best month, average income and expenses per elapsed month, months with entries.
   - **Myynti**: line 300 split into Suomi, EU, muut maat and käänteinen, as a stacked bar and a list; lines 301 to 324 below as other income.
@@ -779,7 +788,7 @@ The app's front page, at `/app/overview`. `/app`, "Jatka kirjanpitoa", opening a
 ## 9. Internationalisation and formatting
 
 - Two languages: **Finnish (default)** and **English**. The choice is persisted. Update `<html lang>` and the document title when it changes. Every UI string is in a dictionary keyed by id, with `[fi, en]` values and `{param}` interpolation. Plural forms are functions (e.g. "1 kirjaus" / "{n} kirjausta"). The artifact's `L` object holds every string and is the source to port. A typed dictionary is enough; no locale routing is needed.
-- **Keys are `namespace.name`** — `t("io.zipNoCsv")`, `t("confirm.clearTitle")`, `t("settings.defaultVat")`. The namespaces are app, common, confirm, entry, file, io, landing, ledger, nav, notFound, overview, receipt, settings, statement, summary, table, vat, viewer. `common.*` is only for words several views share; anything used in one place belongs to that place's namespace even when it is short. The keys were once flat and abbreviated (`setSub`, `f_type`, `nCats`, `delT`, `fb_import`) with four inconsistent prefix styles — unreadable at the call site, and with no room for a second settings subtitle. `messages.test.ts` enforces the shape and the list of namespaces, which is what stops the next key being added the old way.
+- **Keys are `namespace.name`** — `t("io.zipNoCsv")`, `t("confirm.clearTitle")`, `t("settings.defaultVat")`. The namespaces are app, assets, common, confirm, deductions, entry, file, io, landing, ledger, nav, notFound, overview, receipt, recurring, settings, statement, summary, table, vat, viewer. `common.*` is only for words several views share; anything used in one place belongs to that place's namespace even when it is short. The keys were once flat and abbreviated (`setSub`, `f_type`, `nCats`, `delT`, `fb_import`) with four inconsistent prefix styles — unreadable at the call site, and with no room for a second settings subtitle. `messages.test.ts` enforces the shape and the list of namespaces, which is what stops the next key being added the old way.
 - **The namespace is not the module.** Which of `dict/app.ts` and `dict/landing.ts` a key lives in is a bundling decision (the landing bundle must not ship all ~300 keys in both languages), so a namespace may be split across both: `nav.vat`, `receipt.*` and `statement.profit` sit in the landing module because the hero's decorative receipt and mini statement need them. Keys stay disjoint between the two; a test checks it.
 - **Currency always uses Finnish formatting in both languages:** `1 234,56 €` (`Intl.NumberFormat("fi-FI", { style: "currency", currency: "EUR" })`). The amount input also shows the Finnish format.
 - **Dates:**
@@ -985,9 +994,9 @@ app/
     vat/                         layout.tsx = VatShell; page.tsx = Laskelma
       return/                    /app/vat/return (§8.7)
     statement/                   layout.tsx = StatementShell; page.tsx = Laskelma
-      form5/                     /app/statement/form5 (§8.8)
+      form5/  assets/  deductions/  Form 5, Poistot, Vähennykset (§8.8)
     settings/                    layout.tsx = SettingsShell; page.tsx = Yleiset
-      categories/                /app/settings/categories (§8.10)
+      categories/  recurring/    /app/settings/… (§8.10)
 ```
 
 - **The app routes are English** (`/app/overview`, `/app/ledger`, `/app/vat`, `/app/statement`,
@@ -1119,7 +1128,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
 
 - localStorage `bookkeeping` — exported as `BOOK_STORAGE_KEY` from
   `stores/book-store.ts`, so nothing hard-codes the string twice:
-  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, vatPeriod, bookStart, vatFiled, yearsArchived, overviewLayout, autosave }`.
+  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, vatPeriod, bookStart, vatFiled, yearsArchived, overviewLayout, autosave, recurring, assetOpening }`.
   The book's settings are kept twice: here, as the working buffer, and in the
   file's `settings.json` (§7.6), as the record. A reload restores them from
   here; opening a file replaces them from there.
@@ -1144,7 +1153,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
   Its pre-paint inline script reads that key before any of our JS runs, so a
   second source of truth would drift.
 - Both preferences used to live in the `bookkeeping` blob. `persist.migrate`
-  (`version: 3`; the store is now at 4, §4) moves each into its own key and drops the field,
+  (`version: 3`; the store is now at 5, §4, §5) moves each into its own key and drops the field,
   seeding only a key that is still empty — the separate key is the newer truth.
 - IndexedDB `bookkeeping-receipts`, store `files`: receipt Blobs keyed by
   attachment id.
@@ -1155,6 +1164,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
   `AppShell` restores it by hand once the book has rehydrated, and both ways
   of leaving a bookkeeping delete it.
 - **sessionStorage is not used.**
+- **Persistent storage is requested** with `navigator.storage.persist()` at the first unsaved change of a page load (`hooks/use-persistent-storage.ts`), so a browser that prompts does so when there is work to protect. Without it the browser may evict storage under disk pressure, and until a save this is the only copy. A refusal changes nothing and is not shown.
 - **One tab at a time holds the bookkeeping.** localStorage and IndexedDB are
   shared between tabs while the store is per tab, so a second tab would
   overwrite the first one's entries and its receipt sweep would delete the
@@ -1209,4 +1219,5 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 - Filing through Ilmoitin.fi, at least for the VAT return. Not before the user asks for it (§8.8).
 - Form 5 fields the app does not work out: 338 and 347, the deductible parts of depreciation (337) and interest (346), which it fills with the full amounts (§8.8); co-operative surplus (325–328); and the additional deductions of 364, which come from fields 388 and 392 elsewhere on the return.
 - The VAT return of a business that stops trading (§6.5).
+- Asset classes other than machinery and equipment, and templates repeating less often than monthly.
 - VAT return fields the book cannot fill (§8.7): EU purchases, imports and reverse-charge purchases.

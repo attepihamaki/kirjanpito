@@ -592,10 +592,7 @@ export const APP_DICT = {
     "Unusually large amount",
   ],
   "ledger.duplicate": ["Mahdollinen kaksoiskirjaus", "Possible duplicate"],
-  "ledger.vatNotDeductible": [
-    "ALV ei vähennettävää",
-    "VAT not deductible",
-  ],
+  "ledger.vatNotDeductible": ["ALV ei vähennettävää", "VAT not deductible"],
   "ledger.copyAsNew": ["Kopioi", "Copy"],
   "ledger.deleteEntry": ["Poista kirjaus", "Delete entry"],
 
@@ -648,6 +645,7 @@ export const APP_DICT = {
     pl("1 entry deleted.", "{n} entries deleted."),
   ],
   "entry.restoredMany": ["Kirjaukset palautettu.", "Entries restored."],
+  "entry.addUndone": ["Lisäys kumottu.", "Addition undone."],
   "entry.recategorized": [
     pl("Luokka vaihdettu 1 kirjaukseen.", "Luokka vaihdettu {n} kirjaukseen."),
     pl("Category changed on 1 entry.", "Category changed on {n} entries."),
@@ -837,6 +835,17 @@ export const APP_DICT = {
   "statement.print": ["Tulosta", "Print"],
   "statement.sections": ["Tuloslaskelman osiot", "Income statement sections"],
   "statement.sheetTab": ["Laskelma", "Statement"],
+  "summary.compareTitle": ["Vertailu vuoteen {y}", "Compared with {y}"],
+  "summary.compareIncome": ["Tulot {y}", "Income {y}"],
+  "summary.compareExpense": ["Kulut {y}", "Expenses {y}"],
+  "summary.compareResult": ["Tulos {y}", "Result {y}"],
+  "summary.compareChange": ["Muutos", "Change"],
+  "overview.lastYearToDate": [
+    "Tulos {y} samaan aikaan",
+    "Result {y} to the same date",
+  ],
+  "overview.lastYearMonth": ["{m} {y}", "{m} {y}"],
+  "overview.thisYearMonth": ["(nyt {x})", "(now {x})"],
   "statement.form5Tab": ["Lomake 5", "Form 5"],
   "statement.form5Title": [
     "Lomake 5, tuloverolaskelma",
@@ -933,6 +942,215 @@ export const APP_DICT = {
     "Asetukset tallentuvat kirjanpitotiedostoon, kun tallennat sen.",
     "Settings are saved with the bookkeeping file when you save it.",
   ],
+  // --- Recurring entries ---
+
+  "recurring.tab": ["Toistuvat", "Recurring"],
+  "recurring.repeat": ["Toista joka kuukausi", "Repeat every month"],
+  "recurring.dueTitle": [
+    pl(
+      "1 toistuva kirjaus lisäämättä tältä kuulta",
+      "{n} toistuvaa kirjausta lisäämättä tältä kuulta"
+    ),
+    pl(
+      "1 recurring entry not added for this month",
+      "{n} recurring entries not added for this month"
+    ),
+  ],
+  "recurring.noticeTitle": [
+    pl(
+      "1 toistuva kirjaus lisäämättä: {m}",
+      "{n} toistuvaa kirjausta lisäämättä: {m}"
+    ),
+    pl(
+      "1 recurring entry not added: {m}",
+      "{n} recurring entries not added: {m}"
+    ),
+  ],
+  "recurring.review": ["Tarkista ja lisää", "Review and add"],
+  "recurring.dialogTitle": [
+    "Toistuvat kirjaukset: {m}",
+    "Recurring entries: {m}",
+  ],
+  "recurring.dialogHint": [
+    "Valitse tämän kuun kirjaukset. Voit muokata summaa ja liittää tositteen lisäämisen jälkeen.",
+    "Choose this month’s entries. You can change an amount and attach a receipt after adding them.",
+  ],
+  "recurring.noneDue": [
+    "Kaikki tämän kuun toistuvat kirjaukset on lisätty.",
+    "All of this month’s recurring entries have been added.",
+  ],
+  "recurring.addSelected": [
+    pl("Lisää 1 kirjaus", "Lisää {n} kirjausta"),
+    pl("Add 1 entry", "Add {n} entries"),
+  ],
+  "recurring.added": [
+    pl("1 kirjaus lisätty.", "{n} kirjausta lisätty."),
+    pl("1 entry added.", "{n} entries added."),
+  ],
+  "recurring.settingsTitle": ["Toistuvat kirjaukset", "Recurring entries"],
+  "recurring.settingsHint": [
+    "Pohja syntyy, kun valitset kirjauksessa ”Toista joka kuukausi”. Mikään ei kirjaudu itsestään: kirjaukset lisätään kuukausittain Kirjanpito-näkymästä. Pohjan muutos tai poisto ei muuta jo tehtyjä kirjauksia.",
+    "A template is made when you choose “Repeat every month” on an entry. Nothing is booked by itself: you add the entries month by month in the ledger. Changing or deleting a template leaves existing entries as they are.",
+  ],
+  "recurring.empty": ["Ei toistuvia kirjauksia.", "No recurring entries."],
+  "recurring.description": ["Selite", "Description"],
+  "recurring.category": ["Luokka", "Category"],
+  "recurring.amount": ["Summa", "Amount"],
+  "recurring.day": ["Päivä", "Day"],
+  "recurring.from": ["Alkaen", "From"],
+  "recurring.deleted": [
+    "Toistuva kirjaus poistettu.",
+    "Recurring entry deleted.",
+  ],
+  "recurring.remove": ["Poista {x}", "Delete {x}"],
+
+  // --- Fixed assets ---
+
+  "assets.tab": ["Poistot", "Depreciation"],
+  "assets.title": ["Koneet ja kalusto {y}", "Machinery and equipment {y}"],
+  "assets.intro": [
+    "Yli kolme vuotta käytettävä tai yli 1 200 euron hankinta kirjataan luokkaan ”Käyttöomaisuuden hankinta”. Sen alv lasketaan ALV-ilmoitukselle, mutta kulu vähennetään poistoina. Poisto on enintään 25 % menojäännöksestä, ja 1 200 euron tai pienemmän menojäännöksen voi poistaa kerralla.",
+    "A purchase with a life of over three years or a price over €1,200 goes on the “Purchase of fixed assets” category. Its VAT counts on the VAT return, but the cost is deducted as depreciation. Depreciation is at most 25% of the undepreciated balance, and a balance of €1,200 or less can be written off at once.",
+  ],
+  "assets.smallNote": [
+    "Pienhankinnan (enintään 1 200 euroa, yhteensä enintään 3 600 euroa vuodessa) ja enintään kolme vuotta käytettävän hankinnan voi kirjata suoraan kuluksi. Rivin 337 kirjaukset luetaan tämän menojäännöksen poistoiksi. Rakennukset ja muu poistettava omaisuus eivät kuulu tähän laskelmaan.",
+    "A small purchase (up to €1,200, up to €3,600 a year in total) or one with a life of up to three years can be booked straight as an expense. Entries on line 337 are read as depreciation of this balance. Buildings and other depreciable assets are not part of this calculation.",
+  ],
+  "assets.noneTitle": ["Ei käyttöomaisuutta", "No fixed assets"],
+  "assets.noneBody": [
+    "Kirjaa hankinta luokkaan ”Käyttöomaisuuden hankinta”, tai anna alla menojäännös, jos sinulla on jo poistettavaa omaisuutta.",
+    "Book a purchase on the “Purchase of fixed assets” category, or enter a balance below if you already have assets to depreciate.",
+  ],
+  "assets.opening": ["Menojäännös vuoden alussa", "Balance at start of year"],
+  "assets.additions": ["Hankinnat", "Purchases"],
+  "assets.disposals": ["Myynnit", "Sales"],
+  "assets.base": ["Poistopohja", "Depreciation base"],
+  "assets.maximum": ["Enimmäispoisto", "Maximum depreciation"],
+  "assets.taken": ["Kirjatut poistot", "Booked depreciation"],
+  "assets.closing": ["Menojäännös vuoden lopussa", "Balance at end of year"],
+  "assets.amount": ["Poiston määrä", "Depreciation amount"],
+  "assets.book": ["Kirjaa poisto", "Book depreciation"],
+  "assets.bookHint": [
+    "Poiston voi tehdä enimmäismäärää pienempänä. Kirjaus tehdään riville 337.",
+    "You can depreciate less than the maximum. The entry goes on line 337.",
+  ],
+  "assets.badAmount": [
+    "Anna summa, esim. 500,00.",
+    "Enter an amount, e.g. 500.00.",
+  ],
+  "assets.overMaximum": [
+    "Kirjatut poistot ylittävät enimmäismäärän {x}.",
+    "Booked depreciation is over the maximum of {x}.",
+  ],
+  "assets.saleExcess": [
+    "Myyntihinta ylittää menojäännöksen {x}:lla. Ylimenevä osa on veronalaista tuloa, joten kirjaa se myös tuloksi.",
+    "The sale price is {x} over the balance. That part is taxable income, so book it as income too.",
+  ],
+  "assets.entryDescription": [
+    "Poisto {y}, koneet ja kalusto",
+    "Depreciation {y}, machinery and equipment",
+  ],
+  "assets.booked": ["Poisto kirjattu.", "Depreciation booked."],
+  "assets.yearEntries": ["Hankinnat ja myynnit {y}", "Purchases and sales {y}"],
+  "assets.noYearEntries": [
+    "Ei hankintoja tai myyntejä tänä vuonna.",
+    "No purchases or sales this year.",
+  ],
+  "assets.schedule": ["Menojäännös vuosittain", "Balance by year"],
+  "assets.year": ["Vuosi", "Year"],
+  "assets.voucher": ["Nro", "No."],
+  "assets.date": ["Pvm", "Date"],
+  "assets.openingTitle": ["Aloitussaldo", "Opening balance"],
+  "assets.openingHint": [
+    "Jos omaisuutta on jo ennen tätä kirjanpitoa, anna sen menojäännös vuoden {y} alussa. Luku on edellisen vuoden poistoerittelyssä (lomake 62).",
+    "If you have assets from before this bookkeeping, enter their balance at the start of {y}. The figure is on last year’s depreciation schedule (form 62).",
+  ],
+  "assets.openingLabel": [
+    "Menojäännös vuoden {y} alussa",
+    "Balance at the start of {y}",
+  ],
+
+  // --- Calculated deductions ---
+
+  "deductions.tab": ["Vähennykset", "Deductions"],
+  "deductions.intro": [
+    "Nämä vähennykset kirjataan riville 354, kirjanpidon ulkopuolisiin vähennyskelpoisiin kuluihin. Laskelmat käyttävät Verohallinnon vuoden {y} määriä, ja ne ovat apuväline: säilytä ajopäiväkirja ja matkojen tiedot itse.",
+    "These deductions go on line 354, deductible expenses outside the books. The calculators use the Tax Administration’s amounts for {y}. They are an aid: keep your own logbook and trip records.",
+  ],
+  "deductions.noTravelRates": [
+    "Sovelluksessa ei ole Verohallinnon matkakorvausten määriä vuodelle {y}.",
+    "The app does not have the Tax Administration’s travel amounts for {y}.",
+  ],
+  "deductions.noHomeRates": [
+    "Sovelluksessa ei ole vahvistettua työhuonevähennyksen määrää vuodelle {y}.",
+    "The app does not have a confirmed home office amount for {y}.",
+  ],
+  "deductions.mileageTitle": ["Kilometrivähennys", "Mileage deduction"],
+  "deductions.mileageHint": [
+    "Oma tai puolison auto, jonka ajoista vähintään puolet on yksityisajoa. {r} kilometriltä, vähennettynä auton kirjatuilla kuluilla. Ei koske asunnon ja vakituisen työpaikan välisiä matkoja. Matkustaja- ja perävaunulisät eivät ole mukana.",
+    "A car owned by you or your spouse, driven at least half privately. {r} per kilometre, less the car’s booked costs. Trips between home and a permanent workplace do not count. Passenger and trailer additions are not included.",
+  ],
+  "deductions.km": ["Työajot, km", "Business driving, km"],
+  "deductions.bookedCar": ["Kirjatut autokulut", "Booked car costs"],
+  "deductions.bookedCarHint": [
+    "Esitäytetty luokan Ajoneuvokulut summasta. Muuta, jos kaikki ei ole tämän auton kuluja.",
+    "Filled from the Vehicle expenses category. Change it if not all of that is this car’s.",
+  ],
+  "deductions.perDiemTitle": ["Päivärahavähennys", "Per diem deduction"],
+  "deductions.perDiemHint": [
+    "Tilapäinen työmatka tavallisen toimialueen ulkopuolelle: yli 15 km kotoa tai työpaikalta ja yli 5 km molemmista. {a} yli 6 tunnin ja {b} yli 10 tunnin matkalta, Suomessa. Jos ateria sisältyy hintaan, määrä puolittuu, joten vähennä se itse.",
+    "A temporary work trip outside your usual area: over 15 km from home or your workplace and over 5 km from both. {a} for a trip over 6 hours and {b} for one over 10 hours, in Finland. If meals are included the amount is halved, so take that off yourself.",
+  ],
+  "deductions.fullDays": ["Yli 10 tunnin päivät", "Days over 10 hours"],
+  "deductions.partialDays": ["Yli 6 tunnin päivät", "Days over 6 hours"],
+  "deductions.bookedLiving": [
+    "Kirjatut lisääntyneet elantokulut",
+    "Booked increased living costs",
+  ],
+  "deductions.homeTitle": ["Työhuonevähennys", "Home office deduction"],
+  "deductions.homeHint": [
+    "Kaavamainen vähennys kodin käytöstä työhön, enintään {x} vuodessa. Todellisia työtilan kuluja ei voi vähentää sen lisäksi.",
+    "A standard deduction for using your home for work, at most {x} a year. Actual workspace costs cannot be deducted on top of it.",
+  ],
+  "deductions.tierFull": [
+    "Jatkuva, päätoiminen käyttö tai yli puolet työpäivistä",
+    "Continuous full-time use, or over half of working days",
+  ],
+  "deductions.tierPart": [
+    "Jatkuva, osa-aikainen käyttö tai neljännes tai puolet työpäivistä",
+    "Continuous part-time use, or a quarter to half of working days",
+  ],
+  "deductions.tierOccasional": [
+    "Satunnainen mutta toistuva käyttö",
+    "Occasional but repeated use",
+  ],
+  "deductions.tier": ["Käyttö", "Use"],
+  "deductions.result": ["Vähennys", "Deduction"],
+  "deductions.book": ["Kirjaa vähennys", "Book deduction"],
+  "deductions.booked": ["Vähennys kirjattu.", "Deduction booked."],
+  "deductions.nothing": [
+    "Ei vähennettävää: kirjatut kulut ovat vähintään yhtä suuret.",
+    "Nothing to deduct: the booked costs are at least as much.",
+  ],
+  "deductions.mileageEntry": [
+    "Kilometrivähennys {y}: {k} km × {r}, kirjatut kulut {b}",
+    "Mileage deduction {y}: {k} km × {r}, booked costs {b}",
+  ],
+  "deductions.perDiemEntry": [
+    "Päivärahavähennys {y}: {a} × {x}, {b} × {z}, kirjatut kulut {c}",
+    "Per diem deduction {y}: {a} × {x}, {b} × {z}, booked costs {c}",
+  ],
+  "deductions.homeEntry": ["Työhuonevähennys {y}", "Home office deduction {y}"],
+  "deductions.homeExists": [
+    "Työhuonevähennys on jo kirjattu vuodelle {y}.",
+    "A home office deduction is already booked for {y}.",
+  ],
+  "deductions.bookedTitle": ["Kirjattu vuodelle {y}", "Booked for {y}"],
+  "deductions.noneBooked": [
+    "Rivillä 354 ei ole vielä kirjauksia.",
+    "No entries on line 354 yet.",
+  ],
+
   "settings.sections": ["Asetusten osiot", "Settings sections"],
   "settings.general": ["Yleiset", "General"],
   "settings.vatPeriod": ["ALV-ilmoitusjakso", "VAT reporting period"],

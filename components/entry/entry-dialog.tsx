@@ -10,6 +10,7 @@ import { AttachmentGrid } from "@/components/entry/attachment-grid"
 import { ReceiptPreview } from "@/components/entry/receipt-preview"
 import { AttachmentViewer } from "@/components/receipt/receipt-viewer"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -65,6 +66,11 @@ import type {
   EntryType,
 } from "@/lib/domain/types"
 import { indexCategories } from "@/lib/domain/types"
+import {
+  entryToRecurring,
+  matchRecurring,
+  type RecurringEntry,
+} from "@/lib/domain/recurring"
 import { useBookStore } from "@/stores/book-store"
 
 interface FormState {
@@ -76,6 +82,8 @@ interface FormState {
   vatRate: number
   amountMode: AmountMode
   atts: Attachment[]
+  /** Keep this entry as a monthly template (§8.5). */
+  repeat: boolean
 }
 
 /** The three fields §8.5 validates, named as they are in `FormState`. */
@@ -113,6 +121,7 @@ function initialForm({
   month,
   lastType,
   lastMode,
+  recurring,
 }: {
   editing: Entry | undefined
   mode: "new" | "edit" | "copy"
@@ -120,6 +129,7 @@ function initialForm({
   month: number
   lastType: EntryType
   lastMode: AmountMode
+  recurring: readonly RecurringEntry[]
 }): FormState {
   if (!editing || mode === "new") {
     return {
@@ -131,6 +141,7 @@ function initialForm({
       vatRate: 0,
       amountMode: lastMode,
       atts: [],
+      repeat: false,
     }
   }
   const today = todayIso()
@@ -147,6 +158,7 @@ function initialForm({
     amountMode: editing.amountMode,
     // §8.5: a copy takes every field except the receipts.
     atts: mode === "copy" ? [] : [...(editing.atts ?? [])],
+    repeat: mode === "edit" && matchRecurring(recurring, editing) !== undefined,
   }
 }
 
@@ -198,6 +210,9 @@ function EntryDialogForm({
   const setYear = useBookStore((s) => s.setYear)
   const setDraftIds = useBookStore((s) => s.setDraftAttachmentIds)
   const setLastDefaults = useBookStore((s) => s.setLastEntryDefaults)
+  const recurring = useBookStore((s) => s.recurring)
+  const upsertRecurring = useBookStore((s) => s.upsertRecurring)
+  const removeRecurring = useBookStore((s) => s.removeRecurring)
 
   // Captured at mount: the form owns its values from here on.
   const [editing] = React.useState(() =>
@@ -206,7 +221,7 @@ function EntryDialogForm({
   // The entry the duplicate hints leave out: itself, while it is edited.
   const editingId = mode === "edit" ? editing?.id : undefined
   const [initial] = React.useState(() =>
-    initialForm({ editing, mode, year, month, lastType, lastMode })
+    initialForm({ editing, mode, year, month, lastType, lastMode, recurring })
   )
 
   const [form, setForm] = React.useState<FormState>(initial)
@@ -523,6 +538,26 @@ function EntryDialogForm({
     if (!(await confirmFiledChange(after))) return
 
     upsertEntry(entry)
+    /*
+     * The template follows the entry it was made from, found by the entry as
+     * it was before this edit, so renaming the entry does not leave a second
+     * template behind.
+     */
+    const template =
+      (mode === "edit" && editing
+        ? matchRecurring(recurring, editing)
+        : undefined) ?? matchRecurring(recurring, entry)
+    if (form.repeat && entry.description) {
+      upsertRecurring(
+        entryToRecurring(
+          entry,
+          template?.id ?? uid(),
+          template?.from ?? entry.date.slice(0, 7)
+        )
+      )
+    } else if (mode === "edit" && template) {
+      removeRecurring(template.id)
+    }
     setLastDefaults({ mode: form.amountMode, type: form.type })
     // §8.5: saving an entry from another year switches the selected year.
     if (yearOf(entry.date) !== year) setYear(yearOf(entry.date))
@@ -539,6 +574,7 @@ function EntryDialogForm({
         catId: "",
         vatRate: 0,
         atts: [],
+        repeat: false,
       }
       keepRate.current = false
       setForm(next)
@@ -764,6 +800,19 @@ function EntryDialogForm({
                   {f.t("common.net")}
                 </ToggleGroupItem>
               </ToggleGroup>
+            </Field>
+
+            <Field orientation="horizontal">
+              <Checkbox
+                id="entry-repeat"
+                checked={form.repeat}
+                onCheckedChange={(checked) =>
+                  update({ repeat: checked === true })
+                }
+              />
+              <FieldLabel htmlFor="entry-repeat" className="font-normal">
+                {f.t("recurring.repeat")}
+              </FieldLabel>
             </Field>
 
             <FieldError>{error?.message}</FieldError>

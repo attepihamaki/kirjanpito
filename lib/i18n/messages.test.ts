@@ -41,8 +41,10 @@ describe("dictionary integrity", () => {
   it("names every key namespace.name, from a known namespace", () => {
     const NAMESPACES = [
       "app",
+      "assets",
       "common",
       "confirm",
+      "deductions",
       "entry",
       "file",
       "io",
@@ -52,6 +54,7 @@ describe("dictionary integrity", () => {
       "notFound",
       "overview",
       "receipt",
+      "recurring",
       "settings",
       "statement",
       "summary",

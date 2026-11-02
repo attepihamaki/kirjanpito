@@ -4,10 +4,12 @@ import {
   defaultCategories,
 } from "@/lib/domain/accounts"
 import { isVatRate } from "@/lib/domain/money"
+import type { AssetOpening } from "@/lib/domain/assets"
 import {
   normalizeLayout,
   type OverviewWidget,
 } from "@/lib/domain/overview-layout"
+import type { RecurringEntry } from "@/lib/domain/recurring"
 import type { Category, Lang, SalesKind } from "@/lib/domain/types"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 
@@ -49,6 +51,10 @@ export interface BookSettings {
   /** The full category list: the defaults as the user left them, plus custom ones. */
   categories: Category[]
   pageSize: { ledger: PageSize; categories: PageSize }
+  /** Monthly templates (§8.5). */
+  recurring: RecurringEntry[]
+  /** The fixed asset balance the register starts from, or null (§8.8). */
+  assetOpening: AssetOpening | null
 }
 
 /**
@@ -78,6 +84,43 @@ function pageSize(value: unknown): PageSize | undefined {
   return (PAGE_SIZES as readonly unknown[]).includes(value)
     ? (value as PageSize)
     : undefined
+}
+
+function parseRecurring(value: unknown): RecurringEntry | null {
+  if (!isRecord(value)) return null
+  const {
+    id,
+    description,
+    type,
+    catId,
+    amount,
+    vatRate,
+    amountMode,
+    day,
+    from,
+  } = value
+  if (typeof id !== "string" || !id) return null
+  if (typeof description !== "string" || !description.trim()) return null
+  if (type !== "income" && type !== "expense") return null
+  if (typeof catId !== "string" || !catId) return null
+  if (!Number.isInteger(amount) || amount === 0) return null
+  if (typeof vatRate !== "number" || !isVatRate(vatRate)) return null
+  if (amountMode !== "gross" && amountMode !== "net") return null
+  if (!Number.isInteger(day) || (day as number) < 1 || (day as number) > 31) {
+    return null
+  }
+  if (typeof from !== "string" || !MONTH.test(from)) return null
+  return {
+    id,
+    description: description.trim(),
+    type,
+    catId,
+    amount: amount as number,
+    vatRate,
+    amountMode,
+    day: day as number,
+    from,
+  }
 }
 
 function parseCategory(value: unknown): Category | null {
@@ -184,6 +227,23 @@ export function parseSettings(text: string): ParsedSettings {
       .filter((c): c is Category => c !== null)
     out.categories = mergeCategories(cats)
   }
+  if (Array.isArray(raw.recurring)) {
+    out.recurring = raw.recurring
+      .map(parseRecurring)
+      .filter((r): r is RecurringEntry => r !== null)
+  }
+  if (raw.assetOpening === null) out.assetOpening = null
+  else if (
+    isRecord(raw.assetOpening) &&
+    Number.isInteger(raw.assetOpening.year) &&
+    Number.isInteger(raw.assetOpening.amount) &&
+    (raw.assetOpening.amount as number) >= 0
+  ) {
+    out.assetOpening = {
+      year: raw.assetOpening.year as number,
+      amount: raw.assetOpening.amount as number,
+    }
+  }
   if (isRecord(raw.pageSize)) {
     const ledger = pageSize(raw.pageSize.ledger)
     const categories = pageSize(raw.pageSize.categories)
@@ -218,6 +278,8 @@ export function serializeSettings(s: BookSettings): string {
       custom: c.custom,
     })),
     pageSize: s.pageSize,
+    recurring: s.recurring,
+    assetOpening: s.assetOpening,
   }
   return `${JSON.stringify(file, null, 2)}\n`
 }

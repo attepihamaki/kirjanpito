@@ -30,6 +30,7 @@ import {
 } from "@/components/overview/overview-data"
 import { useCanSaveToFile, useSaveBook } from "@/hooks/use-save-book"
 import { calcEntry } from "@/lib/domain/calc"
+import { dueRecurring } from "@/lib/domain/recurring"
 import { lastCompleteMonth, monthOf } from "@/lib/domain/dates"
 import { daysBetween } from "@/lib/domain/vat-deadline"
 import {
@@ -220,6 +221,7 @@ export function ChecksWidget() {
   const openDialog = useBookStore((s) => s.openDialog)
   const setVatFiled = useBookStore((s) => s.setVatFiled)
   const yearsArchived = useBookStore((s) => s.yearsArchived)
+  const recurring = useBookStore((s) => s.recurring)
   const setYearArchived = useBookStore((s) => s.setYearArchived)
   const canSave = useCanSaveToFile()
   const save = useSaveBook()
@@ -394,6 +396,27 @@ export function ChecksWidget() {
       tone: "info",
       title: f.t("overview.emptyMonths", { m: emptyMonths.join(", ") }),
       sub: f.t("overview.emptyMonthsSub"),
+    })
+  }
+
+  // This calendar month's, whatever year is selected: it is a job for today.
+  const thisMonth = data.today.slice(0, 7)
+  const dueNow = dueRecurring(recurring, thisMonth, data.entries)
+  if (dueNow.length) {
+    items.push({
+      key: "recurring",
+      tone: "info",
+      title: f.t("recurring.dueTitle", { n: dueNow.length }),
+      sub: dueNow.map((r) => r.description).join(", "),
+      action: (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => openDialog({ kind: "recurring", month: thisMonth })}
+        >
+          {f.t("common.add")}
+        </Button>
+      ),
     })
   }
 

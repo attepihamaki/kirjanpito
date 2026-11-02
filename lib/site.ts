@@ -88,15 +88,19 @@ export const LEDGER_ROUTES = {
 export const SETTINGS_ROUTES = {
   general: APP_ROUTES.settings,
   categories: `${APP_ROUTES.settings}/categories`,
+  recurring: `${APP_ROUTES.settings}/recurring`,
 } as const
 
 /**
- * The income statement's sub-pages (§8.8): the sheet itself, and the same
- * figures as Form 5's fields for copying into OmaVero.
+ * The income statement's sub-pages (§8.8): the sheet itself, the same figures
+ * as Form 5's fields for copying into OmaVero, the fixed asset register and
+ * the calculated deductions.
  */
 export const STATEMENT_ROUTES = {
   sheet: APP_ROUTES.statement,
   form5: `${APP_ROUTES.statement}/form5`,
+  assets: `${APP_ROUTES.statement}/assets`,
+  deductions: `${APP_ROUTES.statement}/deductions`,
 } as const
 
 /**

@@ -32,6 +32,20 @@ function settings(): BookSettings {
     bookStart: "2025-10",
     vatFiled: { "2026-Q2": "2026-08-10", "2026-Q1": "2026-05-11" },
     yearsArchived: { "2025": "2026-01-20" },
+    recurring: [
+      {
+        id: "r1",
+        description: "Vuokra",
+        type: "expense",
+        catId: "343",
+        amount: 45_000,
+        vatRate: 25.5,
+        amountMode: "gross",
+        day: 20,
+        from: "2026-02",
+      },
+    ],
+    assetOpening: { year: 2026, amount: 300_000 },
     overviewLayout: normalizeLayout([
       { id: "checks", size: "L", hidden: false },
     ]),

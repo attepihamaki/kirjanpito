@@ -4,7 +4,7 @@ import {
   DEFAULT_CATEGORY_FOR_ACCOUNT,
   DEFAULT_EN_NAMES,
   FORMER_NAMES,
-  LINES,
+  ALL_LINES,
   LINE_BY_KEY,
   type AccountLine,
 } from "@/lib/domain/accounts"
@@ -260,7 +260,7 @@ function primaryLineForAccount(
   account: number,
   side: EntryType
 ): AccountLine | undefined {
-  const candidates = LINES.filter(
+  const candidates = ALL_LINES.filter(
     (l) => l.account === account && l.side === side
   )
   if (candidates.length <= 1) return candidates[0]

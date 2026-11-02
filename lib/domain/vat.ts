@@ -1,4 +1,4 @@
-import { RATES } from "@/lib/domain/accounts"
+import { LINE_BY_KEY, RATES } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
 import type { Cents, CategoryMap, Entry, SalesKind } from "@/lib/domain/types"
 
@@ -159,6 +159,9 @@ export function ledgerTotals(
   let incomeNet = 0
   let expenseNet = 0
   for (const e of entries) {
+    const cat = cats.get(e.catId)
+    // A fixed asset counts for VAT only (§5).
+    if (cat && LINE_BY_KEY.get(cat.line)?.capital) continue
     const { net } = calcEntry(e)
     if (e.type === "income") incomeNet += net
     else expenseNet += net

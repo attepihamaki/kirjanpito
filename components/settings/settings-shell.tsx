@@ -21,6 +21,7 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
         tabs={[
           { href: SETTINGS_ROUTES.general, label: t("settings.general") },
           { href: SETTINGS_ROUTES.categories, label: t("settings.categories") },
+          { href: SETTINGS_ROUTES.recurring, label: t("recurring.tab") },
         ]}
       />
       {children}

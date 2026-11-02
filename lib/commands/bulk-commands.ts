@@ -43,6 +43,40 @@ export async function deleteEntries(
 }
 
 /**
+ * Add new entries made by the app: a month's recurring entries, a depreciation,
+ * a calculated deduction. They ask about a filed period like any other change
+ * (§8.11) and can be undone from the toast.
+ */
+export async function addEntriesWithUndo(
+  ctx: Ctx,
+  added: readonly Entry[],
+  title: string
+): Promise<boolean> {
+  if (added.length === 0) return false
+  const after = [...useBookStore.getState().entries, ...added]
+  if (!(await confirmFiledChange(after))) return false
+
+  const store = useBookStore.getState()
+  const epoch = store.bookEpoch
+  store.addEntries(added)
+  const id = toast.add({
+    title,
+    timeout: UNDO_TIMEOUT_MS,
+    actionProps: {
+      children: ctx.t("common.undo"),
+      onClick: () => {
+        toast.close(id)
+        const now = useBookStore.getState()
+        if (now.bookEpoch !== epoch) return
+        now.removeEntries(added.map((e) => e.id))
+        toast.add({ title: ctx.t("entry.addUndone") })
+      },
+    },
+  })
+  return true
+}
+
+/**
  * Move the selected entries to another category. Each keeps its own VAT
  * rate: the rate belongs to the receipt, not to the category (§4).
  */

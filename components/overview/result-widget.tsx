@@ -37,6 +37,7 @@ export function ResultWidget() {
       : "–"
   const yearVat = data.months.vat.reduce((a, b) => a + b, 0)
   const last = cumulative.length - 1
+  const lastYear = data.lastYear
 
   return (
     <Panel
@@ -140,6 +141,34 @@ export function ResultWidget() {
               />
             </dd>
           </div>
+          {lastYear ? (
+            <>
+              <div>
+                <dt className="text-xs text-muted-foreground">
+                  {f.t("overview.lastYearToDate", { y: year - 1 })}
+                </dt>
+                <dd className="font-medium">
+                  <Money cents={lastYear.result} />
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">
+                  {f.t("overview.lastYearMonth", {
+                    m: f.month(lastYear.month - 1),
+                    y: year - 1,
+                  })}
+                </dt>
+                <dd className="font-medium">
+                  <Money cents={lastYear.monthResult} />
+                  <span className="ml-1.5 font-normal text-muted-foreground">
+                    {f.t("overview.thisYearMonth", {
+                      x: f.money(monthResult[lastYear.month - 1]),
+                    })}
+                  </span>
+                </dd>
+              </div>
+            </>
+          ) : null}
         </dl>
         <ButtonLink
           variant="link"

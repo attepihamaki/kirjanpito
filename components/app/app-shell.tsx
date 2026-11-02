@@ -8,6 +8,7 @@ import { AppSkeleton } from "@/components/app/app-skeleton"
 import { AppTopbar } from "@/components/app/app-topbar"
 import { ImportOverlay } from "@/components/app/import-overlay"
 import { ExportDialog } from "@/components/export/export-dialog"
+import { RecurringDialog } from "@/components/ledger/recurring-dialog"
 import { EntryDialog } from "@/components/entry/entry-dialog"
 import { Overlay } from "@/components/common/overlay"
 import { ReceiptViewer } from "@/components/receipt/receipt-viewer"
@@ -28,6 +29,7 @@ import { useFileDrop, isBookFile, isMediaFile } from "@/hooks/use-file-drop"
 import { useReceiptGc } from "@/hooks/use-receipt-gc"
 import { useAppShortcuts } from "@/hooks/use-app-shortcuts"
 import { useAutosave } from "@/hooks/use-autosave"
+import { usePersistentStorage } from "@/hooks/use-persistent-storage"
 import { useStorageWarning } from "@/hooks/use-storage-warning"
 import {
   openFile,
@@ -143,6 +145,7 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
   useAppShortcuts({ onOpenFile: pickFile, onExport: openExportDialog })
   useAutosave()
   useStorageWarning()
+  usePersistentStorage()
 
   const handleDrop = React.useCallback(
     (
@@ -223,6 +226,7 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
         />
         <ReceiptViewer />
         <ExportDialog />
+        <RecurringDialog />
       </SidebarProvider>
     </TooltipProvider>
   )
