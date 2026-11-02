@@ -409,6 +409,19 @@ export const APP_DICT = {
     "Edustuskulujen ja vähennyskelvottomien kulujen vero lasketaan nyt ostojen veroksi. Kirjaa ne 0 %:lla.",
     "VAT on entertainment and non-deductible expenses is now counted as purchase VAT. Book them at 0 %.",
   ],
+  "overview.yearClosed": [
+    "Tilikausi {y} on päättynyt",
+    "Financial year {y} has ended",
+  ],
+  "overview.yearClosedSub": [
+    "Ota tiedostosta talteen kopio, jota et enää muokkaa. Säilytä kirjanpito {b} ja tositteet {v} asti.",
+    "Put away a copy of the file that you no longer edit. Keep the books until {b} and the vouchers until {v}.",
+  ],
+  "overview.yearStored": ["Tallessa", "Stored"],
+  "overview.yearStoredDone": [
+    "Vuosi {y} merkitty tallessa olevaksi.",
+    "Year {y} marked as stored.",
+  ],
   "overview.missingFiles": [
     pl("1 tosite puuttuu tiedostosta", "{n} tositetta puuttuu tiedostosta"),
     pl(
@@ -506,8 +519,8 @@ export const APP_DICT = {
   "ledger.print": ["Tulosta", "Print"],
   /* KPL 2:10, checked on Finlex. */
   "ledger.retention": [
-    "Säilytä päiväkirja ja pääkirja vähintään 10 vuotta tilikauden päättymisestä ja tositteet vähintään 6 vuotta sen vuoden lopusta, jona tilikausi päättyi (kirjanpitolaki 2:10).",
-    "Keep the journal and the general ledger for at least 10 years from the end of the financial year, and the vouchers for at least 6 years from the end of the year in which it ended (Accounting Act 2:10).",
+    "Säilytä päiväkirja ja pääkirja vähintään {b} asti (10 vuotta tilikauden päättymisestä) ja tositteet vähintään {v} asti (6 vuotta sen vuoden lopusta, jona tilikausi päättyi). Kirjanpitolaki 2:10.",
+    "Keep the journal and the general ledger until at least {b} (10 years from the end of the financial year), and the vouchers until at least {v} (6 years from the end of the year in which it ended). Accounting Act 2:10.",
   ],
   /* The voucher number (tositenumero, §4); "tosite" alone is the receipt file. */
   "ledger.colVoucher": ["Nro", "No."],

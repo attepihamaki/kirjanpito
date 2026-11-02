@@ -345,7 +345,7 @@ describe("journal and general ledger (§8.4)", () => {
     ).toBeInTheDocument()
     const income = screen.getByRole("row", { name: /Tulot yhteensä/ })
     expect(flattenSpaces(income.textContent ?? "")).toContain(eur(1_250_000))
-    expect(screen.getByText(/kirjanpitolaki 2:10/)).toBeInTheDocument()
+    expect(screen.getByText(/Kirjanpitolaki 2:10/)).toBeInTheDocument()
   })
 
   it("prints the general ledger by account", () => {

@@ -41,6 +41,8 @@ export interface BookSettings {
   bookStart: string | null
   /** Period key (`"2026-09"`, `"2026-Q3"`, `"2026"`) → ISO date it was marked. */
   vatFiled: Record<string, string>
+  /** Year (`"2025"`) → ISO date its material was marked as stored away. */
+  yearsArchived: Record<string, string>
   overviewLayout: OverviewWidget[]
   autosave: boolean
   /** The full category list: the defaults as the user left them, plus custom ones. */
@@ -56,6 +58,7 @@ export type ParsedSettings = Partial<BookSettings>
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/
+const YEAR = /^[0-9]{4}$/
 const PERIOD_KEY = /^\d{4}(-(0[1-9]|1[0-2])|-Q[1-4])?$/
 const SALES_KINDS: readonly SalesKind[] = [
   "domestic",
@@ -163,6 +166,15 @@ export function parseSettings(text: string): ParsedSettings {
     }
     out.vatFiled = filed
   }
+  if (isRecord(raw.yearsArchived)) {
+    const archived: Record<string, string> = {}
+    for (const [key, date] of Object.entries(raw.yearsArchived)) {
+      if (YEAR.test(key) && typeof date === "string" && ISO_DATE.test(date)) {
+        archived[key] = date
+      }
+    }
+    out.yearsArchived = archived
+  }
   if (isRecord(raw.overview) && Array.isArray(raw.overview.layout)) {
     out.overviewLayout = normalizeLayout(raw.overview.layout)
   }
@@ -191,6 +203,9 @@ export function serializeSettings(s: BookSettings): string {
     bookStart: s.bookStart,
     vatFiled: Object.fromEntries(
       Object.entries(s.vatFiled).sort(([a], [b]) => a.localeCompare(b))
+    ),
+    yearsArchived: Object.fromEntries(
+      Object.entries(s.yearsArchived).sort(([a], [b]) => a.localeCompare(b))
     ),
     overview: { layout: s.overviewLayout },
     autosave: s.autosave,

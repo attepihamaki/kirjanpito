@@ -14,6 +14,7 @@ import {
   type BookRow,
   type Totals,
 } from "@/lib/domain/books"
+import { retentionDates } from "@/lib/domain/retention"
 import { indexCategories, type Category } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
 import { useBookStore } from "@/stores/book-store"
@@ -44,6 +45,7 @@ function ReportPage({
 }) {
   const f = useFormatters()
   const year = useBookStore((s) => s.year)
+  const retention = retentionDates(year)
 
   return (
     <>
@@ -70,7 +72,10 @@ function ReportPage({
         </header>
         {children}
         <p className="mt-8 text-xs text-muted-foreground">
-          {f.t("ledger.retention")}
+          {f.t("ledger.retention", {
+            b: f.date(retention.books),
+            v: f.date(retention.vouchers),
+          })}
         </p>
       </div>
     </>

@@ -30,6 +30,7 @@ export function useAutosave() {
   const entries = useBookStore((s) => s.entries)
   const cats = useBookStore((s) => s.cats)
   const vatFiled = useBookStore((s) => s.vatFiled)
+  const yearsArchived = useBookStore((s) => s.yearsArchived)
   const vatPeriod = useBookStore((s) => s.vatPeriod)
   const layout = useBookStore((s) => s.overviewLayout)
 
@@ -51,6 +52,7 @@ export function useAutosave() {
     entries,
     cats,
     vatFiled,
+    yearsArchived,
     vatPeriod,
     layout,
   ])

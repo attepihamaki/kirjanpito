@@ -349,6 +349,7 @@ function applyImport(
           vatPeriod: settings.vatPeriod,
           bookStart: settings.bookStart,
           vatFiled: settings.vatFiled,
+          yearsArchived: settings.yearsArchived,
           overviewLayout: settings.overviewLayout,
           autosave: settings.autosave,
           ledgerSize: settings.pageSize?.ledger,
@@ -392,6 +393,7 @@ function bookVersion() {
     s.vatPeriod,
     s.bookStart,
     s.vatFiled,
+    s.yearsArchived,
     s.overviewLayout,
   ] as const
 }
@@ -416,6 +418,7 @@ function currentSettingsText(): string {
     vatPeriod: s.vatPeriod,
     bookStart: s.bookStart,
     vatFiled: s.vatFiled,
+    yearsArchived: s.yearsArchived,
     overviewLayout: normalizeLayout(s.overviewLayout),
     autosave: s.autosave,
     categories: s.cats,

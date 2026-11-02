@@ -142,6 +142,11 @@ export interface BookState {
   bookStart: string | null
   /** Period key → ISO date the return was marked as filed (§6.5). */
   vatFiled: Record<string, string>
+  /**
+   * Year (`"2025"`) → ISO date the user marked its material as stored away
+   * (§8.12). Saved in settings.json.
+   */
+  yearsArchived: Record<string, string>
   /** The overview's widgets, in order (§8.12). Normalised where it is read. */
   overviewLayout: OverviewWidget[]
   /** Save to the linked file a moment after each change (§7.5). Opt-in. */
@@ -233,6 +238,7 @@ export interface BookActions {
       vatPeriod?: VatPeriodKind
       bookStart?: string | null
       vatFiled?: Record<string, string>
+      yearsArchived?: Record<string, string>
       overviewLayout?: OverviewWidget[]
       autosave?: boolean
       ledgerSize?: PageSize
@@ -276,6 +282,8 @@ export interface BookActions {
   setBookStart(month: string | null): void
   /** Mark a period as filed on `date`, or clear the mark with null. */
   setVatFiled(key: string, date: string | null): void
+  /** Mark a closed year as stored away on `date`, or clear it with null. */
+  setYearArchived(year: number, date: string | null): void
   setOverviewLayout(layout: OverviewWidget[]): void
   setAutosave(on: boolean): void
   setAutosavePaused(paused: boolean): void
@@ -330,6 +338,7 @@ function initialState(): BookState {
     vatPeriod: "month",
     bookStart: null,
     vatFiled: {},
+    yearsArchived: {},
     overviewLayout: DEFAULT_LAYOUT.map((w) => ({ ...w })),
     autosave: false,
 
@@ -379,6 +388,7 @@ type PersistedBook = Pick<
   | "vatPeriod"
   | "bookStart"
   | "vatFiled"
+  | "yearsArchived"
   | "overviewLayout"
   | "autosave"
 >
@@ -495,6 +505,7 @@ export const useBookStore = create<BookStore>()(
            */
           bookStart: null,
           vatFiled: {},
+          yearsArchived: {},
           undoAttachmentIds: [],
           bookEpoch: get().bookEpoch + 1,
           gcTick: get().gcTick + 1,
@@ -509,6 +520,7 @@ export const useBookStore = create<BookStore>()(
           dirty: false,
           bookStart: null,
           vatFiled: {},
+          yearsArchived: {},
           dialog: { kind: "none" },
           draftAttachmentIds: [],
           undoAttachmentIds: [],
@@ -533,6 +545,7 @@ export const useBookStore = create<BookStore>()(
           vatIndex: clampVatIndex(get().vatIndex, get().vatPeriod, vatPeriod),
           bookStart: s.bookStart ?? null,
           vatFiled: s.vatFiled ?? {},
+          yearsArchived: s.yearsArchived ?? {},
           overviewLayout: s.overviewLayout ?? get().overviewLayout,
           autosave: s.autosave ?? get().autosave,
           autosavePaused: false,
@@ -654,6 +667,12 @@ export const useBookStore = create<BookStore>()(
         else delete vatFiled[key]
         set({ vatFiled, dirty: true })
       },
+      setYearArchived: (year, date) => {
+        const yearsArchived = { ...get().yearsArchived }
+        if (date) yearsArchived[String(year)] = date
+        else delete yearsArchived[String(year)]
+        set({ yearsArchived, dirty: true })
+      },
       setOverviewLayout: (overviewLayout) =>
         set({ overviewLayout, dirty: true }),
       /*
@@ -752,6 +771,7 @@ export const useBookStore = create<BookStore>()(
         vatPeriod: s.vatPeriod,
         bookStart: s.bookStart,
         vatFiled: s.vatFiled,
+        yearsArchived: s.yearsArchived,
         overviewLayout: s.overviewLayout,
         autosave: s.autosave,
       }),

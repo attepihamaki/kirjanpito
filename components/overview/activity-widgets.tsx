@@ -39,6 +39,8 @@ import {
 } from "@/lib/domain/entry-checks"
 import { APP_ROUTES } from "@/lib/site"
 import { cn } from "@/lib/utils"
+import { toast } from "@/components/ui/toast"
+import { retentionDates, yearsToArchive } from "@/lib/domain/retention"
 import { useBookStore, type CheckFilter } from "@/stores/book-store"
 import { hasReceipt } from "@/stores/selectors"
 
@@ -216,8 +218,24 @@ export function ChecksWidget() {
   const fileName = useBookStore((s) => s.fileName)
   const openDialog = useBookStore((s) => s.openDialog)
   const setVatFiled = useBookStore((s) => s.setVatFiled)
+  const yearsArchived = useBookStore((s) => s.yearsArchived)
+  const setYearArchived = useBookStore((s) => s.setYearArchived)
   const canSave = useCanSaveToFile()
   const save = useSaveBook()
+
+  const archiveYear = (y: number) => {
+    setYearArchived(y, data.today)
+    const id = toast.add({
+      title: f.t("overview.yearStoredDone", { y }),
+      actionProps: {
+        children: f.t("common.undo"),
+        onClick: () => {
+          toast.close(id)
+          setYearArchived(y, null)
+        },
+      },
+    })
+  }
 
   const showInLedger = (check: CheckFilter) => {
     const s = useBookStore.getState()
@@ -340,6 +358,28 @@ export function ChecksWidget() {
       tone: "info",
       title: f.t("overview.emptyMonths", { m: emptyMonths.join(", ") }),
       sub: f.t("overview.emptyMonthsSub"),
+    })
+  }
+
+  /*
+   * A reminder rather than a problem, so it stays out of the open count. The
+   * file is the only real copy (§1), and it stays mutable after the year ends.
+   */
+  for (const y of yearsToArchive(data.entries, data.today, yearsArchived)) {
+    const { books, vouchers } = retentionDates(y)
+    items.push({
+      key: `archive-${y}`,
+      tone: "info",
+      title: f.t("overview.yearClosed", { y }),
+      sub: f.t("overview.yearClosedSub", {
+        b: f.date(books),
+        v: f.date(vouchers),
+      }),
+      action: (
+        <Button variant="ghost" size="sm" onClick={() => archiveYear(y)}>
+          {f.t("overview.yearStored")}
+        </Button>
+      ),
     })
   }
 

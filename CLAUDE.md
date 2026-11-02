@@ -474,6 +474,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
   "vatPeriod": "month",
   "bookStart": "2026-10",
   "vatFiled": { "2026-08": "2026-10-12" },
+  "yearsArchived": { "2025": "2026-01-20" },
   "overview": { "layout": [{ "id": "result", "size": "L", "hidden": false }] },
   "categories": [{ "id": "333", "line": "333", "name": "Ostot ja varastojen muutokset", "vatRate": 25.5, "enabled": true, "custom": false }],
   "autosave": false,
@@ -487,7 +488,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
 - **The overview layout** goes through `normalizeLayout` in `lib/domain/overview-layout.ts`: an unknown widget id is dropped and a missing one is appended at its default size, so a file from an older or newer version still opens.
 - **Language and theme** are written from the browser's own keys (§12) at save. Opening a file switches the app to them. They are preferences of the browser as much as of the book, so changing them does not mark the book dirty, and the landing page goes on using the browser's keys. The theme is applied through `Ctx.setTheme`, because only React can reach next-themes.
 - **Page sizes and autosave** are saved the same way: written at save, applied on open, never dirty.
-- **The VAT period, the start month, the filed marks, the layout and the categories do mark the book dirty**, since the file no longer matches.
+- **The VAT period, the start month, the filed marks, the archived years, the layout and the categories do mark the book dirty**, since the file no longer matches.
 - A plain CSV has no settings. Opening one starts with no filed marks and no start month, and keeps the rest as it was.
 - `lib/domain/settings-file.test.ts` covers the round trip and the lenient reading; `lib/commands/io-commands.test.ts` covers opening a ZIP with settings.
 
@@ -604,7 +605,7 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
 - **Päiväkirja and Pääkirja.** The view has three tabs (`LedgerTabs`, routes `LEDGER_ROUTES` in `lib/site.ts`): Kirjaukset at `/app/ledger`, Päiväkirja at `/app/ledger/journal` and Pääkirja at `/app/ledger/accounts`. The Accounting Act asks that entries can be viewed "aikajärjestyksessä ja asiajärjestyksessä" (KPL 2:4, checked on Finlex), and these two are that, for the selected year (`lib/domain/books.ts`, `components/ledger/books-view.tsx`).
   - The journal lists the year by month, in date and then voucher order, with the account number, expenses as negative, and income and expense totals.
   - The general ledger lists the same entries by account in chart-of-accounts order (§5), only accounts that have entries, each with its total. A category is shown under the description unless it has the account's own name.
-  - Both are printable sheets on the `--sheet` surface with a "Tulosta" button, like the income statement (§8.8), and end with the retention rule of KPL 2:10: the books for 10 years from the end of the financial year, the vouchers for 6 years from the end of the year it ended in.
+  - Both are printable sheets on the `--sheet` surface with a "Tulosta" button, like the income statement (§8.8), and end with the retention rule of KPL 2:10, with the year's own dates: the books for 10 years from the end of the financial year, the vouchers for 6 years from the end of the year it ended in.
 
 ### 8.5 Entry dialog (Uusi kirjaus / Muokkaa kirjausta / Kopio kirjaus)
 
@@ -733,7 +734,7 @@ Use one shared `AlertDialog`-based `confirm()` helper, with a title, a message, 
 | Navigate away from Settings            | the new-category name is filled    | same as above, with the category message                                  |
 | Browser tab close (`beforeunload`)     | any of the above dirty states      | the browser's native prompt                                               |
 
-**Dirty bookkeeping** means the entries or the book's settings changed since the last read or write of a file. It is set by any add, edit or delete, by a category change, and by the VAT period, a filed mark or the overview layout (§7.6), and cleared by opening a file, by saving to the linked one, and by downloading a ZIP **only when no file is linked** (§7.5). A book with no entries asks too: deleting the last one still left the file behind.
+**Dirty bookkeeping** means the entries or the book's settings changed since the last read or write of a file. It is set by any add, edit or delete, by a category change, and by the VAT period, a filed mark, an archived year or the overview layout (§7.6), and cleared by opening a file, by saving to the linked one, and by downloading a ZIP **only when no file is linked** (§7.5). A book with no entries asks too: deleting the last one still left the file behind.
 
 The wording everywhere is about saving rather than exporting, so one set of strings covers both ways of keeping the work. The row above that highlights this: the close confirmation is the same sentence whether the user saves to their own file or downloads a copy.
 
@@ -755,7 +756,7 @@ The app's front page, at `/app/overview`. `/app`, "Jatka kirjanpitoa", opening a
   - **Myynti**: line 300 split into Suomi, EU, muut maat and käänteinen, as a stacked bar and a list; lines 301 to 324 below as other income.
   - **Kulut ryhmittäin**: the §6.4 buckets with expenses, largest first; empty ones are counted.
   - **Viimeisimmät kirjaukset** (wide): the year's six newest entries, signed gross, flagged "ei tositetta" where there is no receipt file. A row opens the entry dialog.
-  - **Tarkistettavaa**: unsaved changes with a save (or download) button; each overdue return and each return due within 30 days, with "Ilmoitettu"; one row per check of §8.4 that flags anything (no receipt, a rate that does not fit the date, a future date, a domestic sale without VAT, an unusually large amount, a possible duplicate, VAT on a cost whose VAT cannot be deducted), each with "Näytä", which opens the ledger filtered to them; receipts missing from the file; and empty months from the first entry to the last complete month, skipping any before the start month.
+  - **Tarkistettavaa**: unsaved changes with a save (or download) button; each overdue return and each return due within 30 days, with "Ilmoitettu"; one row per check of §8.4 that flags anything (no receipt, a rate that does not fit the date, a future date, a domestic sale without VAT, an unusually large amount, a possible duplicate, VAT on a cost whose VAT cannot be deducted), each with "Näytä", which opens the ledger filtered to them; receipts missing from the file; empty months from the first entry to the last complete month, skipping any before the start month; and one row per closed year with entries, as a reminder outside the open count (`yearsToArchive` in `lib/domain/retention.ts`). It gives the dates of KPL 2:10 (vero.fi, "Kirjanpito, tilikausi, verokausi"), the books until 31.12. ten years on and the vouchers six, and asks for a copy of the file that is no longer edited. "Tallessa" marks the year in `yearsArchived` and the toast can undo it. A year past the 10 years is not listed. The journal and the general ledger print the same dates (§8.4).
 - **The board** (`overview-board.tsx`) is a three-column grid with `grid-flow-dense` from 1100 px, one column below it. "S" spans one column and "L" two; the month chart at "L" also spans two rows, so the default fills the grid with no holes. Widgets use container queries for their own narrow layouts, so a widget adapts to its column, not the window.
 - **Editing the layout.** "Muokkaa näkymää" turns on edit mode. Each widget gets a toolbar: a drag handle, arrows to move it among the visible widgets, widen or narrow (hidden below 1100 px, where size means nothing), and hide. Its contents go `inert`, so a drag never opens an entry. Hidden widgets wait as buttons under the board. "Palauta oletus" resets; "Valmis" leaves. The layout is `overviewLayout`, saved in `settings.json` and dirty like any setting. dnd-kit's screen-reader texts are translated (`overview.dnd*`).
 - **Empty book**: no widgets and no edit button, but the two ways in and three short steps.
@@ -1104,7 +1105,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
 
 - localStorage `bookkeeping` — exported as `BOOK_STORAGE_KEY` from
   `stores/book-store.ts`, so nothing hard-codes the string twice:
-  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, vatPeriod, bookStart, vatFiled, overviewLayout, autosave }`.
+  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, vatPeriod, bookStart, vatFiled, yearsArchived, overviewLayout, autosave }`.
   The book's settings are kept twice: here, as the working buffer, and in the
   file's `settings.json` (§7.6), as the record. A reload restores them from
   here; opening a file replaces them from there.

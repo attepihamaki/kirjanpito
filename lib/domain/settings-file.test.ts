@@ -31,6 +31,7 @@ function settings(): BookSettings {
     vatPeriod: "quarter",
     bookStart: "2025-10",
     vatFiled: { "2026-Q2": "2026-08-10", "2026-Q1": "2026-05-11" },
+    yearsArchived: { "2025": "2026-01-20" },
     overviewLayout: normalizeLayout([
       { id: "checks", size: "L", hidden: false },
     ]),
@@ -67,12 +68,14 @@ describe("settings.json", () => {
         vatPeriod: "week",
         bookStart: "2026-13",
         vatFiled: { "2026-09": "2026-11-10", "2026-13": "2026-01-01", x: 1 },
+        yearsArchived: { "2025": "2026-01-20", "25": "2026-01-20", "2024": 1 },
         pageSize: { ledger: 7, categories: 25 },
       })
     )
     expect(parsed).toEqual({
       theme: "dark",
       vatFiled: { "2026-09": "2026-11-10" },
+      yearsArchived: { "2025": "2026-01-20" },
     })
   })
 
