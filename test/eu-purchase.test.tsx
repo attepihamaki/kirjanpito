@@ -57,7 +57,7 @@ describe("an EU purchase in the entry dialog", () => {
     expect(
       screen.getByText(/Vero 25,50.*ilmoitetaan itse ALV-ilmoituksella/)
     ).toBeVisible()
-    expect(screen.queryByText("Summa on")).not.toBeInTheDocument()
+    expect(screen.queryByText("Verollisuus")).not.toBeInTheDocument()
   })
 
   it("hides the rate and names it behind the info icon", async () => {

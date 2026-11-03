@@ -174,7 +174,7 @@ describe("the eu_purchase column", () => {
 
   it("reads the Finnish column name", () => {
     const parsed = parseCsv(
-      "pvm;tyyppi;tili;luokka;summa;alv;syotto;eu_osto\r\n2026-05-05;kulu;333;;100,00;25,5;netto;tavara\r\n",
+      "päivämäärä;tyyppi;tili;luokka;summa;alv;verollisuus;eu_osto\r\n2026-05-05;kulu;333;;100,00;25,5;netto;tavara\r\n",
       baseCats
     )
     if (!parsed.ok) throw new Error(parsed.code)

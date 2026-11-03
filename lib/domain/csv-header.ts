@@ -43,14 +43,14 @@ export type CsvColumn = (typeof CSV_HEADER)[number]
  */
 const FINNISH_LABELS: Readonly<Record<CsvColumn, string>> = {
   voucher: "tositenro",
-  date: "pvm",
+  date: "päivämäärä",
   description: "selite",
   type: "tyyppi",
   account: "tili",
   category: "luokka",
   amount: "summa",
   vat: "alv",
-  mode: "syotto",
+  mode: "verollisuus",
   receipts: "liitteet",
   settles: "verokausi",
   paid: "maksettu",

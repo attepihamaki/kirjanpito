@@ -68,7 +68,7 @@ describe("serializeCsv", () => {
   it("starts with a BOM and the exact header of its language", () => {
     expect(out.startsWith(`﻿${csvHeaderLine("fi")}\r\n`)).toBe(true)
     expect(csvHeaderLine("fi")).toBe(
-      "tositenro;pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;liitteet;verokausi;maksettu;ostajan_alv;eu_osto"
+      "tositenro;päivämäärä;selite;tyyppi;tili;luokka;summa;alv;verollisuus;liitteet;verokausi;maksettu;ostajan_alv;eu_osto"
     )
     expect(HEADER).toBe(
       "voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase"
@@ -289,7 +289,10 @@ describe("parseCsv — Finnish column names", () => {
   it("matches Finnish names case-insensitively", () => {
     const r = ok(
       parseCsv(
-        csvText(["PVM;Selite;TYYPPI;summa", "2026-01-08;Lasku;tulo;100,00"]),
+        csvText([
+          "PÄIVÄMÄÄRÄ;Selite;TYYPPI;summa",
+          "2026-01-08;Lasku;tulo;100,00",
+        ]),
         baseCats
       )
     )
@@ -298,13 +301,16 @@ describe("parseCsv — Finnish column names", () => {
 
   it("accepts a header that mixes the two languages", () => {
     const r = ok(
-      parseCsv(csvText(["pvm;type;summa", "2026-01-08;tulo;1,00"]), baseCats)
+      parseCsv(
+        csvText(["päivämäärä;type;summa", "2026-01-08;tulo;1,00"]),
+        baseCats
+      )
     )
     expect(r.entries).toHaveLength(1)
   })
 
   it("names a missing column in English", () => {
-    expect(parseCsv(csvText(["pvm;selite", "a;b"]), baseCats)).toEqual({
+    expect(parseCsv(csvText(["päivämäärä;selite", "a;b"]), baseCats)).toEqual({
       ok: false,
       code: "missing-columns",
       missing: ["type", "amount"],

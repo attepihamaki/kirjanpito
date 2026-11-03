@@ -893,7 +893,7 @@ export const APP_DICT = {
     "Vähennyskelvottoman kulun arvonlisäveroa ei voi vähentää. Kirjaa verollinen summa 0 %:n verokannalla, niin vero jää osaksi kulua.",
     "VAT on a non-deductible expense can’t be deducted. Book the amount including VAT at 0 %, so the tax stays part of the cost.",
   ],
-  "entry.amountMode": ["Summa on", "Amount is"],
+  "entry.amountMode": ["Verollisuus", "VAT treatment"],
   "entry.saveAndNew": ["Tallenna ja uusi", "Save and add another"],
   "entry.errDate": ["Anna päivämäärä.", "Enter a date."],
   "entry.errAmount": [

@@ -397,7 +397,7 @@ A seller in another EU country invoices a VAT-registered buyer without VAT, and 
 - **On a line with `noVatDeduction`** the tax is reported but not deducted, so it adds to the tax payable. It is not a cost in the statement by itself, and the dialog says to book it as a 0 % cost of its own. The dialog's advice to book the gross at 0 % does not fit an EU purchase, and `vatNotDeductible` leaves these out.
 - **A custom category can be one on any cost line** (`canBeEuPurchase`), and the settings file drops the status from any other. A recurring template follows its category, since a monthly subscription is the usual case.
 - **Bulk category changes do not cross the line** (§8.4). An EU purchase's amount is without VAT and any other entry's follows its mode, so moving one across would change what was paid. The entry dialog can change it, with the amount in view.
-- **The rate comes from the category.** The dialog hides "ALV %" and "Summa on" on an EU category. An info icon beside "Luokka" opens a popover on hover or tap that says what the category is for and names the tax and the rate, and the receipt preview shows them too. The warning about a tax that cannot be deducted stays in view. Picking one sets the category's rate as it was on the entry's date, whatever was there before. A purchase taxed at another rate takes a custom EU category at that rate (§8.10), and an entry saved at another rate keeps it. A rate read from an invoice PDF is ignored on an EU category, since the invoice prints no Finnish tax. The ledger shows a pill.
+- **The rate comes from the category.** The dialog hides "ALV %" and "Verollisuus" on an EU category. An info icon beside "Luokka" opens a popover on hover or tap that says what the category is for and names the tax and the rate, and the receipt preview shows them too. The warning about a tax that cannot be deducted stays in view. Picking one sets the category's rate as it was on the entry's date, whatever was there before. A purchase taxed at another rate takes a custom EU category at that rate (§8.10), and an entry saved at another rate keeps it. A rate read from an invoice PDF is ignored on an EU category, since the invoice prints no Finnish tax. The ledger shows a pill.
 - **Not handled:** a business that is not VAT registered, which reports these on its own, and imports from outside the EU.
 
 ---
@@ -412,7 +412,7 @@ category names, the ZIP's suggested name, the CSV's name and the receipt folder
 (§7.2) — and nothing else.
 
 - **Header row**, always these columns in this order, in one of two spellings:
-  - fi: `tositenro;pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;liitteet;verokausi;maksettu;ostajan_alv;eu_osto`
+  - fi: `tositenro;päivämäärä;selite;tyyppi;tili;luokka;summa;alv;verollisuus;liitteet;verokausi;maksettu;ostajan_alv;eu_osto`
   - en: `voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase`
 - **`lib/domain/csv-header.ts` is the one place a column name is spelled.** The
   English names are the canonical ones the parser works in; `FINNISH_LABELS`
@@ -750,7 +750,7 @@ A two-column modal. On mobile the columns stack.
   - Category select: only enabled categories of the chosen type, plus the entry's current category even if disabled.
   - Amount, right-aligned with tabular figures.
   - VAT % select, hidden on an EU purchase category, where the amount takes the whole row (§6.9). Picking a category sets its default rate **as it was on the entry's date** (§5), and changing the date moves an unchosen rate across a rate change. A rate the user picked, one read from a PDF, and the rate of an entry being edited or copied count as chosen and stay. When the rate does not fit the date, a warning-coloured line under the field says so ("25,5 % on voimassa 1.9.2024 alkaen. Tälle päivälle verokanta on 24 %."). Saving is never blocked by it. A second warning line follows when the category's VAT cannot be deducted and the rate is above 0 %, saying to book the gross amount at 0 % (`vatNotDeductible`).
-  - "Summa on" segmented control (Verollinen / Veroton).
+  - "Verollisuus" segmented control (Verollinen / Veroton).
   - A warning-coloured line under the amount when another entry has the same date, side and gross amount, naming its voucher number and description (`duplicateOf`). Attaching a file that another entry already holds raises a toast naming that entry (`entryWithReceipt`). Both are hints: two equal purchases on one day, or one receipt covering two entries, can be right.
   - An inline error line.
 - **Footer:**
