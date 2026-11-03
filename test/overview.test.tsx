@@ -92,7 +92,7 @@ describe("bank widget", () => {
       "2 874,50 €"
     )
     expect(flat(bank.textContent)).toContain("1 000,50 €")
-    expect(flat(bank.textContent)).toContain("Kirjaukset sen jälkeen (2)")
+    expect(flat(bank.textContent)).toContain("Tositteet sen jälkeen (2)")
     expect(flat(bank.textContent)).toContain("2 874,50 €")
   })
 
@@ -157,8 +157,8 @@ describe("overview", () => {
     const checks = widget(/Tarkistettavaa/)
     const text = flat(checks.textContent)
     expect(text).toContain("Tammikuu 2026: ALV-ilmoitus myöhässä")
-    expect(text).toContain("16 kirjausta ilman tositetta")
-    expect(text).toContain("Ei kirjauksia: heinä, elo")
+    expect(text).toContain("16 tositetta ilman liitettä")
+    expect(text).toContain("Ei tositteita: heinä, elo")
   })
 
   it("hides a widget in edit mode and keeps it in the layout", async () => {
@@ -205,7 +205,7 @@ describe("overview", () => {
   it("greets an empty bookkeeping", () => {
     load({ entries: [] })
     mount()
-    expect(screen.getByText("Ei vielä kirjauksia")).toBeInTheDocument()
+    expect(screen.getByText("Ei vielä tositteita")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Muokkaa näkymää" })).toBeNull()
   })
 })

@@ -92,11 +92,8 @@ describe("canBeUnpaid", () => {
 
 describe("taxBasisEntries", () => {
   const result = (y: number) =>
-    incomeStatement(
-      taxBasisEntries([sale({ paidOn: "2027-01-10" })]),
-      cats,
-      y
-    ).result
+    incomeStatement(taxBasisEntries([sale({ paidOn: "2027-01-10" })]), cats, y)
+      .result
 
   it("puts income in the year of payment", () => {
     expect(result(2026)).toBe(0)

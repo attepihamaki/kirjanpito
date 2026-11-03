@@ -97,7 +97,7 @@ describe("deleteEntry", () => {
 
   it("does nothing once another bookkeeping has taken over", async () => {
     await deleteEntry(ctx, useBookStore.getState().entries[0])
-    useBookStore.getState().newBook(2026)
+    useBookStore.getState().newBook(2026, "fi")
 
     clickUndo()
     expect(useBookStore.getState().entries).toEqual([])
@@ -212,7 +212,7 @@ describe("bulk actions (§8.4)", () => {
     const chosen = pick("2026-02-20", "2026-03-20")
     expect(await deleteEntries(ctx, chosen)).toBe(true)
     expect(vi.mocked(confirm).mock.calls[0][0].title).toBe(
-      "Poistetaanko 2 kirjausta?"
+      "Poistetaanko 2 tositetta?"
     )
     expect(useBookStore.getState().entries).toHaveLength(14)
 

@@ -74,10 +74,37 @@ export interface UnpackedZip {
 
 export type ReceiptLookup = (path: string) => Promise<Uint8Array | null>
 
-/** Relative to the CSV's folder, falling back to the archive root. */
+/**
+ * Relative to the CSV's folder, falling back to the archive root and then to
+ * a file of the same name anywhere in the archive.
+ *
+ * The last fallback is what survives a move: the folder a receipt sits in is
+ * named for the export language (§7.2), so changing that language asks this
+ * archive for a path it has never held, and a receipt whose bytes the browser
+ * no longer holds would be dropped from the file replacing it. A name shared
+ * by two files is ambiguous, so the fallback refuses it rather than guessing.
+ */
 function lookupIn(zip: JSZip, csvDir: string): ReceiptLookup {
+  let byBase: Map<string, string | null> | undefined
+
+  const baseNames = () => {
+    const map = new Map<string, string | null>()
+    for (const name of Object.keys(zip.files)) {
+      if (zip.files[name].dir) continue
+      const base = (name.split("/").pop() ?? name).toLowerCase()
+      // Null marks a name that more than one file has.
+      map.set(base, map.has(base) ? null : name)
+    }
+    return map
+  }
+
   return async (path) => {
-    const file = zip.file(csvDir + path) ?? zip.file(path)
+    let file = zip.file(csvDir + path) ?? zip.file(path)
+    if (!file) {
+      byBase ??= baseNames()
+      const match = byBase.get((path.split("/").pop() ?? path).toLowerCase())
+      if (match) file = zip.file(match)
+    }
     return file ? file.async("uint8array") : null
   }
 }

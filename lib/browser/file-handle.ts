@@ -134,16 +134,21 @@ export async function pickFileToOpen(): Promise<FileSystemFileHandle | null> {
   }
 }
 
-/** Null when the user cancelled or the browser has no picker. */
+/**
+ * Null when the user cancelled or the browser has no picker.
+ *
+ * A bookkeeping is always a ZIP (§7.2), because `settings.json` has to travel
+ * with the entries. Only `CSV_TYPE` above is still offered, and only for
+ * opening.
+ */
 export async function pickFileToSave(
-  suggestedName: string,
-  isZip: boolean
+  suggestedName: string
 ): Promise<FileSystemFileHandle | null> {
   if (!isFileHandleSupported()) return null
   try {
     return await window.showSaveFilePicker!({
       suggestedName,
-      types: [isZip ? ZIP_TYPE : CSV_TYPE],
+      types: [ZIP_TYPE],
     })
   } catch (error) {
     if (isAbort(error)) return null

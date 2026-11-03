@@ -10,7 +10,7 @@ import {
   isPdf,
   isReceiptFile,
   mimeForName,
-  slug,
+  receiptStem,
 } from "@/lib/domain/receipt-path"
 import type { Attachment, Entry } from "@/lib/domain/types"
 
@@ -32,48 +32,79 @@ function entry(over: Partial<Entry> = {}): Entry {
   }
 }
 
-describe("slug", () => {
+describe("receiptStem", () => {
+  /*
+   * The point of the whole rule: a name the user chose comes through intact,
+   * spaces, dots, case and Finnish letters included. Only the extension goes,
+   * because the path puts it back.
+   */
   it.each([
-    ["Osto – K-Rauta – tarvikkeet", "osto-k-rauta-tarvikkeet"],
-    ["Lasku 1005 – Mäkinen Rakennus Oy", "lasku-1005-makinen-rakennus-oy"],
-    ["Ääkkösiä öitä Åland", "aakkosia-oita-aland"],
-    ["Café Crème", "cafe-creme"],
-    ["Työtilan vuokra, helmikuu", "tyotilan-vuokra-helmikuu"],
-    ["   ", "tosite"],
-    ["!!!", "tosite"],
-    ["", "tosite"],
-  ])("slugs %j", (input, expected) => {
-    expect(slug(input)).toBe(expected)
+    [
+      "2.11.2026 - HC-Maschinentechnik - Lasku.pdf",
+      "2.11.2026 - HC-Maschinentechnik - Lasku",
+    ],
+    ["IMG_4417.jpg", "IMG_4417"],
+    ["Ääkkösiä öitä Åland.jpg", "Ääkkösiä öitä Åland"],
+    ["Osto – K-Rauta – tarvikkeet.pdf", "Osto – K-Rauta – tarvikkeet"],
+    ["report.final.pdf", "report.final"],
+    ["kuitti", "kuitti"],
+  ])("keeps %j as %j", (input, expected) => {
+    expect(receiptStem(input)).toBe(expected)
   })
 
-  it("cuts at 40 characters and trims the trailing dash", () => {
-    const long =
-      "Lasku 1001 – Mäkinen Rakennus Oy ja pitkä selite joka ylittää neljäkymmentä merkkiä"
-    expect(slug(long)).toBe("lasku-1001-makinen-rakennus-oy-ja-pitka")
+  it("drops what no file system would take", () => {
+    expect(receiptStem('a\\b/c:d*e?f"g<h>i|j.pdf')).toBe("abcdefghij")
+    const ctrl = [0x00, 0x07, 0x1f, 0x7f]
+      .map((c) => String.fromCharCode(c))
+      .join("")
+    expect(receiptStem(`kui${ctrl}tti.pdf`)).toBe("kuitti")
   })
 
-  it("strips combining marks left by NFD normalisation", () => {
-    /*
-     * Built from code points: "e" followed by a combining acute looks exactly
-     * like a precomposed letter, so a literal here would be invisible to
-     * anyone reading the test.
-     */
-    const acute = String.fromCharCode(0x301)
-    const diaeresis = String.fromCharCode(0x308)
-    expect(slug(`Cafe${acute}`)).toBe("cafe")
-    expect(slug(`Ho${diaeresis}tel`)).toBe("hotel")
+  /* `|` separates the receipt paths in the CSV and `"` quotes a field (§7.1). */
+  it("leaves nothing that would break the CSV's receipts column", () => {
+    expect(receiptStem('a|b"c.pdf')).not.toMatch(/[|"]/)
   })
 
-  it("never exceeds 40 characters or ends with a dash", () => {
-    for (const s of [
-      "a".repeat(80),
-      "Lasku ".repeat(20),
-      "– – – ".repeat(10),
-      "Ö".repeat(50),
+  it("falls back when nothing usable is left", () => {
+    expect(receiptStem("<<>>.jpg")).toBe("liite")
+    expect(receiptStem("   .jpg")).toBe("liite")
+    expect(receiptStem("")).toBe("liite")
+  })
+
+  /* Windows trims these when it creates the file, so we must not write them. */
+  it("trims leading and trailing dots and spaces", () => {
+    expect(receiptStem("  kuitti  .pdf")).toBe("kuitti")
+    expect(receiptStem("...kuitti....pdf")).toBe("kuitti")
+  })
+
+  it("steps around an MS-DOS device name", () => {
+    expect(receiptStem("CON.pdf")).toBe("CON_")
+    expect(receiptStem("nul.jpg")).toBe("nul_")
+    expect(receiptStem("com1.pdf")).toBe("com1_")
+    expect(receiptStem("console.pdf")).toBe("console")
+  })
+
+  it("cuts a very long name and leaves no ragged edge", () => {
+    expect(receiptStem("a".repeat(400) + ".pdf")).toBe("a".repeat(100))
+    expect(receiptStem("a".repeat(99) + " b.pdf")).toBe("a".repeat(99))
+  })
+
+  /*
+   * Everything above either removes a character that could never survive, or
+   * is a no-op on its own output. That is what makes the ZIP path a fixed
+   * point, so a book does not rename its receipts on every round trip.
+   */
+  it("is idempotent", () => {
+    for (const name of [
+      "2.11.2026 - HC-Maschinentechnik - Lasku.pdf",
+      "CON.pdf",
+      "  ...x... .pdf",
+      '<>|".pdf',
+      "a".repeat(400) + ".pdf",
+      "Ääkkösiä.jpg",
     ]) {
-      const out = slug(s)
-      expect(out.length).toBeLessThanOrEqual(40)
-      expect(out).not.toMatch(/^-|-$/)
+      const once = receiptStem(name)
+      expect(receiptStem(once)).toBe(once)
     }
   })
 })
@@ -135,62 +166,90 @@ describe("isReceiptFile", () => {
 })
 
 describe("buildReceiptPaths", () => {
-  it("omits the index suffix for a single receipt", () => {
-    const e = entry({ atts: [att({ name: "lasku.pdf" })] })
+  it("names the file after the file", () => {
+    const e = entry({
+      atts: [att({ name: "2.11.2026 - HC-Maschinentechnik - Lasku.pdf" })],
+    })
     expect(buildReceiptPaths([e]).get(attachmentKey("e1", 0))).toBe(
-      "tositteet/2026/10/2026-10-28_lasku-1005-makinen-rakennus-oy.pdf"
+      "liitteet/2026/10/2.11.2026 - HC-Maschinentechnik - Lasku.pdf"
     )
   })
 
-  it("adds 1-based suffixes when an entry has several", () => {
+  /* The names tell them apart, so neither needs an index. */
+  it("keeps each of an entry's receipts under its own name", () => {
     const e = entry({
       id: "e2",
       date: "2026-01-15",
-      description: "Osto – K-Rauta – tarvikkeet",
-      atts: [att({ name: "a.jpg" }), att({ name: "b.pdf" })],
+      atts: [att({ name: "kuitti.jpg" }), att({ name: "lasku.pdf" })],
     })
     const paths = buildReceiptPaths([e])
     expect(paths.get(attachmentKey("e2", 0))).toBe(
-      "tositteet/2026/01/2026-01-15_osto-k-rauta-tarvikkeet_1.jpg"
+      "liitteet/2026/01/kuitti.jpg"
     )
-    expect(paths.get(attachmentKey("e2", 1))).toBe(
-      "tositteet/2026/01/2026-01-15_osto-k-rauta-tarvikkeet_2.pdf"
+    expect(paths.get(attachmentKey("e2", 1))).toBe("liitteet/2026/01/lasku.pdf")
+  })
+
+  it("takes the extension from the MIME type when the name has none", () => {
+    const e = entry({ atts: [att({ name: "scan", type: "image/png" })] })
+    expect(buildReceiptPaths([e]).get(attachmentKey("e1", 0))).toBe(
+      "liitteet/2026/10/scan.png"
     )
   })
 
   it("appends -2 then -3 on collisions", () => {
-    const mk = (id: string) =>
-      entry({ id, date: "2026-01-15", description: "Osto", atts: [att()] })
+    const mk = (id: string) => entry({ id, date: "2026-01-15", atts: [att()] })
     const paths = buildReceiptPaths([mk("a"), mk("b"), mk("c")])
-    expect(paths.get(attachmentKey("a", 0))).toBe(
-      "tositteet/2026/01/2026-01-15_osto.jpg"
-    )
-    expect(paths.get(attachmentKey("b", 0))).toBe(
-      "tositteet/2026/01/2026-01-15_osto-2.jpg"
-    )
-    expect(paths.get(attachmentKey("c", 0))).toBe(
-      "tositteet/2026/01/2026-01-15_osto-3.jpg"
-    )
+    expect(paths.get(attachmentKey("a", 0))).toBe("liitteet/2026/01/kuva.jpg")
+    expect(paths.get(attachmentKey("b", 0))).toBe("liitteet/2026/01/kuva-2.jpg")
+    expect(paths.get(attachmentKey("c", 0))).toBe("liitteet/2026/01/kuva-3.jpg")
   })
 
   it("detects collisions case-insensitively", () => {
     const paths = buildReceiptPaths([
-      entry({
-        id: "a",
-        date: "2026-01-15",
-        description: "Osto",
-        atts: [att()],
-      }),
-      entry({
-        id: "b",
-        date: "2026-01-15",
-        description: "osto",
-        atts: [att()],
-      }),
+      entry({ id: "a", date: "2026-01-15", atts: [att({ name: "Kuva.jpg" })] }),
+      entry({ id: "b", date: "2026-01-15", atts: [att({ name: "kuva.jpg" })] }),
     ])
-    expect(paths.get(attachmentKey("b", 0))).toBe(
-      "tositteet/2026/01/2026-01-15_osto-2.jpg"
+    expect(paths.get(attachmentKey("b", 0))).toBe("liitteet/2026/01/kuva-2.jpg")
+  })
+
+  /* Only within one month: the folder already keeps the two apart. */
+  it("leaves the same name in another month alone", () => {
+    const paths = buildReceiptPaths([
+      entry({ id: "a", date: "2026-01-15", atts: [att({ name: "kuva.jpg" })] }),
+      entry({ id: "b", date: "2026-02-15", atts: [att({ name: "kuva.jpg" })] }),
+    ])
+    expect(paths.get(attachmentKey("a", 0))).toBe("liitteet/2026/01/kuva.jpg")
+    expect(paths.get(attachmentKey("b", 0))).toBe("liitteet/2026/02/kuva.jpg")
+  })
+
+  it("falls back for a name a file system could not take at all", () => {
+    const e = entry({ atts: [att({ name: '<>|".jpg' })] })
+    expect(buildReceiptPaths([e]).get(attachmentKey("e1", 0))).toBe(
+      "liitteet/2026/10/liite.jpg"
     )
+  })
+
+  /*
+   * The name a re-import reads off the path is the name the next export
+   * writes, so a book can go round any number of times without its receipts
+   * drifting. `slug` is idempotent over its own output, which is what makes
+   * this hold.
+   */
+  it("makes the path a fixed point", () => {
+    for (const name of [
+      "2.11.2026 - HC-Maschinentechnik - Lasku.pdf",
+      "IMG_4417.jpg",
+      "Ääkkösiä öitä.jpg",
+      "!!!.jpg",
+      "a".repeat(80) + ".pdf",
+    ]) {
+      const first = entry({ atts: [att({ name })] })
+      const path = buildReceiptPaths([first]).get(attachmentKey("e1", 0))!
+      const again = entry({
+        atts: [att({ name: path.split("/").pop()! })],
+      })
+      expect(buildReceiptPaths([again]).get(attachmentKey("e1", 0))).toBe(path)
+    }
   })
 
   it("keeps a missing attachment's stored path", () => {
@@ -218,58 +277,38 @@ describe("buildReceiptPaths", () => {
     const missing = entry({
       id: "a",
       date: "2026-01-15",
-      description: "Osto",
       atts: [
-        att({
-          id: null,
-          missing: true,
-          path: "tositteet/2026/01/2026-01-15_osto.jpg",
-        }),
+        att({ id: null, missing: true, path: "liitteet/2026/01/kuva.jpg" }),
       ],
     })
-    const real = entry({
-      id: "b",
-      date: "2026-01-15",
-      description: "Osto",
-      atts: [att()],
-    })
+    const real = entry({ id: "b", date: "2026-01-15", atts: [att()] })
     /*
      * Order the real entry first: reserving missing paths up front means the
      * result does not depend on which one is seen first.
      */
     const paths = buildReceiptPaths([real, missing])
-    expect(paths.get(attachmentKey("b", 0))).toBe(
-      "tositteet/2026/01/2026-01-15_osto-2.jpg"
-    )
+    expect(paths.get(attachmentKey("b", 0))).toBe("liitteet/2026/01/kuva-2.jpg")
   })
 
   it("zero-pads the month folder", () => {
     const e = entry({ date: "2026-01-05", atts: [att()] })
     expect(buildReceiptPaths([e]).get(attachmentKey("e1", 0))).toContain(
-      "tositteet/2026/01/"
+      "liitteet/2026/01/"
+    )
+  })
+
+  it("names the folder in the export language", () => {
+    const e = entry({ atts: [att({ name: "lasku.pdf" })] })
+    expect(buildReceiptPaths([e], "en").get(attachmentKey("e1", 0))).toBe(
+      "attachments/2026/10/lasku.pdf"
     )
   })
 
   it("is stable under input shuffling", () => {
     const entries = [
-      entry({
-        id: "a",
-        date: "2026-03-01",
-        description: "Yksi",
-        atts: [att()],
-      }),
-      entry({
-        id: "b",
-        date: "2026-01-01",
-        description: "Kaksi",
-        atts: [att()],
-      }),
-      entry({
-        id: "c",
-        date: "2026-02-01",
-        description: "Kolme",
-        atts: [att()],
-      }),
+      entry({ id: "a", date: "2026-03-01", atts: [att({ name: "a.jpg" })] }),
+      entry({ id: "b", date: "2026-01-01", atts: [att({ name: "b.jpg" })] }),
+      entry({ id: "c", date: "2026-02-01", atts: [att({ name: "c.jpg" })] }),
     ]
     const a = buildReceiptPaths(entries)
     const b = buildReceiptPaths([...entries].reverse())
@@ -316,25 +355,22 @@ describe("cleanFileName", () => {
 })
 
 describe("suggestedBaseName", () => {
-  const d = new Date(2026, 9, 27)
-
   it("reuses the last file's name as it was, date included", () => {
-    expect(suggestedBaseName("toiminimi_2026-10-24.zip", "fi", d)).toBe(
+    expect(suggestedBaseName("toiminimi_2026-10-24.zip", "fi")).toBe(
       "toiminimi_2026-10-24"
     )
-    expect(suggestedBaseName("oma.csv", "en", d)).toBe("oma")
+    expect(suggestedBaseName("oma.csv", "en")).toBe("oma")
   })
 
-  it("falls back to the dated default", () => {
-    expect(suggestedBaseName(null, "fi", d)).toBe("kirjanpito_2026-10-27")
-    expect(suggestedBaseName(".zip", "en", d)).toBe("accounting_2026-10-27")
+  it("falls back to the default", () => {
+    expect(suggestedBaseName(null, "fi")).toBe("kirjanpito")
+    expect(suggestedBaseName(".zip", "en")).toBe("bookkeeping")
   })
 })
 
 describe("defaultFileBaseName", () => {
-  it("uses the Finnish or English stem plus today's date", () => {
-    const d = new Date(2026, 9, 24)
-    expect(defaultFileBaseName("fi", d)).toBe("kirjanpito_2026-10-24")
-    expect(defaultFileBaseName("en", d)).toBe("accounting_2026-10-24")
+  it("is the bare stem, with no date", () => {
+    expect(defaultFileBaseName("fi")).toBe("kirjanpito")
+    expect(defaultFileBaseName("en")).toBe("bookkeeping")
   })
 })

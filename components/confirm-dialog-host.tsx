@@ -77,11 +77,18 @@ export function ConfirmDialogHost() {
           ) : null}
         </AlertDialogHeader>
         <AlertDialogFooter>
-          {/* §8.11: cancel is focused by default. */}
-          <AlertDialogCancel autoFocus onClick={() => settle(false)}>
-            {options?.cancelLabel ?? ""}
-          </AlertDialogCancel>
+          {/*
+           * No cancel label means there is nothing to decide: the dialog is
+           * telling the user something, so one button closes it.
+           */}
+          {options?.cancelLabel ? (
+            /* §8.11: cancel is focused by default. */
+            <AlertDialogCancel autoFocus onClick={() => settle(false)}>
+              {options.cancelLabel}
+            </AlertDialogCancel>
+          ) : null}
           <AlertDialogAction
+            autoFocus={!options?.cancelLabel}
             variant={destructive ? "destructive" : "default"}
             onClick={() => settle(true)}
           >

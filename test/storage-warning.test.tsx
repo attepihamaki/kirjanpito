@@ -46,7 +46,7 @@ let close: ReturnType<typeof vi.spyOn>
 beforeEach(() => {
   localStorage.clear()
   useBookStore.setState(BOOK_INITIAL, true)
-  useBookStore.getState().newBook(2026)
+  useBookStore.getState().newBook(2026, "fi")
   useBookStore.setState({ dirty: false })
   add = vi.spyOn(toast, "add").mockReturnValue("storage")
   close = vi.spyOn(toast, "close").mockImplementation(() => {})

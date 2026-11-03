@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest"
 import { defaultCategories } from "@/lib/domain/accounts"
 import { parseCsv, serializeCsv, type ImportSuccess } from "@/lib/domain/csv"
 import { createIdFactory } from "@/lib/domain/id"
-import { attachmentKey, buildReceiptPaths } from "@/lib/domain/receipt-path"
+import {
+  CSV_FILE_NAME,
+  attachmentKey,
+  buildReceiptPaths,
+} from "@/lib/domain/receipt-path"
 import { entriesFromImport } from "@/lib/domain/test-helpers/canonical"
 import {
   indexCategories,
@@ -57,8 +61,8 @@ function packInputs(entries: Entry[]) {
     }
   }
   return {
-    csvName: "kirjanpito_2026-10-24.csv",
-    csvText: serializeCsv(entries, cats, paths),
+    csvName: CSV_FILE_NAME.fi,
+    csvText: serializeCsv(entries, cats, { paths }),
     paths,
     attachmentIds,
     read: async (id: string) => enc.encode(`bytes-${id}`),
@@ -102,11 +106,9 @@ describe("packZip", () => {
   it("lays the archive out as documented", async () => {
     const entries = [entry({ atts: [att({ id: "a1", name: "lasku.pdf" })] })]
     const unpacked = (await unpackZip(await packZip(packInputs(entries))))!
-    expect(unpacked.csvPath).toBe("kirjanpito_2026-10-24.csv")
+    expect(unpacked.csvPath).toBe("tositteet.csv")
     expect(unpacked.settingsText).toBe(SETTINGS_TEXT)
-    expect(unpacked.otherFiles).toEqual([
-      "tositteet/2026/10/2026-10-28_lasku-1005.pdf",
-    ])
+    expect(unpacked.otherFiles).toEqual(["liitteet/2026/10/lasku.pdf"])
   })
 
   it("reads an archive without settings.json as having none", async () => {
@@ -126,7 +128,7 @@ describe("packZip", () => {
     const bytes = await packZip({
       csvName: "a.csv",
       csvText,
-      paths: new Map([["k", "tositteet/2026/01/x.bin"]]),
+      paths: new Map([["k", "liitteet/2026/01/x.bin"]]),
       attachmentIds: new Map([["k", "id1"]]),
       read: async () => random,
       settingsText: SETTINGS_TEXT,
@@ -201,16 +203,48 @@ describe("readReceipt", () => {
   })
 
   it("falls back to the archive root", async () => {
-    const bytes = await archive("kirjanpito/data.csv", "tositteet/a.jpg")
+    const bytes = await archive("kirjanpito/data.csv", "liitteet/a.jpg")
     const unpacked = (await unpackZip(bytes))!
-    expect(await unpacked.readReceipt("tositteet/a.jpg")).toEqual(
+    expect(await unpacked.readReceipt("liitteet/a.jpg")).toEqual(
       enc.encode("kuitti")
     )
   })
 
   it("returns null for a path that is not there", async () => {
     const unpacked = (await unpackZip(await archive("data.csv", "a.jpg")))!
-    expect(await unpacked.readReceipt("tositteet/nope.jpg")).toBeNull()
+    expect(await unpacked.readReceipt("liitteet/nope.jpg")).toBeNull()
+  })
+
+  /*
+   * Changing the export language renames the receipt folder, so a save asks
+   * the file it is replacing for a path that file never held. Finding the
+   * receipt by its name is what keeps it from being dropped (§7.2).
+   */
+  it("finds a receipt that has moved to another folder", async () => {
+    const bytes = await archive("data.csv", "tositteet/2026/10/a.jpg")
+    const unpacked = (await unpackZip(bytes))!
+    expect(await unpacked.readReceipt("liitteet/2026/10/a.jpg")).toEqual(
+      enc.encode("kuitti")
+    )
+  })
+
+  it("refuses the fallback when two files share a name", async () => {
+    const bytes = await packZip({
+      csvName: "data.csv",
+      csvText: "date;type;amount\r\n",
+      paths: new Map([
+        ["e#0", "tositteet/2026/10/a.jpg"],
+        ["e#1", "tositteet/2026/11/a.jpg"],
+      ]),
+      attachmentIds: new Map([
+        ["e#0", "a1"],
+        ["e#1", "a2"],
+      ]),
+      read: async () => enc.encode("kuitti"),
+      settingsText: SETTINGS_TEXT,
+    })
+    const unpacked = (await unpackZip(bytes))!
+    expect(await unpacked.readReceipt("liitteet/2026/10/a.jpg")).toBeNull()
   })
 })
 
@@ -274,15 +308,15 @@ describe("full ZIP round trip", () => {
     expect(atts).toHaveLength(3)
     expect(atts.every((a) => a.missing && a.id === null)).toBe(true)
     expect(atts.map((a) => a.path)).toEqual([
-      "tositteet/2026/01/2026-01-15_osto-k-rauta-tarvikkeet_1.jpg",
-      "tositteet/2026/01/2026-01-15_osto-k-rauta-tarvikkeet_2.pdf",
-      "tositteet/2026/10/2026-10-28_lasku-1005.pdf",
+      "liitteet/2026/01/kuitti.jpg",
+      "liitteet/2026/01/lasku.pdf",
+      "liitteet/2026/10/lasku.pdf",
     ])
   })
 })
 
 describe("carrying receipts from the file being replaced", () => {
-  const PATH = "tositteet/2026/01/lasku.pdf"
+  const PATH = "liitteet/2026/01/lasku.pdf"
   const packed = (over: Partial<Parameters<typeof packZip>[0]> = {}) =>
     packZip({
       csvName: "kirjanpito.csv",
@@ -302,7 +336,7 @@ describe("carrying receipts from the file being replaced", () => {
     })
     const read = await receiptReader(old)
     expect(await read(PATH)).toEqual(bytes)
-    expect(await read("tositteet/ei-ole.pdf")).toBeNull()
+    expect(await read("liitteet/ei-ole.pdf")).toBeNull()
   })
 
   it("keeps a receipt this browser does not hold", async () => {

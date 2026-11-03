@@ -36,7 +36,7 @@ describe("persisted preferences and bookkeeping (§12)", () => {
   })
 
   it("creates the key with the bookkeeping and keeps it after a close", () => {
-    useBookStore.getState().newBook(2026)
+    useBookStore.getState().newBook(2026, "fi")
     expect(storedBook()?.state.open).toBe(true)
 
     /*
@@ -189,7 +189,7 @@ describe("persisted preferences and bookkeeping (§12)", () => {
    * must not turn it off.
    */
   it("keeps the linked file's timestamp across a reload", () => {
-    useBookStore.getState().newBook(2026)
+    useBookStore.getState().newBook(2026, "fi")
     useBookStore.getState().markSaved({ fileName: "k.zip", savedAt: 1234 })
 
     expect(storedBook()?.state.savedAt).toBe(1234)

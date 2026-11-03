@@ -43,10 +43,14 @@ function ExportDialogForm({ onClose }: { onClose: () => void }) {
     [entries]
   )
 
-  // §7.3: the last file's name, or the dated default for a book with none.
-  const [name, setName] = React.useState(() =>
-    suggestedBaseName(useBookStore.getState().fileName, f.lang)
-  )
+  /*
+   * §7.3: the last file's name, or the default for a book with none. The
+   * book's own export language, not the UI's — the name belongs to the file.
+   */
+  const [name, setName] = React.useState(() => {
+    const s = useBookStore.getState()
+    return suggestedBaseName(s.fileName, s.exportLang)
+  })
   const [busy, setBusy] = React.useState(false)
 
   const run = async () => {

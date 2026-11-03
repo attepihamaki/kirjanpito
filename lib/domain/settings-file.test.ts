@@ -9,6 +9,7 @@ import {
   stepWidget,
 } from "@/lib/domain/overview-layout"
 import {
+  SETTINGS_VERSION,
   mergeCategories,
   parseSettings,
   serializeSettings,
@@ -30,6 +31,7 @@ function settings(): BookSettings {
   return {
     language: "en",
     theme: "dark",
+    exportLang: "en",
     vatPeriod: "quarter",
     bookStart: "2025-10",
     vatFiled: { "2026-Q2": "2026-08-10", "2026-Q1": "2026-05-11" },
@@ -86,6 +88,7 @@ describe("settings.json", () => {
       JSON.stringify({
         language: "sv",
         theme: "dark",
+        exportLang: "sv",
         vatPeriod: "week",
         bookStart: "2026-13",
         vatFiled: { "2026-09": "2026-11-10", "2026-13": "2026-01-01", x: 1 },
@@ -101,9 +104,34 @@ describe("settings.json", () => {
   })
 
   it("ignores keys it does not know", () => {
+    expect(parseSettings(JSON.stringify({ future: true }))).toEqual({})
+  })
+
+  /*
+   * Reading stays lenient — a newer file still opens — but the loss is said
+   * out loud rather than left for the user to discover (§8).
+   */
+  it("flags a file written by a newer version", () => {
     expect(parseSettings(JSON.stringify({ version: 9, future: true }))).toEqual(
-      {}
+      { fromNewerVersion: true }
     )
+    expect(
+      parseSettings(JSON.stringify({ version: SETTINGS_VERSION }))
+        .fromNewerVersion
+    ).toBe(undefined)
+  })
+
+  /*
+   * Absent means "the file did not say", which leaves the book's own export
+   * language alone. A file that names one must be saved back in it (§7.1).
+   */
+  it("leaves out an export language the file does not give", () => {
+    expect(parseSettings(JSON.stringify({ theme: "dark" })).exportLang).toBe(
+      undefined
+    )
+    expect(parseSettings(JSON.stringify({ exportLang: "en" }))).toEqual({
+      exportLang: "en",
+    })
   })
 })
 

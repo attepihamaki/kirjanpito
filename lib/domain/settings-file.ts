@@ -47,6 +47,14 @@ export type ThemeChoice = "light" | "dark" | "system"
 export interface BookSettings {
   language: Lang
   theme: ThemeChoice
+  /**
+   * The language the bookkeeping is written out in (§7.1, §7.2): the ZIP's
+   * suggested name, the CSV's name and column labels, the word in each
+   * `type`, `mode`, `eu_purchase` and `paid` cell, the category names, and the
+   * receipt folder. It belongs to the book rather than to the browser, so a
+   * file opened elsewhere is saved back in the shape it arrived in.
+   */
+  exportLang: Lang
   vatPeriod: VatPeriodKind
   /** `"2026-10"`: the month the bookkeeping began, or null to follow the first entry. */
   bookStart: string | null
@@ -79,7 +87,14 @@ export interface BookSettings {
  * What a file supplied. Every field is optional: absent means the file did
  * not carry a usable value, and the caller keeps what it already has.
  */
-export type ParsedSettings = Partial<BookSettings>
+export type ParsedSettings = Partial<BookSettings> & {
+  /**
+   * The file says it was written by a later version than this one, so it may
+   * hold settings this reader passed over. Reading stays lenient; the import
+   * says so rather than leaving the loss silent (§8).
+   */
+  fromNewerVersion?: true
+}
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/
@@ -206,11 +221,17 @@ export function parseSettings(text: string): ParsedSettings {
   if (!isRecord(raw)) return {}
 
   const out: ParsedSettings = {}
+  if (typeof raw.version === "number" && raw.version > SETTINGS_VERSION) {
+    out.fromNewerVersion = true
+  }
   if (raw.language === "fi" || raw.language === "en") {
     out.language = raw.language
   }
   if (raw.theme === "light" || raw.theme === "dark" || raw.theme === "system") {
     out.theme = raw.theme
+  }
+  if (raw.exportLang === "fi" || raw.exportLang === "en") {
+    out.exportLang = raw.exportLang
   }
   if (
     raw.vatPeriod === "month" ||
@@ -340,6 +361,7 @@ export function serializeSettings(s: BookSettings): string {
     version: SETTINGS_VERSION,
     language: s.language,
     theme: s.theme,
+    exportLang: s.exportLang,
     vatPeriod: s.vatPeriod,
     bookStart: s.bookStart,
     vatFiled: Object.fromEntries(

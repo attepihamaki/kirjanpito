@@ -78,7 +78,7 @@ describe("recurring entries", () => {
     )
     fireEvent.click(screen.getByRole("button", { name: "Tarkista ja lisää" }))
     fireEvent.click(
-      await screen.findByRole("button", { name: "Lisää 1 kirjaus" })
+      await screen.findByRole("button", { name: "Lisää 1 tosite" })
     )
 
     await waitFor(() => expect(useBookStore.getState().entries).toHaveLength(1))

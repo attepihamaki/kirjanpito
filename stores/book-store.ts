@@ -22,7 +22,13 @@ import {
 import { entryChanges, type ChangeRecord } from "@/lib/domain/change-log"
 import type { LoanOpening, YearEnd } from "@/lib/domain/form5-balance"
 import type { PageSize } from "@/lib/domain/settings-file"
-import type { AmountMode, Category, Entry, EntryType } from "@/lib/domain/types"
+import type {
+  AmountMode,
+  Category,
+  Entry,
+  EntryType,
+  Lang,
+} from "@/lib/domain/types"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 import { LANG_STORAGE_KEY, writeLang } from "@/stores/lang-store"
 
@@ -142,6 +148,8 @@ export type DialogState =
     }
   | { kind: "viewer"; entryId: string; index: number }
   | { kind: "export" }
+  /** The settings a new bookkeeping is started with (§8.3). */
+  | { kind: "setup" }
   /** Add a month's recurring entries (§8.5). `month` is `"2026-10"`. */
   | { kind: "recurring"; month: string }
 
@@ -164,6 +172,12 @@ export interface BookState {
   ctSize: PageSize
   /** Desktop sidebar expanded or collapsed to icons (§8.2). */
   sidebarOpen: boolean
+  /**
+   * The language the bookkeeping is written out in (§7.1, §7.2). Saved in
+   * settings.json, and unlike the UI language it belongs to the book: a file
+   * opened in another browser is saved back in the shape it arrived in.
+   */
+  exportLang: Lang
   /** How often the user files a VAT return (§6.5). Saved in settings.json. */
   vatPeriod: VatPeriodKind
   /**
@@ -268,7 +282,19 @@ export interface BookState {
 
 export interface BookActions {
   setHydrated(partial: Partial<BookState>): void
-  newBook(year: number): void
+  /** Start an empty bookkeeping, written out in `exportLang` (§7.1). */
+  newBook(year: number, exportLang: Lang): void
+  /**
+   * Apply the settings the setup dialog collected (§8.3), all at once and
+   * without marking the book dirty: a brand-new bookkeeping nobody has typed
+   * into has nothing unsaved to warn about.
+   */
+  startBook(settings: {
+    exportLang: Lang
+    vatPeriod: VatPeriodKind
+    bookStart: string | null
+    autosave: boolean
+  }): void
   closeBook(): void
   replaceBook(next: {
     entries: Entry[]
@@ -283,6 +309,7 @@ export interface BookActions {
      * filed marks start empty and everything else stays as it was.
      */
     settings?: {
+      exportLang?: Lang
       vatPeriod?: VatPeriodKind
       bookStart?: string | null
       vatFiled?: Record<string, string>
@@ -339,6 +366,11 @@ export interface BookActions {
   setImporting(importing: boolean): void
   setSaving(saving: boolean): void
   setLastEntryDefaults(next: { mode: AmountMode; type: EntryType }): void
+  /**
+   * The language the file is written in (§7.1). It changes the bytes a save
+   * would produce, so unlike the UI language it marks the book dirty.
+   */
+  setExportLang(lang: Lang): void
   setVatPeriod(kind: VatPeriodKind): void
   /** `"2026-10"`, or null to follow the first entry. */
   setBookStart(month: string | null): void
@@ -404,6 +436,7 @@ function initialState(): BookState {
     ledgerSize: 10,
     ctSize: 25,
     sidebarOpen: true,
+    exportLang: "fi",
     vatPeriod: "month",
     bookStart: null,
     vatFiled: {},
@@ -460,6 +493,7 @@ type PersistedBook = Pick<
   | "ledgerSize"
   | "ctSize"
   | "sidebarOpen"
+  | "exportLang"
   | "vatPeriod"
   | "bookStart"
   | "vatFiled"
@@ -617,7 +651,7 @@ export const useBookStore = create<BookStore>()(
 
       setHydrated: (partial) => set({ ...partial, hydrated: true }),
 
-      newBook: (year) =>
+      newBook: (year, exportLang) =>
         set({
           ...clearedFilters,
           ...unlinked,
@@ -627,6 +661,11 @@ export const useBookStore = create<BookStore>()(
           cats: defaultCategories(),
           year,
           dirty: false,
+          /*
+           * A new book is born in the language the caller is working in; the
+           * setup dialog can still change it before anything is written.
+           */
+          exportLang,
           /*
            * The filing period and the layout carry over as the user's habits;
            * the start month and filed marks belong to the bookkeeping.
@@ -644,6 +683,19 @@ export const useBookStore = create<BookStore>()(
           undoAttachmentIds: [],
           bookEpoch: get().bookEpoch + 1,
           gcTick: get().gcTick + 1,
+        }),
+
+      startBook: (settings) =>
+        set({
+          ...settings,
+          vatIndex: clampVatIndex(
+            get().vatIndex,
+            get().vatPeriod,
+            settings.vatPeriod
+          ),
+          autosavePaused: false,
+          dirty: false,
+          dialog: { kind: "none" },
         }),
 
       closeBook: () =>
@@ -692,6 +744,11 @@ export const useBookStore = create<BookStore>()(
           savedAt: next.savedAt,
           year: next.year,
           dirty: next.dirty,
+          /*
+           * Book data, so it comes from the file or falls back to the default
+           * rather than carrying over from the bookkeeping being replaced.
+           */
+          exportLang: s.exportLang ?? "fi",
           vatPeriod,
           vatIndex: clampVatIndex(get().vatIndex, get().vatPeriod, vatPeriod),
           bookStart: s.bookStart ?? null,
@@ -841,6 +898,7 @@ export const useBookStore = create<BookStore>()(
        * the file behind and marks the book dirty, as an entry edit does. The
        * VAT view shows the filing period, the period the user reports in.
        */
+      setExportLang: (exportLang) => set({ exportLang, dirty: true }),
       setVatPeriod: (vatPeriod) =>
         set({
           vatPeriod,
@@ -996,6 +1054,7 @@ export const useBookStore = create<BookStore>()(
         ledgerSize: s.ledgerSize,
         ctSize: s.ctSize,
         sidebarOpen: s.sidebarOpen,
+        exportLang: s.exportLang,
         vatPeriod: s.vatPeriod,
         bookStart: s.bookStart,
         vatFiled: s.vatFiled,

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest"
 import { defaultCategories } from "@/lib/domain/accounts"
 import {
   CSV_HEADER,
+  csvHeaderLine,
   detectDelimiter,
   decodeCsv,
   parseCsv,
@@ -64,8 +65,11 @@ function ok(result: ReturnType<typeof parseCsv>): ImportSuccess {
 describe("serializeCsv", () => {
   const out = serializeCsv(sample, cats)
 
-  it("starts with a BOM and the exact header", () => {
-    expect(out.startsWith(`﻿${HEADER}\r\n`)).toBe(true)
+  it("starts with a BOM and the exact header of its language", () => {
+    expect(out.startsWith(`﻿${csvHeaderLine("fi")}\r\n`)).toBe(true)
+    expect(csvHeaderLine("fi")).toBe(
+      "tositenro;pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;liitteet;verokausi;maksettu;ostajan_alv;eu_osto"
+    )
     expect(HEADER).toBe(
       "voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase"
     )
@@ -88,6 +92,12 @@ describe("serializeCsv", () => {
   it("writes the account number and the Finnish category name", () => {
     expect(out).toContain(";300;Myynti – Suomi;")
     expect(out).not.toContain("Sales – Finland")
+  })
+
+  it("writes the English category name in an English file", () => {
+    const en = serializeCsv(sample, cats, { lang: "en" })
+    expect(en).toContain(";300;Sales – Finland;")
+    expect(en).not.toContain("Myynti – Suomi")
   })
 
   it("writes amounts with a decimal comma and no grouping", () => {
@@ -135,14 +145,12 @@ describe("serializeCsv", () => {
       [entry({ atts: [att({ name: "a.jpg" }), att({ name: "b.pdf" })] })],
       cats
     )
-    expect(text).toContain(
-      "tositteet/2026/10/2026-10-28_lasku-1005_1.jpg|tositteet/2026/10/2026-10-28_lasku-1005_2.pdf"
-    )
+    expect(text).toContain("liitteet/2026/10/a.jpg|liitteet/2026/10/b.pdf")
   })
 
   it("writes receipt paths even when no ZIP is produced", () => {
     const text = serializeCsv([entry({ atts: [att()] })], cats)
-    expect(text).toContain("tositteet/2026/10/2026-10-28_lasku-1005.pdf")
+    expect(text).toContain("liitteet/2026/10/lasku.pdf")
   })
 
   it("writes no path for an attachment that is not an image or a PDF", () => {
@@ -244,10 +252,9 @@ describe("parseCsv — happy path", () => {
 })
 
 describe("parseCsv — Finnish column names", () => {
-  const FINNISH_HEADER =
-    "tositenro;pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite;verokausi;maksettu;ostajan_alv;eu_osto"
+  const FINNISH_HEADER = csvHeaderLine("fi")
   const ROW =
-    "7;2026-11-12;ALV-maksu;kulu;2939;Arvonlisäveron maksu;362,18;0;netto;tositteet/2026/11/a.pdf;2026-10"
+    "7;2026-11-12;ALV-maksu;kulu;2939;Arvonlisäveron maksu;362,18;0;netto;liitteet/2026/11/a.pdf;2026-10"
   const EXPECTED = {
     voucher: 7,
     date: "2026-11-12",
@@ -257,7 +264,7 @@ describe("parseCsv — Finnish column names", () => {
     amount: 36218,
     vatRate: 0,
     amountMode: "net",
-    paths: ["tositteet/2026/11/a.pdf"],
+    paths: ["liitteet/2026/11/a.pdf"],
     settles: "2026-10",
   }
 
@@ -289,16 +296,6 @@ describe("parseCsv — Finnish column names", () => {
     expect(r.entries[0].amount).toBe(10000)
   })
 
-  it("accepts tositenumero for the voucher number", () => {
-    const r = ok(
-      parseCsv(
-        csvText(["tositenumero;pvm;tyyppi;summa", "4;2026-01-08;tulo;1,00"]),
-        baseCats
-      )
-    )
-    expect(r.entries[0].voucher).toBe(4)
-  })
-
   it("accepts a header that mixes the two languages", () => {
     const r = ok(
       parseCsv(csvText(["pvm;type;summa", "2026-01-08;tulo;1,00"]), baseCats)
@@ -314,15 +311,108 @@ describe("parseCsv — Finnish column names", () => {
     })
   })
 
-  it("writes the English header when a Finnish file is saved again", () => {
+  it("writes whichever header the export language asks for", () => {
     const r = ok(parseCsv(csvText([FINNISH_HEADER, ROW]), baseCats))
-    const again = serializeCsv(
-      entriesFromImport(r.entries),
-      indexCategories(r.categories)
+    const entries = entriesFromImport(r.entries)
+    const cats = indexCategories(r.categories)
+
+    const fi = serializeCsv(entries, cats, { lang: "fi" })
+    expect(fi.split("\r\n")[0]).toBe(`﻿${FINNISH_HEADER}`)
+    expect(fi).toContain(";kulu;")
+    expect(fi).toContain(";netto;")
+
+    const en = serializeCsv(entries, cats, { lang: "en" })
+    expect(en.split("\r\n")[0]).toBe(`﻿${HEADER}`)
+    expect(en).toContain(";expense;")
+    expect(en).toContain(";net;")
+  })
+})
+
+describe("the words in a cell follow the export language", () => {
+  const e = entry({
+    type: "expense",
+    catId: "344-other",
+    amountMode: "net",
+    paidOn: null,
+    euPurchase: "goods",
+    vatRate: 25.5,
+  })
+
+  /*
+   * An unrecognised `mode` reads as gross, so a word the writer knows and the
+   * reader does not would keep the number and change what it means: 1 000,00
+   * net at 25,5 % would come back as 1 000,00 gross, i.e. 796,81 net. Nothing
+   * downstream would notice, so this is asserted per language and per mode.
+   */
+  it.each(["fi", "en"] as const)(
+    "brings every amount mode back unchanged from a %s file",
+    (lang) => {
+      for (const amountMode of ["gross", "net"] as const) {
+        const one = entry({ amountMode, amount: 100_000, vatRate: 25.5 })
+        const text = serializeCsv([one], cats, { lang })
+        const back = ok(parseCsv(text, baseCats)).entries[0]
+        expect(back.amountMode).toBe(amountMode)
+        expect(back.amount).toBe(100_000)
+      }
+    }
+  )
+
+  it.each(["fi", "en"] as const)(
+    "round-trips type, payment and EU purchase through a %s file",
+    (lang) => {
+      const text = serializeCsv([e], cats, { lang })
+      const back = ok(parseCsv(text, baseCats)).entries[0]
+      expect(back).toMatchObject({
+        type: "expense",
+        catId: "344-other",
+        amountMode: "net",
+        paidOn: null,
+        euPurchase: "goods",
+      })
+    }
+  )
+
+  it("writes the English words only in an English file", () => {
+    const en = serializeCsv([e], cats, { lang: "en" })
+    expect(en).toContain(";expense;")
+    expect(en).toContain(";net;")
+    expect(en).toContain(";open;")
+    expect(en).toContain(";goods")
+
+    const fi = serializeCsv([e], cats, { lang: "fi" })
+    expect(fi).toContain(";kulu;")
+    expect(fi).toContain(";netto;")
+    expect(fi).toContain(";avoin;")
+    expect(fi).toContain(";tavara")
+  })
+
+  /*
+   * The decimal comma and the ";" delimiter are what let the file open in a
+   * European Excel, and the ISO date is unambiguous. None of them is a word,
+   * so none of them follows the language (§7.1).
+   */
+  it("writes the same numbers, dates and delimiter in both languages", () => {
+    const strip = (text: string) =>
+      text
+        .split("\r\n")
+        .slice(1)
+        .map((line) => line.split(";"))
+        // Drop the three columns that hold words.
+        .map((cells) => [cells[1], cells[6], cells[7], cells[11]])
+
+    expect(strip(serializeCsv(sample, cats, { lang: "en" }))).toEqual(
+      strip(serializeCsv(sample, cats, { lang: "fi" }))
     )
-    expect(again.split("\r\n")[0]).toBe(`﻿${HEADER}`)
-    expect(again).toContain(";kulu;")
-    expect(again).toContain(";netto;")
+    expect(serializeCsv(sample, cats, { lang: "en" })).toContain(";1882,50;")
+    expect(serializeCsv(sample, cats, { lang: "en" })).toContain(";25,5;")
+  })
+
+  it("still accepts veroton, which it never writes", () => {
+    const text = csvText([
+      HEADER,
+      "1;2026-01-08;A;tulo;300;;10,00;25,5;veroton",
+    ])
+    expect(ok(parseCsv(text, baseCats)).entries[0].amountMode).toBe("net")
   })
 })
 
@@ -343,6 +433,40 @@ describe("parseCsv — required columns", () => {
       code: "missing-columns",
       missing: ["date", "type", "amount"],
     })
+  })
+
+  /*
+   * No compatibility layer stands behind an older or foreign file, so one has
+   * to be refused or reported rather than half-read (§8).
+   */
+  it("refuses a file in which nothing is a bookkeeping column", () => {
+    expect(
+      parseCsv(csvText(["nimi;osoite;puhelin", "a;b;c"]), baseCats)
+    ).toEqual({ ok: false, code: "not-a-book" })
+  })
+
+  it("imports but reports a column it does not know", () => {
+    const r = ok(
+      parseCsv(
+        csvText([
+          "date;type;amount;tosite",
+          "2026-01-08;tulo;100,00;liitteet/a.pdf",
+        ]),
+        baseCats
+      )
+    )
+    expect(r.entries).toHaveLength(1)
+    // The column was not read, so its path is not carried into the entry.
+    expect(r.entries[0].paths).toEqual([])
+    expect(r.warnings).toContainEqual({
+      code: "unknown-columns",
+      columns: ["tosite"],
+    })
+  })
+
+  it("says nothing about a file whose every column it knows", () => {
+    const r = ok(parseCsv(serializeCsv(sample, cats), baseCats))
+    expect(r.warnings).toEqual([])
   })
 
   it("accepts a file with only the three required columns", () => {
@@ -903,19 +1027,19 @@ describe("CSV round trip", () => {
     expect(restored[0].atts).toEqual([
       {
         id: null,
-        name: "2026-10-28_lasku-1005_1.jpg",
+        name: "a.jpg",
         type: "",
         size: 0,
         missing: true,
-        path: "tositteet/2026/10/2026-10-28_lasku-1005_1.jpg",
+        path: "liitteet/2026/10/a.jpg",
       },
       {
         id: null,
-        name: "2026-10-28_lasku-1005_2.pdf",
+        name: "b.pdf",
         type: "",
         size: 0,
         missing: true,
-        path: "tositteet/2026/10/2026-10-28_lasku-1005_2.pdf",
+        path: "liitteet/2026/10/b.pdf",
       },
     ])
   })

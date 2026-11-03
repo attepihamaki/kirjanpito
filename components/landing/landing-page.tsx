@@ -35,7 +35,7 @@ import { isBookFile, useFileDrop } from "@/hooks/use-file-drop"
  * From csv-header, not csv: that module pulls in papaparse, which has no
  * business in the landing page bundle. csv-header has no dependencies.
  */
-import { CSV_HEADER_LINE } from "@/lib/domain/csv-header"
+import { csvHeaderLine } from "@/lib/domain/csv-header"
 import { MINUS } from "@/lib/domain/money"
 import { startNewBook } from "@/lib/commands/book-commands"
 import { APP_ROUTES, LANDING, LANDING_FAQ_ID } from "@/lib/site"
@@ -238,16 +238,9 @@ function LandingBody() {
             </div>
             <pre className="overflow-x-auto rounded-lg border border-sheet-edge bg-sheet p-3 text-[0.7rem] leading-relaxed">
               <code>
-                <b>{CSV_HEADER_LINE}</b>
+                <b>{csvHeaderLine(f.lang)}</b>
                 {"\n"}
-                14;2026-10-10;Osto – K-Rauta – tarvikkeet;kulu;333;Ostot ja
-                varastojen muutokset;100,00;25,5;brutto;tositteet/2026/10/…jpg
-                {"\n"}
-                15;2026-10-28;Lasku 1005 – Mäkinen Rakennus Oy;tulo;300;Myynti –
-                Suomi;1882,50;25,5;brutto;tositteet/2026/10/…pdf
-                {"\n"}
-                16;2026-10-30;Pankin palvelumaksut;kulu;349;Muut
-                rahoituskulut;8,50;0;brutto;
+                {f.t("landing.csvSample")}
               </code>
             </pre>
           </div>

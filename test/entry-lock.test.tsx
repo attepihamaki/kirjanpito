@@ -48,7 +48,7 @@ describe("a locked entry in the dialog", () => {
     mount({ "2026-03": "2026-04-12" })
 
     expect(screen.queryByText(/Kirjanpitolaki/)).not.toBeInTheDocument()
-    expect(screen.getByLabelText("Selite")).toBeDisabled()
+    expect(screen.getByLabelText("Kuvaus")).toBeDisabled()
 
     fireEvent.click(screen.getByRole("button", { name: "Lukittu" }))
 

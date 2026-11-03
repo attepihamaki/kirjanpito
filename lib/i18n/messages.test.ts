@@ -88,7 +88,7 @@ describe("translate", () => {
 
   it("interpolates params", () => {
     expect(t("confirm.deleteMessage", "fi", { x: "Lasku 1005" })).toBe(
-      "Kirjaus ”Lasku 1005” poistetaan."
+      "Tosite ”Lasku 1005” poistetaan."
     )
     expect(t("table.pageOf", "en", { p: 1, n: 2 })).toBe("Page 1 of 2")
   })
@@ -105,11 +105,11 @@ describe("translate", () => {
   })
 
   it("picks singular at n = 1 and plural otherwise, in both languages", () => {
-    expect(t("ledger.entryCount", "fi", { n: 1 })).toBe("1 kirjaus")
-    expect(t("ledger.entryCount", "fi", { n: 16 })).toBe("16 kirjausta")
-    expect(t("ledger.entryCount", "en", { n: 1 })).toBe("1 entry")
-    expect(t("ledger.entryCount", "en", { n: 16 })).toBe("16 entries")
-    expect(t("receipt.count", "fi", { n: 2 })).toBe("2 tositetta")
+    expect(t("ledger.entryCount", "fi", { n: 1 })).toBe("1 tosite")
+    expect(t("ledger.entryCount", "fi", { n: 16 })).toBe("16 tositetta")
+    expect(t("ledger.entryCount", "en", { n: 1 })).toBe("1 voucher")
+    expect(t("ledger.entryCount", "en", { n: 16 })).toBe("16 vouchers")
+    expect(t("receipt.count", "fi", { n: 2 })).toBe("2 liitettä")
     expect(t("settings.categoryCount", "en", { n: 32 })).toBe("32 categories")
   })
 
@@ -216,6 +216,6 @@ describe("createFormatters", () => {
 
   it("exposes a bound t()", () => {
     expect(fi.t("nav.ledger")).toBe("Kirjanpito")
-    expect(en.t("ledger.entryCount", { n: 3 })).toBe("3 entries")
+    expect(en.t("ledger.entryCount", { n: 3 })).toBe("3 vouchers")
   })
 })

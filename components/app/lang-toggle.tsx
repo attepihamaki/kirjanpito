@@ -11,14 +11,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useT } from "@/components/lang-provider"
-import { useLangStore } from "@/stores/lang-store"
+import { LANGS, LANG_NAMES, useLangStore } from "@/stores/lang-store"
 import type { Lang } from "@/lib/domain/types"
-
-/** Endonyms, so each option reads the same whichever language is active. */
-const LANGS: ReadonlyArray<{ code: Lang; label: string }> = [
-  { code: "fi", label: "Suomi" },
-  { code: "en", label: "English" },
-]
 
 /**
  * The language picker (§8.2): an icon button opening a checked list, the way
@@ -52,9 +46,9 @@ export function LangToggle({ className }: { className?: string }) {
           value={lang}
           onValueChange={(value) => setLang(value as Lang)}
         >
-          {LANGS.map(({ code, label }) => (
+          {LANGS.map((code) => (
             <DropdownMenuRadioItem key={code} value={code} lang={code}>
-              {label}
+              {LANG_NAMES[code]}
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>

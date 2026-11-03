@@ -2,11 +2,11 @@
 
 import * as React from "react"
 
-import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { isFileHandleSupported } from "@/lib/browser/file-handle"
 import { saveBook } from "@/lib/commands/io-commands"
 import { defaultFileBaseName } from "@/lib/domain/receipt-path"
+import { useBookStore } from "@/stores/book-store"
 
 /**
  * Saving the bookkeeping back to its own file (§7.5).
@@ -77,10 +77,10 @@ export function useShortcut(): (key: string, shift?: boolean) => Shortcut {
  * and the save picker are refused without one.
  */
 export function useSaveBook(): () => void {
-  const f = useFormatters()
   const ctx = useCommandCtx()
 
   return React.useCallback(() => {
-    void saveBook(ctx, defaultFileBaseName(f.lang))
-  }, [ctx, f.lang])
+    // The book's own language, not the UI's: the name belongs to the file.
+    void saveBook(ctx, defaultFileBaseName(useBookStore.getState().exportLang))
+  }, [ctx])
 }

@@ -20,7 +20,18 @@ export const LANG_STORAGE_KEY = "lang"
 
 export const DEFAULT_LANG: Lang = "fi"
 
-const LANGS: readonly Lang[] = ["fi", "en"]
+export const LANGS: readonly Lang[] = ["fi", "en"]
+
+/**
+ * Endonyms, so each option reads the same whichever language is active. They
+ * are names rather than UI copy, which is why they are here and not in the
+ * dictionary: the language picker and the export-language setting (§8.10)
+ * both offer the same two words.
+ */
+export const LANG_NAMES: Readonly<Record<Lang, string>> = {
+  fi: "Suomi",
+  en: "English",
+}
 
 function readLang(): Lang | null {
   try {

@@ -136,7 +136,9 @@ describe("VatView", () => {
     useBookStore.setState({ bookStart: "2026-10", vatIndex: 9 })
     mount(<VatView />)
 
-    expect(screen.getAllByText("Ei ilmoitusta")).toHaveLength(9)
+    // Only the selected one of them is left in the strip, to carry the banner.
+    expect(screen.queryByText("Tammi")).toBeNull()
+    expect(screen.getAllByText("Ei ilmoitusta")).toHaveLength(1)
     expect(screen.queryByText("Myöhässä")).toBeNull()
     expect(screen.getByText(/ennen kirjanpidon aloituskuukautta/)).toBeVisible()
     expect(
@@ -387,6 +389,6 @@ describe("journal and general ledger (§8.4)", () => {
   it("says so when the year has no entries", () => {
     useBookStore.setState({ year: 2025 })
     mount(<JournalView />)
-    expect(screen.getByText("Ei kirjauksia vuonna 2025.")).toBeInTheDocument()
+    expect(screen.getByText("Ei tositteita vuonna 2025.")).toBeInTheDocument()
   })
 })

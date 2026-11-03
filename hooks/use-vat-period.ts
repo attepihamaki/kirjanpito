@@ -67,12 +67,25 @@ export function useVatPeriod() {
       ),
     [bookStart, entries]
   )
-  const periods = React.useMemo(() => vatPeriods(mode, year), [mode, year])
-  const statuses: VatPeriodStatus[] = periods.map((p) =>
+  const all = React.useMemo(() => vatPeriods(mode, year), [mode, year])
+  const current = all.find((p) => p.index === index) ?? all[0]
+  const currentStatus = periodStatus(current, today, vatFiled, start)
+
+  /*
+   * A period that ended before the book began owes no return and is left out
+   * of the strip, so a business founded in October is not offered January to
+   * September. The period on screen always stays, so the strip can never be
+   * empty or lose its selected chip; its banner is what explains the period
+   * to a user who reached it another way.
+   */
+  const shown = all.filter(
+    (p) =>
+      p.index === current.index ||
+      periodStatus(p, today, vatFiled, start) !== "before"
+  )
+  const statuses: VatPeriodStatus[] = shown.map((p) =>
     periodStatus(p, today, vatFiled, start)
   )
-  const current = periods.find((p) => p.index === index) ?? periods[0]
-  const currentStatus = periodStatus(current, today, vatFiled, start)
 
   const label =
     mode === "year"
@@ -81,5 +94,13 @@ export function useVatPeriod() {
         ? f.t("vat.quarterN", { q: index, y: year })
         : `${f.month(index - 1)} ${year}`
 
-  return { mode, label, report, periods, statuses, current, currentStatus }
+  return {
+    mode,
+    label,
+    report,
+    periods: shown,
+    statuses,
+    current,
+    currentStatus,
+  }
 }

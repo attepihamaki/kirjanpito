@@ -25,18 +25,21 @@ import {
   serializeCsv,
   type ImportSuccess,
 } from "@/lib/domain/csv"
-import { CSV_HEADER_LINE } from "@/lib/domain/csv-header"
+import { csvColumnLabel, csvHeaderLine } from "@/lib/domain/csv-header"
 import { uid } from "@/lib/domain/id"
 import {
+  CSV_FILE_NAME,
   attachmentKey,
   buildReceiptPaths,
   cleanFileName,
+  defaultFileBaseName,
   mimeForName,
 } from "@/lib/domain/receipt-path"
 import {
   indexCategories,
   type Attachment,
   type Entry,
+  type Lang,
 } from "@/lib/domain/types"
 import {
   parseSettings,
@@ -47,7 +50,7 @@ import { normalizeLayout } from "@/lib/domain/overview-layout"
 import { packZip, receiptReader, unpackZip } from "@/lib/domain/zip"
 import { SKIP_CODE_KEYS } from "@/lib/i18n/messages"
 import { APP_ROUTES } from "@/lib/site"
-import { confirm } from "@/lib/ui/confirm"
+import { alertDialog, confirm } from "@/lib/ui/confirm"
 import type { Ctx } from "@/lib/commands/ctx"
 import { guardDirty, refuseIfOpenElsewhere } from "@/lib/commands/book-commands"
 import { useBookStore } from "@/stores/book-store"
@@ -70,7 +73,8 @@ function importSummary(
   receipts: {
     imported: number
     missing: number
-  }
+  },
+  settings: ParsedSettings | null
 ): string {
   const rejected = result.rejectedReceiptCount
   let text = ctx.t("io.imported", { n: result.entries.length })
@@ -85,6 +89,17 @@ function importSummary(
   }
   if (rejected) {
     text += ctx.t("io.receiptsRejected", { n: rejected })
+  }
+  /*
+   * A column this app does not know was not read, so say which: a file from
+   * some other shape would otherwise lose it without a word.
+   */
+  const unknown = result.warnings.find((w) => w.code === "unknown-columns")
+  if (unknown) {
+    text += ctx.t("io.unknownColumns", {
+      n: unknown.columns.length,
+      c: unknown.columns.join(", "),
+    })
   }
   if (result.skipped.length) {
     const first = result.skipped
@@ -102,6 +117,7 @@ function importSummary(
       .join(", ")
     text += ctx.t("io.skipped", { n: result.skipped.length, e: first })
   }
+  if (settings?.fromNewerVersion) text += ctx.t("io.settingsNewer")
   return text
 }
 
@@ -187,7 +203,7 @@ async function importCsv(
   const text = decodeCsv(await fileToUint8Array(file))
   const result = parseCsv(text, useBookStore.getState().cats, uid)
   if (!result.ok) {
-    toast.add({ title: failureMessage(ctx, result) })
+    await refuseFile(ctx, failureMessage(ctx, result))
     return false
   }
 
@@ -223,7 +239,7 @@ async function importZip(
 ): Promise<boolean> {
   const unpacked = await unpackZip(await fileToUint8Array(file))
   if (!unpacked) {
-    toast.add({ title: ctx.t("io.zipNoCsv") })
+    await refuseFile(ctx, ctx.t("io.zipNoCsv"))
     return false
   }
 
@@ -241,7 +257,7 @@ async function importZip(
     uid
   )
   if (!result.ok) {
-    toast.add({ title: failureMessage(ctx, result) })
+    await refuseFile(ctx, failureMessage(ctx, result))
     return false
   }
 
@@ -302,15 +318,37 @@ function missingAttachment(path: string): Attachment {
   }
 }
 
+/**
+ * Nothing was imported, so the user has to read why: a dialog rather than a
+ * toast, which is easy to miss and carries an explanation badly (§8).
+ */
+function refuseFile(ctx: Ctx, title: string): Promise<void> {
+  return alertDialog({
+    title: ctx.t("io.notOpened"),
+    message: title,
+    closeLabel: ctx.t("common.close"),
+  })
+}
+
 function failureMessage(
   ctx: Ctx,
   result: Extract<ReturnType<typeof parseCsv>, { ok: false }>
 ): string {
   if (result.code === "empty-file") return ctx.t("io.fileEmpty")
+  if (result.code === "not-a-book") {
+    return ctx.t("io.notABook", {
+      h: csvHeaderLine(useLangStore.getState().lang),
+    })
+  }
   if (result.code === "missing-columns") {
+    /*
+     * The UI language, not the book's: this is a message about a file that
+     * has just been refused, so there is no book whose language to follow.
+     */
+    const lang = useLangStore.getState().lang
     return ctx.t("io.missingColumn", {
-      c: result.missing.join(", "),
-      h: CSV_HEADER_LINE,
+      c: result.missing.map((m) => csvColumnLabel(m, lang)).join(", "),
+      h: csvHeaderLine(lang),
     })
   }
   return ctx.t("io.noRows", { e: String(result.skipped.length) })
@@ -343,6 +381,7 @@ function applyImport(
     dirty: false,
     settings: settings
       ? {
+          exportLang: settings.exportLang,
           vatPeriod: settings.vatPeriod,
           bookStart: settings.bookStart,
           vatFiled: settings.vatFiled,
@@ -368,7 +407,7 @@ function applyImport(
    */
   if (settings?.language) useLangStore.getState().setLang(settings.language)
   if (settings?.theme) ctx.setTheme?.(settings.theme)
-  toast.add({ title: importSummary(ctx, result, receipts) })
+  toast.add({ title: importSummary(ctx, result, receipts, settings) })
   ctx.navigate(APP_ROUTES.overview)
 }
 
@@ -397,6 +436,7 @@ function bookVersion() {
   return [
     s.entries,
     s.cats,
+    s.exportLang,
     s.vatPeriod,
     s.bookStart,
     s.vatFiled,
@@ -429,6 +469,7 @@ function currentSettingsText(): string {
   return serializeSettings({
     language: useLangStore.getState().lang,
     theme: readStoredTheme(),
+    exportLang: s.exportLang,
     vatPeriod: s.vatPeriod,
     bookStart: s.bookStart,
     vatFiled: s.vatFiled,
@@ -471,8 +512,9 @@ function carryFrom(
   }
 }
 
-function bookFileName(baseName: string, extension = ".zip"): string {
-  return `${cleanFileName(baseName) || "kirjanpito"}${extension}`
+/** The ZIP's own name. A name cleaned away falls back to the default (§7.3). */
+function bookFileName(baseName: string, lang: Lang): string {
+  return `${cleanFileName(baseName) || defaultFileBaseName(lang)}.zip`
 }
 
 /** A bookkeeping is a ZIP, because settings.json has to travel with the entries (§7.6). */
@@ -480,14 +522,17 @@ async function buildBookFile(
   baseName: string,
   source: FileSystemFileHandle | null = null
 ): Promise<BookFile> {
-  const { entries, cats } = useBookStore.getState()
+  const { entries, cats, exportLang } = useBookStore.getState()
   const version = bookVersion()
-  const paths = buildReceiptPaths(entries)
+  const paths = buildReceiptPaths(entries, exportLang)
   /*
    * Paths are always written, so a CSV taken out of the ZIP still records
    * which receipts existed (§7.1).
    */
-  const csvText = serializeCsv(entries, indexCategories(cats), paths)
+  const csvText = serializeCsv(entries, indexCategories(cats), {
+    lang: exportLang,
+    paths,
+  })
 
   const attachmentIds = new Map<string, string>()
   for (const e of entries) {
@@ -498,7 +543,7 @@ async function buildBookFile(
   let absentReceipts = 0
   let lostReceipts = 0
   const bytes = await packZip({
-    csvName: bookFileName(baseName, ".csv"),
+    csvName: CSV_FILE_NAME[exportLang],
     csvText,
     paths,
     attachmentIds,
@@ -511,7 +556,7 @@ async function buildBookFile(
     },
   })
   return {
-    name: bookFileName(baseName),
+    name: bookFileName(baseName, exportLang),
     blob: new Blob([bytes as BlobPart], { type: ZIP_MIME }),
     version,
     absentReceipts,
@@ -591,7 +636,10 @@ export async function saveBook(ctx: Ctx, suggestedBase: string): Promise<void> {
      * and a user who backs out should not have to wait for the packing.
      */
     const base = state.fileName ? baseOf(state.fileName) : suggestedBase
-    const handle = await handleToWrite(ctx, bookFileName(base))
+    const handle = await handleToWrite(
+      ctx,
+      bookFileName(base, state.exportLang)
+    )
     if (!handle || replacedSince(state.bookEpoch)) return
 
     const file = await buildBookFile(base, state.fileHandle)
@@ -642,7 +690,7 @@ async function handleToWrite(
   zipName: string
 ): Promise<FileSystemFileHandle | null> {
   const { fileHandle, fileName, savedAt } = useBookStore.getState()
-  const pick = () => pickFileToSave(zipName, true)
+  const pick = () => pickFileToSave(zipName)
 
   if (!fileHandle) return pick()
 

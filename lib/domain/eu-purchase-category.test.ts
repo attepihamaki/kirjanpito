@@ -216,6 +216,18 @@ describe("the CSV", () => {
     expect(result.newCategoryCount).toBe(0)
   })
 
+  it("round-trips an EU category in an English file", () => {
+    const text = serializeCsv([entry()], indexCategories(cats), { lang: "en" })
+    expect(text).toContain("Other deductible expenses – EU, services")
+    const result = parseCsv(text, cats, noId)
+    if (!result.ok) throw new Error(result.code)
+    expect(result.entries[0]).toMatchObject({
+      catId: "344-eu-services",
+      euPurchase: "services",
+    })
+    expect(result.newCategoryCount).toBe(0)
+  })
+
   it("takes the status from a category the row brings in", () => {
     const text = serializeCsv(
       [entry({ catId: "c-1" })],
