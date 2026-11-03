@@ -1682,9 +1682,30 @@ export const APP_DICT = {
   // --- Import and export (§7) ---
   "io.opening": ["Avataan tiedostoa…", "Opening the file…"],
   "io.fileEmpty": ["Tiedosto on tyhjä.", "The file is empty."],
+  /* The title of the dialog that says a file could not be opened (§8). */
+  "io.notOpened": ["Tiedostoa ei voitu avata", "The file could not be opened"],
+  "io.notABook": [
+    "Tiedosto ei ole kirjanpitotiedosto: yhtäkään saraketta ei tunnistettu. Odotettu otsikkorivi: {h}",
+    "This is not a bookkeeping file: not one column was recognised. Expected header row: {h}",
+  ],
   "io.missingColumn": [
     "Tiedostosta puuttuu sarake: {c}. Odotettu otsikkorivi: {h}",
     "The file is missing a column: {c}. Expected header row: {h}",
+  ],
+  /*
+   * A column the app does not know was not read, so the entries came in
+   * without it. Said out loud, since the loss would otherwise only show in
+   * the next export.
+   */
+  "io.unknownColumns": [
+    pl(
+      " Tuntematonta saraketta ei luettu: {c}.",
+      " Tuntemattomia sarakkeita ei luettu: {c}."
+    ),
+    pl(
+      " One column was not recognised and was not read: {c}.",
+      " {n} columns were not recognised and were not read: {c}."
+    ),
   ],
   "io.noRows": [
     "Yhtään riviä ei voitu lukea. {e}",
@@ -1695,6 +1716,10 @@ export const APP_DICT = {
     pl("Imported 1 entry.", "Imported {n} entries."),
   ],
   "io.newCategories": [" Uusia luokkia: {n}.", " New categories: {n}."],
+  "io.settingsNewer": [
+    " Tiedosto on tehty uudemmalla versiolla, joten kaikkia asetuksia ei ehkä luettu.",
+    " The file was made with a newer version, so some settings may not have been read.",
+  ],
   "io.skipped": [
     " Ohitettu tai korjattu: {n} ({e}).",
     " Skipped or corrected: {n} ({e}).",

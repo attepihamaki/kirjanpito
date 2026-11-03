@@ -52,6 +52,8 @@ export { CSV_HEADER, csvHeaderLine, csvColumnLabel }
 
 const REQUIRED = ["date", "type", "amount"] as const
 
+const KNOWN_COLUMNS: ReadonlySet<string> = new Set(CSV_HEADER)
+
 /*
  * The words in a cell follow the book's export language (§7.1), so each map
  * below writes one language and reads both: a file in either language has to
@@ -287,11 +289,15 @@ export type ImportWarning =
       bookedTo: string
     }
   | { code: "new-category"; line: number; catId: string; name: string }
+  /** Header cells this app does not know, so their columns were not read. */
+  | { code: "unknown-columns"; columns: readonly string[] }
 
 export type ImportFailure =
   | { ok: false; code: "empty-file" }
   | { ok: false; code: "missing-columns"; missing: readonly CsvColumn[] }
   | { ok: false; code: "no-rows-read"; skipped: readonly SkippedRow[] }
+  /** Not one column was recognised: this is not a bookkeeping file. */
+  | { ok: false; code: "not-a-book" }
 
 export interface ImportSuccess {
   ok: true
@@ -363,10 +369,28 @@ export function parseCsv(
   if (!headerRow) return { ok: false, code: "empty-file" }
 
   const columns = new Map<string, number>()
+  /*
+   * Columns the header names that this app does not know. They are reported
+   * rather than passed over in silence: a file written to some other shape
+   * would otherwise import with its unreadable columns quietly dropped, and
+   * the loss would only surface in the next export.
+   */
+  const unknown: string[] = []
   headerRow.cells.forEach((cell, i) => {
     const name = columnName(cell)
-    if (name && !columns.has(name)) columns.set(name, i)
+    if (!name) return
+    if (!KNOWN_COLUMNS.has(name)) {
+      if (!unknown.includes(cell.trim())) unknown.push(cell.trim())
+      return
+    }
+    if (!columns.has(name)) columns.set(name, i)
   })
+
+  /*
+   * Not one column was recognised, so this is some other file altogether —
+   * a different message from a bookkeeping missing a column.
+   */
+  if (!columns.size) return { ok: false, code: "not-a-book" }
 
   const missing = REQUIRED.filter((c) => !columns.has(c))
   if (missing.length) return { ok: false, code: "missing-columns", missing }
@@ -479,6 +503,9 @@ export function parseCsv(
   if (!entries.length && skipped.length) {
     return { ok: false, code: "no-rows-read", skipped }
   }
+
+  if (unknown.length)
+    warnings.push({ code: "unknown-columns", columns: unknown })
 
   return {
     ok: true,

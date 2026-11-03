@@ -2,8 +2,10 @@
 import JSZip from "jszip"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { toast } from "@/components/ui/toast"
 import { openFile } from "@/lib/commands/io-commands"
 import { defaultCategories } from "@/lib/domain/accounts"
+import { registerConfirmHandler, type ConfirmOptions } from "@/lib/ui/confirm"
 import { createAppT } from "@/lib/i18n/messages"
 import { useBookStore } from "@/stores/book-store"
 import { useLangStore } from "@/stores/lang-store"
@@ -189,5 +191,85 @@ describe("settings.json", () => {
     await openFile(ctx, pick("kirjanpito.csv"))
     expect(useBookStore.getState().vatFiled).toEqual({})
     expect(useBookStore.getState().vatPeriod).toBe("month")
+  })
+
+  it("takes the export language from the file", async () => {
+    await openFile(ctx, await zipFile({ version: 1, exportLang: "en" }))
+    expect(useBookStore.getState().exportLang).toBe("en")
+  })
+
+  /*
+   * Absent means Finnish — the documented default — rather than whatever the
+   * book being replaced happened to use.
+   */
+  it("falls back to Finnish for a file that does not say", async () => {
+    useBookStore.setState({ exportLang: "en" })
+    await openFile(ctx, await zipFile({ version: 1 }))
+    expect(useBookStore.getState().exportLang).toBe("fi")
+
+    useBookStore.setState({ exportLang: "en", open: false, dirty: false })
+    await openFile(ctx, pick("kirjanpito.csv"))
+    expect(useBookStore.getState().exportLang).toBe("fi")
+  })
+})
+
+/*
+ * Nothing reads an older or foreign file shape, so one has to be refused or
+ * reported rather than half-read (§8).
+ */
+describe("a file the app does not understand", () => {
+  beforeEach(() => {
+    useBookStore.setState({
+      open: false,
+      hydrated: true,
+      entries: [],
+      cats: defaultCategories(),
+      dirty: false,
+      fileName: null,
+      importing: false,
+    })
+    useLangStore.setState({ lang: "fi" })
+  })
+
+  it("is refused in a dialog the user has to close", async () => {
+    const shown: ConfirmOptions[] = []
+    registerConfirmHandler(async (options) => {
+      shown.push(options)
+      return true
+    })
+
+    await openFile(ctx, pick("osoitteet.csv", "nimi;osoite\nA;B"))
+
+    expect(shown).toHaveLength(1)
+    expect(shown[0].title).toBe("Tiedostoa ei voitu avata")
+    expect(shown[0].message).toContain("ei ole kirjanpitotiedosto")
+    // One button: there is nothing here to decide.
+    expect(shown[0].cancelLabel).toBe(undefined)
+    expect(useBookStore.getState().open).toBe(false)
+
+    registerConfirmHandler(null)
+  })
+
+  it("opens a file with an unreadable column, and says which", async () => {
+    const toasted: string[] = []
+    vi.spyOn(toast, "add").mockImplementation(({ title }) => {
+      toasted.push(String(title))
+      return "toast"
+    })
+
+    await openFile(
+      ctx,
+      pick(
+        "vanha.csv",
+        [
+          "date;type;amount;tosite",
+          "2026-01-08;tulo;10,00;liitteet/a.pdf",
+        ].join("\r\n")
+      )
+    )
+
+    expect(useBookStore.getState().entries).toHaveLength(1)
+    expect(toasted.join()).toContain("tosite")
+    vi.restoreAllMocks()
   })
 })

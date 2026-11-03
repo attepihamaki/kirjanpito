@@ -86,7 +86,14 @@ export interface BookSettings {
  * What a file supplied. Every field is optional: absent means the file did
  * not carry a usable value, and the caller keeps what it already has.
  */
-export type ParsedSettings = Partial<BookSettings>
+export type ParsedSettings = Partial<BookSettings> & {
+  /**
+   * The file says it was written by a later version than this one, so it may
+   * hold settings this reader passed over. Reading stays lenient; the import
+   * says so rather than leaving the loss silent (§8).
+   */
+  fromNewerVersion?: true
+}
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/
@@ -207,6 +214,9 @@ export function parseSettings(text: string): ParsedSettings {
   if (!isRecord(raw)) return {}
 
   const out: ParsedSettings = {}
+  if (typeof raw.version === "number" && raw.version > SETTINGS_VERSION) {
+    out.fromNewerVersion = true
+  }
   if (raw.language === "fi" || raw.language === "en") {
     out.language = raw.language
   }

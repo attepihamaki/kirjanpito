@@ -437,6 +437,40 @@ describe("parseCsv — required columns", () => {
     })
   })
 
+  /*
+   * No compatibility layer stands behind an older or foreign file, so one has
+   * to be refused or reported rather than half-read (§8).
+   */
+  it("refuses a file in which nothing is a bookkeeping column", () => {
+    expect(
+      parseCsv(csvText(["nimi;osoite;puhelin", "a;b;c"]), baseCats)
+    ).toEqual({ ok: false, code: "not-a-book" })
+  })
+
+  it("imports but reports a column it does not know", () => {
+    const r = ok(
+      parseCsv(
+        csvText([
+          "date;type;amount;tosite",
+          "2026-01-08;tulo;100,00;liitteet/a.pdf",
+        ]),
+        baseCats
+      )
+    )
+    expect(r.entries).toHaveLength(1)
+    // The column was not read, so its path is not carried into the entry.
+    expect(r.entries[0].paths).toEqual([])
+    expect(r.warnings).toContainEqual({
+      code: "unknown-columns",
+      columns: ["tosite"],
+    })
+  })
+
+  it("says nothing about a file whose every column it knows", () => {
+    const r = ok(parseCsv(serializeCsv(sample, cats), baseCats))
+    expect(r.warnings).toEqual([])
+  })
+
   it("accepts a file with only the three required columns", () => {
     const r = ok(
       parseCsv(csvText(["date;type;amount", "8.1.2026;kulu;12,50"]), baseCats)
