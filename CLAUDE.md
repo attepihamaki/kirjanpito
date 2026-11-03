@@ -129,11 +129,12 @@ This is what the app replaces. Useful for understanding the domain and for check
 
 ### Entry (kirjaus)
 
-**Identifiers are English everywhere in the code and in browser storage.** The
-CSV columns are English too. Their `tulo`/`kulu` and `brutto`/`netto` values
-stay Finnish, because that is the file format (§7.1), and `lib/domain/csv.ts` is
-the only module that knows those values and the Finnish column names older files
-carry. Nothing else, including `Entry`, mentions them.
+**Identifiers are English everywhere in the code and in browser storage**, and
+the canonical CSV column names are English too. What a *file* is written with —
+the column spellings and the `tulo`/`kulu`, `brutto`/`netto` words — follows the
+book's export language (§7.1). `lib/domain/csv-header.ts` is the only module
+that spells a column name and `lib/domain/csv.ts` the only one that knows those
+values. Nothing else, including `Entry`, mentions either.
 
 ```ts
 type EntryType = "income" | "expense"
@@ -172,13 +173,21 @@ The Accounting Act has every entry rest on a dated voucher that is "järjestelm�
 ```ts
 interface Attachment {
   id: string | null // IndexedDB key, null if the file is missing
-  name: string // display / original file name
+  name: string // the original file name
+  label?: string // the name the user gave it, which names the file in the ZIP (§7.2)
   type: string // MIME type
   size: number // bytes
   missing?: true // listed in the CSV but the file wasn't available on import
   path?: string // original path from the CSV, kept for missing files
 }
 ```
+
+**`name` always means the real file**, and a rename never touches it: the
+extension (`extensionFor`), whether it is a PDF (`isPdf`), whether it is a
+receipt at all (`isReceiptFile`), the duplicate check (`fileKey`, §8.4) and the
+change log all read it. `label` is only ever a name on screen and in the
+archive. Overloading the one field would let a rename change a file's apparent
+type and silently clear a duplicate warning.
 
 ### Category (luokka)
 
@@ -381,70 +390,89 @@ A seller in another EU country invoices a VAT-registered buyer without VAT, and 
 
 ### 7.1 CSV
 
-- **Header row**, always exactly these columns in this order:
-  `voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase`
-- **The column names are English and the values stay Finnish.** This is the
-  user's file, and it opens in Finnish Excel with decimal commas, Finnish category
-  names, `tulo`/`kulu` and `brutto`/`netto`. The header is the same in both UI
-  languages. `lib/domain/csv.ts` is the single translation layer: `TYPE_TO_CSV` /
-  `TYPE_FROM_CSV` for `tulo`/`kulu`, `MODE_TO_CSV` for `brutto`/`netto`.
-- **Files with the Finnish header must keep opening.** `FINNISH_COLUMNS` in
-  `lib/domain/csv.ts` maps `tositenro` (or `tositenumero`), `pvm`, `selite`,
-  `tyyppi`, `tili`, `luokka`, `summa`, `alv`, `syotto`, `tosite`, `verokausi`, `maksettu`, `ostajan_alv` and `eu_osto`
-  to the columns above, and both the header match and the delimiter detection go
-  through it. Saving such a file writes the English header. Nothing else in the
-  codebase may spell a Finnish column name.
+**The file is written in the book's own language** (`exportLang`, §7.6), which
+is Finnish or English. It decides the header, the words in the cells, the
+category names, the ZIP's suggested name, the CSV's name and the receipt folder
+(§7.2) — and nothing else.
+
+- **Header row**, always these columns in this order, in one of two spellings:
+  - fi: `tositenro;pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;liitteet;verokausi;maksettu;ostajan_alv;eu_osto`
+  - en: `voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase`
+- **`lib/domain/csv-header.ts` is the one place a column name is spelled.** The
+  English names are the canonical ones the parser works in; `FINNISH_LABELS`
+  gives the Finnish spelling of each, `csvHeaderLine(lang)` builds a header and
+  `columnName` maps either spelling back. The alias map is **derived** from the
+  label table, so what the app writes is always what it reads. Both the header
+  match and the delimiter detection go through `columnName`. Nothing else in the
+  codebase may spell a column name in either language.
+- **The words in the cells follow the language; the formats never do.**
+  `lib/domain/csv.ts` is the single translation layer for the values:
+  `TYPE_TO_CSV` (`tulo`/`kulu` ⇄ `income`/`expense`), `MODE_TO_CSV`
+  (`brutto`/`netto` ⇄ `gross`/`net`), `EU_PURCHASE_TO_CSV`
+  (`tavara`/`palvelu` ⇄ `goods`/`services`) and `PAID_OPEN` (`avoin` ⇄ `open`),
+  each writing one language and reading both. The decimal comma, the `;`
+  delimiter and the ISO date are the same in both, so an English file still
+  opens in a European Excel and there is one number format to parse.
+  > **`NET_VALUES` has to name every word that means net.** Anything the reader
+  > does not recognise is read as gross, so a net row misread keeps its number
+  > and changes what the number means — 1 000,00 € net at 25,5 % becomes
+  > 796,81 € net — with no error, no skipped row and no warning.
 - **Export:**
   - UTF-8 with BOM, `;` delimiter, CRLF line endings. Fields containing `;`, `"` or line breaks are quoted with `"` (doubled inside).
-  - `voucher` is the voucher number (§4). `date` is ISO `YYYY-MM-DD`. `type` is `tulo` or `kulu`. `account` is the account number.
-  - `category` is the category's **Finnish** name (stable across UI languages).
-  - `amount` uses a decimal comma with no thousands separator (`1882,50`). `vat` is the rate, with a decimal comma (`25,5`). `mode` is `brutto` or `netto`.
+  - `voucher` is the voucher number (§4). `date` is ISO `YYYY-MM-DD` in both languages. `type` is `tulo`/`kulu` or `income`/`expense`. `account` is the account number.
+  - `category` is the category's name in the export language, from `categoryName`. A custom category keeps the user's own name in both.
+  - `amount` uses a decimal comma with no thousands separator (`1882,50`) in both languages. `vat` is the rate, with a decimal comma (`25,5`). `mode` is `brutto`/`netto` or `gross`/`net`.
   - `receipts` holds the receipt paths inside the ZIP, separated by `|`. A CSV taken out of the ZIP and opened on its own still records which receipts existed, and the import marks them missing per §7.2.
   - `settles` is the period a VAT payment or refund settles (`2026-10`, `2026-Q4`, `2026`), empty on every other row (§6.6).
-  - `paid` is the payment date when it is not the entry's own, `avoin` while the entry is open, and otherwise empty (§6.3).
+  - `paid` is the payment date when it is not the entry's own, `avoin` / `open` while the entry is open, and otherwise empty (§6.3).
   - `buyer_vat` is the buyer's VAT number on an EU sale (§8.7), empty on every other row.
-  - `eu_purchase` is `tavara` or `palvelu` on an EU purchase (§6.9), empty on every other row.
-  - Rows are sorted by date, then by voucher number. The format is identical in both UI languages, so it opens directly in Finnish Excel.
+  - `eu_purchase` is `tavara`/`palvelu` or `goods`/`services` on an EU purchase (§6.9), empty on every other row.
+  - Rows are sorted by date, then by voucher number. Nothing about the format depends on the **UI** language, only on the book's.
   - **A text cell that Excel would run as a formula gets a leading apostrophe.** That is `description`, `category` or `receipts` starting with `=`, `+`, `-`, `@`, a tab or a carriage return. A value that already starts with apostrophes before one of those gets one more, and the import takes exactly one off, so every value round-trips. The amount and rate columns are left alone, so a negative amount stays a number. Excel may show the apostrophe in the cell.
-- **Import (be lenient):**
-  - `decodeCsv` reads the bytes: a UTF-16 BOM decides, then strict UTF-8, then windows-1252, which is what Excel's plain "CSV (semicolon delimited)" writes. Strip a BOM. Detect the delimiter from the header line (`;`, tab or `,`, whichever splits it most). Headers are matched case-insensitively. `date`, `type` and `amount` are required; the rest are optional.
+- **Import (be lenient with rows, strict about the shape):**
+  - **A bad row is skipped and counted, never fatal. A file whose header the app does not recognise is refused with an explanation**, and a column it does not know is reported rather than dropped in silence (§8.2 of this list, and the dialog in §8.11). There is no compatibility layer behind an older or foreign shape, so saying so is what stands in for one.
+  - `decodeCsv` reads the bytes: a UTF-16 BOM decides, then strict UTF-8, then windows-1252, which is what Excel's plain "CSV (semicolon delimited)" writes. Strip a BOM. Detect the delimiter from the header line (`;`, tab or `,`, whichever splits it most). Headers are matched case-insensitively, in either language. `date`, `type` and `amount` are required; the rest are optional.
+  - **No column recognised at all** is `not-a-book`: some other CSV entirely, and a different sentence from a bookkeeping missing a column. **A column that resolves to nothing** raises an `unknown-columns` warning naming it; the entries still import.
   - Dates are accepted as `YYYY-MM-DD` or `D.M.YYYY` and validated as real dates.
   - `settles` is optional. It is kept only on a settlement category and only when it names a period; otherwise the entry goes by its date (§6.6).
   - `voucher` is optional. A positive whole number is kept; a missing, malformed or repeated one is numbered when the book opens (§4), so an older file without the column opens with its entries numbered by date.
   - Amounts may contain spaces, NBSP, `€` and a Unicode minus. If both `,` and `.` appear, the last one is the decimal separator. A lone comma is a decimal comma in both languages, so a file reads the same in either. More than two decimals is refused, in a file and in the entry dialog: `1,234` could mean 1,23 € or 1 234 €, and a guess would be silently wrong by a factor of a thousand.
-  - `mode` values `netto` or `veroton` mean net; anything else means gross. An empty `vat` uses the category default, and so does one that is not a number from 0 up to 100 (`isVatRate`).
+  - `mode` values `netto`, `veroton` or `net` mean net; anything else means gross. `veroton` is read but never written. An empty `vat` uses the category default, and so does one that is not a number from 0 up to 100 (`isVatRate`).
   - Category matching: same account number and side, and the name matches the Finnish name or the English default name (case-insensitive). If no name is given, the first category on that account is used. If there's no match but the account number exists, a **custom category** is created with that name. If the account is unknown, the entry is booked to 301 (income) or 344-other (expense) with a warning.
-  - Invalid rows (bad date, type or amount) are skipped. A toast summarises: N entries imported, new categories, receipts imported, missing or rejected, and the first skipped rows.
+  - Invalid rows (bad date, type or amount) are skipped. A toast summarises: N entries imported, new categories, receipts imported, missing or rejected, columns not recognised, the first skipped rows, and whether the settings came from a newer version.
   - After import, the selected year is the latest year found in the file.
 
 ### 7.2 ZIP (the bookkeeping file)
 
-A bookkeeping is always written as a ZIP, because `settings.json` (§7.6) has to travel with the entries, receipts or not. The structure is:
+A bookkeeping is always written as a ZIP, because `settings.json` (§7.6) has to travel with the entries, receipts or not. The CSV is the vouchers and the folder holds their attachments, so each is named for what it is rather than after the ZIP around it. Both names follow the book's export language (§7.1), and `receipt-path.ts` holds them in `CSV_FILE_NAME` and `RECEIPT_FOLDER`:
 
 ```
-kirjanpito_2026-10-24.csv
-settings.json
-tositteet/
-  2026/
-    01/
-      2026-01-15_osto-k-rauta-tarvikkeet_1.jpg
-      2026-01-15_osto-k-rauta-tarvikkeet_2.pdf
-    10/
-      2026-10-28_lasku-1005-makinen-rakennus-oy.pdf
+kirjanpito.zip                  bookkeeping.zip
+  tositteet.csv                   vouchers.csv
+  settings.json                   settings.json
+  liitteet/                       attachments/
+    2026/                           2026/
+      01/                             01/
+        2026-01-15_osto-k-rauta-tarvikkeet_1.jpg
+        2026-01-15_k-rauta-kuitti.pdf
+      10/
+        2026-10-28_lasku-1005-makinen-rakennus-oy.pdf
 ```
 
-- Path: `tositteet/{YYYY}/{MM}/{YYYY-MM-DD}_{slug(description)}[_{n}].{ext}`. `_{n}` (1-based) is added only when the entry has several receipts. On a name collision, `-2`, `-3`, … is appended before the extension.
+- Path: `{folder}/{YYYY}/{MM}/{YYYY-MM-DD}_{stem}.{ext}`, where the stem is `slug(attachment.label)` when the user named the receipt (§8.5), and otherwise `defaultAttachmentStem`: `slug(description)` plus `_{n}` (1-based) when the entry has several. On a name collision — including two receipts named the same — `-2`, `-3`, … is appended before the extension.
+- **A named receipt takes no index**, and the suffix is only ever appended to a description-derived stem. Naming one receipt must not move its sibling's path: a path that moved would make the next save fail to find it in the file being replaced.
+- **The name round-trips through the path, with no column of its own.** `labelFromPath` reads it back on import, dropping the date prefix and an unnamed sibling's index, and returning null for the path the description alone would have produced. `slug` is idempotent over its own output, so the path is a fixed point and a book can go round any number of times without its receipts being renamed. The cost, accepted: a name comes back slugged, since the path is the only record of it.
 - Slug: lowercase; å/ä → a, ö → o; strip other diacritics; non-alphanumeric runs → `-`; trim dashes; at most 40 characters; fall back to `tosite`.
 - The extension comes from the file name (`jpeg` → `jpg`), otherwise from the MIME type.
 - Receipt files are stored without compression (STORE); the CSV and `settings.json` are DEFLATE-compressed.
-- **Import:** the user picks a ZIP. Use the shallowest `.csv` in it (ignoring `__MACOSX`). Paths in `receipts` are resolved relative to the CSV's folder, falling back to the ZIP root. Files found are stored in IndexedDB. Listed files that aren't found become `missing` attachments that keep their path, so re-exporting doesn't lose the reference. Importing a plain CSV that has `receipts` paths marks those receipts as missing in the same way. A listed path that names neither an image nor a PDF is not a receipt at all: it is dropped rather than kept as missing, so it cannot reappear in the next export, and the toast counts it.
+- **Import:** the user picks a ZIP. Use the shallowest `.csv` in it (ignoring `__MACOSX`), whatever it is called. Paths in `receipts` are resolved relative to the CSV's folder, then at the ZIP root, then by a **unique file name anywhere in the archive**. That last fallback is what survives a move: changing the export language renames the folder, so a save asks the file it is replacing for a path that file never held, and a receipt whose bytes this browser no longer holds would be dropped (§7.5, `carryFrom`). A name two files share is ambiguous, so the fallback refuses it rather than guessing. Files found are stored in IndexedDB. Listed files that aren't found become `missing` attachments that keep their path, so re-exporting doesn't lose the reference. Importing a plain CSV that has `receipts` paths marks those receipts as missing in the same way. A listed path that names neither an image nor a PDF is not a receipt at all: it is dropped rather than kept as missing, so it cannot reappear in the next export, and the toast counts it.
 - Unpacking, decoding and writing every receipt to IndexedDB takes seconds for a real ZIP, so the import raises `importing` in the store and the UI shows progress once it passes 400 ms — see §8.2.
 
 ### 7.3 File naming when downloading a copy
 
-The download dialog lets the user edit the base name, with the fixed extension `.zip` shown beside the field. The default is **the last opened or saved name**, as it was, date included, without its extension (`suggestedBaseName` in `lib/domain/receipt-path.ts`). With no file behind the book it is `kirjanpito_{YYYY-MM-DD}` in Finnish or `accounting_{YYYY-MM-DD}` in English, using **today's date**. Characters `\ / : * ? " < > |` and control characters are stripped, and a trailing `.csv` or `.zip` is removed. An empty name falls back to the dated default.
+The download dialog lets the user edit the base name, with the fixed extension `.zip` shown beside the field. The default is **the last opened or saved name**, as it was, without its extension (`suggestedBaseName` in `lib/domain/receipt-path.ts`). With no file behind the book it is `defaultFileBaseName`: `kirjanpito` or `bookkeeping`, from the book's **export language** (§7.1) rather than the UI's — the name belongs to the file. It carries no date: saving back to the same file is the normal flow (§7.5), so a date in the name only ages. Characters `\ / : * ? " < > |` and control characters are stripped, and a trailing `.csv` or `.zip` is removed. An empty name falls back to the default.
 
-`fileName` in the store holds that name **with its extension** (`kirjanpito_2026-10-24.zip`), for display only, and is set by opening, saving and downloading alike. Opening a file and finding the box still reading "Uusi kirjanpito" is the bug this format fixes: the first port hard-coded `fileName: null` on import, and the display site appended a literal `.csv`, which was wrong for a ZIP. `lib/commands/io-commands.test.ts` covers it.
+`fileName` in the store holds that name **with its extension** (`kirjanpito.zip`), for display only, and is set by opening, saving and downloading alike. `lib/commands/io-commands.test.ts` covers it.
 
 ### 7.4 Receipt files
 
@@ -541,6 +569,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
   "version": 1,
   "language": "fi",
   "theme": "system",
+  "exportLang": "fi",
   "vatPeriod": "month",
   "bookStart": "2026-10",
   "vatFiled": { "2026-08": "2026-10-12" },
@@ -560,12 +589,13 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
 ```
 
 - **Keys are English**, like browser storage (§12). Nobody opens this file in Excel.
-- **Reading is lenient**, like the CSV. A missing file means defaults. A bad or unknown value is dropped on its own and the rest is kept. `version` leaves room for a migration.
+- **Reading is lenient**, like the CSV. A missing file means defaults. A bad or unknown value is dropped on its own and the rest is kept. A `version` above `SETTINGS_VERSION` still parses, and sets `fromNewerVersion` so the import can say the file may hold settings this reader passed over — lenient, but not silent.
+- **`exportLang` is the language the book is written out in** (§7.1, §7.2). It belongs to the bookkeeping, not to the browser: open a book elsewhere and save it, and it comes back in the shape it went out in rather than reformatting itself to that browser's UI language. Unlike `language` and `theme` it **marks the book dirty**, since it changes the bytes a save would produce, and it is in `bookVersion()`. Absent from a file, it falls back to `"fi"`; a new book is seeded from the UI language and the setup dialog (§8.3) can change it.
 - **Categories**: the full list. A default category keeps its id, line, name and kind from the chart of accounts and takes only `enabled` and `vatRate` from the file, and one the file does not list comes in with its defaults. `persist.migrate` runs a stored list through the same merge. Custom categories come across whole. The CSV is then matched against this list, so a custom category comes back with its own id instead of being recreated from its name.
 - **The overview layout** goes through `normalizeLayout` in `lib/domain/overview-layout.ts`: an unknown widget id is dropped and a missing one goes right after the widget it follows in the default layout, at its default size, so a file from an older or newer version still opens and a new widget does not land at the bottom of the page.
 - **Language and theme** are written from the browser's own keys (§12) at save. Opening a file switches the app to them. They are preferences of the browser as much as of the book, so changing them does not mark the book dirty, and the landing page goes on using the browser's keys. The theme is applied through `Ctx.setTheme`, because only React can reach next-themes.
 - **Page sizes and autosave** are saved the same way: written at save, applied on open, never dirty.
-- **The VAT period, the start month, the filed marks, the archived years, the layout, the categories, the recurring templates, the opening balances, the year-end figures and the bank balance do mark the book dirty**, since the file no longer matches.
+- **The export language, the VAT period, the start month, the filed marks, the archived years, the layout, the categories, the recurring templates, the opening balances, the year-end figures and the bank balance do mark the book dirty**, since the file no longer matches.
 - A plain CSV has no settings. Opening one starts with no filed marks and no start month, and keeps the rest as it was.
 - `lib/domain/settings-file.test.ts` covers the round trip and the lenient reading; `lib/commands/io-commands.test.ts` covers opening a ZIP with settings.
 
@@ -647,6 +677,7 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
 6. A closing call to action, "Aloita tämän kuun tositteista.", and a footer disclaimer: "Laskelmat eivät ole vero- tai kirjanpitoneuvontaa."
 
 - "Aloita uusi kirjanpito" opens the empty overview and sets the year to the current year. If there are unsaved changes, it asks first.
+- **It then opens the setup dialog** (`components/settings/setup-dialog.tsx`, `DialogState` kind `setup`), which asks for the four settings a bookkeeping starts with rather than deciding them silently: the export language (§7.1, seeded from the UI language), the VAT period, the start month, and autosave where a file can be written at all. The controls are the ones Asetukset, Yleiset exports — `ExportLanguageToggle`, `VatPeriodToggle`, `BookStartSelects`, `AutosaveCheckbox` — not copies of them (§11). "Ohita" closes with the defaults; everything it asks lives on Asetukset, so it is never a dead end. `startBook` applies all four at once and leaves `dirty` false, since a bookkeeping nobody has typed into has nothing unsaved. The dialog is **not** shown when a file is opened: a file brings its own `settings.json`. Its host is in `AppShell`, which the route it navigates to mounts. `test/setup-dialog.test.tsx` covers it.
 
 ### 8.4 Ledger (Kirjanpito)
 
@@ -709,6 +740,7 @@ A two-column modal. On mobile the columns stack.
 - **Right column:**
   - A **live receipt preview**, the signature visual element. It looks like a paper receipt with a perforated bottom edge and shows: type, date, description, category, net, VAT with rate, a bold total, and a badge ("Kasvattaa myynnin veroa" / "Vähennetään ostojen verona" / "Ei arvonlisäveroa").
   - Below it, the **"Tositteet" section:** a two-column grid (three on tablets) of 3:4 thumbnails. Images are shown cropped to the top; PDFs show their first page with a "PDF" badge. Each has a remove ✕. An "+ Lisää tosite" tile and the hint "Kuva tai PDF. Voit myös raahata tiedoston tähän." follow. Clicking a thumbnail opens the viewer on that receipt.
+  - **Each thumbnail has a name box** (`Attachment.label`), which becomes the file's name inside the ZIP (§7.2). Its **placeholder is the stem the file would get if the box were left empty** — `defaultAttachmentStem`, the same helper the path builder uses — so the suggestion is on screen rather than implied, and it follows the description as it is typed. A blank or whitespace-only box stores no label at all, so "the description names it" has one representation. A locked entry (§8.11) shows no box.
 - **Defaults for a new entry:** if a month is selected, its date (today's day, capped at 28). Otherwise today if the year matches, else 1.1. of the selected year. The type and amount mode are the last ones used.
 - **Validation:** a valid date, a non-zero amount and a chosen category are required. Error texts: "Anna päivämäärä.", "Anna summa, esim. 124,50.", "Valitse luokka." The error is held as `{ field, message }` where `field` is the `FormState` key: one `FieldError` line shows the message, and the field it names carries `aria-invalid` (the category select takes it through `OptionSelect`'s `invalid` prop). Editing that field clears the error, rather than leaving a complaint under a corrected value until the next save.
 - **Pre-fill from a PDF:** adding an invoice PDF to an untouched form (no amount, no description) reads its text layer and fills the date, a description "Lasku {nro} – {myyjä} – {first row}" (whichever parts it found), the total as a gross amount and the VAT rate. A previous entry naming the same seller supplies the type and category; failing that, `suggestCategory` picks an expense category from words in the seller's name and the rows, falling back to 333. The seller is the company name printed beside a business ID, which is often only in the footer. A rate read this way survives picking a category. `lib/domain/invoice-text.ts` does the reading and is pure; `extractPdfText` in `lib/browser/pdf.ts` feeds it. The virtual barcode, when printed, wins over any labelled total or due date. A credit note keeps its minus, wherever it is printed, and its total is the largest amount by size. An amount like "2 123,00" reads as 2 123,00 €, since a quantity beside a price in the same text run cannot be told from a thousands separator. A scanned PDF has no text layer and pre-fills nothing; there is no OCR.
@@ -721,13 +753,13 @@ A two-column modal. On mobile the columns stack.
 - **`Ctrl`/`⌘`+`Enter`** saves from any field: "Tallenna ja uusi" in the new and copy modes, where its button shows the key cap, and "Tallenna" when editing. It waits while a receipt is still being stored. A new or copied entry opens with the focus on the date, so a month's receipts can be entered from the keyboard alone.
 - **Copy as new** (from a row or from the edit dialog): opens a new entry with every field copied **except receipts**. The date becomes today if the year matches, and the date field gets focus. The title is "Kopio kirjaus".
 - Saving an entry from another year switches the selected year to that year.
-- **Unsaved changes:** a snapshot of all fields (including receipt ids) is taken when the dialog opens. Closing with Peruuta or Escape while the snapshot differs asks "Hylätäänkö muutokset?" with the buttons "Jatka muokkausta" and "Hylkää muutokset". With no changes, it closes immediately.
+- **Unsaved changes:** a snapshot of all fields (including each receipt's id and the name given to it) is taken when the dialog opens. Closing with Peruuta or Escape while the snapshot differs asks "Hylätäänkö muutokset?" with the buttons "Jatka muokkausta" and "Hylkää muutokset". With no changes, it closes immediately.
 
 ### 8.6 Receipt viewer
 
 A near full-screen modal.
 
-- The top bar shows the file name and a sub-line ("Tosite 1 / 2, 139 kt").
+- The top bar shows the name the user gave the receipt, or the file's own when they gave none, and a sub-line ("Tosite 1 / 2, 139 kt"). "Save original" always uses the file's own name: it hands back the file as it is.
 - Controls:
   - Previous/next receipt (when there are several).
   - Previous/next page with "Sivu 1 / 3" (PDFs with several pages).
@@ -793,7 +825,8 @@ Every section is a `Panel` (§11). The page is split into two sub-pages, so the 
 
 On **Yleiset**:
 
-- **"ALV-ilmoitusjakso"** comes first: a segmented Kuukausi / Neljännesvuosi / Vuosi. It sets `vatPeriod` (§6.5), which the overview's due dates and the VAT view follow. Changing it keeps the VAT view on the same part of the year: October becomes Q4.
+- **"Tiedoston kieli"** comes first: a segmented Suomi / English setting `exportLang` (§7.1). It decides the shape of the file — its name, the CSV's columns and words, and the receipt folder — where the VAT period only decides what goes in it, so it leads. The options are endonyms from `LANG_NAMES`, shared with the language picker.
+- **"ALV-ilmoitusjakso"**: a segmented Kuukausi / Neljännesvuosi / Vuosi. It sets `vatPeriod` (§6.5), which the overview's due dates and the VAT view follow. Changing it keeps the VAT view on the same part of the year: October becomes Q4.
 - **"Kirjanpidon aloitus"**: the month the business began, as a month select ("Ensimmäisestä kirjauksesta" or a month) and, once a month is chosen, a year select. It sets `bookStart` (§6.5). Unset, returns are counted from the first entry.
 - **"Tallennus"**, only where the browser can write to a file: the "Tallenna automaattisesti" checkbox (§7.5), with a description that says what can be undone: a delete for 10 seconds (§8.11), an edit not at all.
 - **"Tyhjennä kirjaukset"**, last, as a `variant="destructive"` panel with "Tyhjennä" (`destructive`) on the footer. It deletes all entries (with a confirmation) and leaves the bookkeeping open but empty.
@@ -818,7 +851,11 @@ On **Luokat**:
 
 ### 8.11 Confirmations and unsaved-change rules (apply everywhere)
 
-Use one shared `AlertDialog`-based `confirm()` helper, with a title, a message, a destructive confirm button (red) and a cancel button. The cancel button can be relabelled, e.g. "Jatka muokkausta", and gets focus by default. Cases:
+Use one shared `AlertDialog`-based `confirm()` helper, with a title, a message, a destructive confirm button (red) and a cancel button. The cancel button can be relabelled, e.g. "Jatka muokkausta", and gets focus by default.
+
+`alertDialog()` is the same primitive with no cancel label: one button, nothing to decide. It is for the cases where **nothing happened and the reason is the whole message** — a file the app could not open (§7.1). A toast is easy to miss and carries two sentences badly; a partial problem, where the book did open, stays a toast. Never `window.alert` (§2).
+
+Cases:
 
 | Trigger                                | Condition                          | Title / confirm label                                                     |
 | -------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------- |
@@ -881,12 +918,12 @@ The app's front page, at `/app/overview`. `/app`, "Jatka kirjanpitoa", opening a
 - **Dates:**
   - Finnish UI: `8.1.2026`.
   - English UI: `8 Jan 2026` (`en-GB`, `day: numeric, month: short`).
-  - CSV: always ISO.
-- **VAT rates:** Finnish `25,5 %`, English `25.5%`.
+  - CSV: always ISO, in both export languages. So are the decimal comma and the `;` delimiter — only the words in a file follow its language (§7.1).
+- **VAT rates:** Finnish `25,5 %`, English `25.5%`. In the CSV, `25,5` in both.
 - **File sizes:** `kt`/`Mt` in Finnish, `KB`/`MB` in English.
 - Months have full and short names in both languages (Tammi…Joulu / Jan…Dec).
 - Sorting uses `Intl.Collator` for the current language with numeric ordering.
-- Category names: default categories are translated, custom ones are not. The CSV always uses Finnish names.
+- Category names: default categories are translated, custom ones are not. The CSV uses the book's export language (§7.1), which is independent of the UI's.
 - **Typography in UI copy:** use typographic apostrophes and quotes (’ in English, “ ” in English, ” ” in Finnish), an en dash for ranges, and the minus sign (−) for negative amounts.
 
 ---
@@ -1204,9 +1241,10 @@ static files, so any static host would do.
 ## 12. Persistence keys
 
 **Storage names and the field names inside them are English**, so what a
-browser holds is legible without Finnish. The CSV's values and the ZIP's
-`tositteet/` folder are the file format and stay Finnish (§7.1, §7.2), and the
-two vocabularies meet only in `lib/domain/csv.ts`.
+browser holds is legible without Finnish, whatever language the book is written
+out in. The file's own vocabulary — the CSV's columns and words, the receipt
+folder — belongs to `exportLang` (§7.1, §7.2) and meets this one only in
+`lib/domain/csv.ts` and `lib/domain/csv-header.ts`.
 
 **The two app-level preferences each own a key**, outside the bookkeeping
 blob, and each holds a bare value rather than JSON. They belong to the
@@ -1215,7 +1253,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
 
 - localStorage `bookkeeping` — exported as `BOOK_STORAGE_KEY` from
   `stores/book-store.ts`, so nothing hard-codes the string twice:
-  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, vatPeriod, bookStart, vatFiled, yearsArchived, overviewLayout, autosave, recurring, assetOpening, bankBalance }`.
+  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, exportLang, vatPeriod, bookStart, vatFiled, yearsArchived, overviewLayout, autosave, recurring, assetOpening, bankBalance }`.
   The book's settings are kept twice: here, as the working buffer, and in the
   file's `settings.json` (§7.6), as the record. A reload restores them from
   here; opening a file replaces them from there.
@@ -1291,8 +1329,11 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 ### Acceptance checklist
 
 - [ ] The §10 fixture gives the figures in §10.
-- [ ] Exporting a CSV and importing it back reproduces the same entries (including custom categories and the `mode` column).
-- [ ] Exporting a ZIP with receipts and importing it back restores the receipts. A plain CSV import keeps their paths as missing.
+- [ ] Exporting and importing back reproduces the same entries **in either export language** (including custom categories, the `mode` column and a net entry's amount).
+- [ ] An English export writes English words and Finnish numbers, dates and delimiter, so it still opens in a European Excel.
+- [ ] Exporting a ZIP with receipts and importing it back restores the receipts and the names given to them. A plain CSV import keeps their paths as missing.
+- [ ] Changing the export language on a book whose receipts are not in this browser still carries every receipt into the new file, with no "receipts lost" prompt.
+- [ ] A file the app does not understand is refused in a dialog that says why; a column it does not know is named in the import toast.
 - [ ] On Chrome, a file opened through the picker saves back to itself, survives a reload, and asks before overwriting a file edited elsewhere (§7.5). On Firefox and Safari the save row is absent and nothing else changes.
 - [ ] Every confirmation in §8.11 appears in the right situations, and only then.
 - [ ] No `window.confirm` / `alert` anywhere.
