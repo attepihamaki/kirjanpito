@@ -227,15 +227,24 @@ export function filedOn(
   return dates.length ? dates.sort().at(-1)! : null
 }
 
+/**
+ * Where `p` stands on `today`. `start` is the day the book owes returns from
+ * (see `bookStartDate`), and null means a bookkeeping that has not begun: no
+ * start month set and no entry to date it from. Nothing is owed then, which
+ * is what the overview's timeline says by being empty, and a book nobody has
+ * typed into must not report a year of overdue returns. It is required rather
+ * than defaulted, so no caller can leave the question unanswered.
+ */
 export function periodStatus(
   p: VatPeriod,
   today: string,
   filed: Readonly<Record<string, string>>,
-  start: string | null = null
+  start: string | null
 ): VatPeriodStatus {
   if (start && p.to < start) return "before"
   if (today < p.from) return "future"
   if (today <= p.to) return "open"
+  if (!start) return "before"
   if (filedKeys(p, filed).length) return "filed"
   return today > p.due ? "overdue" : "due"
 }
@@ -274,7 +283,7 @@ export function vatTimeline(
   for (let y = start.year; y <= lastYear; y++) {
     for (const p of vatPeriods(kind, y)) {
       if (p.from < start.from) continue
-      out.push({ ...p, status: periodStatus(p, today, filed) })
+      out.push({ ...p, status: periodStatus(p, today, filed, startDate) })
       // One period past today's, so "and after that" always has an answer.
       if (p.from > current.from) return out
     }

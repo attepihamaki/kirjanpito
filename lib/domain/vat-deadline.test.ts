@@ -119,21 +119,24 @@ describe("periodContaining and asPeriod", () => {
   })
 })
 
+/** A book that has been running all along, so no period is before its start. */
+const BEGUN = "2026-01-01"
+
 describe("periodStatus", () => {
   const sep = vatPeriods("month", 2026)[8]
 
   it("walks future, open, due and overdue", () => {
-    expect(periodStatus(sep, "2026-08-31", {})).toBe("future")
-    expect(periodStatus(sep, "2026-09-30", {})).toBe("open")
-    expect(periodStatus(sep, "2026-10-01", {})).toBe("due")
-    expect(periodStatus(sep, "2026-11-12", {})).toBe("due")
-    expect(periodStatus(sep, "2026-11-13", {})).toBe("overdue")
+    expect(periodStatus(sep, "2026-08-31", {}, BEGUN)).toBe("future")
+    expect(periodStatus(sep, "2026-09-30", {}, BEGUN)).toBe("open")
+    expect(periodStatus(sep, "2026-10-01", {}, BEGUN)).toBe("due")
+    expect(periodStatus(sep, "2026-11-12", {}, BEGUN)).toBe("due")
+    expect(periodStatus(sep, "2026-11-13", {}, BEGUN)).toBe("overdue")
   })
 
   it("counts a filed mark only once the period has closed", () => {
     const filed = { "2026-09": "2026-11-10" }
-    expect(periodStatus(sep, "2026-11-20", filed)).toBe("filed")
-    expect(periodStatus(sep, "2026-09-15", filed)).toBe("open")
+    expect(periodStatus(sep, "2026-11-20", filed, BEGUN)).toBe("filed")
+    expect(periodStatus(sep, "2026-09-15", filed, BEGUN)).toBe("open")
   })
 })
 
@@ -154,6 +157,11 @@ describe("periodStatus before the bookkeeping began", () => {
 
   it("still owes the period the start falls in", () => {
     expect(periodStatus(q3, "2026-12-20", {}, "2026-09-15")).toBe("overdue")
+  })
+
+  it("owes nothing at all without a start date", () => {
+    expect(periodStatus(sep, "2026-12-20", {}, null)).toBe("before")
+    expect(periodStatus(q3, "2026-12-20", {}, null)).toBe("before")
   })
 })
 
@@ -207,27 +215,39 @@ describe("filed marks made in another filing period (§6.5)", () => {
       "2026-02": "2026-04-12",
       "2026-03": "2026-05-12",
     }
-    expect(periodStatus(q("quarter", 1), "2026-11-02", filed)).toBe("filed")
+    expect(periodStatus(q("quarter", 1), "2026-11-02", filed, BEGUN)).toBe(
+      "filed"
+    )
     expect(filedOn(q("quarter", 1), filed)).toBe("2026-05-12")
     expect(filedKeys(q("quarter", 1), filed)).toHaveLength(3)
   })
 
   it("does not let two filed months cover a quarter", () => {
     const filed = { "2026-01": "2026-03-12", "2026-02": "2026-04-12" }
-    expect(periodStatus(q("quarter", 1), "2026-11-02", filed)).toBe("overdue")
+    expect(periodStatus(q("quarter", 1), "2026-11-02", filed, BEGUN)).toBe(
+      "overdue"
+    )
     expect(filedOn(q("quarter", 1), filed)).toBeNull()
   })
 
   it("lets a filed quarter cover its months", () => {
     const filed = { "2026-Q1": "2026-05-12" }
-    expect(periodStatus(q("month", 2), "2026-11-02", filed)).toBe("filed")
-    expect(periodStatus(q("month", 4), "2026-11-02", filed)).toBe("overdue")
+    expect(periodStatus(q("month", 2), "2026-11-02", filed, BEGUN)).toBe(
+      "filed"
+    )
+    expect(periodStatus(q("month", 4), "2026-11-02", filed, BEGUN)).toBe(
+      "overdue"
+    )
   })
 
   it("lets a filed year cover everything in it", () => {
     const filed = { "2026": "2027-02-28" }
-    expect(periodStatus(q("quarter", 3), "2027-11-02", filed)).toBe("filed")
-    expect(periodStatus(q("month", 12), "2027-11-02", filed)).toBe("filed")
+    expect(periodStatus(q("quarter", 3), "2027-11-02", filed, BEGUN)).toBe(
+      "filed"
+    )
+    expect(periodStatus(q("month", 12), "2027-11-02", filed, BEGUN)).toBe(
+      "filed"
+    )
   })
 
   it("adds a year up from its quarters", () => {

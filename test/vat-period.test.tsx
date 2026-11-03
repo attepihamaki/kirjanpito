@@ -76,6 +76,23 @@ describe("the VAT view's period", () => {
     expect(useBookStore.getState().vatIndex).toBe(4)
   })
 
+  it("owes nothing for the months before the start month", () => {
+    useBookStore.setState({ vatPeriod: "month", bookStart: "2026-10" })
+    const { periods, statuses } = period()
+    const status = (key: string) =>
+      statuses[periods.findIndex((p) => p.key === key)]
+
+    expect(status("2026-09")).toBe("before")
+    expect(status("2026-01")).toBe("before")
+    expect(status("2026-10")).toBe("due")
+  })
+
+  it("owes nothing at all before the first entry of a book with none", () => {
+    useBookStore.setState({ vatPeriod: "month", entries: [] })
+
+    expect(period().statuses).not.toContain("overdue")
+  })
+
   it("goes back to today after a year, which has no pick to carry", () => {
     useBookStore.setState({ vatPeriod: "month", vatIndex: 5 })
     useBookStore.getState().setVatPeriod("year")

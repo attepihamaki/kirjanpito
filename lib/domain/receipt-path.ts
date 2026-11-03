@@ -23,46 +23,61 @@ export function receiptFolder(lang: Lang): string {
   return RECEIPT_FOLDER[lang]
 }
 
+/** Characters Windows and POSIX file systems reject in a name (§7.3). */
+const FORBIDDEN_IN_FILENAME = '\\/:*?"<>|'
+
 /**
- * Combining marks in the range U+0300 to U+036F: what `normalize("NFD")`
- * splits accented letters into.
+ * Drop what no file system will take: the characters above, and the C0
+ * controls plus DEL.
  *
- * Matched by code point rather than a regex character class. A class would
- * have to spell the range as an escape, and an escape that any tool decodes
- * leaves two invisible combining characters sitting in the source.
+ * Written as an explicit scan rather than a regex character class: the class
+ * would need a literal control range, which is invisible in source and easy
+ * for tooling to mangle.
+ *
+ * `|` and `"` being in the forbidden set is also what keeps a receipt path
+ * safe in the CSV, where `|` separates them and `"` quotes a field (§7.1).
  */
-function stripCombiningMarks(input: string): string {
+function stripUnsafeChars(input: string): string {
   let out = ""
-  for (const ch of input) {
+  for (const ch of String(input ?? "")) {
     const code = ch.codePointAt(0) ?? 0
-    if (code >= 0x300 && code <= 0x36f) continue
+    if (code < 0x20 || code === 0x7f) continue
+    if (FORBIDDEN_IN_FILENAME.includes(ch)) continue
     out += ch
   }
   return out
 }
 
-/**
- * Slug for a receipt file name (§7.2): lowercase, å/ä → a and ö → o, other
- * diacritics stripped, non-alphanumeric runs collapsed to "-", at most 40
- * characters, falling back to "tosite".
- */
-export function slug(input: string): string {
-  /*
-   * NFD splits the remaining accents into letter + combining mark, which
-   * stripCombiningMarks then drops, leaving the bare letter.
-   */
-  const folded = String(input ?? "")
-    .toLowerCase()
-    .replace(/[åä]/g, "a")
-    .replace(/ö/g, "o")
-    .normalize("NFD")
+/* MS-DOS device names, which Windows refuses whatever extension follows. */
+const RESERVED_NAMES = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i
 
-  const s = stripCombiningMarks(folded)
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40)
-    .replace(/-+$/, "")
-  return s || "tosite"
+/** Longest stem written, leaving room for the folders and a `-2` suffix. */
+const MAX_STEM = 100
+
+/**
+ * The name a receipt takes inside the archive: its own file name, with only
+ * what a file system would refuse taken out (§7.2).
+ *
+ * Deliberately **not** a slug. The name came off the user's own disk, so it
+ * is already a valid file name, and most of it is a choice they made —
+ * "2.11.2026 - HC-Maschinentechnik - Lasku" says far more than the
+ * alphanumeric fold of it would. Keeping it also means the name written and
+ * the name a re-import reads back are the same string.
+ *
+ * **Idempotent**, which is what keeps the path a fixed point across any
+ * number of round trips: everything below either removes a character that
+ * can never survive, or is a no-op on its own output.
+ */
+export function receiptStem(name: string): string {
+  const out = stripUnsafeChars(stemFromName(name))
+    .slice(0, MAX_STEM)
+    /*
+     * Windows trims a trailing dot or space when it creates a file, so a name
+     * ending in one would come back different from the one that was written.
+     */
+    .replace(/^[\s.]+|[\s.]+$/g, "")
+  if (RESERVED_NAMES.test(out)) return `${out}_`
+  return out || "tosite"
 }
 
 const MIME_BY_EXT: Readonly<Record<string, string>> = {
@@ -194,7 +209,7 @@ export function buildReceiptPaths(
     for (const [i, a] of atts.entries()) {
       if (a.missing || !isReceiptFile(a)) continue
       const [y, mo] = e.date.split("-")
-      const base = `${RECEIPT_FOLDER[lang]}/${y}/${mo}/${slug(stemFromName(a.name))}`
+      const base = `${RECEIPT_FOLDER[lang]}/${y}/${mo}/${receiptStem(a.name)}`
       const ext = extensionFor(a)
       let path = `${base}.${ext}`
       let n = 2
@@ -207,25 +222,11 @@ export function buildReceiptPaths(
   return paths
 }
 
-/** Characters Windows and POSIX file systems reject in a name (§7.3). */
-const FORBIDDEN_IN_FILENAME = '\\/:*?"<>|'
-
-/**
- * Strip characters a file system will not accept, and a trailing ".csv".
- *
- * Written as an explicit scan rather than a regex character class: the class
- * would need a literal C0 control range, which is invisible in source and
- * easy for tooling to mangle.
- */
+/** Strip what a file system will not accept, and a trailing ".csv" or ".zip". */
 export function cleanFileName(input: string): string {
-  let out = ""
-  for (const ch of String(input ?? "")) {
-    const code = ch.codePointAt(0) ?? 0
-    if (code < 0x20 || code === 0x7f) continue
-    if (FORBIDDEN_IN_FILENAME.includes(ch)) continue
-    out += ch
-  }
-  return out.replace(/\.(csv|zip)$/i, "").trim()
+  return stripUnsafeChars(input)
+    .replace(/\.(csv|zip)$/i, "")
+    .trim()
 }
 
 /**

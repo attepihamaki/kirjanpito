@@ -10,7 +10,7 @@ import {
   isPdf,
   isReceiptFile,
   mimeForName,
-  slug,
+  receiptStem,
 } from "@/lib/domain/receipt-path"
 import type { Attachment, Entry } from "@/lib/domain/types"
 
@@ -32,48 +32,79 @@ function entry(over: Partial<Entry> = {}): Entry {
   }
 }
 
-describe("slug", () => {
+describe("receiptStem", () => {
+  /*
+   * The point of the whole rule: a name the user chose comes through intact,
+   * spaces, dots, case and Finnish letters included. Only the extension goes,
+   * because the path puts it back.
+   */
   it.each([
-    ["Osto – K-Rauta – tarvikkeet", "osto-k-rauta-tarvikkeet"],
-    ["Lasku 1005 – Mäkinen Rakennus Oy", "lasku-1005-makinen-rakennus-oy"],
-    ["Ääkkösiä öitä Åland", "aakkosia-oita-aland"],
-    ["Café Crème", "cafe-creme"],
-    ["Työtilan vuokra, helmikuu", "tyotilan-vuokra-helmikuu"],
-    ["   ", "tosite"],
-    ["!!!", "tosite"],
-    ["", "tosite"],
-  ])("slugs %j", (input, expected) => {
-    expect(slug(input)).toBe(expected)
+    [
+      "2.11.2026 - HC-Maschinentechnik - Lasku.pdf",
+      "2.11.2026 - HC-Maschinentechnik - Lasku",
+    ],
+    ["IMG_4417.jpg", "IMG_4417"],
+    ["Ääkkösiä öitä Åland.jpg", "Ääkkösiä öitä Åland"],
+    ["Osto – K-Rauta – tarvikkeet.pdf", "Osto – K-Rauta – tarvikkeet"],
+    ["report.final.pdf", "report.final"],
+    ["kuitti", "kuitti"],
+  ])("keeps %j as %j", (input, expected) => {
+    expect(receiptStem(input)).toBe(expected)
   })
 
-  it("cuts at 40 characters and trims the trailing dash", () => {
-    const long =
-      "Lasku 1001 – Mäkinen Rakennus Oy ja pitkä selite joka ylittää neljäkymmentä merkkiä"
-    expect(slug(long)).toBe("lasku-1001-makinen-rakennus-oy-ja-pitka")
+  it("drops what no file system would take", () => {
+    expect(receiptStem('a\\b/c:d*e?f"g<h>i|j.pdf')).toBe("abcdefghij")
+    const ctrl = [0x00, 0x07, 0x1f, 0x7f]
+      .map((c) => String.fromCharCode(c))
+      .join("")
+    expect(receiptStem(`kui${ctrl}tti.pdf`)).toBe("kuitti")
   })
 
-  it("strips combining marks left by NFD normalisation", () => {
-    /*
-     * Built from code points: "e" followed by a combining acute looks exactly
-     * like a precomposed letter, so a literal here would be invisible to
-     * anyone reading the test.
-     */
-    const acute = String.fromCharCode(0x301)
-    const diaeresis = String.fromCharCode(0x308)
-    expect(slug(`Cafe${acute}`)).toBe("cafe")
-    expect(slug(`Ho${diaeresis}tel`)).toBe("hotel")
+  /* `|` separates the receipt paths in the CSV and `"` quotes a field (§7.1). */
+  it("leaves nothing that would break the CSV's receipts column", () => {
+    expect(receiptStem('a|b"c.pdf')).not.toMatch(/[|"]/)
   })
 
-  it("never exceeds 40 characters or ends with a dash", () => {
-    for (const s of [
-      "a".repeat(80),
-      "Lasku ".repeat(20),
-      "– – – ".repeat(10),
-      "Ö".repeat(50),
+  it("falls back when nothing usable is left", () => {
+    expect(receiptStem("<<>>.jpg")).toBe("tosite")
+    expect(receiptStem("   .jpg")).toBe("tosite")
+    expect(receiptStem("")).toBe("tosite")
+  })
+
+  /* Windows trims these when it creates the file, so we must not write them. */
+  it("trims leading and trailing dots and spaces", () => {
+    expect(receiptStem("  kuitti  .pdf")).toBe("kuitti")
+    expect(receiptStem("...kuitti....pdf")).toBe("kuitti")
+  })
+
+  it("steps around an MS-DOS device name", () => {
+    expect(receiptStem("CON.pdf")).toBe("CON_")
+    expect(receiptStem("nul.jpg")).toBe("nul_")
+    expect(receiptStem("com1.pdf")).toBe("com1_")
+    expect(receiptStem("console.pdf")).toBe("console")
+  })
+
+  it("cuts a very long name and leaves no ragged edge", () => {
+    expect(receiptStem("a".repeat(400) + ".pdf")).toBe("a".repeat(100))
+    expect(receiptStem("a".repeat(99) + " b.pdf")).toBe("a".repeat(99))
+  })
+
+  /*
+   * Everything above either removes a character that could never survive, or
+   * is a no-op on its own output. That is what makes the ZIP path a fixed
+   * point, so a book does not rename its receipts on every round trip.
+   */
+  it("is idempotent", () => {
+    for (const name of [
+      "2.11.2026 - HC-Maschinentechnik - Lasku.pdf",
+      "CON.pdf",
+      "  ...x... .pdf",
+      '<>|".pdf',
+      "a".repeat(400) + ".pdf",
+      "Ääkkösiä.jpg",
     ]) {
-      const out = slug(s)
-      expect(out.length).toBeLessThanOrEqual(40)
-      expect(out).not.toMatch(/^-|-$/)
+      const once = receiptStem(name)
+      expect(receiptStem(once)).toBe(once)
     }
   })
 })
@@ -140,7 +171,7 @@ describe("buildReceiptPaths", () => {
       atts: [att({ name: "2.11.2026 - HC-Maschinentechnik - Lasku.pdf" })],
     })
     expect(buildReceiptPaths([e]).get(attachmentKey("e1", 0))).toBe(
-      "liitteet/2026/10/2-11-2026-hc-maschinentechnik-lasku.pdf"
+      "liitteet/2026/10/2.11.2026 - HC-Maschinentechnik - Lasku.pdf"
     )
   })
 
@@ -191,8 +222,8 @@ describe("buildReceiptPaths", () => {
     expect(paths.get(attachmentKey("b", 0))).toBe("liitteet/2026/02/kuva.jpg")
   })
 
-  it("falls back for a name with nothing to slug", () => {
-    const e = entry({ atts: [att({ name: "!!!.jpg" })] })
+  it("falls back for a name a file system could not take at all", () => {
+    const e = entry({ atts: [att({ name: '<>|".jpg' })] })
     expect(buildReceiptPaths([e]).get(attachmentKey("e1", 0))).toBe(
       "liitteet/2026/10/tosite.jpg"
     )

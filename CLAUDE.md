@@ -340,7 +340,7 @@ For the selected year, by month (net amounts):
 - A period is **future**, **open** (today is inside it), **filed** (closed and marked), **due** (closed, not marked, due date ahead or today) or **overdue**. A period is keyed `2026-09`, `2026-Q3` or `2026`, and `vatFiled` maps that key to the ISO date it was marked.
 - **Filing is the user's statement, not the app's knowledge.** The app cannot see OmaVero, so a closed period stays due until the user marks it. A mark can be undone.
 - **A filed mark counts whatever period it was made in** (`filedKeys`), so changing how often VAT is filed leaves filed returns filed: three marked months cover their quarter, and a marked quarter or year covers what is in it. A period only partly covered still shows as due.
-- **A closed period with no entries still needs a return**, a nil return ("Nollailmoitus"). The timeline starts at the period that contains the book's start: the start month set in Settings (`bookStart`, §8.10), or else the first entry (`bookStartDate`). A period that ended before the start is **before**, owes nothing and has no filed toggle, so a business founded in October does not see January to September as overdue.
+- **A closed period with no entries still needs a return**, a nil return ("Nollailmoitus"). The timeline starts at the period that contains the book's start: the start month set in Settings (`bookStart`, §8.10), or else the first entry (`bookStartDate`). A period that ended before the start is **before**, owes nothing and has no filed toggle, so a business founded in October does not see January to September as overdue. With neither a start month nor an entry the bookkeeping has not begun: every period is **before** and the timeline is empty, so an untouched book reports no overdue returns. `periodStatus` takes the start date as a required argument, so no caller can leave that question unanswered.
 - The overview's VAT widget follows **today**, not the selected year, because December's return falls due in the February after it. It also runs one period past today's, so "and after that" always has an answer.
 - **Source:** vero.fi, "When to file and pay VAT" and the Arvonlisäverovelvollisen opas. The tests assert Verohallinto's own examples: March's return due 12 May, the 2020 yearly return due 1.3.2021, the 2025 one due 2.3.2026. Midsummer Eve and Christmas Eve are in the list because the act on calculating time limits moves a deadline past them too.
 - **Not handled:** a business that stops trading files by the 12th of the second month after the month it ends, whatever its period.
@@ -453,17 +453,17 @@ kirjanpito.zip                  bookkeeping.zip
   liitteet/                       attachments/
     2026/                           2026/
       01/                             01/
-        k-rauta-kuitti.jpg
-        img-4417.jpg
+        K-Rauta kuitti.jpg
+        IMG_4417.jpg
       10/
-        2-11-2026-hc-maschinentechnik-lasku.pdf
+        2.11.2026 - HC-Maschinentechnik - Lasku.pdf
 ```
 
-- Path: `{folder}/{YYYY}/{MM}/{slug(file name)}.{ext}`. On a collision — two receipts of the same month whose names slug alike — `-2`, `-3`, … is appended before the extension.
+- Path: `{folder}/{YYYY}/{MM}/{receiptStem(file name)}.{ext}`. On a collision — two receipts of the same month whose names match, ignoring case — `-2`, `-3`, … is appended before the extension.
 - **The receipt keeps the name it already has**, and there is no field asking for another (§4). The name is stripped of the extension it will be given back, using the same pattern `extFromName` matches, so the stem and the extension cannot disagree.
-- **That makes the path a fixed point.** The name a re-import reads off the path is the name the next export writes, because `slug` is idempotent over its own output, so a book can go round any number of times without its receipts drifting. The cost, accepted: a name comes back slugged and lowercased, since the path is the only record of it.
+- **`receiptStem` sanitises, it does not slug.** The name came off the user's own disk, so it is already a valid file name and most of it is a choice they made. It keeps spaces, dots, case and Finnish letters, and removes only what a file system would refuse: `\ / : * ? " < > |`, control characters, leading and trailing dots and spaces (Windows trims those on creation), and an MS-DOS device name (`CON`, `NUL`, `COM1`…, which Windows refuses whatever extension follows) gets a `_`. At most 100 characters; an empty result falls back to `tosite`. Dropping `|` and `"` is also what keeps the path safe in the CSV's receipts column (§7.1).
+- **The round trip is lossless, and the path is a fixed point.** `receiptStem` is idempotent — everything it does either removes a character that could never survive or is a no-op on its own output — so the name a re-import reads off the path is the name the next export writes, and a book can go round any number of times without its receipts drifting or degrading.
 - **No date prefix.** The folder gives the year and month, and a user's own name often carries a date already — prefixing one would read twice.
-- Slug: lowercase; å/ä → a, ö → o; strip other diacritics; non-alphanumeric runs → `-`; trim dashes; at most 40 characters; fall back to `tosite`.
 - The extension comes from the file name (`jpeg` → `jpg`), otherwise from the MIME type.
 - Receipt files are stored without compression (STORE); the CSV and `settings.json` are DEFLATE-compressed.
 - **Import:** the user picks a ZIP. Use the shallowest `.csv` in it (ignoring `__MACOSX`), whatever it is called. Paths in `receipts` are resolved relative to the CSV's folder, then at the ZIP root, then by a **unique file name anywhere in the archive**. That last fallback is what survives a move: changing the export language renames the folder, so a save asks the file it is replacing for a path that file never held, and a receipt whose bytes this browser no longer holds would be dropped (§7.5, `carryFrom`). A name two files share is ambiguous, so the fallback refuses it rather than guessing. Files found are stored in IndexedDB. Listed files that aren't found become `missing` attachments that keep their path, so re-exporting doesn't lose the reference. Importing a plain CSV that has `receipts` paths marks those receipts as missing in the same way. A listed path that names neither an image nor a PDF is not a receipt at all: it is dropped rather than kept as missing, so it cannot reappear in the next export, and the toast counts it.
@@ -1317,7 +1317,7 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 
 ## 13. Suggested implementation order
 
-1. Domain modules with no React: types, the chart of accounts and default categories, money and format helpers, `calc`, VAT report, income statement, summary, CSV parse and serialize, path and slug building, and ZIP pack and unpack. **Unit-test these first** (Vitest), including the reference figures in §10 and comparisons with the Excel's monthly sheets.
+1. Domain modules with no React: types, the chart of accounts and default categories, money and format helpers, `calc`, VAT report, income statement, summary, CSV parse and serialize, path and file-name building, and ZIP pack and unpack. **Unit-test these first** (Vitest), including the reference figures in §10 and comparisons with the Excel's monthly sheets.
 2. A store with persistence (localStorage and IndexedDB), the open/dirty/year/language/theme state, and the i18n dictionary.
 3. The shell (sidebar, top bar), routing, and the theme and language switches.
 4. The ledger with the data table (sort, filter, paginate), the entry dialog, and the confirmation helper.
