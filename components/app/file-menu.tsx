@@ -47,7 +47,7 @@ import { useBookStore } from "@/stores/book-store"
  * which year, and is it saved".
  *
  * The trigger is an icon like the rest of the bar, with the file's name in its
- * accessible name and tooltip, and a dot for the save status.
+ * accessible name and tooltip, and a dot while there are unsaved changes.
  */
 export function FileMenu({
   onOpenFile,
@@ -62,6 +62,7 @@ export function FileMenu({
   const fileName = useBookStore((s) => s.fileName)
   const importing = useBookStore((s) => s.importing)
   const saving = useBookStore((s) => s.saving)
+  const dirty = useBookStore((s) => s.dirty)
   const busy = useDelayedFlag(importing)
   const savingNow = useDelayedFlag(saving)
   const status = useFileStatusText()
@@ -104,11 +105,12 @@ export function FileMenu({
         }
       >
         {/* The dot rides the icon's top-right corner the way an unread badge
-            does. It is the only always-visible sign that there are unsaved
-            changes, and the file name is no longer on the bar to carry it. */}
+            does, and like one it appears only when there is something to say:
+            it is the only always-visible sign of unsaved changes. A saved book
+            shows no dot here, and the popup's status line says it is saved. */}
         <span className="relative flex">
           <BusyIcon busy={busy || savingNow} icon={BookBookmarkIcon} />
-          <StatusDot className="absolute -top-1 -right-1" />
+          {dirty ? <StatusDot className="absolute -top-1 -right-1" /> : null}
         </span>
       </PopoverTrigger>
 

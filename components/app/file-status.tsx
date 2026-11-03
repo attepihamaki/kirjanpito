@@ -21,8 +21,9 @@ export function useFileStatusText() {
 }
 
 /**
- * The amber / green dot alone, for the menu trigger, which has no room for the
- * label and carries the wording in its accessible name instead.
+ * The amber / green dot alone. The menu trigger shows it only while the book is
+ * dirty, has no room for the label and carries the wording in its accessible
+ * name instead.
  */
 export function StatusDot({ className }: { className?: string }) {
   const dirty = useBookStore((s) => s.dirty)
