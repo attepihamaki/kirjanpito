@@ -147,10 +147,6 @@ export const APP_DICT = {
       "The numbers of {n} entries change. Numbers you have written on receipts or given to an accountant will no longer match."
     ),
   ],
-  "confirm.renumberArchived": [
-    "Olet merkinnyt vuoden {year} kopion tallessa olevaksi. Siinä säilyvät vanhat numerot.",
-    "You have marked a copy of {year} as stored. It keeps the old numbers.",
-  ],
   "confirm.renumberConfirm": ["Numeroi uudelleen", "Renumber"],
   "confirm.discardTitle": ["Hylätäänkö muutokset?", "Discard changes?"],
   "confirm.discardConfirm": ["Hylkää muutokset", "Discard changes"],
@@ -662,6 +658,49 @@ export const APP_DICT = {
   "ledger.entriesTab": ["Kirjaukset", "Entries"],
   "ledger.journalTab": ["Päiväkirja", "Journal"],
   "ledger.accountsTab": ["Pääkirja", "General ledger"],
+  "ledger.logTab": ["Muutosloki", "Change log"],
+  "ledger.logTitle": ["Muutosloki {y}", "Change log {y}"],
+  "ledger.logSub": [
+    "Kaikki muutokset tämän vuoden kirjauksiin",
+    "Every change to this year’s entries",
+  ],
+  "ledger.logEmpty": ["Ei muutoksia.", "No changes."],
+  "ledger.logWhen": ["Aika", "When"],
+  "ledger.logWhat": ["Muutos", "Change"],
+  "ledger.logAdd": ["Lisätty", "Added"],
+  "ledger.logDelete": ["Poistettu", "Deleted"],
+  "ledger.logRestore": ["Palautettu", "Restored"],
+  "ledger.logClear": [
+    "Kaikki kirjaukset tyhjennetty ({n})",
+    "All entries cleared ({n})",
+  ],
+  "ledger.logRenumber": [
+    "Tositteet numeroitu uudelleen ({n})",
+    "Vouchers renumbered ({n})",
+  ],
+  "ledger.logLock": ["Lukittu: {p}", "Locked: {p}"],
+  "ledger.logUnlock": ["Lukitus poistettu: {p}", "Unlocked: {p}"],
+  "ledger.logImport": [
+    "Avattu tiedostosta, jossa ei ole muutoslokia",
+    "Opened from a file with no change log",
+  ],
+  "ledger.logEdit": ["{field}: {a} → {b}", "{field}: {a} → {b}"],
+  "ledger.logFieldDate": ["Päivä", "Date"],
+  "ledger.logFieldDescription": ["Selite", "Description"],
+  "ledger.logFieldType": ["Tyyppi", "Type"],
+  "ledger.logFieldCategory": ["Luokka", "Category"],
+  "ledger.logFieldAmount": ["Summa", "Amount"],
+  "ledger.logFieldVat": ["ALV", "VAT"],
+  "ledger.logFieldMode": ["Summan tyyppi", "Amount type"],
+  "ledger.logFieldSettles": ["Verokausi", "Tax period"],
+  "ledger.logFieldPaid": ["Maksettu", "Paid"],
+  "ledger.logFieldBuyer": ["Ostajan ALV-numero", "Buyer’s VAT number"],
+  "ledger.logFieldVoucher": ["Tositenumero", "Voucher number"],
+  "ledger.logFieldReceipts": ["Tositteet", "Receipts"],
+  "ledger.logLimit": [
+    "Loki kertoo sovelluksen käytöstä. Se kulkee kirjanpitotiedostossa, jota voi muokata muullakin tavalla, joten se ei todista, ettei muuta ole tapahtunut.",
+    "The log records use of the app. It travels in the bookkeeping file, which can be edited in other ways, so it does not prove that nothing else happened.",
+  ],
   "ledger.chartTab": ["Tililuettelo", "Account list"],
   "ledger.chartTitle": ["Tililuettelo {y}", "Account list {y}"],
   "ledger.chartSub": [
@@ -771,6 +810,37 @@ export const APP_DICT = {
   ],
   "entry.category": ["Luokka", "Category"],
   "entry.amount": ["Summa (€)", "Amount (€)"],
+  "entry.lockedFiled": [
+    "Tämä kirjaus kuuluu kauteen {p}, joka on merkitty ilmoitetuksi {d}. Kirjanpitolaki (2:7) ei salli muuttaa kirjausta ilmoituksen jälkeen. Tee korjauskirjaus. Vain maksupäivän voi vielä merkitä. Jos ilmoitusta ei oikeasti ole annettu, poista merkintä ALV-laskelmasta.",
+    "This entry is in period {p}, marked as filed on {d}. The Accounting Act (2:7) does not allow changing an entry after a return. Make a correction entry. Only the payment date can still be set. If the return has not really been filed, remove the mark in the VAT view.",
+  ],
+  "entry.lockedYear": [
+    "Vuosi {p} on merkitty talletetuksi {d}, joten sen kirjaukset ovat lukittuja. Tee korjauskirjaus. Vain maksupäivän voi vielä merkitä.",
+    "Year {p} was marked as stored on {d}, so its entries are locked. Make a correction entry. Only the payment date can still be set.",
+  ],
+  "entry.lockedRefused": [
+    pl(
+      "1 kirjaus on lukitulla kaudella, joten muutosta ei tehty.",
+      "{n} kirjausta on lukitulla kaudella, joten muutosta ei tehty."
+    ),
+    pl(
+      "1 entry is in a locked period, so nothing was changed.",
+      "{n} entries are in a locked period, so nothing was changed."
+    ),
+  ],
+  "entry.yearStored": [
+    "Tämä vuosi on merkitty talletetuksi. Valitse toinen päivä.",
+    "This year is marked as stored. Choose another date.",
+  ],
+  "entry.correction": ["Tee korjauskirjaus", "Make a correction entry"],
+  "entry.correctionOf": [
+    "Korjaus: tosite {n}, {x}",
+    "Correction: voucher {n}, {x}",
+  ],
+  "entry.history": [
+    pl("Muutoshistoria (1)", "Muutoshistoria ({n})"),
+    pl("Change history (1)", "Change history ({n})"),
+  ],
   "entry.buyerVat": ["Ostajan ALV-numero", "Buyer’s VAT number"],
   "entry.buyerVatHint": [
     "Tarvitaan yhteenvetoilmoitukseen.",

@@ -39,6 +39,7 @@ export function useAutosave() {
   const bankBalance = useBookStore((s) => s.bankBalance)
   const loanOpening = useBookStore((s) => s.loanOpening)
   const yearEnd = useBookStore((s) => s.yearEnd)
+  const changeLog = useBookStore((s) => s.changeLog)
 
   React.useEffect(() => {
     if (!canSave || !autosave || paused || !dirty || !linked || busy) return
@@ -67,5 +68,6 @@ export function useAutosave() {
     bankBalance,
     loanOpening,
     yearEnd,
+    changeLog,
   ])
 }

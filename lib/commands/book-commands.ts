@@ -9,6 +9,7 @@ import {
 import { heldByAnotherTab } from "@/lib/browser/tab-lock"
 import { yearOf } from "@/lib/domain/dates"
 import { collectLiveIds } from "@/lib/domain/gc"
+import { lockedEntries } from "@/lib/domain/period-lock"
 import type { Entry } from "@/lib/domain/types"
 import { renumberYear } from "@/lib/domain/voucher"
 import { LANDING, APP_ROUTES } from "@/lib/site"
@@ -113,21 +114,13 @@ export async function closeBook(ctx: Ctx): Promise<void> {
 }
 
 export async function deleteEntry(ctx: Ctx, entry: Entry): Promise<boolean> {
-  // Loaded on demand: the landing page imports this module (§11b).
-  const { filedChangeNotice } = await import("@/lib/commands/filed-commands")
-  const filed = filedChangeNotice(
-    useBookStore.getState().entries.filter((e) => e.id !== entry.id)
-  )
+  if (refuseLocked(ctx, [entry])) return false
   const message = ctx.t("confirm.deleteMessage", {
     x: entry.description || ctx.t("ledger.noDescription"),
   })
   const confirmed = await confirm({
     title: ctx.t("confirm.deleteTitle"),
-    message: filed
-      ? `${message}
-
-${filed}`
-      : message,
+    message,
     confirmLabel: ctx.t("common.delete"),
     cancelLabel: ctx.t("common.cancel"),
   })
@@ -137,7 +130,19 @@ ${filed}`
   return true
 }
 
+/**
+ * Stop a change to entries in a filed VAT period or a stored year (KPL 2:7,
+ * §8.11). True when something was locked and the user has been told.
+ */
+export function refuseLocked(ctx: Ctx, entries: readonly Entry[]): boolean {
+  const locked = lockedEntries(entries, useBookStore.getState())
+  if (locked.length === 0) return false
+  toast.add({ title: ctx.t("entry.lockedRefused", { n: locked.length }) })
+  return true
+}
+
 export async function clearAllEntries(ctx: Ctx): Promise<void> {
+  if (refuseLocked(ctx, useBookStore.getState().entries)) return
   const confirmed = await confirm({
     title: ctx.t("confirm.clearTitle"),
     message: ctx.t("confirm.clearMessage"),
@@ -164,6 +169,14 @@ export async function renumberVouchers(
   year: number
 ): Promise<boolean> {
   const before = useBookStore.getState()
+  if (
+    refuseLocked(
+      ctx,
+      before.entries.filter((e) => yearOf(e.date) === year)
+    )
+  ) {
+    return false
+  }
   const after = renumberYear(before.entries, year)
   const previous = new Map(before.entries.map((e) => [e.id, e.voucher]))
   const numbers = new Map(
@@ -175,12 +188,9 @@ export async function renumberVouchers(
   )
   if (numbers.size === 0) return false
 
-  const message = ctx.t("confirm.renumberMessage", { n: numbers.size })
   const confirmed = await confirm({
     title: ctx.t("confirm.renumberTitle", { year }),
-    message: before.yearsArchived[String(year)]
-      ? `${message}\n\n${ctx.t("confirm.renumberArchived", { year })}`
-      : message,
+    message: ctx.t("confirm.renumberMessage", { n: numbers.size }),
     confirmLabel: ctx.t("confirm.renumberConfirm"),
     cancelLabel: ctx.t("common.cancel"),
   })

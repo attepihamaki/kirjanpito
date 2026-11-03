@@ -37,7 +37,7 @@ function Thumb({
 }: {
   att: Attachment
   onOpen: () => void
-  onRemove: () => void
+  onRemove?: () => void
 }) {
   const f = useFormatters()
   const [url, setUrl] = React.useState<string | null>(() =>
@@ -140,15 +140,17 @@ function Thumb({
         </span>
       ) : null}
 
-      <Button
-        variant="secondary"
-        size="icon-xs"
-        aria-label={f.t("receipt.remove")}
-        onClick={onRemove}
-        className="absolute top-1 right-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100"
-      >
-        <XIcon />
-      </Button>
+      {onRemove ? (
+        <Button
+          variant="secondary"
+          size="icon-xs"
+          aria-label={f.t("receipt.remove")}
+          onClick={onRemove}
+          className="absolute top-1 right-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100"
+        >
+          <XIcon />
+        </Button>
+      ) : null}
     </div>
   )
 }
@@ -159,6 +161,7 @@ export function AttachmentGrid({
   onOpen,
   onRemove,
   busy,
+  readOnly,
   className,
 }: {
   attachments: readonly Attachment[]
@@ -166,6 +169,8 @@ export function AttachmentGrid({
   onOpen: (index: number) => void
   onRemove: (index: number) => void
   busy?: boolean
+  /** Opens the receipts only: an entry in a locked period (§8.11). */
+  readOnly?: boolean
   className?: string
 }) {
   const f = useFormatters()
@@ -184,21 +189,25 @@ export function AttachmentGrid({
             key={att.id ?? `${att.path}-${i}`}
             att={att}
             onOpen={() => onOpen(i)}
-            onRemove={() => onRemove(i)}
+            onRemove={readOnly ? undefined : () => onRemove(i)}
           />
         ))}
-        <DropTile
-          onClick={onAdd}
-          disabled={busy}
-          className="flex aspect-3/4 flex-col items-center justify-center gap-1 rounded-md text-muted-foreground hover:text-foreground"
-        >
-          <BusyIcon busy={busy} icon={PlusIcon} className="size-5" />
-          <span className="px-1 text-center text-[0.7rem]">
-            {f.t("receipt.add")}
-          </span>
-        </DropTile>
+        {readOnly ? null : (
+          <DropTile
+            onClick={onAdd}
+            disabled={busy}
+            className="flex aspect-3/4 flex-col items-center justify-center gap-1 rounded-md text-muted-foreground hover:text-foreground"
+          >
+            <BusyIcon busy={busy} icon={PlusIcon} className="size-5" />
+            <span className="px-1 text-center text-[0.7rem]">
+              {f.t("receipt.add")}
+            </span>
+          </DropTile>
+        )}
       </div>
-      <p className="text-xs text-muted-foreground">{f.t("receipt.hint")}</p>
+      {readOnly ? null : (
+        <p className="text-xs text-muted-foreground">{f.t("receipt.hint")}</p>
+      )}
     </div>
   )
 }

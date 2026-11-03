@@ -14,6 +14,7 @@ import {
   DEFAULT_LAYOUT,
   type OverviewWidget,
 } from "@/lib/domain/overview-layout"
+import { entryChanges, type ChangeRecord } from "@/lib/domain/change-log"
 import type { LoanOpening, YearEnd } from "@/lib/domain/form5-balance"
 import type { PageSize, TraderType } from "@/lib/domain/settings-file"
 import type { AmountMode, Category, Entry, EntryType } from "@/lib/domain/types"
@@ -180,6 +181,8 @@ export interface BookState {
   loanOpening: LoanOpening | null
   /** Year → what the book cannot supply for Form 5 (§8.8). Saved in settings.json. */
   yearEnd: Record<string, YearEnd>
+  /** What has happened to the entries, oldest first (§8.11). Saved in settings.json. */
+  changeLog: ChangeRecord[]
 
   // ---- ephemeral ----
   hydrated: boolean
@@ -277,6 +280,7 @@ export interface BookActions {
       bankBalance?: BankBalance | null
       loanOpening?: LoanOpening | null
       yearEnd?: Record<string, YearEnd>
+      changeLog?: ChangeRecord[]
       overviewLayout?: OverviewWidget[]
       autosave?: boolean
       ledgerSize?: PageSize
@@ -399,6 +403,7 @@ function initialState(): BookState {
     bankBalance: null,
     loanOpening: null,
     yearEnd: {},
+    changeLog: [],
 
     hydrated: false,
     importing: false,
@@ -454,6 +459,7 @@ type PersistedBook = Pick<
   | "bankBalance"
   | "loanOpening"
   | "yearEnd"
+  | "changeLog"
 >
 
 /**
@@ -566,6 +572,31 @@ const clearedFilters = {
   catFormName: "",
 }
 
+/** The new entries and the log with what took them there (§8.11). */
+function withLog(
+  state: Pick<BookState, "entries" | "changeLog">,
+  entries: Entry[],
+  kind?: "restore" | "renumber" | "clear"
+): Pick<BookState, "entries" | "changeLog"> {
+  const at = new Date().toISOString()
+  return {
+    entries,
+    changeLog: [
+      ...state.changeLog,
+      ...entryChanges(state.entries, entries, at, kind),
+    ],
+  }
+}
+
+/** A VAT period or a year marked or unmarked, which locks or unlocks its entries. */
+function lockRecord(period: string, date: string | null): ChangeRecord {
+  return {
+    at: new Date().toISOString(),
+    action: date ? "lock" : "unlock",
+    period,
+  }
+}
+
 export const useBookStore = create<BookStore>()(
   persist(
     (set, get) => ({
@@ -596,6 +627,7 @@ export const useBookStore = create<BookStore>()(
           bankBalance: null,
           loanOpening: null,
           yearEnd: {},
+          changeLog: [],
           undoAttachmentIds: [],
           bookEpoch: get().bookEpoch + 1,
           gcTick: get().gcTick + 1,
@@ -618,6 +650,7 @@ export const useBookStore = create<BookStore>()(
           bankBalance: null,
           loanOpening: null,
           yearEnd: {},
+          changeLog: [],
           dialog: { kind: "none" },
           draftAttachmentIds: [],
           undoAttachmentIds: [],
@@ -649,6 +682,9 @@ export const useBookStore = create<BookStore>()(
           bankBalance: s.bankBalance ?? null,
           loanOpening: s.loanOpening ?? null,
           yearEnd: s.yearEnd ?? {},
+          changeLog: s.changeLog ?? [
+            { at: new Date().toISOString(), action: "import" },
+          ],
           overviewLayout: s.overviewLayout ?? get().overviewLayout,
           autosave: s.autosave ?? get().autosave,
           autosavePaused: false,
@@ -666,7 +702,7 @@ export const useBookStore = create<BookStore>()(
         if (i >= 0) entries[i] = keepVoucher(entry, entries[i])
         else entries.push(entry)
         set({
-          entries: [...assignVouchers(entries)],
+          ...withLog(get(), [...assignVouchers(entries)]),
           dirty: true,
           gcTick: get().gcTick + 1,
         })
@@ -674,14 +710,17 @@ export const useBookStore = create<BookStore>()(
 
       addEntries: (added) =>
         set({
-          entries: [...assignVouchers([...get().entries, ...added])],
+          ...withLog(get(), [...assignVouchers([...get().entries, ...added])]),
           dirty: true,
           gcTick: get().gcTick + 1,
         }),
 
       removeEntry: (id) =>
         set({
-          entries: get().entries.filter((e) => e.id !== id),
+          ...withLog(
+            get(),
+            get().entries.filter((e) => e.id !== id)
+          ),
           dirty: true,
           gcTick: get().gcTick + 1,
         }),
@@ -689,7 +728,10 @@ export const useBookStore = create<BookStore>()(
       removeEntries: (ids) => {
         const gone = new Set(ids)
         set({
-          entries: get().entries.filter((e) => !gone.has(e.id)),
+          ...withLog(
+            get(),
+            get().entries.filter((e) => !gone.has(e.id))
+          ),
           dirty: true,
           gcTick: get().gcTick + 1,
         })
@@ -702,7 +744,7 @@ export const useBookStore = create<BookStore>()(
           return next ? keepVoucher(next, e) : e
         })
         set({
-          entries: [...assignVouchers(entries)],
+          ...withLog(get(), [...assignVouchers(entries)]),
           dirty: true,
           gcTick: get().gcTick + 1,
         })
@@ -713,12 +755,15 @@ export const useBookStore = create<BookStore>()(
           const voucher = numbers.get(e.id)
           return voucher === undefined ? e : { ...e, voucher }
         })
-        set({ entries: [...assignVouchers(entries)], dirty: true })
+        set({
+          ...withLog(get(), [...assignVouchers(entries)], "renumber"),
+          dirty: true,
+        })
       },
 
       clearEntries: () =>
         set({
-          entries: [],
+          ...withLog(get(), [], "clear"),
           dirty: true,
           ledgerPage: 1,
           gcTick: get().gcTick + 1,
@@ -733,7 +778,11 @@ export const useBookStore = create<BookStore>()(
          * made in the meantime may have taken the newest one (§4).
          */
         set({
-          entries: [...assignVouchers([...back, ...get().entries])],
+          ...withLog(
+            get(),
+            [...assignVouchers([...back, ...get().entries])],
+            "restore"
+          ),
           dirty: true,
           gcTick: get().gcTick + 1,
         })
@@ -782,13 +831,21 @@ export const useBookStore = create<BookStore>()(
         const vatFiled = { ...get().vatFiled }
         if (date) vatFiled[key] = date
         else delete vatFiled[key]
-        set({ vatFiled, dirty: true })
+        set({
+          vatFiled,
+          changeLog: [...get().changeLog, lockRecord(key, date)],
+          dirty: true,
+        })
       },
       setYearArchived: (year, date) => {
         const yearsArchived = { ...get().yearsArchived }
         if (date) yearsArchived[String(year)] = date
         else delete yearsArchived[String(year)]
-        set({ yearsArchived, dirty: true })
+        set({
+          yearsArchived,
+          changeLog: [...get().changeLog, lockRecord(String(year), date)],
+          dirty: true,
+        })
       },
       setOverviewLayout: (overviewLayout) =>
         set({ overviewLayout, dirty: true }),
@@ -921,6 +978,7 @@ export const useBookStore = create<BookStore>()(
         bankBalance: s.bankBalance,
         loanOpening: s.loanOpening,
         yearEnd: s.yearEnd,
+        changeLog: s.changeLog,
       }),
       migrate: (persisted) => {
         const blob = (persisted ?? {}) as Record<string, unknown>

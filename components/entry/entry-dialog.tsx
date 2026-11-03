@@ -8,6 +8,7 @@ import { OptionSelect } from "@/components/common/option-select"
 import { Keys } from "@/components/common/keys"
 import { AttachmentGrid } from "@/components/entry/attachment-grid"
 import { ReceiptPreview } from "@/components/entry/receipt-preview"
+import { describeRecord } from "@/components/ledger/change-log-view"
 import { AttachmentViewer } from "@/components/receipt/receipt-viewer"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -34,6 +35,7 @@ import { useCommandCtx } from "@/hooks/use-commands"
 import { useShortcut } from "@/hooks/use-save-book"
 import { isMediaFile } from "@/hooks/use-file-drop"
 import { looksLikeVatId, normalizeVatId } from "@/lib/domain/ec-sales"
+import { lockOn } from "@/lib/domain/period-lock"
 import { canBeUnpaid } from "@/lib/domain/open-items"
 import {
   isReceiptStorageSupported,
@@ -374,6 +376,13 @@ function EntryDialogForm({
        * The picker's `accept` is only a hint — "all files" defeats it — so
        * the rule is enforced here as well, for files from either source.
        */
+      // A file can be dropped on the dialog as well as picked (§8.2).
+      const state = useBookStore.getState()
+      const current = state.entries.find((e) => e.id === editingId)
+      if (current && lockOn(current.date, state)) {
+        toast.add({ title: f.t("entry.lockedRefused", { n: 1 }) })
+        return
+      }
       const accepted = files.filter(isMediaFile)
       if (accepted.length < files.length) {
         toast.add({ title: f.t("receipt.badType") })
@@ -473,9 +482,22 @@ function EntryDialogForm({
     label: f.catLabel(c),
   }))
   const selectedCat = cats.find((c) => c.id === form.catId)
+  const changeLog = useBookStore((s) => s.changeLog)
+  const history = React.useMemo(
+    () =>
+      mode === "edit" && editing
+        ? changeLog.filter((r) => r.entryId === editing.id)
+        : [],
+    [changeLog, mode, editing]
+  )
   const settlement = !!(
     selectedCat && LINE_BY_KEY.get(selectedCat.line)?.settlement
   )
+  const vatFiledMarks = useBookStore((s) => s.vatFiled)
+  const yearsArchived = useBookStore((s) => s.yearsArchived)
+  const marks = { vatFiled: vatFiledMarks, yearsArchived }
+  // Read-only apart from the payment date (KPL 2:7, §8.11).
+  const lock = mode === "edit" && editing ? lockOn(editing.date, marks) : null
   const euSale = isEuSaleKind(selectedCat?.kind)
   const unpayable = canBeUnpaid(
     selectedCat && LINE_BY_KEY.get(selectedCat.line)
@@ -606,6 +628,10 @@ function EntryDialogForm({
     if (busy) return
     const entry = validate()
     if (!entry) return
+    if (!lock && lockOn(entry.date, marks)?.kind === "year") {
+      setError({ field: "date", message: f.t("entry.yearStored") })
+      return
+    }
 
     const entries = useBookStore.getState().entries
     const after = entries.some((e) => e.id === entry.id)
@@ -720,124 +746,138 @@ function EntryDialogForm({
           }}
         />
 
+        {lock ? (
+          <p className="rounded-md bg-muted p-3 text-sm">
+            {f.t(
+              lock.kind === "year" ? "entry.lockedYear" : "entry.lockedFiled",
+              { p: lock.key, d: f.date(lock.since) }
+            )}
+          </p>
+        ) : null}
+
         <div className="grid gap-6 md:grid-cols-[1fr_17rem]">
           <FieldGroup>
-            {/*
-             * Date and type share a row: both are narrow, and pairing them
-             * keeps the form short enough that the receipt preview beside it
-             * does not stand alone. One column below the compact breakpoint,
-             * where a date input with its picker no longer fits half a dialog.
-             */}
-            <div className="grid gap-5 min-[560px]:grid-cols-2">
-              <Field data-invalid={invalid("date")}>
-                <FieldLabel htmlFor="entry-date">
-                  {f.t("entry.date")}
+            <fieldset disabled={!!lock} className="contents">
+              {/*
+               * Date and type share a row: both are narrow, and pairing them
+               * keeps the form short enough that the receipt preview beside it
+               * does not stand alone. One column below the compact breakpoint,
+               * where a date input with its picker no longer fits half a dialog.
+               */}
+              <div className="grid gap-5 min-[560px]:grid-cols-2">
+                <Field data-invalid={invalid("date")}>
+                  <FieldLabel htmlFor="entry-date">
+                    {f.t("entry.date")}
+                  </FieldLabel>
+                  <Input
+                    id="entry-date"
+                    ref={dateRef}
+                    type="date"
+                    value={form.date}
+                    autoFocus={mode !== "edit"}
+                    aria-invalid={invalid("date")}
+                    onChange={(e) => {
+                      const date = e.target.value
+                      /*
+                       * A rate the user did not choose follows the date across
+                       * a rate change (§5); one they picked stays.
+                       */
+                      update(
+                        keepRate.current
+                          ? { date }
+                          : { date, vatRate: rateOnDate(form.vatRate, date) }
+                      )
+                    }}
+                  />
+                </Field>
+
+                <Field>
+                  <FieldLabel>{f.t("common.type")}</FieldLabel>
+                  <EntryTypeToggle
+                    value={form.type}
+                    // The old category belongs to the other side.
+                    onChange={(type) => update({ type, catId: "" })}
+                  />
+                </Field>
+              </div>
+
+              <Field>
+                <FieldLabel htmlFor="entry-desc">
+                  {f.t("entry.description")}
                 </FieldLabel>
                 <Input
-                  id="entry-date"
-                  ref={dateRef}
-                  type="date"
-                  value={form.date}
-                  autoFocus={mode !== "edit"}
-                  aria-invalid={invalid("date")}
-                  onChange={(e) => {
-                    const date = e.target.value
-                    /*
-                     * A rate the user did not choose follows the date across
-                     * a rate change (§5); one they picked stays.
-                     */
-                    update(
-                      keepRate.current
-                        ? { date }
-                        : { date, vatRate: rateOnDate(form.vatRate, date) }
-                    )
-                  }}
+                  id="entry-desc"
+                  value={form.description}
+                  placeholder={f.t("entry.descriptionPlaceholder")}
+                  onChange={(e) => update({ description: e.target.value })}
                 />
               </Field>
 
-              <Field>
-                <FieldLabel>{f.t("common.type")}</FieldLabel>
-                <EntryTypeToggle
-                  value={form.type}
-                  // The old category belongs to the other side.
-                  onChange={(type) => update({ type, catId: "" })}
-                />
-              </Field>
-            </div>
-
-            <Field>
-              <FieldLabel htmlFor="entry-desc">
-                {f.t("entry.description")}
-              </FieldLabel>
-              <Input
-                id="entry-desc"
-                value={form.description}
-                placeholder={f.t("entry.descriptionPlaceholder")}
-                onChange={(e) => update({ description: e.target.value })}
-              />
-            </Field>
-
-            <Field data-invalid={invalid("catId")}>
-              <FieldLabel>{f.t("entry.category")}</FieldLabel>
-              <OptionSelect
-                invalid={invalid("catId")}
-                options={catOptions}
-                value={form.catId}
-                onChange={(value) => {
-                  const cat = cats.find((c) => c.id === value)
-                  // Picking a category pre-fills its default rate (§8.5).
-                  update({
-                    catId: value,
-                    vatRate:
-                      cat && !keepRate.current
-                        ? rateOnDate(cat.vatRate, form.date)
-                        : form.vatRate,
-                  })
-                }}
-                placeholder={f.t("entry.errCategory")}
-                label={f.t("entry.category")}
-              />
-            </Field>
-
-            {settlement ? (
-              <Field>
-                <FieldLabel>{f.t("entry.settles")}</FieldLabel>
+              <Field data-invalid={invalid("catId")}>
+                <FieldLabel>{f.t("entry.category")}</FieldLabel>
                 <OptionSelect
-                  options={settledOptions}
-                  value={settledValue}
-                  onChange={(value) => update({ settles: value })}
-                  label={f.t("entry.settles")}
+                  invalid={invalid("catId")}
+                  options={catOptions}
+                  value={form.catId}
+                  onChange={(value) => {
+                    const cat = cats.find((c) => c.id === value)
+                    // Picking a category pre-fills its default rate (§8.5).
+                    update({
+                      catId: value,
+                      vatRate:
+                        cat && !keepRate.current
+                          ? rateOnDate(cat.vatRate, form.date)
+                          : form.vatRate,
+                    })
+                  }}
+                  placeholder={f.t("entry.errCategory")}
+                  label={f.t("entry.category")}
                 />
-                <FieldDescription>{f.t("entry.settlesHint")}</FieldDescription>
               </Field>
-            ) : null}
 
-            {ownerTransfer ? (
-              <FieldDescription>{f.t("entry.ownerHint")}</FieldDescription>
-            ) : null}
-
-            {euSale ? (
-              <Field>
-                <FieldLabel htmlFor="entry-buyer-vat">
-                  {f.t("entry.buyerVat")}
-                </FieldLabel>
-                <Input
-                  id="entry-buyer-vat"
-                  value={form.buyerVatId}
-                  placeholder="SE556123456701"
-                  onChange={(e) => update({ buyerVatId: e.target.value })}
-                />
-                {form.buyerVatId.trim() && !looksLikeVatId(form.buyerVatId) ? (
-                  <FieldDescription className="text-warning">
-                    {f.t("entry.buyerVatBad")}
-                  </FieldDescription>
-                ) : (
+              {settlement ? (
+                <Field>
+                  <FieldLabel>{f.t("entry.settles")}</FieldLabel>
+                  <OptionSelect
+                    options={settledOptions}
+                    value={settledValue}
+                    onChange={(value) => update({ settles: value })}
+                    label={f.t("entry.settles")}
+                  />
                   <FieldDescription>
-                    {f.t("entry.buyerVatHint")}
+                    {f.t("entry.settlesHint")}
                   </FieldDescription>
-                )}
-              </Field>
-            ) : null}
+                </Field>
+              ) : null}
+
+              {ownerTransfer ? (
+                <FieldDescription>{f.t("entry.ownerHint")}</FieldDescription>
+              ) : null}
+
+              {euSale ? (
+                <Field>
+                  <FieldLabel htmlFor="entry-buyer-vat">
+                    {f.t("entry.buyerVat")}
+                  </FieldLabel>
+                  <Input
+                    id="entry-buyer-vat"
+                    value={form.buyerVatId}
+                    placeholder="SE556123456701"
+                    onChange={(e) => update({ buyerVatId: e.target.value })}
+                  />
+                  {form.buyerVatId.trim() &&
+                  !looksLikeVatId(form.buyerVatId) ? (
+                    <FieldDescription className="text-warning">
+                      {f.t("entry.buyerVatBad")}
+                    </FieldDescription>
+                  ) : (
+                    <FieldDescription>
+                      {f.t("entry.buyerVatHint")}
+                    </FieldDescription>
+                  )}
+                </Field>
+              ) : null}
+            </fieldset>
 
             {unpayable ? (
               <Field>
@@ -883,112 +923,132 @@ function EntryDialogForm({
               </Field>
             ) : null}
 
-            {selectedCat?.line === "313" ||
-            selectedCat?.line === "314" ||
-            selectedCat?.line === "315" ? (
-              <FieldDescription>{f.t("entry.privateUseHint")}</FieldDescription>
-            ) : null}
+            <fieldset disabled={!!lock} className="contents">
+              {selectedCat?.line === "313" ||
+              selectedCat?.line === "314" ||
+              selectedCat?.line === "315" ? (
+                <FieldDescription>
+                  {f.t("entry.privateUseHint")}
+                </FieldDescription>
+              ) : null}
 
-            {selectedCat?.line === "335" ? (
-              <FieldDescription>{f.t("entry.payrollHint")}</FieldDescription>
-            ) : null}
+              {selectedCat?.line === "335" ? (
+                <FieldDescription>{f.t("entry.payrollHint")}</FieldDescription>
+              ) : null}
 
-            {/* Paired for the same reason as date and type above. */}
-            <div className="grid gap-5 min-[560px]:grid-cols-2">
-              <Field data-invalid={invalid("amount")}>
-                <FieldLabel htmlFor="entry-sum">
-                  {f.t("entry.amount")}
-                </FieldLabel>
-                <Input
-                  id="entry-sum"
-                  inputMode="decimal"
-                  value={form.amount}
-                  aria-invalid={invalid("amount")}
-                  onChange={(e) => update({ amount: e.target.value })}
-                  className="tabular text-right"
-                />
-                {duplicate ? (
-                  <FieldDescription className="text-warning">
-                    {f.t("entry.duplicateOf", {
-                      n: duplicate.voucher ?? "",
-                      d: duplicate.description || f.t("ledger.noDescription"),
-                    })}
-                  </FieldDescription>
-                ) : null}
-              </Field>
+              {/* Paired for the same reason as date and type above. */}
+              <div className="grid gap-5 min-[560px]:grid-cols-2">
+                <Field data-invalid={invalid("amount")}>
+                  <FieldLabel htmlFor="entry-sum">
+                    {f.t("entry.amount")}
+                  </FieldLabel>
+                  <Input
+                    id="entry-sum"
+                    inputMode="decimal"
+                    value={form.amount}
+                    aria-invalid={invalid("amount")}
+                    onChange={(e) => update({ amount: e.target.value })}
+                    className="tabular text-right"
+                  />
+                  {duplicate ? (
+                    <FieldDescription className="text-warning">
+                      {f.t("entry.duplicateOf", {
+                        n: duplicate.voucher ?? "",
+                        d: duplicate.description || f.t("ledger.noDescription"),
+                      })}
+                    </FieldDescription>
+                  ) : null}
+                </Field>
+
+                <Field>
+                  <FieldLabel>{f.t("entry.vatRate")}</FieldLabel>
+                  <OptionSelect
+                    options={rateOptions.map((rate) => ({
+                      value: String(rate),
+                      label: f.rate(rate),
+                    }))}
+                    value={String(form.vatRate)}
+                    onChange={(value) => {
+                      keepRate.current = true
+                      update({ vatRate: Number(value) })
+                    }}
+                    label={f.t("entry.vatRate")}
+                  />
+                  {mismatch ? (
+                    <FieldDescription className="text-warning">
+                      {mismatch.kind === "notYet"
+                        ? f.t("entry.rateNotYet", {
+                            r: f.rate(mismatch.rate),
+                            d: f.date(mismatch.since),
+                            s: f.rate(mismatch.suggested),
+                          })
+                        : f.t("entry.rateEnded", {
+                            r: f.rate(mismatch.rate),
+                            d: f.date(mismatch.until),
+                            s: f.rate(mismatch.suggested),
+                          })}
+                    </FieldDescription>
+                  ) : null}
+                  {noDeduction ? (
+                    <FieldDescription className="text-warning">
+                      {selectedCat?.line === "341"
+                        ? f.t("entry.vatNotDeductible341")
+                        : f.t("entry.vatNotDeductible")}
+                    </FieldDescription>
+                  ) : null}
+                </Field>
+              </div>
 
               <Field>
-                <FieldLabel>{f.t("entry.vatRate")}</FieldLabel>
-                <OptionSelect
-                  options={rateOptions.map((rate) => ({
-                    value: String(rate),
-                    label: f.rate(rate),
-                  }))}
-                  value={String(form.vatRate)}
-                  onChange={(value) => {
-                    keepRate.current = true
-                    update({ vatRate: Number(value) })
+                <FieldLabel>{f.t("entry.amountMode")}</FieldLabel>
+                <ToggleGroup
+                  aria-label={f.t("entry.amountMode")}
+                  value={[form.amountMode]}
+                  onValueChange={(value) => {
+                    const next = value[0] as AmountMode | undefined
+                    if (next) update({ amountMode: next })
                   }}
-                  label={f.t("entry.vatRate")}
-                />
-                {mismatch ? (
-                  <FieldDescription className="text-warning">
-                    {mismatch.kind === "notYet"
-                      ? f.t("entry.rateNotYet", {
-                          r: f.rate(mismatch.rate),
-                          d: f.date(mismatch.since),
-                          s: f.rate(mismatch.suggested),
-                        })
-                      : f.t("entry.rateEnded", {
-                          r: f.rate(mismatch.rate),
-                          d: f.date(mismatch.until),
-                          s: f.rate(mismatch.suggested),
-                        })}
-                  </FieldDescription>
-                ) : null}
-                {noDeduction ? (
-                  <FieldDescription className="text-warning">
-                    {selectedCat?.line === "341"
-                      ? f.t("entry.vatNotDeductible341")
-                      : f.t("entry.vatNotDeductible")}
-                  </FieldDescription>
-                ) : null}
+                >
+                  <ToggleGroupItem value="gross">
+                    {f.t("common.gross")}
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="net">
+                    {f.t("common.net")}
+                  </ToggleGroupItem>
+                </ToggleGroup>
               </Field>
-            </div>
 
-            <Field>
-              <FieldLabel>{f.t("entry.amountMode")}</FieldLabel>
-              <ToggleGroup
-                aria-label={f.t("entry.amountMode")}
-                value={[form.amountMode]}
-                onValueChange={(value) => {
-                  const next = value[0] as AmountMode | undefined
-                  if (next) update({ amountMode: next })
-                }}
-              >
-                <ToggleGroupItem value="gross">
-                  {f.t("common.gross")}
-                </ToggleGroupItem>
-                <ToggleGroupItem value="net">
-                  {f.t("common.net")}
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </Field>
-
-            <Field orientation="horizontal">
-              <Checkbox
-                id="entry-repeat"
-                checked={form.repeat}
-                onCheckedChange={(checked) =>
-                  update({ repeat: checked === true })
-                }
-              />
-              <FieldLabel htmlFor="entry-repeat" className="font-normal">
-                {f.t("recurring.repeat")}
-              </FieldLabel>
-            </Field>
+              <Field orientation="horizontal">
+                <Checkbox
+                  id="entry-repeat"
+                  checked={form.repeat}
+                  onCheckedChange={(checked) =>
+                    update({ repeat: checked === true })
+                  }
+                />
+                <FieldLabel htmlFor="entry-repeat" className="font-normal">
+                  {f.t("recurring.repeat")}
+                </FieldLabel>
+              </Field>
+            </fieldset>
 
             <FieldError>{error?.message}</FieldError>
+
+            {history.length ? (
+              <details className="text-sm">
+                <summary className="cursor-pointer text-muted-foreground">
+                  {f.t("entry.history", { n: history.length })}
+                </summary>
+                <ul className="mt-2 flex flex-col gap-1 text-xs text-muted-foreground">
+                  {history.map((r, i) => (
+                    <li key={`${r.at}-${i}`}>
+                      {f.date(r.at.slice(0, 10))}:{" "}
+                      {describeRecord(f, catMap, r)}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
           </FieldGroup>
 
           {/* The paper sits on a sunken surface, which is what tells it
@@ -1011,6 +1071,7 @@ function EntryDialogForm({
               onRemove={(index) =>
                 update({ atts: form.atts.filter((_, i) => i !== index) })
               }
+              readOnly={!!lock}
             />
           </div>
         </div>
@@ -1018,15 +1079,41 @@ function EntryDialogForm({
         <DialogFooter className="flex-wrap">
           {mode === "edit" && editing ? (
             <>
-              <Button
-                variant="destructive"
-                onClick={async () => {
-                  if (await deleteEntry(ctx, editing)) closeDialog()
-                }}
-              >
-                <Trash2Icon data-icon="inline-start" />
-                {f.t("common.delete")}
-              </Button>
+              {lock ? (
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    openDialog({
+                      kind: "entry",
+                      mode: "new",
+                      prefill: {
+                        date: todayIso(),
+                        description: f.t("entry.correctionOf", {
+                          n: editing.voucher ?? "",
+                          x: editing.description,
+                        }),
+                        type: editing.type,
+                        catId: editing.catId,
+                        amount: -editing.amount,
+                        vatRate: editing.vatRate,
+                        amountMode: editing.amountMode,
+                      },
+                    })
+                  }
+                >
+                  {f.t("entry.correction")}
+                </Button>
+              ) : (
+                <Button
+                  variant="destructive"
+                  onClick={async () => {
+                    if (await deleteEntry(ctx, editing)) closeDialog()
+                  }}
+                >
+                  <Trash2Icon data-icon="inline-start" />
+                  {f.t("common.delete")}
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={async () => {

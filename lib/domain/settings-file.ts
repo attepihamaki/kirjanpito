@@ -6,6 +6,7 @@ import {
 import { isVatRate } from "@/lib/domain/money"
 import type { AssetOpening } from "@/lib/domain/assets"
 import type { BankBalance } from "@/lib/domain/bank-balance"
+import type { ChangeRecord } from "@/lib/domain/change-log"
 import {
   EMPTY_YEAR_END,
   type LoanOpening,
@@ -74,6 +75,8 @@ export interface BookSettings {
   loanOpening: LoanOpening | null
   /** Year (`"2026"`) → what the book cannot supply for Form 5 (§8.8). */
   yearEnd: Record<string, YearEnd>
+  /** What has happened to the entries, oldest first (§8.11). */
+  changeLog: ChangeRecord[]
 }
 
 /**
@@ -294,6 +297,12 @@ export function parseSettings(text: string): ParsedSettings {
     }
     out.yearEnd = years
   }
+  if (Array.isArray(raw.changeLog)) {
+    out.changeLog = raw.changeLog.filter(
+      (r): r is ChangeRecord =>
+        isRecord(r) && typeof r.at === "string" && typeof r.action === "string"
+    )
+  }
   if (raw.bankBalance === null) out.bankBalance = null
   else if (
     isRecord(raw.bankBalance) &&
@@ -346,6 +355,7 @@ export function serializeSettings(s: BookSettings): string {
     bankBalance: s.bankBalance,
     loanOpening: s.loanOpening,
     yearEnd: s.yearEnd,
+    changeLog: s.changeLog,
   }
   return `${JSON.stringify(file, null, 2)}\n`
 }

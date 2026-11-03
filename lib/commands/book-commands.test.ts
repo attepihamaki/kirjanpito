@@ -137,16 +137,33 @@ describe("changes to a filed period", () => {
     useBookStore.setState({ vatPeriod: "month", vatFiled: {} })
   })
 
-  it("adds what a delete does to a filed return to its confirmation", async () => {
+  it("refuses to delete an entry in a filed period (KPL 2:7)", async () => {
     useBookStore.setState({ vatFiled: { "2026-10": "2026-12-14" } })
-    await deleteEntry(ctx, october())
+    const before = useBookStore.getState().entries.length
 
+    expect(await deleteEntry(ctx, october())).toBe(false)
+    expect(confirm).not.toHaveBeenCalled()
+    expect(useBookStore.getState().entries).toHaveLength(before)
+  })
+
+  it("refuses to clear a book with an entry in a filed period", async () => {
+    useBookStore.setState({ vatFiled: { "2026-10": "2026-12-14" } })
+    const before = useBookStore.getState().entries.length
+
+    await clearAllEntries(ctx)
+    expect(useBookStore.getState().entries).toHaveLength(before)
+  })
+
+  it("says how to correct a return when a new entry goes into its period", async () => {
+    useBookStore.setState({ vatFiled: { "2026-10": "2026-12-14" } })
+    const added = { ...october(), id: "new", amount: 100_000 }
+    vi.mocked(confirm).mockResolvedValueOnce(false)
+
+    await confirmFiledChange([...useBookStore.getState().entries, added])
     const message = flat(vi.mocked(confirm).mock.calls[0][0].message)
     expect(message).toContain(
       "Lokakuu 2026 on merkitty ilmoitetuksi 14.12.2026."
     )
-    expect(message).toContain("Maksettava vero pienenee 382,50 €.")
-    expect(message).toContain("seuraavalla ilmoituksella")
   })
 
   it("keeps the plain confirmation when no filed period changes", async () => {
@@ -209,14 +226,13 @@ describe("bulk actions (§8.4)", () => {
     ])
   })
 
-  it("asks before moving entries of a filed period, and stops on cancel", async () => {
+  it("refuses to move or delete entries of a filed period", async () => {
     useBookStore.setState({ vatFiled: { "2026-02": "2026-04-12" } })
-    vi.mocked(confirm).mockResolvedValueOnce(false)
-    // A Finnish sale moved to EU goods leaves the sales VAT (§6.1).
     const sale = pick("2026-02-12")
 
     expect(await recategorizeEntries(ctx, sale, "300-eu-goods")).toBe(false)
-    expect(confirm).toHaveBeenCalledOnce()
+    expect(await deleteEntries(ctx, sale)).toBe(false)
+    expect(confirm).not.toHaveBeenCalled()
     expect(pick("2026-02-12")[0].catId).toBe("300-domestic")
   })
 
@@ -252,6 +268,7 @@ describe("renumberVouchers", () => {
         voucher("early", "2026-01-01", 2),
       ],
       yearsArchived: {},
+      vatFiled: {},
       dirty: false,
     })
   })
@@ -278,10 +295,15 @@ describe("renumberVouchers", () => {
     expect(confirm).not.toHaveBeenCalled()
   })
 
-  it("says a stored copy keeps the old numbers", async () => {
+  it("refuses a year with an entry in a stored year or filed period", async () => {
     useBookStore.setState({ yearsArchived: { "2026": "2027-01-20" } })
-    await renumberVouchers(ctx, 2026)
-    expect(vi.mocked(confirm).mock.calls[0][0].message).toContain("tallessa")
+    expect(await renumberVouchers(ctx, 2026)).toBe(false)
+    useBookStore.setState({
+      yearsArchived: {},
+      vatFiled: { "2026-01": "2026-03-12" },
+    })
+    expect(await renumberVouchers(ctx, 2026)).toBe(false)
+    expect(confirm).not.toHaveBeenCalled()
   })
 
   it("keeps an entry added since when undone", async () => {
@@ -289,5 +311,54 @@ describe("renumberVouchers", () => {
     useBookStore.getState().addEntries([voucher("new", "2026-04-01")])
     clickUndo()
     expect(numbers()).toEqual({ late: 1, early: 2, new: 3 })
+  })
+})
+
+describe("the change log (§8.11)", () => {
+  const added = {
+    id: "logged",
+    date: "2026-07-01",
+    description: "Testi",
+    type: "expense" as const,
+    catId: "333",
+    amount: 1000,
+    vatRate: 25.5,
+    amountMode: "gross" as const,
+  }
+  const actions = () => useBookStore.getState().changeLog.map((r) => r.action)
+
+  beforeEach(() => {
+    useBookStore.setState({ entries: [], changeLog: [], vatFiled: {} })
+  })
+
+  it("records an entry's life, from adding to an undone delete", () => {
+    const store = useBookStore.getState()
+    store.addEntries([added])
+    store.upsertEntry({ ...added, amount: 2000 })
+    store.removeEntry("logged")
+    store.restoreEntries([added])
+    expect(actions()).toEqual(["add", "edit", "delete", "restore"])
+    expect(useBookStore.getState().changeLog[1].changes).toEqual([
+      { field: "amount", from: 1000, to: 2000 },
+    ])
+  })
+
+  it("records a mark set and removed", () => {
+    const store = useBookStore.getState()
+    store.setVatFiled("2026-07", "2026-09-14")
+    store.setVatFiled("2026-07", null)
+    expect(actions()).toEqual(["lock", "unlock"])
+    expect(useBookStore.getState().changeLog[0].period).toBe("2026-07")
+  })
+
+  it("lets a payment date be set on a locked entry's record", () => {
+    const store = useBookStore.getState()
+    store.addEntries([{ ...added, paidOn: null }])
+    store.setVatFiled("2026-07", "2026-09-14")
+    store.upsertEntry({
+      ...useBookStore.getState().entries[0],
+      paidOn: "2026-10-01",
+    })
+    expect(actions()).toEqual(["add", "lock", "edit"])
   })
 })

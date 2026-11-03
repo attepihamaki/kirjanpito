@@ -162,7 +162,7 @@ The Accounting Act has every entry rest on a dated voucher that is "järjestelm�
 
 - One series per financial year, starting at 1. A new entry takes the year's highest number plus one.
 - An entry keeps its number while it stays in its year (`keepVoucher`). Moved to another year, it takes the next number there. Nothing renumbers by itself to close a gap, so a deleted entry leaves one, unless it was the newest.
-- **Renumbering is the user's own action** (`renumberYear`, `renumberVouchers` in `book-commands.ts`). Asetukset, Yleiset, Tositenumerot numbers the selected year from 1 in date order, and entries of one date stay in their current order. It asks first, says so if a copy of the year is marked as stored (§8.12), and can be undone from the toast for 10 seconds. It does not touch VAT or the result, so it has no filed-period warning (§8.11).
+- **Renumbering is the user's own action** (`renumberYear`, `renumberVouchers` in `book-commands.ts`). Asetukset, Yleiset, Tositenumerot numbers the selected year from 1 in date order, and entries of one date stay in their current order. It asks first and can be undone from the toast for 10 seconds. It refuses a year with any entry in a filed period or a stored year (§8.11), since the numbers are then on record.
 - `assignVouchers` numbers whatever has no number, or a number another entry of its year already holds, in date order after the year's highest. The store runs it on every add, on opening a file and on restoring deleted entries, which go first so they keep theirs. `persist.migrate` (version 4) numbers a book stored before this existed.
 - In the UI the field is "Tositenumero" / "Voucher number", and the ledger column is "Nro". "Tosite" on its own stays the receipt file.
 
@@ -540,6 +540,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
   "assetOpening": { "year": 2026, "amount": 300000 },
   "bankBalance": { "amount": 125000, "date": "2026-10-31" },
   "loanOpening": { "year": 2026, "amount": 800000 },
+  "changeLog": [{ "at": "2026-11-03T10:00:00.000Z", "action": "add", "voucher": 1, "date": "2026-10-10", "description": "Osto" }],
   "yearEnd": { "2026": { "goods": 120000, "otherCurrent": 0, "otherFixed": 0, "cash": 3500, "otherFinancial": 0, "loanCurrent": 0, "otherCurrentDebt": 0, "otherLongDebt": 0 } }
 }
 ```
@@ -664,11 +665,11 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
   - Responsive: the category column is hidden under 1240 px. Under 560 px, the type, net, VAT and actions columns are hidden (tap the row to edit); the signed gross is what still tells income from expense there.
 - **Bulk actions.** Ticking rows, or the header box for the whole page, shows a bar above the table (`components/ledger/bulk-bar.tsx`) with the count, "Vaihda luokka" and "Poista valitut".
   - The category list offers the enabled categories of the selected side. A mix of income and expenses cannot share a category, so the bar says so instead of offering one. Each entry keeps its own VAT rate and its voucher number.
-  - Both go through `lib/commands/bulk-commands.ts`: the delete asks first, both warn about a filed VAT period they would change (§8.11), and both can be undone from the toast for 10 seconds.
+  - Both go through `lib/commands/bulk-commands.ts`: the delete asks first, both refuse an entry in a locked period (§8.11), and both can be undone from the toast for 10 seconds.
   - The selection belongs to the period and filters it was made under. Changing either starts over, so the bar never acts on rows that are no longer listed. It is component state, not stored.
 - **Pagination:** the row count ("16 kirjausta") at the left-hand end, and at the right "Rivejä sivulla" with a 10/25/50/100 select (default 10), "Sivu 1 / 2", and first / previous / next / last icon buttons. The strip reads as "what you are looking at" / "how to move through it", which is why the count lives here rather than in the toolbar. The page resets to 1 when filters, sorting or the month change. It sits **inside the table's surface**, as the categories table places it (§8.10) — `ledger-table.tsx` renders the table alone and the view composes the `Surface` around both. `TablePagination` owns that strip, its padding and the rule above it: the table body drops the last row's own bottom border, which in a table that ends its surface would land on the surface's edge. **It is always shown**, even on a single page: the rows-per-page select is how the page length is set, so hiding the row until the list outgrows that length would hide the only control that changes it.
 - **Empty state** (open but no entries): "Ei vielä kirjauksia" with "Uusi kirjaus" and "Avaa tiedosto".
-- **Päiväkirja, Pääkirja and Tililuettelo.** The view has four tabs (`LedgerTabs`, routes `LEDGER_ROUTES` in `lib/site.ts`): Kirjaukset at `/app/ledger`, Päiväkirja at `/app/ledger/journal`, Pääkirja at `/app/ledger/accounts` and Tililuettelo at `/app/ledger/chart`. The Accounting Act asks that entries can be viewed "aikajärjestyksessä ja asiajärjestyksessä" (KPL 2:4, checked on Finlex), and these two are that, for the selected year (`lib/domain/books.ts`, `components/ledger/books-view.tsx`).
+- **Päiväkirja, Pääkirja, Tililuettelo and Muutosloki.** The view has five tabs (`LedgerTabs`, routes `LEDGER_ROUTES` in `lib/site.ts`): Kirjaukset at `/app/ledger`, Päiväkirja at `/app/ledger/journal`, Pääkirja at `/app/ledger/accounts`, Tililuettelo at `/app/ledger/chart` and Muutosloki at `/app/ledger/log` (§8.11). The Accounting Act asks that entries can be viewed "aikajärjestyksessä ja asiajärjestyksessä" (KPL 2:4, checked on Finlex), and these two are that, for the selected year (`lib/domain/books.ts`, `components/ledger/books-view.tsx`).
   - The journal lists the year by month, in date and then voucher order, with the account number, expenses as negative, and income and expense totals.
   - The general ledger lists the same entries by account in chart-of-accounts order (§5), only accounts that have entries, each with its total. A category is shown under the description unless it has the account's own name.
   - The account list (KPL 2:2, `accountList`) names each account with an enabled category or an entry that year and what it holds, followed by the list of books and material of KPL 2:7a. The Act keeps both for 10 years with the books.
@@ -810,8 +811,8 @@ Use one shared `AlertDialog`-based `confirm()` helper, with a title, a message, 
 | Start new bookkeeping                  | unsaved changes                    | same as above                                                             |
 | Open a file over the current one       | unsaved changes                    | "Korvataanko avoin kirjanpito?" / "Korvaa"                                |
 | Save over a file edited elsewhere      | its timestamp moved since we read it | "Korvataanko tiedosto?" / "Korvaa"                                      |
-| Delete an entry (row or dialog)        | always                             | "Poistetaanko kirjaus?" / "Poista", plus a paragraph per filed period it changes |
-| Save an entry                          | it changes a period marked as filed | "Muutetaanko ilmoitettua kautta?" / "Tallenna silti"                     |
+| Delete an entry (row or dialog)        | not in a locked period             | "Poistetaanko kirjaus?" / "Poista" |
+| Save an entry                          | it adds to a period marked as filed | "Muutetaanko ilmoitettua kautta?" / "Tallenna silti"                     |
 | Clear all entries                      | always                             | "Tyhjennetäänkö kirjaukset?" / "Tyhjennä"                                 |
 | Close the entry dialog (Peruuta / Esc) | form differs from its snapshot     | "Hylätäänkö muutokset?" / "Hylkää muutokset", cancel = "Jatka muokkausta" |
 | Navigate away from Settings            | the new-category name is filled    | same as above, with the category message                                  |
@@ -823,7 +824,11 @@ The wording everywhere is about saving rather than exporting, so one set of stri
 
 Closing a file clears entries, the file name and filters, puts the categories back to the defaults, unlinks the file (§7.5), sets the bookkeeping to closed, garbage-collects receipts, and returns to the landing page. A new bookkeeping starts from the default categories too: custom ones and changed rates belong to the old file (§7.6).
 
-**A change to a filed period says how to correct the return.** `filedPeriodChanges` in `lib/domain/filed-changes.ts` builds each touched period's return before and after the change and compares the fields, so a new description, a receipt or an entry no field counts (a 0 % grant) asks nothing. For each period that does change, the confirmation names it, the date it was marked, and how much the tax payable goes up or down. It then gives Vero's fix (vero.fi, "Miten arvonlisäveroilmoituksen tietoja korjataan?"): a replacement return (korvaava ilmoitus) for the period in OmaVero, or, when only the tax fields change and by at most 500 €, the next return instead (`fitsNextReturn`). A change to EU, reverse-charge or 0 % sales always needs the replacement. The filed mark stays as it was, since the user decides when the correction is made. `lib/commands/filed-commands.ts` holds the wording and is loaded on demand by `deleteEntry`, because `book-commands.ts` is in the landing bundle.
+**A filed period and a stored year are locked** (`lib/domain/period-lock.ts`). KPL 2:7 forbids changing or deleting the content of a voucher or a book after a periodic return has been made from it, or after the financial statements are prepared. So an entry whose date falls in a VAT period marked as filed, or in a year marked as stored, opens read-only with a notice saying why. Delete, bulk actions, clearing and renumbering refuse with a toast (`refuseLocked`). The payment date stays open, since a later payment adds to what is known and alters nothing reported. "Tee korjauskirjaus" opens a new entry with the opposite amount, dated today. Removing the mark unlocks the entry, which is how a mark made by mistake gets undone, and the log shows it. No new entry can be dated in a stored year.
+
+**Every change to the entries is logged** (`lib/domain/change-log.ts`). The store's entry actions diff the entries before and after and append records: added, edited with each field's old and new value, deleted, restored, cleared, renumbered, and each mark set or removed. An undo is logged as its own record. The log is `changeLog` in `settings.json` and the browser's blob, and the Muutosloki tab at `/app/ledger/log` prints it. An entry's own history is in its dialog. A file opened with no log, such as a plain CSV, starts one with a record saying so. **It records use of the app.** A file the user controls can be edited by hand, so the log is not proof, and the tab says so.
+
+**A new entry in a filed period says how to correct the return.** `filedPeriodChanges` in `lib/domain/filed-changes.ts` builds each touched period's return before and after the change and compares the fields, so an entry no field counts (a 0 % grant) asks nothing. For each period that does change, the confirmation names it, the date it was marked, and how much the tax payable goes up or down. It then gives Vero's fix (vero.fi, "Miten arvonlisäveroilmoituksen tietoja korjataan?"): a replacement return (korvaava ilmoitus) for the period in OmaVero, or, when only the tax fields change and by at most 500 €, the next return instead (`fitsNextReturn`). A change to EU, reverse-charge or 0 % sales always needs the replacement. The filed mark stays as it was, since the user decides when the correction is made. `lib/commands/filed-commands.ts` holds the wording and is loaded on demand by `deleteEntry`, because `book-commands.ts` is in the landing bundle.
 
 **Deleting can be undone.** Deleting an entry and clearing the entries both still ask first, then raise a toast with "Kumoa" for 10 seconds (`offerUndo` in `lib/commands/book-commands.ts`). An undo also brings back a custom category deleted in the meantime, and undoing a bulk category change only moves the category back, so an edit made since stays. The deleted entries' receipts stay in IndexedDB while the toast is up (`undoAttachmentIds`, which the GC sweep counts as live), or an undo would bring back entries whose files were already gone. An undo after a new, closed or opened bookkeeping has taken over does nothing (`bookEpoch`). Undo marks the book dirty, since autosave may already have written the deletion. `lib/commands/book-commands.test.ts` covers it.
 
@@ -1057,7 +1062,7 @@ app/
     page.tsx                     /app → /app/overview
     overview/  summary/
     ledger/                      page.tsx = Kirjaukset
-      journal/  accounts/  chart/  Päiväkirja, Pääkirja, Tililuettelo (§8.4)
+      journal/  accounts/  chart/  log/  Päiväkirja, Pääkirja, Tililuettelo, Muutosloki (§8.4)
     vat/                         layout.tsx = VatShell; page.tsx = Laskelma
       return/                    /app/vat/return (§8.7)
     statement/                   layout.tsx = StatementShell; page.tsx = Laskelma
@@ -1282,13 +1287,12 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 
 ## 14. Open questions and ideas not yet done
 
-- Undo for edits. Deleting can be undone (§8.11); changing an entry cannot. Autosave (§7.5) makes a mistake reach the file within seconds, which is why it is opt-in.
+- Undo for edits. Deleting can be undone (§8.11); changing an entry cannot, though the change log shows the old values. Autosave (§7.5) makes a mistake reach the file within seconds, which is why it is opt-in.
 - Filing through Ilmoitin.fi, at least for the VAT return. Not before the user asks for it (§8.8).
 - Form 5 fields the app does not work out: 338 and 347, the deductible parts of depreciation (337) and interest (346), which it fills with the full amounts (§8.8); co-operative surplus (325–328); and the additional deductions of 364, which come from fields 388 and 392 elsewhere on the return.
 - The VAT return of a business that stops trading (§6.5).
 - Asset classes other than machinery and equipment, and templates repeating less often than monthly.
 - VAT return fields the book cannot fill (§8.7): EU purchases, imports and reverse-charge purchases.
-- Whether renumbering a year's vouchers (§4) is acceptable once its books are closed. The app warns and leaves the choice to the user; an accountant has not confirmed it.
 - Whether a VAT payment or refund booked on account 2939 (§6.6) is what an accountant would expect in a single-entry book, and whether 2939 should be another number. The same goes for the owner's transfers on 2000 (§6.7).
 
 ### Legal gaps
@@ -1300,7 +1304,7 @@ What the sources settle:
 - **Who keeps what (KPL 1:1a).** A sole trader of either kind must be able to determine accounts payable and receivable at all times. Single-entry books are allowed while at most one of three limits is exceeded in both the closed year and the one before: balance sheet 100 000 €, turnover 200 000 €, more than 3 employees on average. Financial statements are required only when at least two of the micro limits of KPL 1:4b are exceeded in both years: 450 000 €, 900 000 €, 10 employees. They then follow the micro rules, within 4 months (3:6), dated and signed (3:7).
 - **Income timing (EVL 27 a §, vero.fi, "Yritystoiminta, tulonhankkimistoiminta ja harrastustoiminta henkilöverotuksessa").** An ammatinharjoittaja with single-entry books is taxed on a cash basis: income and expenses belong to the year of payment. A liikkeenharjoittaja may keep single-entry books but must adjust them to accrual basis for tax. KPL 2:3 allows the accrual, invoice and payment bases in the books themselves.
 - **Changing what is recorded (KPL 2:7).** The content of a voucher or a book may not be changed or deleted after the financial statements are prepared, or after a periodic return to an authority has been made from the books. That includes the VAT return. The form may change for handling or storage, if the content and the audit trail survive.
-- **Timing of entries (KPL 2:4).** Cash payments are recorded without delay, in date order. Others may be monthly, and in time for returns to be made from up-to-date books. The Act sets no four-month limit for a sole trader.
+- **Timing of entries (KPL 2:4).** Cash payments are recorded without delay, in date order. Others may be monthly, and in time for returns to be made from up-to-date books. The Act sets no four-month limit for a sole trader. The book does not say which sales were cash, so the app does not check this, and a new entry in a filed period gets the warning of §8.11.
 - **Lists (KPL 2:2, 2:7a, 2:10).** An account list that explains each account's content, for each financial year, and a list of the books and voucher types showing how they connect and how they are kept. Both for 10 years.
 - **Private use (AVL 21 §, Vero's guidance of 17.3.2020).** Goods whose VAT was deducted carry VAT when taken into private use, on the purchase price or a lower probable selling price. For a natural person the first 850 € a year is free. This guidance predates 2021, so confirm the figure.
 - **EC Sales List (vero.fi).** Monthly, only for a month with such sales, due on the 20th of the next month or the next working day. It lists each buyer's VAT number and total. Goods go by the invoice's month and services by the month of the supply or payment.
@@ -1313,6 +1317,4 @@ Questions for an accountant. Building proceeds on the answer given:
 - Is a change log with locked periods enough for KPL 2:6 and 2:7 in a file the user controls? Assumed yes, and the app says it is a record of use and not proof.
 - Are accounts 2939 and 2000, and a loan account, what a single-entry book should use? Assumed acceptable as the app's own numbers.
 
-The gaps themselves, in the order they are being closed:
-
-- **Edits and deletes leave no trace, and nothing locks.** An entry in a filed period can be changed after a warning, which KPL 2:7 does not allow.
+What the app still leaves to the user is listed above each topic. No known legal gap remains open beyond the questions above and the Form 5 fields at the top of this section.

@@ -354,6 +354,7 @@ function applyImport(
           bankBalance: settings.bankBalance,
           loanOpening: settings.loanOpening,
           yearEnd: settings.yearEnd,
+          changeLog: settings.changeLog,
           overviewLayout: settings.overviewLayout,
           autosave: settings.autosave,
           ledgerSize: settings.pageSize?.ledger,
@@ -409,6 +410,7 @@ function bookVersion() {
     s.bankBalance,
     s.loanOpening,
     s.yearEnd,
+    s.changeLog,
   ] as const
 }
 
@@ -443,6 +445,7 @@ function currentSettingsText(): string {
     bankBalance: s.bankBalance,
     loanOpening: s.loanOpening,
     yearEnd: s.yearEnd,
+    changeLog: s.changeLog,
   })
 }
 
