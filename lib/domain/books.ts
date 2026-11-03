@@ -6,7 +6,7 @@ import {
 } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
 import { monthOf, yearOf } from "@/lib/domain/dates"
-import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
+import type { Category, Cents, CategoryMap, Entry } from "@/lib/domain/types"
 
 /**
  * The two books the Accounting Act asks for (KPL 2:4): the entries "aika-
@@ -117,4 +117,30 @@ export function generalLedger(
     add(account.totals, row)
   }
   return ALL_LINES.flatMap((line) => byLine.get(line.key) ?? [])
+}
+
+export interface AccountListRow {
+  line: AccountLine
+  /** The categories on it that are enabled or used in the year. */
+  categories: Category[]
+}
+
+/**
+ * The account list of KPL 2:2 for one financial year: every account with an
+ * enabled category or an entry that year, in chart-of-accounts order.
+ */
+export function accountList(
+  entries: readonly Entry[],
+  cats: readonly Category[],
+  year: number
+): AccountListRow[] {
+  const used = new Set(
+    entries.filter((e) => yearOf(e.date) === year).map((e) => e.catId)
+  )
+  return ALL_LINES.flatMap((line) => {
+    const categories = cats.filter(
+      (c) => c.line === line.key && (c.enabled || used.has(c.id))
+    )
+    return categories.length ? [{ line, categories }] : []
+  })
 }

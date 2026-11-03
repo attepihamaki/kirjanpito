@@ -421,7 +421,7 @@ The download dialog lets the user edit the base name, with a fixed extension sho
 ### 7.4 Receipt files
 
 - Accepted: images (`image/*`, including `.heic`/`.heif`) and PDF. Several per entry. **`isReceiptFile` in `lib/domain/receipt-path.ts` is the one place that decides this**, and every route in and out goes through it: the file picker (whose `accept` is only a hint, so the picked files are filtered again), drag and drop, and the `receipts` paths of an imported CSV or ZIP. Export applies it too — an attachment outside the rule gets no ZIP path and no `receipts` entry — so nothing a browser still holds from before the rule can leak back into a file.
-- Images: if the long edge is ≤ 2000 px, the file is ≤ 1.5 MB and the type is JPEG/PNG/WebP, the original is kept. Otherwise it is redrawn onto a white canvas with the long edge at 2000 px and saved as JPEG at quality 0.85, with the extension renamed to `.jpg`. If the browser can't decode it (e.g. HEIC outside Safari), the original is kept and the preview shows the file name instead.
+- Images are stored as the original file, byte for byte, whatever their size or type. KPL 2:7 lets a voucher's form change only if its content survives, and a resized JPEG is not obviously the same content, so the app never converts one. The viewer scales a large image to the stage when it draws it (§8.6). If the browser can't decode it (e.g. HEIC outside Safari), the preview shows the file name instead.
 - PDFs are stored as they are.
 - Stored in IndexedDB: database `bookkeeping-receipts`, object store `files`, key = attachment id, value = Blob. (The prototype used `kirjanpito-tositteet`; see §12.)
 - **Garbage collection:** after saving or deleting entries, closing the file, importing, or closing the entry dialog, delete IndexedDB files that no entry (and no open dialog) references. Revoke object URLs of removed thumbnails. **A receipt being added counts as referenced before its bytes are written:** the entry dialog registers its id first, and the sweep waits while `importing` is up, since an import's receipts belong to no entry until the whole file is read.
@@ -515,6 +515,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
   "language": "fi",
   "theme": "system",
   "vatPeriod": "month",
+  "traderType": "professional",
   "bookStart": "2026-10",
   "vatFiled": { "2026-08": "2026-10-12" },
   "yearsArchived": { "2025": "2026-01-20" },
@@ -534,7 +535,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
 - **The overview layout** goes through `normalizeLayout` in `lib/domain/overview-layout.ts`: an unknown widget id is dropped and a missing one goes right after the widget it follows in the default layout, at its default size, so a file from an older or newer version still opens and a new widget does not land at the bottom of the page.
 - **Language and theme** are written from the browser's own keys (§12) at save. Opening a file switches the app to them. They are preferences of the browser as much as of the book, so changing them does not mark the book dirty, and the landing page goes on using the browser's keys. The theme is applied through `Ctx.setTheme`, because only React can reach next-themes.
 - **Page sizes and autosave** are saved the same way: written at save, applied on open, never dirty.
-- **The VAT period, the start month, the filed marks, the archived years, the layout, the categories, the recurring templates, the asset opening balance and the bank balance do mark the book dirty**, since the file no longer matches.
+- **The trader type, the VAT period, the start month, the filed marks, the archived years, the layout, the categories, the recurring templates, the asset opening balance and the bank balance do mark the book dirty**, since the file no longer matches.
 - A plain CSV has no settings. Opening one starts with no filed marks and no start month, and keeps the rest as it was.
 - `lib/domain/settings-file.test.ts` covers the round trip and the lenient reading; `lib/commands/io-commands.test.ts` covers opening a ZIP with settings.
 
@@ -634,6 +635,7 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
     - A domestic sale without VAT is a line 300 `domestic` sale at 0 %, flagged only in a year that also has domestic sales with VAT, since a business that is not VAT registered sells everything at 0 %.
     - A large amount is a gross amount over ten times the median of that year's income, or expenses, given at least five of them, and never under 1 000 €. It is meant to catch a misplaced decimal comma.
     - A possible duplicate shares its date, side and gross amount with another entry, or a stored receipt file (same name, type and size). Both of a pair are flagged. The category is not compared, since the same receipt entered twice can land in two categories.
+    - Private use without VAT is a 0 % entry on line 314 in a year where that line adds up to more than 850 €, the free part for a natural person (AVL 21 §). Line 313 is not checked, since a car's VAT depends on how much of it was deducted. The entry dialog explains the rule under the category on 313 to 315.
     - VAT not deductible is an expense with VAT on entertainment (341) or a non-deductible line (365–367), `AccountLine.noVatDeduction`. VAT on entertainment cannot be deducted (AVL 114 § 1 mom. 3 kohta, checked in Vero's guide "Markkinointi- ja edustustilaisuudet arvonlisäverotuksessa"), and a cost that is not deductible for income tax is usually not for the taxable business either. Such a cost is booked at its gross amount with 0 % VAT, so the tax stays part of the cost; with a rate it would count as purchase VAT.
     - The overview's checklist sets this filter when it sends the user here.
   - "Tyhjennä suodattimet" when any filter is active.
@@ -651,10 +653,11 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
   - The selection belongs to the period and filters it was made under. Changing either starts over, so the bar never acts on rows that are no longer listed. It is component state, not stored.
 - **Pagination:** the row count ("16 kirjausta") at the left-hand end, and at the right "Rivejä sivulla" with a 10/25/50/100 select (default 10), "Sivu 1 / 2", and first / previous / next / last icon buttons. The strip reads as "what you are looking at" / "how to move through it", which is why the count lives here rather than in the toolbar. The page resets to 1 when filters, sorting or the month change. It sits **inside the table's surface**, as the categories table places it (§8.10) — `ledger-table.tsx` renders the table alone and the view composes the `Surface` around both. `TablePagination` owns that strip, its padding and the rule above it: the table body drops the last row's own bottom border, which in a table that ends its surface would land on the surface's edge. **It is always shown**, even on a single page: the rows-per-page select is how the page length is set, so hiding the row until the list outgrows that length would hide the only control that changes it.
 - **Empty state** (open but no entries): "Ei vielä kirjauksia" with "Uusi kirjaus" and "Avaa tiedosto".
-- **Päiväkirja and Pääkirja.** The view has three tabs (`LedgerTabs`, routes `LEDGER_ROUTES` in `lib/site.ts`): Kirjaukset at `/app/ledger`, Päiväkirja at `/app/ledger/journal` and Pääkirja at `/app/ledger/accounts`. The Accounting Act asks that entries can be viewed "aikajärjestyksessä ja asiajärjestyksessä" (KPL 2:4, checked on Finlex), and these two are that, for the selected year (`lib/domain/books.ts`, `components/ledger/books-view.tsx`).
+- **Päiväkirja, Pääkirja and Tililuettelo.** The view has four tabs (`LedgerTabs`, routes `LEDGER_ROUTES` in `lib/site.ts`): Kirjaukset at `/app/ledger`, Päiväkirja at `/app/ledger/journal`, Pääkirja at `/app/ledger/accounts` and Tililuettelo at `/app/ledger/chart`. The Accounting Act asks that entries can be viewed "aikajärjestyksessä ja asiajärjestyksessä" (KPL 2:4, checked on Finlex), and these two are that, for the selected year (`lib/domain/books.ts`, `components/ledger/books-view.tsx`).
   - The journal lists the year by month, in date and then voucher order, with the account number, expenses as negative, and income and expense totals.
   - The general ledger lists the same entries by account in chart-of-accounts order (§5), only accounts that have entries, each with its total. A category is shown under the description unless it has the account's own name.
-  - Both are printable sheets on the `--sheet` surface with a "Tulosta" button, like the income statement (§8.8), and end with the retention rule of KPL 2:10, with the year's own dates: the books for 10 years from the end of the financial year, the vouchers for 6 years from the end of the year it ended in.
+  - The account list (KPL 2:2, `accountList`) names each account with an enabled category or an entry that year and what it holds, followed by the list of books and material of KPL 2:7a. The Act keeps both for 10 years with the books.
+  - All three are printable sheets on the `--sheet` surface with a "Tulosta" button, like the income statement (§8.8), and end with the retention rule of KPL 2:10, with the year's own dates: the books for 10 years from the end of the financial year, the vouchers for 6 years from the end of the year it ended in.
 
 ### 8.5 Entry dialog (Uusi kirjaus / Muokkaa kirjausta / Kopio kirjaus)
 
@@ -754,7 +757,8 @@ Every section is a `Panel` (§11). The page is split into two sub-pages, so the 
 
 On **Yleiset**:
 
-- **"ALV-ilmoitusjakso"** comes first: a segmented Kuukausi / Neljännesvuosi / Vuosi. It sets `vatPeriod` (§6.5), which the overview's due dates and the VAT view follow. Changing it keeps the VAT view on the same part of the year: October becomes Q4.
+- **"Toiminnan laji"** comes first: Liikkeenharjoittaja or Ammatinharjoittaja (`traderType`, in `settings.json`). It decides which year an amount belongs to for tax (§6.3). Unset, the app reads every amount by its date and the overview's checklist asks.
+- **"ALV-ilmoitusjakso"**: a segmented Kuukausi / Neljännesvuosi / Vuosi. It sets `vatPeriod` (§6.5), which the overview's due dates and the VAT view follow. Changing it keeps the VAT view on the same part of the year: October becomes Q4.
 - **"Kirjanpidon aloitus"**: the month the business began, as a month select ("Ensimmäisestä kirjauksesta" or a month) and, once a month is chosen, a year select. It sets `bookStart` (§6.5). Unset, returns are counted from the first entry.
 - **"Tallennus"**, only where the browser can write to a file: the "Tallenna automaattisesti" checkbox (§7.5), with a description that says what can be undone: a delete for 10 seconds (§8.11), an edit not at all.
 - **"Tyhjennä kirjaukset"**, last, as a `variant="destructive"` panel with "Tyhjennä" (`destructive`) on the footer. It deletes all entries (with a confirmation) and leaves the bookkeeping open but empty.
@@ -818,6 +822,8 @@ The app's front page, at `/app/overview`. `/app`, "Jatka kirjanpitoa", opening a
   - **Kulut ryhmittäin**: the §6.4 buckets with expenses, largest first; empty ones are counted.
   - **Viimeisimmät kirjaukset** (wide): the year's six newest entries, signed gross, flagged "ei tositetta" where there is no receipt file. A row opens the entry dialog.
   - **Tarkistettavaa**: unsaved changes with a save (or download) button; each overdue return and each return due within 30 days, with "Ilmoitettu"; one row per check of §8.4 that flags anything (no receipt, a rate that does not fit the date, a future date, a domestic sale without VAT, an unusually large amount, a possible duplicate, VAT on a cost whose VAT cannot be deducted), each with "Näytä", which opens the ledger filtered to them; receipts missing from the file; the VAT registration limit (below); empty months from the first entry to the last complete month, skipping any before the start month; and one row per closed year with entries, as a reminder outside the open count (`yearsToArchive` in `lib/domain/retention.ts`). It gives the dates of KPL 2:10 (vero.fi, "Kirjanpito, tilikausi, verokausi"), the books until 31.12. ten years on and the vouchers six, and asks for a copy of the file that is no longer edited. "Tallessa" marks the year in `yearsArchived` and the toast can undo it. A year past the 10 years is not listed. The journal and the general ledger print the same dates (§8.4).
+- **The filing period's limit** (`vatPeriodOverLimit`). Quarterly filing needs turnover of at most 100 000 € and yearly filing at most 30 000 € (vero.fi, "Tax period"). A closed year above that gets a warning row, and nothing is blocked, since the period itself is set in OmaVero.
+- **Form 5's due date** (`lib/domain/tax-return-deadline.ts`). A row from the start of the year until Verohallinto's date, added by hand per tax year. A year not in the table says "in the spring" until the end of April rather than guessing.
 - **The VAT registration limit** (`lib/domain/vat-threshold.ts`). A business is liable for VAT from the day a calendar year's turnover exceeds 20 000 €, and while the previous year's did (AVL 3 §, vero.fi, "VAT exemption for small businesses", valid from 1.1.2025). The book does not record registration, so a line 300 sale with VAT this year or last is what says the business is registered, and the row then disappears. Otherwise the checklist has one row, following today rather than the selected year: turnover against the limit as information, a warning from 15 000 €, and from the sale that goes over, the date it did, as an error. Turnover is line 300 net, without `300-eu-services`, which is supplied in the buyer's country. The book cannot tell a service sold outside the EU from an exported good, or a fixed asset from other sales, so those count.
 - **The board** (`overview-board.tsx`) is a three-column grid with `grid-flow-dense` from 1100 px, one column below it. "S" spans one column and "L" two; the month chart at "L" also spans two rows, so the default fills the grid with no holes. Widgets use container queries for their own narrow layouts, so a widget adapts to its column, not the window.
 - **Editing the layout.** "Muokkaa näkymää" turns on edit mode. Each widget gets a toolbar: a drag handle, arrows to move it among the visible widgets, widen or narrow (hidden below 1100 px, where size means nothing), and hide. Its contents go `inert`, so a drag never opens an entry. Hidden widgets wait as buttons under the board. "Palauta oletus" resets; "Valmis" leaves. The layout is `overviewLayout`, saved in `settings.json` and dirty like any setting. dnd-kit's screen-reader texts are translated (`overview.dnd*`).
@@ -1031,7 +1037,7 @@ app/
     page.tsx                     /app → /app/overview
     overview/  summary/
     ledger/                      page.tsx = Kirjaukset
-      journal/  accounts/        Päiväkirja, Pääkirja (§8.4)
+      journal/  accounts/  chart/  Päiväkirja, Pääkirja, Tililuettelo (§8.4)
     vat/                         layout.tsx = VatShell; page.tsx = Laskelma
       return/                    /app/vat/return (§8.7)
     statement/                   layout.tsx = StatementShell; page.tsx = Laskelma
@@ -1264,3 +1270,35 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 - VAT return fields the book cannot fill (§8.7): EU purchases, imports and reverse-charge purchases.
 - Whether renumbering a year's vouchers (§4) is acceptable once its books are closed. The app warns and leaves the choice to the user; an accountant has not confirmed it.
 - Whether a VAT payment or refund booked on account 2939 (§6.6) is what an accountant would expect in a single-entry book, and whether 2939 should be another number. The same goes for the owner's transfers on 2000 (§6.7).
+
+### Legal gaps
+
+Compared on 3 November 2026 against the Accounting Act as consolidated on Finlex (KPL), Vero's guidance and Verohallinto's 2026 data file specification for Form 5.
+
+What the sources settle:
+
+- **Who keeps what (KPL 1:1a).** A sole trader of either kind must be able to determine accounts payable and receivable at all times. Single-entry books are allowed while at most one of three limits is exceeded in both the closed year and the one before: balance sheet 100 000 €, turnover 200 000 €, more than 3 employees on average. Financial statements are required only when at least two of the micro limits of KPL 1:4b are exceeded in both years: 450 000 €, 900 000 €, 10 employees. They then follow the micro rules, within 4 months (3:6), dated and signed (3:7).
+- **Income timing (EVL 27 a §, vero.fi, "Yritystoiminta, tulonhankkimistoiminta ja harrastustoiminta henkilöverotuksessa").** An ammatinharjoittaja with single-entry books is taxed on a cash basis: income and expenses belong to the year of payment. A liikkeenharjoittaja may keep single-entry books but must adjust them to accrual basis for tax. KPL 2:3 allows the accrual, invoice and payment bases in the books themselves.
+- **Changing what is recorded (KPL 2:7).** The content of a voucher or a book may not be changed or deleted after the financial statements are prepared, or after a periodic return to an authority has been made from the books. That includes the VAT return. The form may change for handling or storage, if the content and the audit trail survive.
+- **Timing of entries (KPL 2:4).** Cash payments are recorded without delay, in date order. Others may be monthly, and in time for returns to be made from up-to-date books. The Act sets no four-month limit for a sole trader.
+- **Lists (KPL 2:2, 2:7a, 2:10).** An account list that explains each account's content, for each financial year, and a list of the books and voucher types showing how they connect and how they are kept. Both for 10 years.
+- **Private use (AVL 21 §, Vero's guidance of 17.3.2020).** Goods whose VAT was deducted carry VAT when taken into private use, on the purchase price or a lower probable selling price. For a natural person the first 850 € a year is free. This guidance predates 2021, so confirm the figure.
+- **EC Sales List (vero.fi).** Monthly, only for a month with such sales, due on the 20th of the next month or the next working day. It lists each buyer's VAT number and total. Goods go by the invoice's month and services by the month of the supply or payment.
+- **Form 5's balance (specification 2026).** 704 machinery and equipment, 708 goods, 709 other current assets, 711 accounts receivable, 714 cash in hand, 716 other financial assets, 718 total assets. 749 current and 750 non-current liabilities, 725 total. 733 or 734 net worth. 394 wages paid in the 12 months before the year's end. **Bank deposits are in none of these.**
+- **Payroll.** Line 335 takes wages, but the app has no payroll records or income register reporting, and says so in the entry dialog and on Lomake 5. Building them is not planned.
+
+Questions for an accountant. Building proceeds on the answer given:
+
+- Does `Entry.date` as the delivery or invoice date, with a separate payment date, satisfy both kinds of trader? Assumed yes.
+- Is a change log with locked periods enough for KPL 2:6 and 2:7 in a file the user controls? Assumed yes, and the app says it is a record of use and not proof.
+- Are accounts 2939 and 2000, and a loan account, what a single-entry book should use? Assumed acceptable as the app's own numbers.
+
+The gaps themselves, in the order they are being closed:
+
+- **Payment basis and sales ledger.** An entry has one date and cannot be open, so neither the cash basis nor the receivables above can be worked out.
+- **Form 5's assets and liabilities.** Vero splits the profit into capital and earned income from the net assets, and the app fills none of the fields above.
+- **Loans.** KPL 2:1 has the books record financing transactions, and no off-statement line takes a drawdown or repayment.
+- **Inventory.** Line 333 includes the change in inventory, but nothing records the stock.
+- **EC Sales List.** An entry has no buyer VAT number.
+- **Edits and deletes leave no trace, and nothing locks.** An entry in a filed period can be changed after a warning, which KPL 2:7 does not allow.
+- **Single-entry and financial statement limits.** The app warns only about the VAT limit (§8.12).

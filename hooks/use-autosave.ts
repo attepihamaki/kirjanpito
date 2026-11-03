@@ -34,6 +34,7 @@ export function useAutosave() {
   const vatPeriod = useBookStore((s) => s.vatPeriod)
   const layout = useBookStore((s) => s.overviewLayout)
   const recurring = useBookStore((s) => s.recurring)
+  const traderType = useBookStore((s) => s.traderType)
   const assetOpening = useBookStore((s) => s.assetOpening)
   const bankBalance = useBookStore((s) => s.bankBalance)
 
@@ -59,6 +60,7 @@ export function useAutosave() {
     vatPeriod,
     layout,
     recurring,
+    traderType,
     assetOpening,
     bankBalance,
   ])

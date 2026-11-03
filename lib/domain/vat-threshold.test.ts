@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { defaultCategories } from "@/lib/domain/accounts"
 import { indexCategories, type Entry } from "@/lib/domain/types"
-import { vatThreshold } from "@/lib/domain/vat-threshold"
+import { vatPeriodOverLimit, vatThreshold } from "@/lib/domain/vat-threshold"
 
 /* The 20 000 € turnover limit of VAT liability (§8.12). */
 
@@ -81,5 +81,28 @@ describe("vatThreshold", () => {
       sale("2026-01-01", 900, { catId: "318" }),
     ])
     expect(s?.turnover).toBe(10_000)
+  })
+})
+
+describe("vatPeriodOverLimit", () => {
+  const over = (period: "month" | "quarter" | "year", euros: number) =>
+    vatPeriodOverLimit([sale("2025-05-01", euros)], cats, period, TODAY)
+
+  it("holds yearly filing to 30 000 €", () => {
+    expect(over("year", 30_000)).toBeNull()
+    expect(over("year", 30_001)).toEqual({
+      year: 2025,
+      turnover: 3_000_100,
+      limit: 3_000_000,
+    })
+  })
+
+  it("holds quarterly filing to 100 000 €", () => {
+    expect(over("quarter", 100_000)).toBeNull()
+    expect(over("quarter", 100_001)?.limit).toBe(10_000_000)
+  })
+
+  it("has no limit on monthly filing", () => {
+    expect(over("month", 500_000)).toBeNull()
   })
 })

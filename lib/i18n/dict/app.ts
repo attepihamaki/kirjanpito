@@ -471,6 +471,48 @@ export const APP_DICT = {
     "Edustuskulujen ja vähennyskelvottomien kulujen vero lasketaan nyt ostojen veroksi. Kirjaa ne 0 %:lla.",
     "VAT on entertainment and non-deductible expenses is now counted as purchase VAT. Book them at 0 %.",
   ],
+  "overview.privateUseNoVat": [
+    pl(
+      "1 tavaran oma käyttö ilman arvonlisäveroa",
+      "{n} tavaran omaa käyttöä ilman arvonlisäveroa"
+    ),
+    pl(
+      "1 private use of goods without VAT",
+      "{n} private uses of goods without VAT"
+    ),
+  ],
+  "overview.privateUseNoVatSub": [
+    "Oma käyttö ylittää vuodessa 850 €. Ylittävä osa on arvonlisäverollista, jos tavaran ostosta on vähennetty vero.",
+    "Private use is over 850 € this year. The part above that carries VAT if the VAT on the goods was deducted.",
+  ],
+  "overview.vatPeriodLimit": [
+    "Liikevaihto {y} oli {a}",
+    "Turnover in {y} was {a}",
+  ],
+  "overview.vatPeriodLimitSub": [
+    "Valitsemasi ALV-ilmoitusjakso edellyttää enintään {l} liikevaihtoa. Tarkista verokausi OmaVerosta.",
+    "The VAT filing period you chose requires turnover of at most {l}. Check your tax period in OmaVero.",
+  ],
+  "overview.form5Due": [
+    "Veroilmoitus (lomake 5) vuodelta {y}",
+    "Tax return (Form 5) for {y}",
+  ],
+  "overview.form5DueOn": [
+    "Annettava viimeistään {d}. Tarkista päivä OmaVerosta.",
+    "Due by {d}. Check the date in OmaVero.",
+  ],
+  "overview.form5DueUnknown": [
+    "Määräpäivä on keväällä. Tarkista se OmaVerosta.",
+    "It is due in the spring. Check the date in OmaVero.",
+  ],
+  "overview.traderType": [
+    "Kerro, oletko liikkeen- vai ammatinharjoittaja",
+    "Say whether you are a liikkeenharjoittaja or an ammatinharjoittaja",
+  ],
+  "overview.traderTypeSub": [
+    "Asetukset, Yleiset. Se ratkaisee, kummalle vuodelle tulot ja kulut verotuksessa kuuluvat.",
+    "Settings, General. It decides which year income and expenses belong to for tax.",
+  ],
   "overview.yearClosed": [
     "Tilikausi {y} on päättynyt",
     "Financial year {y} has ended",
@@ -588,6 +630,41 @@ export const APP_DICT = {
   "ledger.entriesTab": ["Kirjaukset", "Entries"],
   "ledger.journalTab": ["Päiväkirja", "Journal"],
   "ledger.accountsTab": ["Pääkirja", "General ledger"],
+  "ledger.chartTab": ["Tililuettelo", "Account list"],
+  "ledger.chartTitle": ["Tililuettelo {y}", "Account list {y}"],
+  "ledger.chartSub": [
+    "Tilit ja niiden sisältö tällä tilikaudella",
+    "The accounts and their content this financial year",
+  ],
+  "ledger.chartName": ["Tili", "Account"],
+  "ledger.chartContent": ["Sisältö", "Content"],
+  "ledger.bookListTitle": [
+    "Luettelo kirjanpidoista ja aineistoista",
+    "List of books and material",
+  ],
+  "ledger.bookJournal": ["Päiväkirja", "Journal"],
+  "ledger.bookJournalKept": [
+    "Kirjaukset aikajärjestyksessä. Muodostetaan kirjanpitotiedoston CSV:stä, ja jokainen rivi viittaa tositenumeroon.",
+    "The entries in date order. Built from the CSV in the bookkeeping file, and each row refers to a voucher number.",
+  ],
+  "ledger.bookGeneral": ["Pääkirja", "General ledger"],
+  "ledger.bookGeneralKept": [
+    "Samat kirjaukset tileittäin. Muodostetaan samasta CSV:stä, ja siitä johdetaan tuloslaskelma.",
+    "The same entries by account. Built from the same CSV, and the income statement is derived from it.",
+  ],
+  "ledger.bookVouchers": ["Tositteet", "Vouchers"],
+  "ledger.bookVouchersKept": [
+    "Alkuperäiset tiedostot kirjanpitotiedoston kansiossa tositteet/vuosi/kuukausi. CSV:n rivi kertoo kirjauksen tositteet.",
+    "The original files in the bookkeeping file, in the folder tositteet/year/month. A CSV row names its entry’s receipts.",
+  ],
+  "ledger.bookReports": [
+    "Tuloslaskelma ja arvonlisäveroilmoitukset",
+    "Income statement and VAT returns",
+  ],
+  "ledger.bookReportsKept": [
+    "Lasketaan kirjauksista. Tulosta ne talteen, kun ilmoitus on annettu.",
+    "Calculated from the entries. Print them for keeping once the return is filed.",
+  ],
   "ledger.journalTitle": ["Päiväkirja {y}", "Journal {y}"],
   "ledger.accountsTitle": ["Pääkirja {y}", "General ledger {y}"],
   "ledger.journalSub": [
@@ -641,6 +718,10 @@ export const APP_DICT = {
   ],
   "ledger.duplicate": ["Mahdollinen kaksoiskirjaus", "Possible duplicate"],
   "ledger.vatNotDeductible": ["ALV ei vähennettävää", "VAT not deductible"],
+  "ledger.privateUseNoVat": [
+    "Oma käyttö ilman ALV:tä",
+    "Private use without VAT",
+  ],
   "ledger.copyAsNew": ["Kopioi", "Copy"],
   "ledger.deleteEntry": ["Poista kirjaus", "Delete entry"],
 
@@ -656,6 +737,14 @@ export const APP_DICT = {
   ],
   "entry.category": ["Luokka", "Category"],
   "entry.amount": ["Summa (€)", "Amount (€)"],
+  "entry.privateUseHint": [
+    "Tavaran oma käyttö on arvonlisäverollista, jos ostosta on vähennetty vero, ja 850 € vuodessa on verotonta. Auton kohdalla asia riippuu siitä, paljonko autosta on vähennetty.",
+    "Taking goods into private use carries VAT if the VAT on the purchase was deducted, and the first 850 € a year is free. For a car it depends on how much of the car was deducted.",
+  ],
+  "entry.payrollHint": [
+    "Tämä kirjaus ei korvaa palkkakirjanpitoa eikä tulorekisteri-ilmoitusta. Hoida ne muualla.",
+    "This entry does not replace payroll records or income register reporting. Handle those elsewhere.",
+  ],
   "entry.ownerHint": [
     "Oma raha yrityksen ja oman tilisi välillä ei ole tuloa eikä kulua. Se ei vaikuta tulokseen eikä arvonlisäveroon. Liitä tositteeksi tiliote.",
     "Your own money moving between the business and your personal account is neither income nor an expense. It doesn’t affect the result or VAT. Attach the bank statement as the receipt.",
@@ -949,6 +1038,10 @@ export const APP_DICT = {
   "statement.form5Assumed": [
     "Poistot (337) ja korkokulut (346) on laskettu kokonaan vähennyskelpoisiksi, joten 338 ja 347 ovat samat summat. Jos osa ei ole vähennyskelpoista, muuta kohtia OmaVerossa, jolloin myös 355 ja tulos muuttuvat.",
     "Depreciation (337) and interest expenses (346) are counted as fully deductible, so 338 and 347 are the same amounts. If part of them is not deductible, change those fields in OmaVero, and 355 and the result change with them.",
+  ],
+  "statement.form5Payroll": [
+    "Kirjanpito ei sisällä palkkakirjanpitoa eikä tulorekisteri-ilmoituksia.",
+    "The bookkeeping includes no payroll records or income register reporting.",
   ],
   "statement.form5Missing": [
     "Kirjanpito ei täytä osuuskuntien ylijäämiä (325–328), lisävähennyksiä (364) eikä lomakkeen muita osia, kuten poistoja, ajoneuvoja ja varallisuuslaskelmaa. Ne täytetään OmaVerossa.",
@@ -1244,6 +1337,13 @@ export const APP_DICT = {
   "settings.sections": ["Asetusten osiot", "Settings sections"],
   "settings.general": ["Yleiset", "General"],
   "settings.vatPeriod": ["ALV-ilmoitusjakso", "VAT reporting period"],
+  "settings.traderType": ["Toiminnan laji", "Type of business"],
+  "settings.traderTypeHint": [
+    "Ammatinharjoittajan yhdenkertaisessa kirjanpidossa tulot ja kulut kuuluvat verotuksessa maksuvuodelle. Liikkeenharjoittajan on oikaistava ne suoriteperusteisiksi. Jos et ole varma, tarkista asia Verohallinnosta.",
+    "For an ammatinharjoittaja with single-entry books, income and expenses belong to the year of payment for tax. A liikkeenharjoittaja adjusts them to accrual basis. If you are unsure, check with the Tax Administration.",
+  ],
+  "settings.traderBusiness": ["Liikkeenharjoittaja", "Liikkeenharjoittaja"],
+  "settings.traderProfessional": ["Ammatinharjoittaja", "Ammatinharjoittaja"],
   "settings.vatPeriodHint": [
     "Kuinka usein annat arvonlisäveroilmoituksen. Yleiskatsauksen eräpäivät lasketaan tämän mukaan.",
     "How often you file a VAT return. The due dates on the overview follow it.",

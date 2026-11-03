@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest"
 
 import { defaultCategories } from "@/lib/domain/accounts"
-import { generalLedger, journal } from "@/lib/domain/books"
+import { accountList, generalLedger, journal } from "@/lib/domain/books"
 import { createIdFactory } from "@/lib/domain/id"
 import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
-import { indexCategories } from "@/lib/domain/types"
+import { indexCategories, type Entry } from "@/lib/domain/types"
 import { assignVouchers } from "@/lib/domain/voucher"
 
 /* The journal and the general ledger (KPL 2:4, §8.4). */
@@ -69,5 +69,28 @@ describe("generalLedger", () => {
     const rows = accounts.flatMap((a) => a.rows)
     expect(rows).toHaveLength(16)
     expect(new Set(rows.map((r) => r.entry.id)).size).toBe(16)
+  })
+})
+
+describe("accountList", () => {
+  it("lists enabled categories and any used one, in chart order", () => {
+    const list = defaultCategories().map((c) =>
+      c.line === "349" ? { ...c, enabled: false } : c
+    )
+    const used: Entry = {
+      id: "e",
+      date: "2026-02-01",
+      description: "",
+      type: "expense",
+      catId: "349",
+      amount: 100,
+      vatRate: 0,
+      amountMode: "gross",
+    }
+    const has = (year: number) =>
+      accountList([used], list, year).some((r) => r.line.key === "349")
+    expect(has(2026)).toBe(true)
+    expect(has(2025)).toBe(false)
+    expect(accountList([], list, 2026)[0].line.key).toBe("300")
   })
 })

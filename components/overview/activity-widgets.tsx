@@ -42,7 +42,12 @@ import { APP_ROUTES } from "@/lib/site"
 import { cn } from "@/lib/utils"
 import { toast } from "@/components/ui/toast"
 import { retentionDates, yearsToArchive } from "@/lib/domain/retention"
-import { VAT_THRESHOLD, vatThreshold } from "@/lib/domain/vat-threshold"
+import { form5Reminder } from "@/lib/domain/tax-return-deadline"
+import {
+  VAT_THRESHOLD,
+  vatPeriodOverLimit,
+  vatThreshold,
+} from "@/lib/domain/vat-threshold"
 import { useBookStore, type CheckFilter } from "@/stores/book-store"
 import { hasReceipt } from "@/stores/selectors"
 
@@ -190,6 +195,10 @@ const CHECK_TEXT = {
     title: "overview.vatNotDeductible",
     sub: "overview.vatNotDeductibleSub",
   },
+  privateUseNoVat: {
+    title: "overview.privateUseNoVat",
+    sub: "overview.privateUseNoVatSub",
+  },
 } as const satisfies Record<EntryCheck, { title: string; sub: string }>
 
 interface CheckItem {
@@ -333,6 +342,8 @@ export function ChecksWidget() {
     })
   }
 
+  const vatPeriod = useBookStore((s) => s.vatPeriod)
+  const traderType = useBookStore((s) => s.traderType)
   const threshold = vatThreshold(data.entries, data.catMap, data.today)
   if (threshold) {
     const figures = {
@@ -362,6 +373,45 @@ export function ChecksWidget() {
             ),
           }
     )
+  }
+
+  const overPeriod = vatPeriodOverLimit(
+    data.entries,
+    data.catMap,
+    vatPeriod,
+    data.today
+  )
+  if (overPeriod) {
+    items.push({
+      key: "vatPeriodLimit",
+      tone: "warn",
+      title: f.t("overview.vatPeriodLimit", {
+        y: overPeriod.year,
+        a: f.money(overPeriod.turnover),
+      }),
+      sub: f.t("overview.vatPeriodLimitSub", { l: f.money(overPeriod.limit) }),
+    })
+  }
+
+  const form5 = form5Reminder(data.entries, data.today)
+  if (form5) {
+    items.push({
+      key: "form5Due",
+      tone: "info",
+      title: f.t("overview.form5Due", { y: form5.taxYear }),
+      sub: form5.due
+        ? f.t("overview.form5DueOn", { d: f.date(form5.due) })
+        : f.t("overview.form5DueUnknown"),
+    })
+  }
+
+  if (!traderType) {
+    items.push({
+      key: "traderType",
+      tone: "info",
+      title: f.t("overview.traderType"),
+      sub: f.t("overview.traderTypeSub"),
+    })
   }
 
   const missing = data.yearEntries.reduce(

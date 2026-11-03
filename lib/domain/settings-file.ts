@@ -37,10 +37,17 @@ export type PageSize = (typeof PAGE_SIZES)[number]
 
 export type ThemeChoice = "light" | "dark" | "system"
 
+/**
+ * Liikkeenharjoittaja or ammatinharjoittaja. It decides which year income and
+ * expenses belong to for tax (EVL 27 a §, §6.3). Null until the user says.
+ */
+export type TraderType = "business" | "professional"
+
 export interface BookSettings {
   language: Lang
   theme: ThemeChoice
   vatPeriod: VatPeriodKind
+  traderType: TraderType | null
   /** `"2026-10"`: the month the bookkeeping began, or null to follow the first entry. */
   bookStart: string | null
   /** Period key (`"2026-09"`, `"2026-Q3"`, `"2026"`) → ISO date it was marked. */
@@ -194,6 +201,10 @@ export function parseSettings(text: string): ParsedSettings {
   ) {
     out.vatPeriod = raw.vatPeriod
   }
+  if (raw.traderType === null) out.traderType = null
+  else if (raw.traderType === "business" || raw.traderType === "professional") {
+    out.traderType = raw.traderType
+  }
   if (raw.bookStart === null) out.bookStart = null
   else if (typeof raw.bookStart === "string" && MONTH.test(raw.bookStart)) {
     out.bookStart = raw.bookStart
@@ -274,6 +285,7 @@ export function serializeSettings(s: BookSettings): string {
     language: s.language,
     theme: s.theme,
     vatPeriod: s.vatPeriod,
+    traderType: s.traderType,
     bookStart: s.bookStart,
     vatFiled: Object.fromEntries(
       Object.entries(s.vatFiled).sort(([a], [b]) => a.localeCompare(b))

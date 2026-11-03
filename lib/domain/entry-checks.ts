@@ -1,6 +1,6 @@
 import { LINE_BY_KEY } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
-import type { Attachment, CategoryMap, Entry } from "@/lib/domain/types"
+import type { Attachment, Cents, CategoryMap, Entry } from "@/lib/domain/types"
 import { rateMismatch } from "@/lib/domain/vat-rates"
 
 /**
@@ -16,6 +16,7 @@ export type EntryCheck =
   | "largeAmount"
   | "duplicate"
   | "vatNotDeductible"
+  | "privateUseNoVat"
 
 export const ENTRY_CHECKS: readonly EntryCheck[] = [
   "noReceipt",
@@ -25,6 +26,7 @@ export const ENTRY_CHECKS: readonly EntryCheck[] = [
   "largeAmount",
   "duplicate",
   "vatNotDeductible",
+  "privateUseNoVat",
 ]
 
 /**
@@ -89,6 +91,12 @@ export function vatNotDeductible(
   const line = cat && LINE_BY_KEY.get(cat.line)
   return entry.type === "expense" && entry.vatRate > 0 && !!line?.noVatDeduction
 }
+
+/**
+ * What a natural person may take into private use in a year before it carries
+ * VAT, excluding VAT (AVL 21 §, Vero's guidance on own use of 17.3.2020).
+ */
+export const PRIVATE_USE_FREE: Cents = 85_000
 
 /** How many times the type's median an amount has to be to stand out. */
 const LARGE_FACTOR = 10
@@ -174,6 +182,13 @@ export function flaggedEntryIds(
     }
     case "vatNotDeductible":
       return ids((e) => vatNotDeductible(e, cats))
+    case "privateUseNoVat": {
+      // Line 314 only: a car's private use depends on how much of it was deducted.
+      const goods = entries.filter((e) => cats.get(e.catId)?.line === "314")
+      const total = goods.reduce((sum, e) => sum + calcEntry(e).net, 0)
+      if (total <= PRIVATE_USE_FREE) return new Set()
+      return ids((e) => cats.get(e.catId)?.line === "314" && e.vatRate === 0)
+    }
     case "duplicate": {
       /*
        * Entries that share their figures, or a receipt file, with another

@@ -349,6 +349,7 @@ function applyImport(
           vatFiled: settings.vatFiled,
           yearsArchived: settings.yearsArchived,
           recurring: settings.recurring,
+          traderType: settings.traderType,
           assetOpening: settings.assetOpening,
           bankBalance: settings.bankBalance,
           overviewLayout: settings.overviewLayout,
@@ -401,6 +402,7 @@ function bookVersion() {
     s.yearsArchived,
     s.overviewLayout,
     s.recurring,
+    s.traderType,
     s.assetOpening,
     s.bankBalance,
   ] as const
@@ -432,6 +434,7 @@ function currentSettingsText(): string {
     categories: s.cats,
     pageSize: { ledger: s.ledgerSize, categories: s.ctSize },
     recurring: s.recurring,
+    traderType: s.traderType,
     assetOpening: s.assetOpening,
     bankBalance: s.bankBalance,
   })

@@ -110,7 +110,12 @@ describe("largeAmount", () => {
 })
 
 describe("duplicate", () => {
-  const receipt = { id: "a1", name: "kuitti.jpg", type: "image/jpeg", size: 1234 }
+  const receipt = {
+    id: "a1",
+    name: "kuitti.jpg",
+    type: "image/jpeg",
+    size: 1234,
+  }
 
   it("flags nothing in the sample book", () => {
     expect(flagged("duplicate", sample)).toEqual([])
@@ -183,5 +188,25 @@ describe("vatNotDeductible", () => {
       entry({ id: "b", catId: "344-meeting", vatRate: 13.5 }),
     ]
     expect(flagged("vatNotDeductible", rows)).toEqual([])
+  })
+})
+
+describe("privateUseNoVat", () => {
+  const use = (id: string, euros: number, vatRate = 0) =>
+    entry({
+      id,
+      type: "income",
+      catId: "314",
+      amount: euros * 100,
+      vatRate,
+    })
+
+  it("stays quiet up to 850 € a year", () => {
+    expect(flagged("privateUseNoVat", [use("a", 850)])).toEqual([])
+  })
+
+  it("flags 0 % private use above it", () => {
+    const rows = [use("a", 600), use("b", 300), use("c", 100, 25.5)]
+    expect(flagged("privateUseNoVat", rows).sort()).toEqual(["a", "b"])
   })
 })

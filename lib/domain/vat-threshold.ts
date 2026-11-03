@@ -1,6 +1,7 @@
 import { calcEntry } from "@/lib/domain/calc"
 import { yearOf } from "@/lib/domain/dates"
 import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
+import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 
 /**
  * The turnover limit of VAT liability, per calendar year and excluding VAT
@@ -82,4 +83,43 @@ export function vatThreshold(
         ? "near"
         : "below",
   }
+}
+
+/** The most a year's turnover may be for quarterly and yearly filing (vero.fi, "Tax period"). */
+export const VAT_PERIOD_LIMIT = {
+  quarter: 10_000_000,
+  year: 3_000_000,
+} as const satisfies Partial<Record<VatPeriodKind, Cents>>
+
+export interface VatPeriodOverLimit {
+  /** The closed year the turnover is from. */
+  year: number
+  turnover: Cents
+  limit: Cents
+}
+
+/**
+ * Whether last year's turnover is above what the chosen filing period allows.
+ * It warns and never blocks: the period itself is set in OmaVero, and Vero
+ * decides when to shorten it. Turnover is counted as for the VAT limit above.
+ */
+export function vatPeriodOverLimit(
+  entries: readonly Entry[],
+  cats: CategoryMap,
+  period: VatPeriodKind,
+  today: string
+): VatPeriodOverLimit | null {
+  if (period === "month") return null
+  const year = yearOf(today) - 1
+  const turnover = entries
+    .filter(
+      (e) =>
+        yearOf(e.date) === year &&
+        e.type === "income" &&
+        cats.get(e.catId)?.line === "300" &&
+        counts(e, cats)
+    )
+    .reduce((sum, e) => sum + calcEntry(e).net, 0)
+  const limit = VAT_PERIOD_LIMIT[period]
+  return turnover > limit ? { year, turnover, limit } : null
 }

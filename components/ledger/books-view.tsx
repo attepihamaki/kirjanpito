@@ -8,7 +8,9 @@ import { PageHeader } from "@/components/common/page-header"
 import { LedgerTabs } from "@/components/ledger/ledger-tabs"
 import { Button } from "@/components/ui/button"
 import { useFormatters } from "@/components/lang-provider"
+import { groupName, lineName } from "@/lib/domain/accounts"
 import {
+  accountList,
   generalLedger,
   journal,
   type BookRow,
@@ -345,6 +347,86 @@ export function GeneralLedgerView() {
           </table>
         </div>
       )}
+    </ReportPage>
+  )
+}
+
+/** The kinds of book and material KPL 2:7a asks to have listed, each with how it is kept. */
+const BOOK_LIST = [
+  ["ledger.bookJournal", "ledger.bookJournalKept"],
+  ["ledger.bookGeneral", "ledger.bookGeneralKept"],
+  ["ledger.bookVouchers", "ledger.bookVouchersKept"],
+  ["ledger.bookReports", "ledger.bookReportsKept"],
+] as const
+
+/** Tililuettelo and the list of books and material (KPL 2:2, 2:7a, §8.4). */
+export function AccountListView() {
+  const f = useFormatters()
+  const entries = useBookStore((s) => s.entries)
+  const cats = useBookStore((s) => s.cats)
+  const year = useBookStore((s) => s.year)
+  const rows = React.useMemo(
+    () => accountList(entries, cats, year),
+    [entries, cats, year]
+  )
+  const head = "pb-2 pr-3 text-left text-xs font-medium text-muted-foreground"
+
+  return (
+    <ReportPage
+      title={f.t("ledger.chartTitle", { y: year })}
+      subtitle={f.t("ledger.chartSub")}
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[32rem] text-sm">
+          <thead>
+            <tr className="border-b border-sheet-edge">
+              <th scope="col" className={cn(head, "w-px")}>
+                {f.t("ledger.colAccount")}
+              </th>
+              <th scope="col" className={head}>
+                {f.t("ledger.chartName")}
+              </th>
+              <th scope="col" className={head}>
+                {f.t("ledger.chartContent")}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(({ line, categories }) => {
+              const name = lineName(line, f.lang)
+              const own = categories
+                .map((c) => f.catName(c))
+                .filter((c) => c !== name)
+              const content = [groupName(line, f.lang), ...own]
+                .filter(Boolean)
+                .join(", ")
+              return (
+                <tr key={line.key} className="border-b border-sheet-edge">
+                  <td className={cn(cell, "tabular text-muted-foreground")}>
+                    {line.account}
+                  </td>
+                  <td className={cell}>{name}</td>
+                  <td className={cn(cell, "text-muted-foreground")}>
+                    {content}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <h3 className="mt-8 mb-2 font-heading font-semibold">
+        {f.t("ledger.bookListTitle")}
+      </h3>
+      <dl className="grid gap-3 text-sm">
+        {BOOK_LIST.map(([name, kept]) => (
+          <div key={name}>
+            <dt className="font-medium">{f.t(name)}</dt>
+            <dd className="text-muted-foreground">{f.t(kept)}</dd>
+          </div>
+        ))}
+      </dl>
     </ReportPage>
   )
 }

@@ -32,7 +32,11 @@ export function Form5View() {
       intro={f.t("statement.form5Intro")}
       nothing={f.t("statement.form5Nothing")}
       sections={sections}
-      notes={[f.t("statement.form5Assumed"), f.t("statement.form5Missing")]}
+      notes={[
+        f.t("statement.form5Assumed"),
+        f.t("statement.form5Missing"),
+        f.t("statement.form5Payroll"),
+      ]}
     />
   )
 }

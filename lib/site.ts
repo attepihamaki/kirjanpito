@@ -79,6 +79,7 @@ export const LEDGER_ROUTES = {
   entries: APP_ROUTES.ledger,
   journal: `${APP_ROUTES.ledger}/journal`,
   accounts: `${APP_ROUTES.ledger}/accounts`,
+  chart: `${APP_ROUTES.ledger}/chart`,
 } as const
 
 /**

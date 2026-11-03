@@ -45,6 +45,7 @@ function settings(): BookSettings {
         from: "2026-02",
       },
     ],
+    traderType: "professional",
     assetOpening: { year: 2026, amount: 300_000 },
     bankBalance: { amount: -12_345, date: "2026-10-31" },
     overviewLayout: normalizeLayout([
