@@ -775,6 +775,7 @@ export const APP_DICT = {
   ],
   "entry.category": ["Luokka", "Category"],
   "entry.amount": ["Summa (€)", "Amount (€)"],
+  "entry.locked": ["Lukittu", "Locked"],
   "entry.lockedFiled": [
     "Tämä kirjaus on mukana kauden {p} arvonlisäveroilmoituksessa, joka on merkitty ilmoitetuksi {d}. Kirjanpitolaki (2:7) ei salli muuttaa kirjausta ilmoituksen jälkeen. Tee korjauskirjaus. Vain maksupäivän voi vielä merkitä. Jos ilmoitusta ei oikeasti ole annettu, poista merkintä ALV-laskelmasta.",
     "This entry is on the VAT return for period {p}, marked as filed on {d}. The Accounting Act (2:7) does not allow changing an entry after a return. Make a correction entry. Only the payment date can still be set. If the return has not really been filed, remove the mark in the VAT view.",

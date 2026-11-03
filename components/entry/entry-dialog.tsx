@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { CopyIcon, Trash2Icon } from "lucide-react"
+import { CopyIcon, LockIcon, Trash2Icon } from "lucide-react"
 
 import { EntryTypeToggle } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
@@ -28,6 +28,11 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { toast } from "@/components/ui/toast"
 import { useFormatters } from "@/components/lang-provider"
@@ -745,7 +750,42 @@ function EntryDialogForm({
         onKeyDown={handleKeyDown}
       >
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <div className="flex items-center gap-2">
+            <DialogTitle>{title}</DialogTitle>
+            {lock ? (
+              /*
+               * A popover that opens on hover rather than a tooltip: touch
+               * has no hover, and a tooltip would also open by itself when
+               * the dialog focuses its first control.
+               */
+              <Popover>
+                <PopoverTrigger
+                  openOnHover
+                  delay={0}
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="-my-1 text-muted-foreground"
+                    />
+                  }
+                >
+                  <LockIcon />
+                  {f.t("entry.locked")}
+                </PopoverTrigger>
+                <PopoverContent align="start" aria-label={f.t("entry.locked")}>
+                  {f.t(
+                    lock.kind === "year"
+                      ? "entry.lockedYear"
+                      : lock.kind === "form5"
+                        ? "entry.lockedForm5"
+                        : "entry.lockedFiled",
+                    { p: lock.key, d: f.date(lock.since) }
+                  )}
+                </PopoverContent>
+              </Popover>
+            ) : null}
+          </div>
           {mode === "edit" && editing?.voucher ? (
             <DialogDescription className="tabular">
               {f.t("entry.voucher", { n: editing.voucher })}
@@ -767,19 +807,6 @@ function EntryDialogForm({
             if (files.length) void addFiles(files)
           }}
         />
-
-        {lock ? (
-          <p className="rounded-md bg-muted p-3 text-sm">
-            {f.t(
-              lock.kind === "year"
-                ? "entry.lockedYear"
-                : lock.kind === "form5"
-                  ? "entry.lockedForm5"
-                  : "entry.lockedFiled",
-              { p: lock.key, d: f.date(lock.since) }
-            )}
-          </p>
-        ) : null}
 
         <div className="grid gap-6 md:grid-cols-[1fr_17rem]">
           <FieldGroup>
