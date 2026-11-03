@@ -228,22 +228,40 @@ describe("readReceipt", () => {
     )
   })
 
-  it("refuses the fallback when two files share a name", async () => {
+  /** Two receipts of the same archive, at the paths given. */
+  async function archiveOf(...paths: string[]) {
     const bytes = await packZip({
       csvName: "data.csv",
       csvText: "date;type;amount\r\n",
-      paths: new Map([
-        ["e#0", "tositteet/2026/10/a.jpg"],
-        ["e#1", "tositteet/2026/11/a.jpg"],
-      ]),
-      attachmentIds: new Map([
-        ["e#0", "a1"],
-        ["e#1", "a2"],
-      ]),
-      read: async () => enc.encode("kuitti"),
+      paths: new Map(paths.map((p, i) => [`e#${i}`, p])),
+      attachmentIds: new Map(paths.map((_, i) => [`e#${i}`, `a${i}`])),
+      read: async (id) => enc.encode(id),
       settingsText: SETTINGS_TEXT,
     })
-    const unpacked = (await unpackZip(bytes))!
+    return (await unpackZip(bytes))!
+  }
+
+  /*
+   * Two receipts of different months may well share a name, so the folder
+   * rename must not make either ambiguous: the month is part of the path.
+   */
+  it("tells two receipts of the same name apart by their month", async () => {
+    const unpacked = await archiveOf(
+      "tositteet/2026/10/a.jpg",
+      "tositteet/2026/11/a.jpg"
+    )
+    expect(await unpacked.readReceipt("liitteet/2026/11/a.jpg")).toEqual(
+      enc.encode("a1")
+    )
+  })
+
+  it("refuses the fallback when two files share a name", async () => {
+    const unpacked = await archiveOf("yksi/a.jpg", "kaksi/a.jpg")
+    expect(await unpacked.readReceipt("liitteet/a.jpg")).toBeNull()
+  })
+
+  it("refuses the fallback when two folders hold the same path", async () => {
+    const unpacked = await archiveOf("yksi/2026/10/a.jpg", "kaksi/2026/10/a.jpg")
     expect(await unpacked.readReceipt("liitteet/2026/10/a.jpg")).toBeNull()
   })
 })

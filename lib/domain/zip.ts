@@ -75,34 +75,54 @@ export interface UnpackedZip {
 export type ReceiptLookup = (path: string) => Promise<Uint8Array | null>
 
 /**
- * Relative to the CSV's folder, falling back to the archive root and then to
- * a file of the same name anywhere in the archive.
+ * Relative to the CSV's folder, falling back to the archive root, then to the
+ * same path under a differently named folder, and last to a file of the same
+ * name anywhere in the archive.
  *
- * The last fallback is what survives a move: the folder a receipt sits in is
+ * The two fallbacks are what survive a move: the folder a receipt sits in is
  * named for the export language (§7.2), so changing that language asks this
  * archive for a path it has never held, and a receipt whose bytes the browser
- * no longer holds would be dropped from the file replacing it. A name shared
- * by two files is ambiguous, so the fallback refuses it rather than guessing.
+ * no longer holds would be dropped from the file replacing it. Only the
+ * folder's own name changes, so everything below it — the year, the month and
+ * the file name — still identifies the receipt, and two receipts of different
+ * months may well share a name. The bare name is tried only after that, and a
+ * name shared by two files is ambiguous, so it refuses rather than guessing.
  */
 function lookupIn(zip: JSZip, csvDir: string): ReceiptLookup {
+  let byTail: Map<string, string | null> | undefined
   let byBase: Map<string, string | null> | undefined
 
-  const baseNames = () => {
+  /** Everything below the top folder of a path relative to the CSV, or "". */
+  const tailOf = (path: string) => {
+    const rel = path.startsWith(csvDir) ? path.slice(csvDir.length) : path
+    const cut = rel.indexOf("/")
+    return cut < 0 ? "" : rel.slice(cut + 1).toLowerCase()
+  }
+
+  const baseOf = (path: string) => (path.split("/").pop() ?? path).toLowerCase()
+
+  const indexBy = (key: (name: string) => string) => {
     const map = new Map<string, string | null>()
     for (const name of Object.keys(zip.files)) {
       if (zip.files[name].dir) continue
-      const base = (name.split("/").pop() ?? name).toLowerCase()
-      // Null marks a name that more than one file has.
-      map.set(base, map.has(base) ? null : name)
+      const k = key(name)
+      // Null marks a key that more than one file has.
+      if (k) map.set(k, map.has(k) ? null : name)
     }
     return map
   }
 
   return async (path) => {
     let file = zip.file(csvDir + path) ?? zip.file(path)
+    const tail = tailOf(path)
+    if (!file && tail) {
+      byTail ??= indexBy(tailOf)
+      const match = byTail.get(tail)
+      if (match) file = zip.file(match)
+    }
     if (!file) {
-      byBase ??= baseNames()
-      const match = byBase.get((path.split("/").pop() ?? path).toLowerCase())
+      byBase ??= indexBy(baseOf)
+      const match = byBase.get(baseOf(path))
       if (match) file = zip.file(match)
     }
     return file ? file.async("uint8array") : null

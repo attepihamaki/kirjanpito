@@ -513,6 +513,53 @@ describe("receipts the browser does not hold", () => {
     )
   })
 
+  /*
+   * Two receipts of different months may share a name — a scanner writes
+   * "kuitti.jpg" every time — so the folder rename must not leave either of
+   * them unidentifiable in the file being replaced.
+   */
+  it("carries two same-named receipts of different months", async () => {
+    const was = ["liitteet/2026/01/kuitti.jpg", "liitteet/2026/10/kuitti.jpg"]
+    const handle = fakeHandle("kirjanpito.zip")
+    const data = await packZip({
+      csvName: "tositteet.csv",
+      csvText: CSV,
+      paths: new Map(was.map((p, i) => [`k${i}`, p])),
+      attachmentIds: new Map(was.map((_, i) => [`k${i}`, `s${i}`])),
+      read: async (id) => new TextEncoder().encode(id),
+      settingsText: "{}",
+    })
+    handle.getFile.mockImplementation(
+      async () =>
+        new File([data as BlobPart], handle.name, {
+          lastModified: handle.lastModified,
+        })
+    )
+    linkZip(handle)
+    useBookStore.setState({
+      entries: [
+        { ...sample(), id: "e1", date: "2026-01-08", atts: [gone] },
+        { ...sample(), id: "e2", date: "2026-10-08", atts: [gone] },
+      ],
+      exportLang: "en",
+    })
+    const asked = vi.fn(async () => false)
+    registerConfirmHandler(asked)
+
+    await saveBook(ctx, "kirjanpito")
+
+    expect(asked).not.toHaveBeenCalled()
+    const saved = await unzipped(handle.written[0])
+    expect(saved?.otherFiles).toEqual(
+      was.map((p) => p.replace("liitteet/", "attachments/"))
+    )
+    // Each receipt kept its own bytes rather than the other's.
+    const read = async (p: string) =>
+      new TextDecoder().decode((await saved?.readReceipt(p))!)
+    expect(await read("attachments/2026/01/kuitti.jpg")).toBe("s0")
+    expect(await read("attachments/2026/10/kuitti.jpg")).toBe("s1")
+  })
+
   it("does not ask about a receipt the file never held", async () => {
     const handle = await zipOnDisk(missing, false)
     const asked = vi.fn(async () => false)
