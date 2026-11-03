@@ -19,11 +19,12 @@ const preparing = vi.hoisted(() => ({
   release: (() => {}) as () => void,
 }))
 
-vi.mock("@/lib/browser/prep-image", () => ({
-  prepareImage: (file: File) =>
-    new Promise((resolve) => {
-      preparing.release = () =>
-        resolve({ blob: file, name: file.name, type: file.type })
+vi.mock("@/lib/browser/receipt-store", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  isReceiptStorageSupported: () => true,
+  putReceipt: () =>
+    new Promise<void>((resolve) => {
+      preparing.release = resolve
     }),
 }))
 

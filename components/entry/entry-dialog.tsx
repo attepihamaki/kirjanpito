@@ -33,7 +33,6 @@ import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { useShortcut } from "@/hooks/use-save-book"
 import { isMediaFile } from "@/hooks/use-file-drop"
-import { prepareImage } from "@/lib/browser/prep-image"
 import {
   isReceiptStorageSupported,
   putReceipt,
@@ -368,17 +367,16 @@ function EntryDialogForm({
       try {
         const added: Attachment[] = []
         for (const file of accepted) {
-          const prepared = await prepareImage(file)
           const id = `a-${uid()}`
           pendingIds.current.add(id)
           setDraftIds([...useBookStore.getState().draftAttachmentIds, id])
           try {
-            await putReceipt(id, prepared.blob)
+            await putReceipt(id, file)
             added.push({
               id,
-              name: prepared.name,
-              type: prepared.type,
-              size: prepared.blob.size,
+              name: file.name,
+              type: file.type,
+              size: file.size,
             })
           } catch {
             // Never record an attachment we failed to store.
@@ -784,6 +782,16 @@ function EntryDialogForm({
 
             {ownerTransfer ? (
               <FieldDescription>{f.t("entry.ownerHint")}</FieldDescription>
+            ) : null}
+
+            {selectedCat?.line === "313" ||
+            selectedCat?.line === "314" ||
+            selectedCat?.line === "315" ? (
+              <FieldDescription>{f.t("entry.privateUseHint")}</FieldDescription>
+            ) : null}
+
+            {selectedCat?.line === "335" ? (
+              <FieldDescription>{f.t("entry.payrollHint")}</FieldDescription>
             ) : null}
 
             {/* Paired for the same reason as date and type above. */}
