@@ -187,7 +187,9 @@ export function form5BalanceSections(
     kind: "group",
     label: { fi, en },
   })
-  const total = { total: true }
+  // With no assets or liabilities, there is no total to check in OmaVero.
+  const empty = b.assets === 0 && b.liabilities === 0
+  const total = { total: true, unused: empty }
 
   return [
     {
@@ -250,7 +252,7 @@ export function form5BalanceSections(
           "Positiivinen nettovarallisuus",
           "Positive net worth",
           Math.max(0, b.netWorth),
-          { total: true, unused: b.netWorth < 0 }
+          { total: true, unused: empty || b.netWorth < 0 }
         ),
         field(
           734,

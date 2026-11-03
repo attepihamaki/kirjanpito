@@ -1141,8 +1141,8 @@ export const APP_DICT = {
   "overview.thisYearMonth": ["(nyt {x})", "(now {x})"],
   "statement.form5Tab": ["Lomake 5", "Form 5"],
   "statement.form5Title": [
-    "Lomake 5, tuloverolaskelma",
-    "Form 5, calculation of taxable income",
+    "Lomake 5, elinkeinotoiminnan veroilmoitus",
+    "Form 5, business tax return",
   ],
   "statement.form5Kicker": ["Verovuosi {y}", "Tax year {y}"],
   "statement.form5Intro": [
@@ -1171,8 +1171,8 @@ export const APP_DICT = {
     "The bookkeeping includes no payroll records or income register reporting.",
   ],
   "statement.form5Missing": [
-    "Kirjanpito ei täytä osuuskuntien ylijäämiä (325–328), lisävähennyksiä (364) eikä lomakkeen muita osia, kuten poistoja ja ajoneuvoja. Ne täytetään OmaVerossa. Varat ja velat ovat välilehdellä Varat ja velat.",
-    "The bookkeeping does not fill co-operative surplus (325–328), additional deductions (364) or the form’s other sections, such as depreciation and vehicles. Fill those in OmaVero. Assets and liabilities are on the Assets and liabilities tab.",
+    "Kirjanpito ei täytä osuuskuntien ylijäämiä (325–328), lisävähennyksiä (364) eikä lomakkeen muita osia, kuten poistoja ja ajoneuvoja. Ne täytetään OmaVerossa.",
+    "The bookkeeping does not fill co-operative surplus (325–328), additional deductions (364) or the form’s other sections, such as depreciation and vehicles. Fill those in OmaVero.",
   ],
   "statement.form5Nothing": [
     "Tälle vuodelle ei ole summia, jotka täytetään lomakkeelle.",
@@ -1317,28 +1317,24 @@ export const APP_DICT = {
   // --- Fixed assets ---
 
   "balance.tab": ["Varat ja velat", "Assets and liabilities"],
-  "balance.kicker": ["Lomake 5, verovuosi {y}", "Form 5, tax year {y}"],
-  "balance.title": ["Varat, velat ja palkat", "Assets, liabilities and wages"],
   "balance.intro": [
-    "Nämä kohdat ratkaisevat, kuinka suuri osa tuloksesta on pääomatuloa. Täytä ne OmaVeroon tilikauden päättymisen tilanteen mukaan.",
-    "These fields decide how much of the profit counts as capital income. Enter them in OmaVero as they stood at the end of the financial year.",
-  ],
-  "balance.nothing": [
-    "Vuodelle ei ole varoja, velkoja eikä palkkoja.",
-    "This year has no assets, liabilities or wages.",
+    "Varat ja velat ratkaisevat, kuinka suuri osa tuloksesta on pääomatuloa. Täytä ne OmaVeroon tilikauden päättymisen tilanteen mukaan.",
+    "Assets and liabilities decide how much of the profit counts as capital income. Enter them in OmaVero as they stood at the end of the financial year.",
   ],
   "balance.notBank": [
     "Pankkitalletukset eivät kuulu näihin kohtiin.",
     "Bank deposits are in none of these fields.",
   ],
   "balance.missing": [
-    "Kiinteistöjä (703) ja arvopapereita (705, 745) kirjanpito ei täytä, koska ne eritellään lomakkeilla 18B ja 8B. Oikaistu negatiivinen oma pääoma (747) täytetään OmaVerossa.",
-    "The bookkeeping does not fill real estate (703) or securities (705, 745), which are itemised on Forms 18B and 8B. Adjusted negative equity (747) is entered in OmaVero.",
+    "Kiinteistöjä (703) ja arvopapereita (705, 745) kirjanpito ei täytä, koska ne eritellään lomakkeilla 18B ja 8B. Oikaistu negatiivinen oma pääoma (747) täytetään OmaVerossa. Jos sinulla on näitä, kohdat 718, 725 ja nettovarallisuus ovat OmaVerossa eri summat kuin tässä.",
+    "The bookkeeping does not fill real estate (703) or securities (705, 745), which are itemised on Forms 18B and 8B. Adjusted negative equity (747) is entered in OmaVero. If you have any of these, fields 718 and 725 and the net worth differ in OmaVero from the amounts here.",
   ],
   "balance.figuresTitle": [
-    "Mistä luvut tulevat",
-    "Where the figures come from",
+    "Mistä varat ja velat tulevat",
+    "Where the assets and liabilities come from",
   ],
+  "balance.editFigures": ["Muokkaa lukuja", "Edit the figures"],
+  "balance.openForm5": ["Avaa Lomake 5", "Open Form 5"],
   "balance.figures": [
     "Kirjauksista: myyntisaamiset {r}, ostovelat {p}, lainat {l}. Poistolaskelmasta: koneet ja kalusto {m}.",
     "From the entries: receivables {r}, payables {p}, loans {l}. From the depreciation register: machinery and equipment {m}.",
@@ -1349,8 +1345,8 @@ export const APP_DICT = {
     "The year’s tax return is marked as filed, so these figures are locked. Remove the mark on the Form 5 tab if you need to change them.",
   ],
   "balance.yearEndHint": [
-    "Kirjanpito ei tiedä näitä, joten kirjoita ne tähän. Tyhjä kohta on nolla. Luvut tallentuvat kirjanpitotiedostoon.",
-    "The bookkeeping cannot know these, so enter them here. An empty field is zero. They are saved in the bookkeeping file.",
+    "Kirjanpito ei tiedä näitä, joten kirjoita ne tähän. Tyhjä kohta on nolla. Luvut tallentuvat kirjanpitotiedostoon, ja kopioit ne OmaVeroon välilehdeltä Lomake 5.",
+    "The bookkeeping cannot know these, so enter them here. An empty field is zero. They are saved in the bookkeeping file, and you copy them into OmaVero from the Form 5 tab.",
   ],
   "balance.goods": ["Tavarat (708)", "Goods (708)"],
   "balance.otherCurrent": [

@@ -11,8 +11,10 @@ import { VatReturnView } from "@/components/vat/vat-return-view"
 import { VatShell } from "@/components/vat/vat-shell"
 import { VatView as VatPage } from "@/components/vat/vat-view"
 import { defaultCategories } from "@/lib/domain/accounts"
+import { EMPTY_YEAR_END } from "@/lib/domain/form5-balance"
 import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { createIdFactory } from "@/lib/domain/id"
+import { STATEMENT_ROUTES } from "@/lib/site"
 import { useBookStore } from "@/stores/book-store"
 import type { Lang } from "@/lib/domain/types"
 
@@ -267,10 +269,30 @@ describe("Form5View", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Kaikki kohdat/ }))
     expect(screen.getByText("Saadut avustukset ja tuet")).toBeInTheDocument()
     expect(screen.getAllByText("Veronalainen osuus")).toHaveLength(2)
+    expect(screen.getByText("Elinkeinotoiminnan varat")).toBeInTheDocument()
+    expect(screen.getByText("Maksetut palkat")).toBeInTheDocument()
     // An empty field has nothing to copy.
     expect(
       screen.queryByRole("button", { name: /^Kopioi kohta 318:/ })
     ).toBeNull()
+  })
+
+  it("adds the year-end figures to the fields and totals to fill in", () => {
+    useBookStore.setState({
+      year: 2026,
+      yearEnd: { 2026: { ...EMPTY_YEAR_END, goods: 120_000 } },
+    })
+    mount(<Form5View />)
+
+    expect(
+      screen.getByRole("button", { name: "Kopioi kohta 708: 1200,00" })
+    ).toBeInTheDocument()
+    expect(screen.getByText("Varat yhteensä")).toBeInTheDocument()
+    expect(screen.getByText("Positiivinen nettovarallisuus")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Muokkaa lukuja" })).toHaveAttribute(
+      "href",
+      expect.stringContaining(STATEMENT_ROUTES.balance)
+    )
   })
 })
 

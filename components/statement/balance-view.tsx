@@ -2,77 +2,32 @@
 
 import * as React from "react"
 
+import { ButtonLink } from "@/components/common/button-link"
 import { Panel } from "@/components/common/panel"
-import { TaxForm, TaxFormStep } from "@/components/common/tax-form"
 import { useFormatters } from "@/components/lang-provider"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import {
   EMPTY_YEAR_END,
-  form5Balance,
-  form5BalanceSections,
   inventoryChange,
   type YearEnd,
 } from "@/lib/domain/form5-balance"
 import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
-import { indexCategories } from "@/lib/domain/types"
+import { STATEMENT_ROUTES } from "@/lib/site"
 import { useBookStore } from "@/stores/book-store"
 
 /**
- * Form 5's assets, liabilities and wages paid (§8.8). The book supplies what it
- * knows, and the panel below takes the rest, year by year.
+ * What Form 5's assets and liabilities need beyond the book (§8.8), year by
+ * year. The Lomake 5 tab lists the resulting fields for copying.
  */
 export function BalanceView() {
-  const f = useFormatters()
-  const entries = useBookStore((s) => s.entries)
-  const cats = useBookStore((s) => s.cats)
   const year = useBookStore((s) => s.year)
-  const yearEnds = useBookStore((s) => s.yearEnd)
-  const assetOpening = useBookStore((s) => s.assetOpening)
-  const loanOpening = useBookStore((s) => s.loanOpening)
-  const yearEnd = yearEnds[year] ?? EMPTY_YEAR_END
-
-  const balance = React.useMemo(
-    () =>
-      form5Balance({
-        entries,
-        cats: indexCategories(cats),
-        year,
-        yearEnd,
-        assetOpening,
-        loanOpening,
-      }),
-    [entries, cats, year, yearEnd, assetOpening, loanOpening]
-  )
-  const sections = React.useMemo(
-    () => form5BalanceSections(balance, yearEnd),
-    [balance, yearEnd]
-  )
 
   return (
     <div className="flex flex-col gap-6">
       <YearEndPanel key={year} year={year} />
       <InventoryPanel year={year} />
-      <TaxForm
-        key={`balance-${year}`}
-        kicker={f.t("balance.kicker", { y: String(year) })}
-        title={f.t("balance.title")}
-        intro={f.t("balance.intro")}
-        nothing={f.t("balance.nothing")}
-        sections={sections}
-        notes={[f.t("balance.notBank"), f.t("balance.missing")]}
-      >
-        <TaxFormStep step={3}>{f.t("balance.figuresTitle")}</TaxFormStep>
-        <p className="ml-[2.125rem] text-sm text-muted-foreground">
-          {f.t("balance.figures", {
-            r: f.money(balance.receivables),
-            p: f.money(balance.payables),
-            l: f.money(balance.loans),
-            m: f.money(balance.machinery),
-          })}
-        </p>
-      </TaxForm>
     </div>
   )
 }
@@ -148,6 +103,15 @@ function YearEndPanel({ year }: { year: number }) {
       title={f.t("balance.yearEndTitle", { d: f.date(`${year}-12-31`) })}
       description={f.t(filed ? "balance.yearEndFiled" : "balance.yearEndHint")}
       bodyClassName="grid gap-4 p-4 min-[560px]:grid-cols-2"
+      footer={
+        <ButtonLink
+          href={STATEMENT_ROUTES.form5}
+          variant="outline"
+          className="print-hidden"
+        >
+          {f.t("balance.openForm5")}
+        </ButtonLink>
+      }
     >
       {FIELDS.map(([key, label]) => (
         <AmountField

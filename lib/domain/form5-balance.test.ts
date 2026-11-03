@@ -120,6 +120,21 @@ describe("form5Balance", () => {
     expect(totals.map((t) => t.code)).toEqual(["718", "725", "733"])
   })
 
+  it("has no totals to check without assets or liabilities", () => {
+    const sections = form5BalanceSections(
+      form5Balance({
+        entries: [],
+        cats,
+        year: 2026,
+        yearEnd: EMPTY_YEAR_END,
+        assetOpening: null,
+        loanOpening: null,
+      }),
+      EMPTY_YEAR_END
+    )
+    expect(taxFormSteps(sections).totals).toEqual([])
+  })
+
   it("never moves more of a loan to 749 than there is", () => {
     const b = form5Balance({
       ...input,
