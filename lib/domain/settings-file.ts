@@ -7,6 +7,11 @@ import { isVatRate } from "@/lib/domain/money"
 import type { AssetOpening } from "@/lib/domain/assets"
 import type { BankBalance } from "@/lib/domain/bank-balance"
 import {
+  EMPTY_YEAR_END,
+  type LoanOpening,
+  type YearEnd,
+} from "@/lib/domain/form5-balance"
+import {
   normalizeLayout,
   type OverviewWidget,
 } from "@/lib/domain/overview-layout"
@@ -65,6 +70,10 @@ export interface BookSettings {
   assetOpening: AssetOpening | null
   /** The bank balance as last read, or null (§8.12). */
   bankBalance: BankBalance | null
+  /** The loans outstanding when the book starts, or null (§6.8). */
+  loanOpening: LoanOpening | null
+  /** Year (`"2026"`) → what the book cannot supply for Form 5 (§8.8). */
+  yearEnd: Record<string, YearEnd>
 }
 
 /**
@@ -258,6 +267,33 @@ export function parseSettings(text: string): ParsedSettings {
       amount: raw.assetOpening.amount as number,
     }
   }
+  if (raw.loanOpening === null) out.loanOpening = null
+  else if (
+    isRecord(raw.loanOpening) &&
+    Number.isInteger(raw.loanOpening.year) &&
+    Number.isInteger(raw.loanOpening.amount) &&
+    (raw.loanOpening.amount as number) >= 0
+  ) {
+    out.loanOpening = {
+      year: raw.loanOpening.year as number,
+      amount: raw.loanOpening.amount as number,
+    }
+  }
+  if (isRecord(raw.yearEnd)) {
+    const years: Record<string, YearEnd> = {}
+    for (const [key, value] of Object.entries(raw.yearEnd)) {
+      if (!YEAR.test(key) || !isRecord(value)) continue
+      const row: YearEnd = { ...EMPTY_YEAR_END }
+      for (const field of Object.keys(row) as (keyof YearEnd)[]) {
+        const amount = value[field]
+        if (Number.isInteger(amount) && (amount as number) >= 0) {
+          row[field] = amount as number
+        }
+      }
+      years[key] = row
+    }
+    out.yearEnd = years
+  }
   if (raw.bankBalance === null) out.bankBalance = null
   else if (
     isRecord(raw.bankBalance) &&
@@ -308,6 +344,8 @@ export function serializeSettings(s: BookSettings): string {
     recurring: s.recurring,
     assetOpening: s.assetOpening,
     bankBalance: s.bankBalance,
+    loanOpening: s.loanOpening,
+    yearEnd: s.yearEnd,
   }
   return `${JSON.stringify(file, null, 2)}\n`
 }

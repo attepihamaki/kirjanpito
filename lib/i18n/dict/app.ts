@@ -493,6 +493,30 @@ export const APP_DICT = {
     "Myyntisaamiset {r}, ostovelat {p}.",
     "Receivables {r}, payables {p}.",
   ],
+  "overview.singleEntryLimit": [
+    "Yhdenkertaisen kirjanpidon rajat, tilikaudet {y} ja sitä edeltävä",
+    "Limits for single-entry books, financial year {y} and the one before",
+  ],
+  "overview.singleEntryLimitOver": [
+    "Kaksi rajaa ylittyy molempina vuosina, joten sinun on pidettävä kahdenkertaista kirjanpitoa (KPL 1:1a). Tämä sovellus ei tee sitä.",
+    "Two limits are exceeded in both years, so you must keep double-entry books (KPL 1:1a). This app does not do that.",
+  ],
+  "overview.singleEntryLimitStaff": [
+    "Yksi raja ylittyy molempina vuosina. Jos palveluksessasi on keskimäärin yli 3 henkilöä, sinun on pidettävä kahdenkertaista kirjanpitoa (KPL 1:1a).",
+    "One limit is exceeded in both years. If you employ more than 3 people on average, you must keep double-entry books (KPL 1:1a).",
+  ],
+  "overview.statementLimit": [
+    "Tilinpäätöksen rajat, tilikaudet {y} ja sitä edeltävä",
+    "Limits for financial statements, financial year {y} and the one before",
+  ],
+  "overview.statementLimitOver": [
+    "Kaksi rajaa ylittyy molempina vuosina, joten sinun on laadittava tilinpäätös neljässä kuukaudessa (KPL 1:1a, 3:6). Tämä sovellus ei tee sitä.",
+    "Two limits are exceeded in both years, so you must prepare financial statements within four months (KPL 1:1a, 3:6). This app does not do that.",
+  ],
+  "overview.statementLimitStaff": [
+    "Yksi raja ylittyy molempina vuosina. Jos palveluksessasi on keskimäärin yli 10 henkilöä, sinun on laadittava tilinpäätös (KPL 1:1a).",
+    "One limit is exceeded in both years. If you employ more than 10 people on average, you must prepare financial statements (KPL 1:1a).",
+  ],
   "overview.vatPeriodLimit": [
     "Liikevaihto {y} oli {a}",
     "Turnover in {y} was {a}",
@@ -747,6 +771,15 @@ export const APP_DICT = {
   ],
   "entry.category": ["Luokka", "Category"],
   "entry.amount": ["Summa (€)", "Amount (€)"],
+  "entry.buyerVat": ["Ostajan ALV-numero", "Buyer’s VAT number"],
+  "entry.buyerVatHint": [
+    "Tarvitaan yhteenvetoilmoitukseen.",
+    "Needed for the EC Sales List.",
+  ],
+  "entry.buyerVatBad": [
+    "Numero alkaa yleensä maakoodilla, esim. SE. Tarkista se VIES-palvelusta.",
+    "A number usually starts with a country code, such as SE. Check it in VIES.",
+  ],
   "entry.paid": ["Maksettu", "Paid"],
   "entry.paidSame": ["Samana päivänä", "On the same day"],
   "entry.paidLater": ["Toisena päivänä", "On another day"],
@@ -918,6 +951,24 @@ export const APP_DICT = {
   ],
   "vat.markFiled": ["Merkitse ilmoitetuksi", "Mark as filed"],
   /* The money that moved for a return, booked as an entry (§6.6). */
+  "vat.ecTab": ["Yhteenvetoilmoitus", "EC Sales List"],
+  "vat.ecIntro": [
+    "Ilmoitus annetaan kuukausittain, vain kuukaudelta, jolla on tällaista myyntiä, ja se eritellään ostajittain. Tavarat menevät laskun kuukauden mukaan, ja palvelut suorituksen tai maksun kuukauden mukaan. Tässä kuukausi on kirjauksen päivän mukainen.",
+    "The list is filed monthly, only for a month with such sales, and itemised by buyer. Goods go by the invoice’s month, and services by the month of the supply or payment. Here the month follows the entry’s date.",
+  ],
+  "vat.ecNone": [
+    "Vuonna {y} ei ole myyntiä muihin EU-maihin.",
+    "There are no sales to other EU countries in {y}.",
+  ],
+  "vat.ecDue": ["Annettava viimeistään {d}", "Due by {d}"],
+  "vat.ecBuyer": ["Ostajan ALV-numero", "Buyer’s VAT number"],
+  "vat.ecGoods": ["Tavarat", "Goods"],
+  "vat.ecServices": ["Palvelut", "Services"],
+  "vat.ecNoNumber": ["Numero puuttuu", "Number missing"],
+  "vat.ecUnsorted": [
+    "{a} vanhalla luokalla Myynti – EU. Vaihda luokka.",
+    "{a} on the old category Sales – EU. Change the category.",
+  ],
   "vat.settlementTitle": ["Maksu tai palautus", "Payment or refund"],
   "vat.settlementHint": [
     "Kirjanpito ei näe pankkia. Kirjaa maksu tai palautus, kun raha on liikkunut, ja liitä tiliote tositteeksi. Kirjaus saa tositenumeron, mutta se ei ole tulo eikä kulu eikä muuta ilmoitusta.",
@@ -1071,8 +1122,8 @@ export const APP_DICT = {
     "The bookkeeping includes no payroll records or income register reporting.",
   ],
   "statement.form5Missing": [
-    "Kirjanpito ei täytä osuuskuntien ylijäämiä (325–328), lisävähennyksiä (364) eikä lomakkeen muita osia, kuten poistoja, ajoneuvoja ja varallisuuslaskelmaa. Ne täytetään OmaVerossa.",
-    "The bookkeeping does not fill co-operative surplus (325–328), additional deductions (364) or the form’s other sections, such as depreciation, vehicles and net worth. Fill those in OmaVero.",
+    "Kirjanpito ei täytä osuuskuntien ylijäämiä (325–328), lisävähennyksiä (364) eikä lomakkeen muita osia, kuten poistoja ja ajoneuvoja. Ne täytetään OmaVerossa. Varat ja velat ovat välilehdellä Varat ja velat.",
+    "The bookkeeping does not fill co-operative surplus (325–328), additional deductions (364) or the form’s other sections, such as depreciation and vehicles. Fill those in OmaVero. Assets and liabilities are on the Assets and liabilities tab.",
   ],
   "statement.form5Nothing": [
     "Tälle vuodelle ei ole summia, jotka täytetään lomakkeelle.",
@@ -1216,6 +1267,83 @@ export const APP_DICT = {
 
   // --- Fixed assets ---
 
+  "balance.tab": ["Varat ja velat", "Assets and liabilities"],
+  "balance.kicker": ["Lomake 5, verovuosi {y}", "Form 5, tax year {y}"],
+  "balance.title": ["Varat, velat ja palkat", "Assets, liabilities and wages"],
+  "balance.intro": [
+    "Nämä kohdat ratkaisevat, kuinka suuri osa tuloksesta on pääomatuloa. Täytä ne OmaVeroon tilikauden päättymisen tilanteen mukaan.",
+    "These fields decide how much of the profit counts as capital income. Enter them in OmaVero as they stood at the end of the financial year.",
+  ],
+  "balance.nothing": [
+    "Vuodelle ei ole varoja, velkoja eikä palkkoja.",
+    "This year has no assets, liabilities or wages.",
+  ],
+  "balance.notBank": [
+    "Pankkitalletukset eivät kuulu näihin kohtiin.",
+    "Bank deposits are in none of these fields.",
+  ],
+  "balance.missing": [
+    "Kiinteistöjä (703) ja arvopapereita (705, 745) kirjanpito ei täytä, koska ne eritellään lomakkeilla 18B ja 8B. Oikaistu negatiivinen oma pääoma (747) täytetään OmaVerossa.",
+    "The bookkeeping does not fill real estate (703) or securities (705, 745), which are itemised on Forms 18B and 8B. Adjusted negative equity (747) is entered in OmaVero.",
+  ],
+  "balance.figuresTitle": [
+    "Mistä luvut tulevat",
+    "Where the figures come from",
+  ],
+  "balance.figures": [
+    "Kirjauksista: myyntisaamiset {r}, ostovelat {p}, lainat {l}. Poistolaskelmasta: koneet ja kalusto {m}.",
+    "From the entries: receivables {r}, payables {p}, loans {l}. From the depreciation register: machinery and equipment {m}.",
+  ],
+  "balance.yearEndTitle": ["Tilanne {d}", "Position on {d}"],
+  "balance.yearEndHint": [
+    "Kirjanpito ei tiedä näitä, joten kirjoita ne tähän. Tyhjä kohta on nolla. Luvut tallentuvat kirjanpitotiedostoon.",
+    "The bookkeeping cannot know these, so enter them here. An empty field is zero. They are saved in the bookkeeping file.",
+  ],
+  "balance.goods": ["Tavarat (708)", "Goods (708)"],
+  "balance.otherCurrent": [
+    "Muu vaihto-omaisuus (709)",
+    "Other current assets (709)",
+  ],
+  "balance.otherFixed": [
+    "Muu käyttöomaisuus (706)",
+    "Other fixed assets (706)",
+  ],
+  "balance.cash": ["Käteisvarat (714)", "Cash in hand (714)"],
+  "balance.otherFinancial": [
+    "Muu rahoitusomaisuus (716)",
+    "Other financial assets (716)",
+  ],
+  "balance.loanCurrent": [
+    "Lainoista vuoden sisällä erääntyvä osa",
+    "Part of the loans due within a year",
+  ],
+  "balance.otherCurrentDebt": [
+    "Muut lyhytaikaiset velat",
+    "Other current liabilities",
+  ],
+  "balance.otherLongDebt": [
+    "Muut pitkäaikaiset velat",
+    "Other non-current liabilities",
+  ],
+  "balance.loanOpening": [
+    "Lainat vuoden {y} alussa",
+    "Loans at the start of {y}",
+  ],
+  "balance.badAmount": [
+    "Anna summa, esim. 124,50.",
+    "Enter an amount, e.g. 124.50.",
+  ],
+  "balance.inventoryTitle": ["Varaston muutos", "Change in inventory"],
+  "balance.inventoryHint": [
+    "Tavarat ja muu vaihto-omaisuus edellisen vuoden lopusta tämän vuoden loppuun. Kirjaus riville 333: {a}. Varaston kasvu pienentää kuluja.",
+    "Goods and other current assets from the end of last year to the end of this one. The entry on line 333: {a}. A growing stock lowers the cost.",
+  ],
+  "balance.inventoryBook": ["Kirjaa varaston muutos", "Book the change"],
+  "balance.inventoryBooked": [
+    "Varaston muutos on kirjattu tälle vuodelle.",
+    "The change in inventory is booked for this year.",
+  ],
+  "balance.inventoryEntry": ["Varaston muutos {y}", "Change in inventory {y}"],
   "assets.tab": ["Poistot", "Depreciation"],
   "assets.title": ["Koneet ja kalusto {y}", "Machinery and equipment {y}"],
   "assets.intro": [

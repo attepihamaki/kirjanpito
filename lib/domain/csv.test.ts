@@ -67,7 +67,7 @@ describe("serializeCsv", () => {
   it("starts with a BOM and the exact header", () => {
     expect(out.startsWith(`﻿${HEADER}\r\n`)).toBe(true)
     expect(HEADER).toBe(
-      "voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid"
+      "voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat"
     )
   })
 
@@ -245,7 +245,7 @@ describe("parseCsv — happy path", () => {
 
 describe("parseCsv — Finnish column names", () => {
   const FINNISH_HEADER =
-    "tositenro;pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite;verokausi;maksettu"
+    "tositenro;pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite;verokausi;maksettu;ostajan_alv"
   const ROW =
     "7;2026-11-12;ALV-maksu;kulu;2939;Arvonlisäveron maksu;362,18;0;netto;tositteet/2026/11/a.pdf;2026-10"
   const EXPECTED = {
@@ -760,7 +760,7 @@ describe("VAT settlements", () => {
   it("writes and reads back the period a payment settles", () => {
     const text = serializeCsv([payment], cats)
     expect(text).toContain(
-      ";2939;Arvonlisäveron maksu;362,18;0;brutto;;2026-10;\r\n"
+      ";2939;Arvonlisäveron maksu;362,18;0;brutto;;2026-10;;\r\n"
     )
 
     const back = ok(parseCsv(text, baseCats)).entries[0]
@@ -1020,5 +1020,30 @@ describe("paid column", () => {
       paidOn: null,
     })
     expect(owner.paidOn).toBeUndefined()
+  })
+})
+
+describe("buyer_vat column", () => {
+  const back = (catId: string) => {
+    const e: Entry = {
+      id: "b",
+      date: "2026-03-03",
+      description: "",
+      type: "income",
+      catId,
+      amount: 10_000,
+      vatRate: 0,
+      amountMode: "gross",
+      buyerVatId: "SE1234",
+    }
+    return ok(parseCsv(serializeCsv([e], cats), baseCats)).entries[0]
+  }
+
+  it("round-trips on an EU sale", () => {
+    expect(back("300-eu-goods").buyerVatId).toBe("SE1234")
+  })
+
+  it("drops it on any other category", () => {
+    expect(back("300-domestic").buyerVatId).toBeUndefined()
   })
 })

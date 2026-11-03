@@ -33,12 +33,18 @@ import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { useShortcut } from "@/hooks/use-save-book"
 import { isMediaFile } from "@/hooks/use-file-drop"
+import { looksLikeVatId, normalizeVatId } from "@/lib/domain/ec-sales"
 import { canBeUnpaid } from "@/lib/domain/open-items"
 import {
   isReceiptStorageSupported,
   putReceipt,
 } from "@/lib/browser/receipt-store"
-import { LINE_BY_KEY, RATES, categoryName } from "@/lib/domain/accounts"
+import {
+  LINE_BY_KEY,
+  RATES,
+  categoryName,
+  isEuSaleKind,
+} from "@/lib/domain/accounts"
 import {
   describeInvoice,
   isEmptyGuess,
@@ -91,6 +97,8 @@ interface FormState {
   settles: string
   /** "" when paid on the date, "open" while unpaid, else the payment date (§6.3). */
   paid: string
+  /** The buyer's VAT number on an EU sale (§8.7). */
+  buyerVatId: string
 }
 
 /** The three fields §8.5 validates, named as they are in `FormState`. */
@@ -153,6 +161,7 @@ function initialForm({
       repeat: false,
       settles: prefill?.settles ?? "",
       paid: "",
+      buyerVatId: "",
     }
   }
   const today = todayIso()
@@ -177,6 +186,7 @@ function initialForm({
           ? "open"
           : (editing.paidOn ?? "")
         : "",
+    buyerVatId: editing.buyerVatId ?? "",
   }
 }
 
@@ -466,6 +476,7 @@ function EntryDialogForm({
   const settlement = !!(
     selectedCat && LINE_BY_KEY.get(selectedCat.line)?.settlement
   )
+  const euSale = isEuSaleKind(selectedCat?.kind)
   const unpayable = canBeUnpaid(
     selectedCat && LINE_BY_KEY.get(selectedCat.line)
   )
@@ -581,6 +592,9 @@ function EntryDialogForm({
       ...(unpayable && form.paid && form.paid !== form.date
         ? { paidOn: form.paid === "open" ? null : form.paid }
         : {}),
+      ...(euSale && form.buyerVatId.trim()
+        ? { buyerVatId: normalizeVatId(form.buyerVatId) }
+        : {}),
     }
   }
 
@@ -639,6 +653,7 @@ function EntryDialogForm({
         repeat: false,
         settles: "",
         paid: "",
+        buyerVatId: "",
       }
       keepRate.current = false
       setForm(next)
@@ -799,6 +814,29 @@ function EntryDialogForm({
 
             {ownerTransfer ? (
               <FieldDescription>{f.t("entry.ownerHint")}</FieldDescription>
+            ) : null}
+
+            {euSale ? (
+              <Field>
+                <FieldLabel htmlFor="entry-buyer-vat">
+                  {f.t("entry.buyerVat")}
+                </FieldLabel>
+                <Input
+                  id="entry-buyer-vat"
+                  value={form.buyerVatId}
+                  placeholder="SE556123456701"
+                  onChange={(e) => update({ buyerVatId: e.target.value })}
+                />
+                {form.buyerVatId.trim() && !looksLikeVatId(form.buyerVatId) ? (
+                  <FieldDescription className="text-warning">
+                    {f.t("entry.buyerVatBad")}
+                  </FieldDescription>
+                ) : (
+                  <FieldDescription>
+                    {f.t("entry.buyerVatHint")}
+                  </FieldDescription>
+                )}
+              </Field>
             ) : null}
 
             {unpayable ? (

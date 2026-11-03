@@ -63,6 +63,11 @@ export function offStatement(line: AccountLine | undefined): boolean {
   return !!line && (line.capital || line.settlement || line.owner || line.loan)
 }
 
+/** Sales the EC Sales List covers, the retired category included (§5, §8.7). */
+export function isEuSaleKind(kind: SalesKind | undefined): boolean {
+  return kind === "euGoods" || kind === "euServices" || kind === "eu"
+}
+
 /**
  * VAT rates offered in the entry dialog.
  *

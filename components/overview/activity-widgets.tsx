@@ -42,6 +42,8 @@ import { APP_ROUTES } from "@/lib/site"
 import { cn } from "@/lib/utils"
 import { toast } from "@/components/ui/toast"
 import { retentionDates, yearsToArchive } from "@/lib/domain/retention"
+import { bookLimits } from "@/lib/domain/book-limits"
+import { EMPTY_YEAR_END, form5Balance } from "@/lib/domain/form5-balance"
 import { balancesAt } from "@/lib/domain/open-items"
 import { form5Reminder } from "@/lib/domain/tax-return-deadline"
 import {
@@ -344,6 +346,9 @@ export function ChecksWidget() {
   }
 
   const vatPeriod = useBookStore((s) => s.vatPeriod)
+  const yearEnds = useBookStore((s) => s.yearEnd)
+  const assetOpening = useBookStore((s) => s.assetOpening)
+  const loanOpening = useBookStore((s) => s.loanOpening)
   const traderType = useBookStore((s) => s.traderType)
   const threshold = vatThreshold(data.entries, data.catMap, data.today)
   if (threshold) {
@@ -409,6 +414,45 @@ export function ChecksWidget() {
         a: f.money(overPeriod.turnover),
       }),
       sub: f.t("overview.vatPeriodLimitSub", { l: f.money(overPeriod.limit) }),
+    })
+  }
+
+  const limits = bookLimits(
+    data.entries,
+    data.catMap,
+    (y) =>
+      form5Balance({
+        entries: data.entries,
+        cats: data.catMap,
+        year: y,
+        yearEnd: yearEnds[y] ?? EMPTY_YEAR_END,
+        assetOpening,
+        loanOpening,
+      }).assets,
+    data.today
+  )
+  if (limits.singleEntry) {
+    items.push({
+      key: "singleEntryLimit",
+      tone: limits.singleEntry === "over" ? "crit" : "info",
+      title: f.t("overview.singleEntryLimit", { y: limits.year }),
+      sub: f.t(
+        limits.singleEntry === "over"
+          ? "overview.singleEntryLimitOver"
+          : "overview.singleEntryLimitStaff"
+      ),
+    })
+  }
+  if (limits.statements) {
+    items.push({
+      key: "statementLimit",
+      tone: limits.statements === "over" ? "crit" : "info",
+      title: f.t("overview.statementLimit", { y: limits.year }),
+      sub: f.t(
+        limits.statements === "over"
+          ? "overview.statementLimitOver"
+          : "overview.statementLimitStaff"
+      ),
     })
   }
 

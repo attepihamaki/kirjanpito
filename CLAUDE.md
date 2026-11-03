@@ -152,6 +152,7 @@ interface Entry {
   atts?: Attachment[] // receipts, may be several
   settles?: string // VAT payment or refund only: the period key it settles (§6.6)
   paidOn?: string | null // payment date if not `date`; null while open (§6.3)
+  buyerVatId?: string // the buyer's VAT number on an EU sale (§8.7)
 }
 ```
 
@@ -367,7 +368,7 @@ For the selected year, by month (net amounts):
 ### 7.1 CSV
 
 - **Header row**, always exactly these columns in this order:
-  `voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid`
+  `voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat`
 - **The column names are English and the values stay Finnish.** This is the
   user's file, and it opens in Finnish Excel with decimal commas, Finnish category
   names, `tulo`/`kulu` and `brutto`/`netto`. The header is the same in both UI
@@ -375,7 +376,7 @@ For the selected year, by month (net amounts):
   `TYPE_FROM_CSV` for `tulo`/`kulu`, `MODE_TO_CSV` for `brutto`/`netto`.
 - **Files with the Finnish header must keep opening.** `FINNISH_COLUMNS` in
   `lib/domain/csv.ts` maps `tositenro` (or `tositenumero`), `pvm`, `selite`,
-  `tyyppi`, `tili`, `luokka`, `summa`, `alv`, `syotto`, `tosite`, `verokausi` and `maksettu`
+  `tyyppi`, `tili`, `luokka`, `summa`, `alv`, `syotto`, `tosite`, `verokausi`, `maksettu` and `ostajan_alv`
   to the columns above, and both the header match and the delimiter detection go
   through it. Saving such a file writes the English header. Nothing else in the
   codebase may spell a Finnish column name.
@@ -387,6 +388,7 @@ For the selected year, by month (net amounts):
   - `receipts` holds the receipt paths inside the ZIP, separated by `|`. **These are written even when exporting CSV only**, so a plain CSV still records which receipts existed and a re-import can mark them missing per §7.2. The prototype dropped them, which made a CSV-only export lossy.
   - `settles` is the period a VAT payment or refund settles (`2026-10`, `2026-Q4`, `2026`), empty on every other row (§6.6).
   - `paid` is the payment date when it is not the entry's own, `avoin` while the entry is open, and otherwise empty (§6.3).
+  - `buyer_vat` is the buyer's VAT number on an EU sale (§8.7), empty on every other row.
   - Rows are sorted by date, then by voucher number. The format is identical in both UI languages, so it opens directly in Finnish Excel.
   - **A text cell that Excel would run as a formula gets a leading apostrophe.** That is `description`, `category` or `receipts` starting with `=`, `+`, `-`, `@`, a tab or a carriage return. A value that already starts with apostrophes before one of those gets one more, and the import takes exactly one off, so every value round-trips. The amount and rate columns are left alone, so a negative amount stays a number. Excel may show the apostrophe in the cell.
 - **Import (be lenient):**
@@ -536,7 +538,9 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
   "pageSize": { "ledger": 10, "categories": 25 },
   "recurring": [{ "id": "r1", "description": "Vuokra", "type": "expense", "catId": "343", "amount": 45000, "vatRate": 25.5, "amountMode": "gross", "day": 20, "from": "2026-02" }],
   "assetOpening": { "year": 2026, "amount": 300000 },
-  "bankBalance": { "amount": 125000, "date": "2026-10-31" }
+  "bankBalance": { "amount": 125000, "date": "2026-10-31" },
+  "loanOpening": { "year": 2026, "amount": 800000 },
+  "yearEnd": { "2026": { "goods": 120000, "otherCurrent": 0, "otherFixed": 0, "cash": 3500, "otherFinancial": 0, "loanCurrent": 0, "otherCurrentDebt": 0, "otherLongDebt": 0 } }
 }
 ```
 
@@ -546,7 +550,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
 - **The overview layout** goes through `normalizeLayout` in `lib/domain/overview-layout.ts`: an unknown widget id is dropped and a missing one goes right after the widget it follows in the default layout, at its default size, so a file from an older or newer version still opens and a new widget does not land at the bottom of the page.
 - **Language and theme** are written from the browser's own keys (§12) at save. Opening a file switches the app to them. They are preferences of the browser as much as of the book, so changing them does not mark the book dirty, and the landing page goes on using the browser's keys. The theme is applied through `Ctx.setTheme`, because only React can reach next-themes.
 - **Page sizes and autosave** are saved the same way: written at save, applied on open, never dirty.
-- **The trader type, the VAT period, the start month, the filed marks, the archived years, the layout, the categories, the recurring templates, the asset opening balance and the bank balance do mark the book dirty**, since the file no longer matches.
+- **The trader type, the VAT period, the start month, the filed marks, the archived years, the layout, the categories, the recurring templates, the opening balances, the year-end figures and the bank balance do mark the book dirty**, since the file no longer matches.
 - A plain CSV has no settings. Opening one starts with no filed marks and no start month, and keeps the rest as it was.
 - `lib/domain/settings-file.test.ts` covers the round trip and the lenient reading; `lib/commands/io-commands.test.ts` covers opening a ZIP with settings.
 
@@ -741,6 +745,8 @@ The view has two sub-pages, as tabs shaped like the settings tabs (`SubPageTabs`
   - A sales rate outside `RATES` has no field. It stays in 308 and the view warns about it.
   - With no amounts, the checklist points to "Ei toimintaa verokaudella".
 
+- **Yhteenvetoilmoitus** at `/app/vat/ec`: the EC Sales List for the selected year, month by month, with each buyer's VAT number, goods and services (`lib/domain/ec-sales.ts`). It is monthly whatever the VAT period is, so the shell hides the period strip here. Due on the 20th of the next month or the next working day (vero.fi). The month is the entry's date, which stands in for the invoice's month on goods and the supply's or payment's on services. An EU sale gets "Ostajan ALV-numero" in the entry dialog, with a warning on a number of the wrong shape that never blocks saving. The app has no connection to VIES. A sale with no number is listed for the user to fix.
+
 ### 8.8 Income statement (Tuloslaskelma)
 
 Presented as a printable **sheet**: the `--sheet` surface (warm paper in light, the card tone in dark — see §11), a thin border, and a soft shadow. It has the title, the period, sections with totals, greyed group headings, lines with muted account numbers, and a double-ruled result line. A "Tulosta" button calls `window.print()`, and the print styles hide the chrome: `.print-hidden`, which the top bar carries, and the sidebar by its `data-slot`.
@@ -749,6 +755,7 @@ The view has two sub-pages, as tabs shaped like the settings tabs (§8.10, `SubP
 
 - **Laskelma** at `/app/statement`: the sheet above.
 - **Lomake 5** at `/app/statement/form5`: the same figures as Form 5's section 2, in the form's order, with its codes and its labels (`lib/domain/form5.ts`). It opens on "Täytettävät", in two steps: the fields with an amount, as a checklist with a "3/10 kopioitu" count and a progress bar, then the totals 316, 355 and 358 or 359 to check against OmaVero. The totals have no copy button. "Kaikki kohdat" shows every field in the form's order, for finding one by its place; the non-deductible expenses and the result are sections of their own. Each code sits in a box like the paper form's, filled where there is an amount to enter, and a portion (320, 322, 338, 342, 347) is indented under its field. The amount itself is the copy button: a click puts it on the clipboard as `1234,56`, with no spaces and no euro sign, and turns the button green. "Avaa OmaVero" links to vero.fi/omavero; the notes on what the app leaves out are behind "Mitä laskelma ei sisällä". The codes use Geist with tabular figures rather than a monospace, since Geist is the only face (§11). It sits on the same `--sheet` surface as the statement, so the two tabs read as one document, and its rules take `--sheet-edge`. The checklist itself is `TaxForm` in `components/common/tax-form.tsx`, shared with the VAT return (§8.7); `lib/domain/tax-form.ts` holds its row types and splits a form into steps. 338 and 347 repeat 337 and 346, since the app deducts depreciation and interest in full, and a note says so. Another note names what the app does not fill: 325 to 328, 364 and the form's other sections. `lib/domain/form5.test.ts` runs Verohallinto's own check rules from the 2026 data file specification against the fields.
+- **Varat ja velat** at `/app/statement/balance`: Form 5's net worth calculation and wages paid (`lib/domain/form5-balance.ts`, on `TaxForm`). 704 is the register's closing balance below, 711 the open sales on 31.12. and 725 holds the open purchases and the loans (§6.8). What the book cannot know is typed in per year: goods, other current assets, other fixed assets, cash in hand, other financial assets, the part of the loans due within a year, and other debts (`yearEnd` in `settings.json`). Bank deposits are in no field, as the form says. Real estate and securities are left to Forms 18B and 8B, and adjusted negative equity (747) to OmaVero. 394 is line 335 by payment date. "Kirjaa varaston muutos" books the year's stock change on line 333 at 31.12., opening minus closing, so a growing stock lowers the cost. Tests assert the specification's rule for 718.
 - **Poistot** at `/app/statement/assets`: the register of machinery and equipment (`lib/domain/assets.ts`), one pool as EVL 30 § has it. A purchase is an entry on `asset-purchase` and a sale one on `asset-sale` (§5), so each keeps its voucher number and receipt, and the only thing stored is an opening balance for older assets (`assetOpening` in `settings.json`). Each year: opening + purchases − sales is the base; the maximum is 25 % of it, or all of it at 1 200 € or less; **depreciation is whatever the year's entries on line 337 add up to**, so a year with none carries the whole balance forward. "Kirjaa poisto" adds such an entry, the maximum by default, and less is allowed. A sale above the balance gets a warning that the excess is taxable income. Buildings and other classes are not handled, and the raised 50 % rate of 2020 to 2025 is not either. Rules from vero.fi, "Poistot ja pienhankinnat".
 - **Vähennykset** at `/app/statement/deductions`: calculators that book an entry on line 354 (`lib/domain/deductions.ts`), since these are deductible outside the books. Mileage and per diems are the additional deduction: the year's tax-free amount minus the actual costs already booked, zero if those are higher (Vero, "Liikkeen- ja ammatinharjoittajien sekä maataloudenharjoittajien matkakustannusten vähentäminen"). Booked car costs start from `344-vehicle`, which can only lower the figure. The home office deduction is one of three yearly tiers. **The amounts are a table per year, added by hand from Vero's decisions**: travel for 2024 to 2027, home office for 2025 and 2026. A year with none says so and offers no calculator. Passenger and trailer additions and foreign per diems are left out. An entry calculated for a year is dated today within that year and otherwise 31.12. Line 337 and 354 entries are exempt from the "no receipt" check (§8.4).
 - An Ilmoitin.fi file is not made. That would be filing, and the app does not know the rest of the form (§1).
@@ -834,6 +841,7 @@ The app's front page, at `/app/overview`. `/app`, "Jatka kirjanpitoa", opening a
   - **Kulut ryhmittäin**: the §6.4 buckets with expenses, largest first; empty ones are counted.
   - **Viimeisimmät kirjaukset** (wide): the year's six newest entries, signed gross, flagged "ei tositetta" where there is no receipt file. A row opens the entry dialog.
   - **Tarkistettavaa**: unsaved changes with a save (or download) button; each overdue return and each return due within 30 days, with "Ilmoitettu"; one row per check of §8.4 that flags anything (no receipt, a rate that does not fit the date, a future date, a domestic sale without VAT, an unusually large amount, a possible duplicate, VAT on a cost whose VAT cannot be deducted), each with "Näytä", which opens the ledger filtered to them; receipts missing from the file; the VAT registration limit (below); empty months from the first entry to the last complete month, skipping any before the start month; and one row per closed year with entries, as a reminder outside the open count (`yearsToArchive` in `lib/domain/retention.ts`). It gives the dates of KPL 2:10 (vero.fi, "Kirjanpito, tilikausi, verokausi"), the books until 31.12. ten years on and the vouchers six, and asks for a copy of the file that is no longer edited. "Tallessa" marks the year in `yearsArchived` and the toast can undo it. A year past the 10 years is not listed. The journal and the general ledger print the same dates (§8.4).
+- **The limits of KPL 1:1a** (`lib/domain/book-limits.ts`). Each counts only when it holds in both the closed year and the one before. Single-entry books are allowed unless two of these are exceeded: assets 100 000 €, turnover 200 000 €, more than 3 staff. Financial statements are required when two of the micro limits are: 450 000 €, 900 000 €, 10 staff. They then follow the micro rules, within 4 months. The book does not record staff, so two limits over gets an error row saying the app does not cover it, and one over gets an information row naming the staff limit. Assets are Form 5's 718, which has no bank deposits, so a business near a limit has to count those in itself.
 - **The filing period's limit** (`vatPeriodOverLimit`). Quarterly filing needs turnover of at most 100 000 € and yearly filing at most 30 000 € (vero.fi, "Tax period"). A closed year above that gets a warning row, and nothing is blocked, since the period itself is set in OmaVero.
 - **Form 5's due date** (`lib/domain/tax-return-deadline.ts`). A row from the start of the year until Verohallinto's date, added by hand per tax year. A year not in the table says "in the spring" until the end of April rather than guessing.
 - **The VAT registration limit** (`lib/domain/vat-threshold.ts`). A business is liable for VAT from the day a calendar year's turnover exceeds 20 000 €, and while the previous year's did (AVL 3 §, vero.fi, "VAT exemption for small businesses", valid from 1.1.2025). The book does not record registration, so a line 300 sale with VAT this year or last is what says the business is registered, and the row then disappears. Otherwise the checklist has one row, following today rather than the selected year: turnover against the limit as information, a warning from 15 000 €, and from the sale that goes over, the date it did, as an error. Turnover is line 300 net, without `300-eu-services`, which is supplied in the buyer's country. The book cannot tell a service sold outside the EU from an exported good, or a fixed asset from other sales, so those count.
@@ -847,7 +855,7 @@ The app's front page, at `/app/overview`. `/app`, "Jatka kirjanpitoa", opening a
 ## 9. Internationalisation and formatting
 
 - Two languages: **Finnish (default)** and **English**. The choice is persisted. Update `<html lang>` and the document title when it changes. Every UI string is in a dictionary keyed by id, with `[fi, en]` values and `{param}` interpolation. Plural forms are functions (e.g. "1 kirjaus" / "{n} kirjausta"). The artifact's `L` object holds every string and is the source to port. A typed dictionary is enough; no locale routing is needed.
-- **Keys are `namespace.name`** — `t("io.zipNoCsv")`, `t("confirm.clearTitle")`, `t("settings.defaultVat")`. The namespaces are app, assets, common, confirm, deductions, entry, file, io, landing, ledger, nav, notFound, overview, receipt, recurring, settings, statement, summary, table, vat, viewer. `common.*` is only for words several views share; anything used in one place belongs to that place's namespace even when it is short. The keys were once flat and abbreviated (`setSub`, `f_type`, `nCats`, `delT`, `fb_import`) with four inconsistent prefix styles — unreadable at the call site, and with no room for a second settings subtitle. `messages.test.ts` enforces the shape and the list of namespaces, which is what stops the next key being added the old way.
+- **Keys are `namespace.name`** — `t("io.zipNoCsv")`, `t("confirm.clearTitle")`, `t("settings.defaultVat")`. The namespaces are app, assets, balance, common, confirm, deductions, entry, file, io, landing, ledger, nav, notFound, overview, receipt, recurring, settings, statement, summary, table, vat, viewer. `common.*` is only for words several views share; anything used in one place belongs to that place's namespace even when it is short. The keys were once flat and abbreviated (`setSub`, `f_type`, `nCats`, `delT`, `fb_import`) with four inconsistent prefix styles — unreadable at the call site, and with no room for a second settings subtitle. `messages.test.ts` enforces the shape and the list of namespaces, which is what stops the next key being added the old way.
 - **The namespace is not the module.** Which of `dict/app.ts` and `dict/landing.ts` a key lives in is a bundling decision (the landing bundle must not ship all ~300 keys in both languages), so a namespace may be split across both: `nav.vat`, `receipt.*` and `statement.profit` sit in the landing module because the hero's decorative receipt and mini statement need them. Keys stay disjoint between the two; a test checks it.
 - **Currency always uses Finnish formatting in both languages:** `1 234,56 €` (`Intl.NumberFormat("fi-FI", { style: "currency", currency: "EUR" })`). The amount input also shows the Finnish format.
 - **Dates:**
@@ -1053,7 +1061,7 @@ app/
     vat/                         layout.tsx = VatShell; page.tsx = Laskelma
       return/                    /app/vat/return (§8.7)
     statement/                   layout.tsx = StatementShell; page.tsx = Laskelma
-      form5/  assets/  deductions/  Form 5, Poistot, Vähennykset (§8.8)
+      form5/  balance/  assets/  deductions/  Form 5, Varat ja velat, Poistot, Vähennykset (§8.8)
     settings/                    layout.tsx = SettingsShell; page.tsx = Yleiset
       categories/  recurring/    /app/settings/… (§8.10)
 ```
@@ -1307,8 +1315,4 @@ Questions for an accountant. Building proceeds on the answer given:
 
 The gaps themselves, in the order they are being closed:
 
-- **Form 5's assets and liabilities.** Vero splits the profit into capital and earned income from the net assets, and the app fills none of the fields above.
-- **Inventory.** Line 333 includes the change in inventory, but nothing records the stock.
-- **EC Sales List.** An entry has no buyer VAT number.
 - **Edits and deletes leave no trace, and nothing locks.** An entry in a filed period can be changed after a warning, which KPL 2:7 does not allow.
-- **Single-entry and financial statement limits.** The app warns only about the VAT limit (§8.12).

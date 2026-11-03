@@ -1,3 +1,4 @@
+import { EMPTY_YEAR_END } from "@/lib/domain/form5-balance"
 import { describe, expect, it } from "vitest"
 
 import { defaultCategories } from "@/lib/domain/accounts"
@@ -48,6 +49,8 @@ function settings(): BookSettings {
     traderType: "professional",
     assetOpening: { year: 2026, amount: 300_000 },
     bankBalance: { amount: -12_345, date: "2026-10-31" },
+    loanOpening: { year: 2026, amount: 800_000 },
+    yearEnd: { "2026": { ...EMPTY_YEAR_END, goods: 120_000, cash: 3_500 } },
     overviewLayout: normalizeLayout([
       { id: "checks", size: "L", hidden: false },
     ]),

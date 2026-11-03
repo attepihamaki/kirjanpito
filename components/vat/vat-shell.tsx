@@ -1,5 +1,7 @@
 "use client"
 
+import { usePathname } from "next/navigation"
+
 import { PageHeader } from "@/components/common/page-header"
 import { SubPageTabs } from "@/components/common/sub-page-tabs"
 import { useFormatters } from "@/components/lang-provider"
@@ -16,19 +18,26 @@ export function VatShell({ children }: { children: React.ReactNode }) {
   const f = useFormatters()
   const setIndex = useBookStore((s) => s.setVatIndex)
   const { mode, label, periods, statuses, current } = useVatPeriod()
+  const year = useBookStore((s) => s.year)
+  // The EC Sales List is monthly whatever the VAT period is (§8.7).
+  const monthlyList = usePathname().replace(/\/$/, "") === VAT_ROUTES.ec
 
   return (
     <>
-      <PageHeader title={f.t("nav.vat")} subtitle={label} />
+      <PageHeader
+        title={f.t("nav.vat")}
+        subtitle={monthlyList ? String(year) : label}
+      />
       <div className="print-hidden">
         <SubPageTabs
           label={f.t("vat.sections")}
           tabs={[
             { href: VAT_ROUTES.sheet, label: f.t("vat.sheetTab") },
             { href: VAT_ROUTES.return, label: f.t("vat.returnTab") },
+            { href: VAT_ROUTES.ec, label: f.t("vat.ecTab") },
           ]}
         />
-        {mode !== "year" ? (
+        {mode !== "year" && !monthlyList ? (
           <div className="mb-5">
             <VatPeriodStrip
               periods={periods}

@@ -10,6 +10,7 @@ import {
 } from "@/lib/domain/accounts"
 import { CSV_HEADER, CSV_HEADER_LINE } from "@/lib/domain/csv-header"
 import { parseCsvDate, yearOf } from "@/lib/domain/dates"
+import { isEuSaleKind } from "@/lib/domain/accounts"
 import { canBeUnpaid } from "@/lib/domain/open-items"
 import { uid } from "@/lib/domain/id"
 import {
@@ -61,6 +62,7 @@ const FINNISH_COLUMNS: ReadonlyMap<string, string> = new Map([
   ["tosite", "receipts"],
   ["verokausi", "settles"],
   ["maksettu", "paid"],
+  ["ostajan_alv", "buyer_vat"],
 ])
 
 /** The column a header cell names, ignoring case and either language. */
@@ -165,6 +167,7 @@ export function serializeCsv(
         defuseFormula(receipts),
         e.settles ?? "",
         e.paidOn === null ? PAID_OPEN : (e.paidOn ?? ""),
+        defuseFormula(e.buyerVatId ?? ""),
       ]
         .map(quote)
         .join(";")
@@ -442,6 +445,7 @@ export function parseCsv(
       paths,
       ...settledPeriod(get("settles"), cat),
       ...paidColumn(get("paid"), date, cat),
+      ...buyerColumn(restoreFormula(get("buyer_vat")), cat),
     })
 
     const y = yearOf(date)
@@ -467,6 +471,11 @@ export function parseCsv(
     latestYear,
     delimiter,
   }
+}
+
+/** The buyer's VAT number, kept only on an EU sale (§8.7). */
+function buyerColumn(value: string, cat: Category): { buyerVatId?: string } {
+  return value && isEuSaleKind(cat.kind) ? { buyerVatId: value } : {}
 }
 
 /**

@@ -91,6 +91,8 @@ export interface Entry {
    * `date` itself is the delivery or invoice date (§6.3).
    */
   paidOn?: string | null
+  /** The buyer's VAT number on a sale to another EU country (§8.7). */
+  buyerVatId?: string
 }
 
 /** A category (luokka) the user books entries to. */

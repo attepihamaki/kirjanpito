@@ -42,6 +42,7 @@ describe("dictionary integrity", () => {
     const NAMESPACES = [
       "app",
       "assets",
+      "balance",
       "common",
       "confirm",
       "deductions",

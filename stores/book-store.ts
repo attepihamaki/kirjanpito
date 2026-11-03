@@ -14,6 +14,7 @@ import {
   DEFAULT_LAYOUT,
   type OverviewWidget,
 } from "@/lib/domain/overview-layout"
+import type { LoanOpening, YearEnd } from "@/lib/domain/form5-balance"
 import type { PageSize, TraderType } from "@/lib/domain/settings-file"
 import type { AmountMode, Category, Entry, EntryType } from "@/lib/domain/types"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
@@ -175,6 +176,10 @@ export interface BookState {
   assetOpening: AssetOpening | null
   /** The bank balance as last read (§8.12). Saved in settings.json. */
   bankBalance: BankBalance | null
+  /** The loans outstanding when the book starts (§6.8). Saved in settings.json. */
+  loanOpening: LoanOpening | null
+  /** Year → what the book cannot supply for Form 5 (§8.8). Saved in settings.json. */
+  yearEnd: Record<string, YearEnd>
 
   // ---- ephemeral ----
   hydrated: boolean
@@ -270,6 +275,8 @@ export interface BookActions {
       traderType?: TraderType | null
       assetOpening?: AssetOpening | null
       bankBalance?: BankBalance | null
+      loanOpening?: LoanOpening | null
+      yearEnd?: Record<string, YearEnd>
       overviewLayout?: OverviewWidget[]
       autosave?: boolean
       ledgerSize?: PageSize
@@ -328,6 +335,8 @@ export interface BookActions {
   upsertRecurring(template: RecurringEntry): void
   removeRecurring(id: string): void
   setTraderType(traderType: TraderType | null): void
+  setLoanOpening(loanOpening: LoanOpening | null): void
+  setYearEnd(year: number, values: YearEnd): void
   setAssetOpening(opening: AssetOpening | null): void
   setBankBalance(balance: BankBalance | null): void
 
@@ -388,6 +397,8 @@ function initialState(): BookState {
     traderType: null,
     assetOpening: null,
     bankBalance: null,
+    loanOpening: null,
+    yearEnd: {},
 
     hydrated: false,
     importing: false,
@@ -441,6 +452,8 @@ type PersistedBook = Pick<
   | "traderType"
   | "assetOpening"
   | "bankBalance"
+  | "loanOpening"
+  | "yearEnd"
 >
 
 /**
@@ -581,6 +594,8 @@ export const useBookStore = create<BookStore>()(
           traderType: null,
           assetOpening: null,
           bankBalance: null,
+          loanOpening: null,
+          yearEnd: {},
           undoAttachmentIds: [],
           bookEpoch: get().bookEpoch + 1,
           gcTick: get().gcTick + 1,
@@ -601,6 +616,8 @@ export const useBookStore = create<BookStore>()(
           traderType: null,
           assetOpening: null,
           bankBalance: null,
+          loanOpening: null,
+          yearEnd: {},
           dialog: { kind: "none" },
           draftAttachmentIds: [],
           undoAttachmentIds: [],
@@ -630,6 +647,8 @@ export const useBookStore = create<BookStore>()(
           traderType: s.traderType ?? null,
           assetOpening: s.assetOpening ?? null,
           bankBalance: s.bankBalance ?? null,
+          loanOpening: s.loanOpening ?? null,
+          yearEnd: s.yearEnd ?? {},
           overviewLayout: s.overviewLayout ?? get().overviewLayout,
           autosave: s.autosave ?? get().autosave,
           autosavePaused: false,
@@ -788,6 +807,12 @@ export const useBookStore = create<BookStore>()(
       setTraderType: (traderType) => set({ traderType, dirty: true }),
       setAssetOpening: (assetOpening) => set({ assetOpening, dirty: true }),
       setBankBalance: (bankBalance) => set({ bankBalance, dirty: true }),
+      setLoanOpening: (loanOpening) => set({ loanOpening, dirty: true }),
+      setYearEnd: (year, values) =>
+        set((s) => ({
+          yearEnd: { ...s.yearEnd, [year]: values },
+          dirty: true,
+        })),
       /*
        * A preference, like the language: it travels in settings.json but
        * turning it on or off does not change the bookkeeping.
@@ -894,6 +919,8 @@ export const useBookStore = create<BookStore>()(
         traderType: s.traderType,
         assetOpening: s.assetOpening,
         bankBalance: s.bankBalance,
+        loanOpening: s.loanOpening,
+        yearEnd: s.yearEnd,
       }),
       migrate: (persisted) => {
         const blob = (persisted ?? {}) as Record<string, unknown>

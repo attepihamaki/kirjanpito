@@ -2,7 +2,7 @@
  * The CSV columns, always in this order (§7.1). `voucher` leads, as the
  * voucher number does on a printed journal (§4). `settles` is filled only on a
  * VAT payment or refund (§6.6), and `paid` only on an entry not paid on its
- * date (§6.3).
+ * date (§6.3). `buyer_vat` is the buyer's VAT number on an EU sale (§8.7).
  *
  * The column names are English whatever the UI language. The rows keep Finnish
  * values (`tulo`, `brutto`, category names) and decimal commas for Finnish
@@ -26,6 +26,7 @@ export const CSV_HEADER = [
   "receipts",
   "settles",
   "paid",
+  "buyer_vat",
 ] as const
 
 /** The header as it appears on the first line of an exported file. */

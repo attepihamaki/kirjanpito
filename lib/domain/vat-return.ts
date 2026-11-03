@@ -150,7 +150,7 @@ export function vatReturnSections(report: VatReport): TaxFormSection[] {
           report.otherSales.euGoods,
           {
             hint: {
-              fi: "Anna näistä myynneistä lisäksi yhteenvetoilmoitus.",
+              fi: "Anna näistä myynneistä lisäksi yhteenvetoilmoitus, ks. välilehti Yhteenvetoilmoitus.",
               en: "These sales also go on an EC Sales List.",
             },
           }

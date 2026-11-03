@@ -352,6 +352,8 @@ function applyImport(
           traderType: settings.traderType,
           assetOpening: settings.assetOpening,
           bankBalance: settings.bankBalance,
+          loanOpening: settings.loanOpening,
+          yearEnd: settings.yearEnd,
           overviewLayout: settings.overviewLayout,
           autosave: settings.autosave,
           ledgerSize: settings.pageSize?.ledger,
@@ -405,6 +407,8 @@ function bookVersion() {
     s.traderType,
     s.assetOpening,
     s.bankBalance,
+    s.loanOpening,
+    s.yearEnd,
   ] as const
 }
 
@@ -437,6 +441,8 @@ function currentSettingsText(): string {
     traderType: s.traderType,
     assetOpening: s.assetOpening,
     bankBalance: s.bankBalance,
+    loanOpening: s.loanOpening,
+    yearEnd: s.yearEnd,
   })
 }
 
