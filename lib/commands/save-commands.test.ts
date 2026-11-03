@@ -494,7 +494,7 @@ describe("receipts the browser does not hold", () => {
    */
   it("carries a receipt across when the export language changes", async () => {
     // Where this book's receipt sits while the file is still Finnish.
-    const was = "liitteet/2026/01/2026-01-08_lasku-1001.jpg"
+    const was = "liitteet/2026/01/kuitti.jpg"
     const handle = await zipOnDisk(gone, true, was)
     const asked = vi.fn(async () => false)
     registerConfirmHandler(asked)

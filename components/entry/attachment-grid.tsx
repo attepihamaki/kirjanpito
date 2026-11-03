@@ -6,12 +6,11 @@ import { FileTextIcon, PlusIcon, XIcon } from "lucide-react"
 import { BusyIcon } from "@/components/common/busy-button"
 import { DropTile } from "@/components/common/drop-tile"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { useFormatters } from "@/components/lang-provider"
 import { getReceipt } from "@/lib/browser/receipt-store"
 import { acquireObjectUrl, releaseObjectUrl } from "@/lib/browser/object-urls"
-import { defaultAttachmentStem, isPdf } from "@/lib/domain/receipt-path"
+import { isPdf } from "@/lib/domain/receipt-path"
 import type { Attachment } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
 
@@ -156,51 +155,19 @@ function Thumb({
   )
 }
 
-/**
- * The name box under a thumbnail (§8.5). Its placeholder is the name the file
- * really gets when the box is left empty, so the suggestion is on screen
- * rather than implied; leaving it empty stores no name at all.
- */
-function NameField({
-  att,
-  placeholder,
-  onRename,
-}: {
-  att: Attachment
-  placeholder: string
-  onRename: (label: string) => void
-}) {
-  const f = useFormatters()
-
-  return (
-    <Input
-      maxLength={60}
-      aria-label={f.t("receipt.nameLabel")}
-      value={att.label ?? ""}
-      placeholder={placeholder}
-      onChange={(e) => onRename(e.target.value)}
-    />
-  )
-}
-
 export function AttachmentGrid({
   attachments,
-  description,
   onAdd,
   onOpen,
   onRemove,
-  onRename,
   busy,
   readOnly,
   className,
 }: {
   attachments: readonly Attachment[]
-  /** The entry's description, which names an unnamed receipt's file (§7.2). */
-  description: string
   onAdd: () => void
   onOpen: (index: number) => void
   onRemove: (index: number) => void
-  onRename: (index: number, label: string) => void
   busy?: boolean
   /** Opens the receipts only: an entry in a locked period (§8.11). */
   readOnly?: boolean
@@ -220,27 +187,12 @@ export function AttachmentGrid({
        */}
       <div className="grid grid-cols-3 gap-2 md:grid-cols-2">
         {attachments.map((att, i) => (
-          <div
+          <Thumb
             key={att.id ?? `${att.path}-${i}`}
-            className="flex flex-col gap-1"
-          >
-            <Thumb
-              att={att}
-              onOpen={() => onOpen(i)}
-              onRemove={readOnly ? undefined : () => onRemove(i)}
-            />
-            {readOnly ? null : (
-              <NameField
-                att={att}
-                placeholder={defaultAttachmentStem(
-                  description,
-                  i,
-                  attachments.length
-                )}
-                onRename={(label) => onRename(i, label)}
-              />
-            )}
-          </div>
+            att={att}
+            onOpen={() => onOpen(i)}
+            onRemove={readOnly ? undefined : () => onRemove(i)}
+          />
         ))}
         {readOnly ? null : (
           <DropTile

@@ -134,34 +134,31 @@ export function attachmentKey(entryId: string, index: number): string {
 }
 
 /**
- * The file name a receipt takes when the user has not named it: the entry's
- * own description, with the index telling several receipts of one entry apart.
+ * The file's name without the extension it will be given back.
  *
- * Shared with the entry dialog, which shows it as the name box's placeholder,
- * so the suggestion on screen is the name the file will really get.
+ * Stripped with the same pattern `extFromName` matches, so the stem and the
+ * extension always come from the same place and cannot disagree.
  */
-export function defaultAttachmentStem(
-  description: string,
-  index: number,
-  count: number
-): string {
-  return `${slug(description)}${count > 1 ? `_${index + 1}` : ""}`
+function stemFromName(name: string): string {
+  return String(name ?? "")
+    .trim()
+    .replace(/\.[a-z0-9]+$/i, "")
 }
 
 /**
  * Build the ZIP path for every attachment (§7.2):
- * `{folder}/{YYYY}/{MM}/{YYYY-MM-DD}_{stem}.{ext}`, where the stem is the name
- * the user gave the receipt, or `defaultAttachmentStem` when they gave none.
- * `-2`, `-3`, … is appended before the extension on a collision, which is also
- * what two receipts named the same thing get.
+ * `{folder}/{YYYY}/{MM}/{slug(file name)}.{ext}`. `-2`, `-3`, … is appended
+ * before the extension when two receipts of the same month share a name.
  *
- * A named receipt takes no index: the name already tells it from its siblings,
- * and numbering only the unnamed ones keeps a path from moving when a
- * neighbour is renamed.
+ * **The receipt keeps the name it already has.** A user who files an invoice
+ * as "2.11.2026 - HC-Maschinentechnik - Lasku.pdf" has already said what it
+ * is, so the archive says the same rather than renaming it after the entry.
+ * That also makes the path a fixed point: the name a re-import reads off the
+ * path is the name the next export writes, so a book can go round any number
+ * of times without its receipts drifting.
  *
  * Missing attachments keep their stored path and reserve it, so a real
- * attachment colliding with one gets the suffix instead — a pinned path beats
- * a name.
+ * attachment colliding with one gets the suffix instead.
  *
  * Anything that is not an image or a PDF gets no path at all, which is what
  * keeps it out of both the ZIP and the CSV's receipts column.
@@ -197,11 +194,7 @@ export function buildReceiptPaths(
     for (const [i, a] of atts.entries()) {
       if (a.missing || !isReceiptFile(a)) continue
       const [y, mo] = e.date.split("-")
-      const named = a.label?.trim()
-      const stem = named
-        ? slug(named)
-        : defaultAttachmentStem(e.description, i, atts.length)
-      const base = `${RECEIPT_FOLDER[lang]}/${y}/${mo}/${e.date}_${stem}`
+      const base = `${RECEIPT_FOLDER[lang]}/${y}/${mo}/${slug(stemFromName(a.name))}`
       const ext = extensionFor(a)
       let path = `${base}.${ext}`
       let n = 2
@@ -246,50 +239,4 @@ export function suggestedBaseName(fileName: string | null, lang: Lang): string {
 /** "kirjanpito" / "bookkeeping". */
 export function defaultFileBaseName(lang: Lang): string {
   return lang === "en" ? "bookkeeping" : "kirjanpito"
-}
-
-/**
- * The name a receipt was given, read back from the path it was written to
- * (§7.2). Null when the path is the one the entry's own description would
- * have produced, which is what an unnamed receipt gets.
- *
- * This is what carries a name through a file and back: the path is the only
- * record of it, so a name returns slugged. Reading it back makes the path a
- * fixed point — exporting the recovered name reproduces the same path — so a
- * book can go round any number of times without its receipts being renamed.
- */
-export function labelFromPath(
-  path: string,
-  entry: { date: string; description: string },
-  index: number,
-  count: number
-): string | null {
-  const base = path.split("/").pop() ?? path
-  const ext = extFromName(base)
-  const stem = ext ? base.slice(0, -(ext.length + 1)) : base
-
-  const expected = `${entry.date}_${defaultAttachmentStem(entry.description, index, count)}`
-  // A collision tail belongs to the path, not to the name (`-2`, `-3`, …).
-  const withoutTail = stem.replace(/-\d+$/, "")
-  if (
-    stem.toLowerCase() === expected.toLowerCase() ||
-    withoutTail.toLowerCase() === expected.toLowerCase()
-  ) {
-    return null
-  }
-
-  const prefix = `${entry.date}_`
-  if (!stem.toLowerCase().startsWith(prefix.toLowerCase())) return null
-  let name = stem.slice(prefix.length)
-  /*
-   * An unnamed sibling's index is part of the path, not of the name. A slug
-   * never contains "_", so the only thing that can precede one here is an
-   * index — but something has to precede it, or a receipt the user called
-   * "2" would read as unnamed and move on the next save.
-   */
-  const indexTail = `_${index + 1}`
-  if (count > 1 && name.length > indexTail.length && name.endsWith(indexTail)) {
-    name = name.slice(0, -indexTail.length)
-  }
-  return name || null
 }

@@ -120,30 +120,15 @@ interface FormState {
 /** The rate an EU purchase starts from when its category is at 0 %. */
 const GENERAL_RATE = 25.5
 
-/**
- * Set or clear the name a receipt was given. A blank box stores no name at
- * all, so "the description names it" has one representation rather than two.
- */
-function withLabel(att: Attachment, label: string): Attachment {
-  const rest = { ...att }
-  delete rest.label
-  return label.trim() ? { ...rest, label } : rest
-}
-
 /** The three fields §8.5 validates, named as they are in `FormState`. */
 type ErrorField = "date" | "amount" | "catId"
 
 type FieldErrorState = { field: ErrorField; message: string } | null
 
-/*
- * Attachments collapse to an identity plus the name the user gave them: a
- * rename is a change like any other, and without it typing a name and pressing
- * Escape would discard it with nothing asked.
- */
 const snapshot = (form: FormState) =>
   JSON.stringify({
     ...form,
-    atts: form.atts.map((a) => `${a.id ?? a.path ?? a.name}|${a.label ?? ""}`),
+    atts: form.atts.map((a) => a.id ?? a.path ?? a.name),
   })
 
 /**
@@ -1185,24 +1170,11 @@ function EntryDialogForm({
             />
             <AttachmentGrid
               attachments={form.atts}
-              description={form.description}
               busy={busy}
               onAdd={() => fileRef.current?.click()}
               onOpen={setViewing}
               onRemove={(index) =>
                 update({ atts: form.atts.filter((_, i) => i !== index) })
-              }
-              onRename={(index, label) =>
-                update({
-                  /*
-                   * A new object rather than an edit in place: `initialForm`
-                   * copies the array alone, so mutating one would reach into
-                   * the entry the store holds.
-                   */
-                  atts: form.atts.map((a, i) =>
-                    i === index ? withLabel(a, label) : a
-                  ),
-                })
               }
               readOnly={!!lock}
             />

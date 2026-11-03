@@ -78,24 +78,6 @@ describe("entryChanges", () => {
     ])
   })
 
-  /*
-   * The log records which file was attached, which is a historical fact. The
-   * name the user gives it can change afterwards and does not rewrite that.
-   */
-  it("records the file that was attached, not the name given to it", () => {
-    const att = {
-      id: "x",
-      name: "kuitti.pdf",
-      label: "K-Rauta",
-      type: "application/pdf",
-      size: 9,
-    }
-    const [record] = entryChanges([entry()], [entry({ atts: [att] })], AT)
-    expect(record.changes).toEqual([
-      { field: "atts", from: null, to: "kuitti.pdf (9)" },
-    ])
-  })
-
   it("marks restored entries as an undo", () => {
     expect(entryChanges([], [entry()], AT, "restore")[0].action).toBe("restore")
   })

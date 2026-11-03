@@ -145,14 +145,12 @@ describe("serializeCsv", () => {
       [entry({ atts: [att({ name: "a.jpg" }), att({ name: "b.pdf" })] })],
       cats
     )
-    expect(text).toContain(
-      "liitteet/2026/10/2026-10-28_lasku-1005_1.jpg|liitteet/2026/10/2026-10-28_lasku-1005_2.pdf"
-    )
+    expect(text).toContain("liitteet/2026/10/a.jpg|liitteet/2026/10/b.pdf")
   })
 
   it("writes receipt paths even when no ZIP is produced", () => {
     const text = serializeCsv([entry({ atts: [att()] })], cats)
-    expect(text).toContain("liitteet/2026/10/2026-10-28_lasku-1005.pdf")
+    expect(text).toContain("liitteet/2026/10/lasku.pdf")
   })
 
   it("writes no path for an attachment that is not an image or a PDF", () => {
@@ -1029,19 +1027,19 @@ describe("CSV round trip", () => {
     expect(restored[0].atts).toEqual([
       {
         id: null,
-        name: "2026-10-28_lasku-1005_1.jpg",
+        name: "a.jpg",
         type: "",
         size: 0,
         missing: true,
-        path: "liitteet/2026/10/2026-10-28_lasku-1005_1.jpg",
+        path: "liitteet/2026/10/a.jpg",
       },
       {
         id: null,
-        name: "2026-10-28_lasku-1005_2.pdf",
+        name: "b.pdf",
         type: "",
         size: 0,
         missing: true,
-        path: "liitteet/2026/10/2026-10-28_lasku-1005_2.pdf",
+        path: "liitteet/2026/10/b.pdf",
       },
     ])
   })

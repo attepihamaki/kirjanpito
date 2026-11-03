@@ -173,8 +173,7 @@ The Accounting Act has every entry rest on a dated voucher that is "järjestelm�
 ```ts
 interface Attachment {
   id: string | null // IndexedDB key, null if the file is missing
-  name: string // the original file name
-  label?: string // the name the user gave it, which names the file in the ZIP (§7.2)
+  name: string // the original file name; also its name in the ZIP (§7.2)
   type: string // MIME type
   size: number // bytes
   missing?: true // listed in the CSV but the file wasn't available on import
@@ -182,12 +181,13 @@ interface Attachment {
 }
 ```
 
-**`name` always means the real file**, and a rename never touches it: the
-extension (`extensionFor`), whether it is a PDF (`isPdf`), whether it is a
-receipt at all (`isReceiptFile`), the duplicate check (`fileKey`, §8.4) and the
-change log all read it. `label` is only ever a name on screen and in the
-archive. Overloading the one field would let a rename change a file's apparent
-type and silently clear a duplicate warning.
+**`name` is the one name a receipt has.** The extension (`extensionFor`),
+whether it is a PDF (`isPdf`), whether it is a receipt at all
+(`isReceiptFile`), the duplicate check (`fileKey`, §8.4), the viewer title, the
+change log and the file's own name inside the archive all read it. There is no
+second, user-entered name: a user who files an invoice as
+"2.11.2026 - HC-Maschinentechnik - Lasku.pdf" has already said what it is, so
+the app does not ask again.
 
 ### Category (luokka)
 
@@ -453,15 +453,16 @@ kirjanpito.zip                  bookkeeping.zip
   liitteet/                       attachments/
     2026/                           2026/
       01/                             01/
-        2026-01-15_osto-k-rauta-tarvikkeet_1.jpg
-        2026-01-15_k-rauta-kuitti.pdf
+        k-rauta-kuitti.jpg
+        img-4417.jpg
       10/
-        2026-10-28_lasku-1005-makinen-rakennus-oy.pdf
+        2-11-2026-hc-maschinentechnik-lasku.pdf
 ```
 
-- Path: `{folder}/{YYYY}/{MM}/{YYYY-MM-DD}_{stem}.{ext}`, where the stem is `slug(attachment.label)` when the user named the receipt (§8.5), and otherwise `defaultAttachmentStem`: `slug(description)` plus `_{n}` (1-based) when the entry has several. On a name collision — including two receipts named the same — `-2`, `-3`, … is appended before the extension.
-- **A named receipt takes no index**, and the suffix is only ever appended to a description-derived stem. Naming one receipt must not move its sibling's path: a path that moved would make the next save fail to find it in the file being replaced.
-- **The name round-trips through the path, with no column of its own.** `labelFromPath` reads it back on import, dropping the date prefix and an unnamed sibling's index, and returning null for the path the description alone would have produced. `slug` is idempotent over its own output, so the path is a fixed point and a book can go round any number of times without its receipts being renamed. The cost, accepted: a name comes back slugged, since the path is the only record of it.
+- Path: `{folder}/{YYYY}/{MM}/{slug(file name)}.{ext}`. On a collision — two receipts of the same month whose names slug alike — `-2`, `-3`, … is appended before the extension.
+- **The receipt keeps the name it already has**, and there is no field asking for another (§4). The name is stripped of the extension it will be given back, using the same pattern `extFromName` matches, so the stem and the extension cannot disagree.
+- **That makes the path a fixed point.** The name a re-import reads off the path is the name the next export writes, because `slug` is idempotent over its own output, so a book can go round any number of times without its receipts drifting. The cost, accepted: a name comes back slugged and lowercased, since the path is the only record of it.
+- **No date prefix.** The folder gives the year and month, and a user's own name often carries a date already — prefixing one would read twice.
 - Slug: lowercase; å/ä → a, ö → o; strip other diacritics; non-alphanumeric runs → `-`; trim dashes; at most 40 characters; fall back to `tosite`.
 - The extension comes from the file name (`jpeg` → `jpg`), otherwise from the MIME type.
 - Receipt files are stored without compression (STORE); the CSV and `settings.json` are DEFLATE-compressed.
@@ -740,7 +741,7 @@ A two-column modal. On mobile the columns stack.
 - **Right column:**
   - A **live receipt preview**, the signature visual element. It looks like a paper receipt with a perforated bottom edge and shows: type, date, description, category, net, VAT with rate, a bold total, and a badge ("Kasvattaa myynnin veroa" / "Vähennetään ostojen verona" / "Ei arvonlisäveroa").
   - Below it, the **"Tositteet" section:** a two-column grid (three on tablets) of 3:4 thumbnails. Images are shown cropped to the top; PDFs show their first page with a "PDF" badge. Each has a remove ✕. An "+ Lisää tosite" tile and the hint "Kuva tai PDF. Voit myös raahata tiedoston tähän." follow. Clicking a thumbnail opens the viewer on that receipt.
-  - **Each thumbnail has a name box** (`Attachment.label`), which becomes the file's name inside the ZIP (§7.2). Its **placeholder is the stem the file would get if the box were left empty** — `defaultAttachmentStem`, the same helper the path builder uses — so the suggestion is on screen rather than implied, and it follows the description as it is typed. A blank or whitespace-only box stores no label at all, so "the description names it" has one representation. A locked entry (§8.11) shows no box.
+  - **There is no name field.** The receipt's own file name is what names it in the archive (§7.2), so asking for a second name would only make the user type again what they already decided when they saved the file.
 - **Defaults for a new entry:** if a month is selected, its date (today's day, capped at 28). Otherwise today if the year matches, else 1.1. of the selected year. The type and amount mode are the last ones used.
 - **Validation:** a valid date, a non-zero amount and a chosen category are required. Error texts: "Anna päivämäärä.", "Anna summa, esim. 124,50.", "Valitse luokka." The error is held as `{ field, message }` where `field` is the `FormState` key: one `FieldError` line shows the message, and the field it names carries `aria-invalid` (the category select takes it through `OptionSelect`'s `invalid` prop). Editing that field clears the error, rather than leaving a complaint under a corrected value until the next save.
 - **Pre-fill from a PDF:** adding an invoice PDF to an untouched form (no amount, no description) reads its text layer and fills the date, a description "Lasku {nro} – {myyjä} – {first row}" (whichever parts it found), the total as a gross amount and the VAT rate. A previous entry naming the same seller supplies the type and category; failing that, `suggestCategory` picks an expense category from words in the seller's name and the rows, falling back to 333. The seller is the company name printed beside a business ID, which is often only in the footer. A rate read this way survives picking a category. `lib/domain/invoice-text.ts` does the reading and is pure; `extractPdfText` in `lib/browser/pdf.ts` feeds it. The virtual barcode, when printed, wins over any labelled total or due date. A credit note keeps its minus, wherever it is printed, and its total is the largest amount by size. An amount like "2 123,00" reads as 2 123,00 €, since a quantity beside a price in the same text run cannot be told from a thousands separator. A scanned PDF has no text layer and pre-fills nothing; there is no OCR.
@@ -753,13 +754,13 @@ A two-column modal. On mobile the columns stack.
 - **`Ctrl`/`⌘`+`Enter`** saves from any field: "Tallenna ja uusi" in the new and copy modes, where its button shows the key cap, and "Tallenna" when editing. It waits while a receipt is still being stored. A new or copied entry opens with the focus on the date, so a month's receipts can be entered from the keyboard alone.
 - **Copy as new** (from a row or from the edit dialog): opens a new entry with every field copied **except receipts**. The date becomes today if the year matches, and the date field gets focus. The title is "Kopio kirjaus".
 - Saving an entry from another year switches the selected year to that year.
-- **Unsaved changes:** a snapshot of all fields (including each receipt's id and the name given to it) is taken when the dialog opens. Closing with Peruuta or Escape while the snapshot differs asks "Hylätäänkö muutokset?" with the buttons "Jatka muokkausta" and "Hylkää muutokset". With no changes, it closes immediately.
+- **Unsaved changes:** a snapshot of all fields (including receipt ids) is taken when the dialog opens. Closing with Peruuta or Escape while the snapshot differs asks "Hylätäänkö muutokset?" with the buttons "Jatka muokkausta" and "Hylkää muutokset". With no changes, it closes immediately.
 
 ### 8.6 Receipt viewer
 
 A near full-screen modal.
 
-- The top bar shows the name the user gave the receipt, or the file's own when they gave none, and a sub-line ("Tosite 1 / 2, 139 kt"). "Save original" always uses the file's own name: it hands back the file as it is.
+- The top bar shows the file name and a sub-line ("Tosite 1 / 2, 139 kt").
 - Controls:
   - Previous/next receipt (when there are several).
   - Previous/next page with "Sivu 1 / 3" (PDFs with several pages).
@@ -1331,7 +1332,7 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 - [ ] The §10 fixture gives the figures in §10.
 - [ ] Exporting and importing back reproduces the same entries **in either export language** (including custom categories, the `mode` column and a net entry's amount).
 - [ ] An English export writes English words and Finnish numbers, dates and delimiter, so it still opens in a European Excel.
-- [ ] Exporting a ZIP with receipts and importing it back restores the receipts and the names given to them. A plain CSV import keeps their paths as missing.
+- [ ] Exporting a ZIP with receipts and importing it back restores them under the same names, and a second export reproduces the same paths. A plain CSV import keeps their paths as missing.
 - [ ] Changing the export language on a book whose receipts are not in this browser still carries every receipt into the new file, with no "receipts lost" prompt.
 - [ ] A file the app does not understand is refused in a dialog that says why; a column it does not know is named in the import toast.
 - [ ] On Chrome, a file opened through the picker saves back to itself, survives a reload, and asks before overwriting a file edited elsewhere (§7.5). On Firefox and Safari the save row is absent and nothing else changes.

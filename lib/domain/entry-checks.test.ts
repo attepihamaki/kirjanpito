@@ -151,22 +151,6 @@ describe("duplicate", () => {
     expect(flagged("duplicate", pair).sort()).toEqual(["x", "y"])
   })
 
-  /*
-   * The duplicate check is about the file, so renaming a receipt neither
-   * raises nor clears it: the same bytes attached twice stay the same bytes.
-   */
-  it("flags the same file whatever the user named it", () => {
-    const pair = [
-      entry({ atts: [{ ...receipt, label: "Kuitti" }] }),
-      entry({
-        id: "y",
-        date: "2026-10-20",
-        atts: [{ ...receipt, id: "a2", label: "Toinen nimi" }],
-      }),
-    ]
-    expect(flagged("duplicate", pair).sort()).toEqual(["x", "y"])
-  })
-
   it("ignores receipts missing from the file", () => {
     const missing = { ...receipt, id: null, missing: true as const }
     const pair = [

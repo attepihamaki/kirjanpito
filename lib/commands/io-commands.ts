@@ -33,7 +33,6 @@ import {
   buildReceiptPaths,
   cleanFileName,
   defaultFileBaseName,
-  labelFromPath,
   mimeForName,
 } from "@/lib/domain/receipt-path"
 import {
@@ -217,13 +216,7 @@ async function importCsv(
     missing += paths.length
     return {
       ...entry,
-      ...(paths.length
-        ? {
-            atts: paths.map((path, i) =>
-              missingAttachment(path, entry, i, paths.length)
-            ),
-          }
-        : {}),
+      ...(paths.length ? { atts: paths.map(missingAttachment) } : {}),
     }
   })
 
@@ -275,11 +268,11 @@ async function importZip(
   const entries: Entry[] = []
   for (const { paths, ...entry } of result.entries) {
     const atts: Attachment[] = []
-    for (const [i, path] of paths.entries()) {
+    for (const path of paths) {
       const bytes = canStore ? await unpacked.readReceipt(path) : null
       if (!bytes) {
         missing += 1
-        atts.push(missingAttachment(path, entry, i, paths.length))
+        atts.push(missingAttachment(path))
         continue
       }
       const id = `a-${uid()}`
@@ -292,17 +285,11 @@ async function importZip(
       const blob = new Blob([bytes as BlobPart], { type })
       try {
         await putReceipt(id, blob)
-        atts.push({
-          id,
-          name,
-          ...labelOf(path, entry, i, paths.length),
-          type,
-          size: blob.size,
-        })
+        atts.push({ id, name, type, size: blob.size })
         imported += 1
       } catch {
         missing += 1
-        atts.push(missingAttachment(path, entry, i, paths.length))
+        atts.push(missingAttachment(path))
       }
     }
     entries.push({ ...entry, ...(atts.length ? { atts } : {}) })
@@ -320,30 +307,10 @@ async function importZip(
   return true
 }
 
-/**
- * The name the user gave a receipt, read back from the path it was written to
- * (§7.2). Spread into the attachment, so one it never had stays absent.
- */
-function labelOf(
-  path: string,
-  entry: { date: string; description: string },
-  index: number,
-  count: number
-): { label?: string } {
-  const label = labelFromPath(path, entry, index, count)
-  return label ? { label } : {}
-}
-
-function missingAttachment(
-  path: string,
-  entry: { date: string; description: string },
-  index: number,
-  count: number
-): Attachment {
+function missingAttachment(path: string): Attachment {
   return {
     id: null,
     name: path.split("/").pop() ?? path,
-    ...labelOf(path, entry, index, count),
     type: "",
     size: 0,
     missing: true,

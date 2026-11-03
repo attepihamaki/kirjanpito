@@ -292,10 +292,7 @@ function ViewerBody({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="flex h-[92svh] max-w-[min(96vw,72rem)] flex-col gap-3 sm:max-w-[min(96vw,72rem)]">
         <DialogHeader className="pr-8">
-          {/* The user's name for the receipt, or the file's own. */}
-          <DialogTitle className="truncate">
-            {att.label?.trim() || att.name}
-          </DialogTitle>
+          <DialogTitle className="truncate">{att.name}</DialogTitle>
           <p className="text-xs text-muted-foreground">
             {f.t("viewer.receiptOf", { i: index + 1, n: count })}
             {att.size ? ` · ${f.size(att.size)}` : ""}

@@ -50,11 +50,9 @@ describe("an undecodable receipt", () => {
       <LangProvider lang="fi">
         <AttachmentGrid
           attachments={[heic]}
-          description="Osto"
           onAdd={() => {}}
           onOpen={() => {}}
           onRemove={() => {}}
-          onRename={() => {}}
         />
       </LangProvider>
     )
@@ -63,73 +61,5 @@ describe("an undecodable receipt", () => {
 
     await waitFor(() => expect(screen.getByText("kuitti.heic")).toBeVisible())
     expect(screen.queryByRole("img")).toBeNull()
-  })
-})
-
-describe("the name a receipt was given (§8.5)", () => {
-  const named: Attachment = { ...heic, label: "K-Rauta kuitti" }
-
-  it("titles the viewer with it, and the file name without one", () => {
-    const view = (att: Attachment) => (
-      <LangProvider lang="fi">
-        <AttachmentViewer
-          attachments={[att]}
-          index={0}
-          onIndexChange={() => {}}
-          onClose={() => {}}
-        />
-      </LangProvider>
-    )
-
-    const { unmount } = render(view(named))
-    expect(screen.getByRole("heading")).toHaveTextContent("K-Rauta kuitti")
-    unmount()
-
-    render(view(heic))
-    expect(screen.getByRole("heading")).toHaveTextContent("kuitti.heic")
-  })
-
-  /*
-   * The placeholder is the name the file really gets when the box is left
-   * empty, so the suggestion is on screen rather than implied (§7.2).
-   */
-  it("suggests the name the file would get, and reports what is typed", () => {
-    const onRename = vi.fn()
-    render(
-      <LangProvider lang="fi">
-        <AttachmentGrid
-          attachments={[heic]}
-          description="Osto – K-Rauta"
-          onAdd={() => {}}
-          onOpen={() => {}}
-          onRemove={() => {}}
-          onRename={onRename}
-        />
-      </LangProvider>
-    )
-
-    const box = screen.getByRole("textbox", { name: "Tositteen nimi" })
-    expect(box).toHaveAttribute("placeholder", "osto-k-rauta")
-    expect(box).toHaveValue("")
-
-    fireEvent.change(box, { target: { value: "Kuitti" } })
-    expect(onRename).toHaveBeenCalledWith(0, "Kuitti")
-  })
-
-  it("offers no name box on a locked entry", () => {
-    render(
-      <LangProvider lang="fi">
-        <AttachmentGrid
-          attachments={[named]}
-          description="Osto"
-          readOnly
-          onAdd={() => {}}
-          onOpen={() => {}}
-          onRemove={() => {}}
-          onRename={() => {}}
-        />
-      </LangProvider>
-    )
-    expect(screen.queryByRole("textbox")).toBeNull()
   })
 })

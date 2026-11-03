@@ -108,9 +108,7 @@ describe("packZip", () => {
     const unpacked = (await unpackZip(await packZip(packInputs(entries))))!
     expect(unpacked.csvPath).toBe("tositteet.csv")
     expect(unpacked.settingsText).toBe(SETTINGS_TEXT)
-    expect(unpacked.otherFiles).toEqual([
-      "liitteet/2026/10/2026-10-28_lasku-1005.pdf",
-    ])
+    expect(unpacked.otherFiles).toEqual(["liitteet/2026/10/lasku.pdf"])
   })
 
   it("reads an archive without settings.json as having none", async () => {
@@ -310,9 +308,9 @@ describe("full ZIP round trip", () => {
     expect(atts).toHaveLength(3)
     expect(atts.every((a) => a.missing && a.id === null)).toBe(true)
     expect(atts.map((a) => a.path)).toEqual([
-      "liitteet/2026/01/2026-01-15_osto-k-rauta-tarvikkeet_1.jpg",
-      "liitteet/2026/01/2026-01-15_osto-k-rauta-tarvikkeet_2.pdf",
-      "liitteet/2026/10/2026-10-28_lasku-1005.pdf",
+      "liitteet/2026/01/kuitti.jpg",
+      "liitteet/2026/01/lasku.pdf",
+      "liitteet/2026/10/lasku.pdf",
     ])
   })
 })
