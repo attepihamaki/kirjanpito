@@ -10,7 +10,7 @@ import { heldByAnotherTab } from "@/lib/browser/tab-lock"
 import { yearOf } from "@/lib/domain/dates"
 import { collectLiveIds } from "@/lib/domain/gc"
 import { lockedEntries } from "@/lib/domain/period-lock"
-import type { Entry } from "@/lib/domain/types"
+import { indexCategories, type Entry } from "@/lib/domain/types"
 import { renumberYear } from "@/lib/domain/voucher"
 import { LANDING, APP_ROUTES } from "@/lib/site"
 import { confirm } from "@/lib/ui/confirm"
@@ -131,11 +131,12 @@ export async function deleteEntry(ctx: Ctx, entry: Entry): Promise<boolean> {
 }
 
 /**
- * Stop a change to entries in a filed VAT period or a stored year (KPL 2:7,
- * §8.11). True when something was locked and the user has been told.
+ * Stop a change to entries a filed VAT return counts, or in a stored year
+ * (KPL 2:7, §8.11). True when something was locked and the user has been told.
  */
 export function refuseLocked(ctx: Ctx, entries: readonly Entry[]): boolean {
-  const locked = lockedEntries(entries, useBookStore.getState())
+  const state = useBookStore.getState()
+  const locked = lockedEntries(entries, state, indexCategories(state.cats))
   if (locked.length === 0) return false
   toast.add({ title: ctx.t("entry.lockedRefused", { n: locked.length }) })
   return true

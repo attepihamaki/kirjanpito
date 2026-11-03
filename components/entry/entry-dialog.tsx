@@ -7,8 +7,8 @@ import { EntryTypeToggle } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
 import { Keys } from "@/components/common/keys"
 import { AttachmentGrid } from "@/components/entry/attachment-grid"
+import { EntryHistory } from "@/components/entry/entry-history"
 import { ReceiptPreview } from "@/components/entry/receipt-preview"
-import { describeRecord } from "@/components/ledger/change-log-view"
 import { AttachmentViewer } from "@/components/receipt/receipt-viewer"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -35,7 +35,7 @@ import { useCommandCtx } from "@/hooks/use-commands"
 import { useShortcut } from "@/hooks/use-save-book"
 import { isMediaFile } from "@/hooks/use-file-drop"
 import { looksLikeVatId, normalizeVatId } from "@/lib/domain/ec-sales"
-import { lockOn } from "@/lib/domain/period-lock"
+import { entryLock, lockOn } from "@/lib/domain/period-lock"
 import { canBeUnpaid } from "@/lib/domain/open-items"
 import {
   isReceiptStorageSupported,
@@ -379,7 +379,7 @@ function EntryDialogForm({
       // A file can be dropped on the dialog as well as picked (§8.2).
       const state = useBookStore.getState()
       const current = state.entries.find((e) => e.id === editingId)
-      if (current && lockOn(current.date, state)) {
+      if (current && entryLock(current, state, indexCategories(state.cats))) {
         toast.add({ title: f.t("entry.lockedRefused", { n: 1 }) })
         return
       }
@@ -497,7 +497,8 @@ function EntryDialogForm({
   const yearsArchived = useBookStore((s) => s.yearsArchived)
   const marks = { vatFiled: vatFiledMarks, yearsArchived }
   // Read-only apart from the payment date (KPL 2:7, §8.11).
-  const lock = mode === "edit" && editing ? lockOn(editing.date, marks) : null
+  const lock =
+    mode === "edit" && editing ? entryLock(editing, marks, catMap) : null
   const euSale = isEuSaleKind(selectedCat?.kind)
   const unpayable = canBeUnpaid(
     selectedCat && LINE_BY_KEY.get(selectedCat.line)
@@ -1034,21 +1035,7 @@ function EntryDialogForm({
 
             <FieldError>{error?.message}</FieldError>
 
-            {history.length ? (
-              <details className="text-sm">
-                <summary className="cursor-pointer text-muted-foreground">
-                  {f.t("entry.history", { n: history.length })}
-                </summary>
-                <ul className="mt-2 flex flex-col gap-1 text-xs text-muted-foreground">
-                  {history.map((r, i) => (
-                    <li key={`${r.at}-${i}`}>
-                      {f.date(r.at.slice(0, 10))}:{" "}
-                      {describeRecord(f, catMap, r)}
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            ) : null}
+            <EntryHistory records={history} cats={catMap} />
           </FieldGroup>
 
           {/* The paper sits on a sunken surface, which is what tells it

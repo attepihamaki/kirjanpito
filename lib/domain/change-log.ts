@@ -9,15 +9,7 @@ import type { Entry } from "@/lib/domain/types"
  * the log is not proof that nothing else happened.
  */
 export type ChangeAction =
-  | "add"
-  | "edit"
-  | "delete"
-  | "restore"
-  | "clear"
-  | "renumber"
-  | "lock"
-  | "unlock"
-  | "import"
+  "add" | "edit" | "delete" | "restore" | "lock" | "unlock" | "import"
 
 export interface FieldChange {
   field: LoggedField
@@ -36,8 +28,6 @@ export interface ChangeRecord {
   description?: string
   /** On "edit": what changed. */
   changes?: FieldChange[]
-  /** On "clear" and "renumber": how many entries. */
-  count?: number
   /** On "lock" and "unlock": the VAT period or the year. */
   period?: string
 }
@@ -79,27 +69,17 @@ function subject(
 }
 
 /**
- * The records that take `before` to `after`. `restore` marks additions as an
- * undo, and `renumber` and `clear` give one record for the whole change.
+ * The records that take `before` to `after`, one per voucher, so each voucher's
+ * history is complete. `restore` marks additions as an undo.
  */
 export function entryChanges(
   before: readonly Entry[],
   after: readonly Entry[],
   at: string,
-  kind?: "restore" | "renumber" | "clear"
+  kind?: "restore"
 ): ChangeRecord[] {
-  if (kind === "clear") {
-    return before.length ? [{ at, action: "clear", count: before.length }] : []
-  }
   const old = new Map(before.map((e) => [e.id, e]))
   const records: ChangeRecord[] = []
-  if (kind === "renumber") {
-    const count = after.filter((e) => {
-      const was = old.get(e.id)
-      return was && was.voucher !== e.voucher
-    }).length
-    return count ? [{ at, action: "renumber", count }] : []
-  }
   const now = new Set(after.map((e) => e.id))
   for (const e of before) {
     if (!now.has(e.id)) records.push({ at, action: "delete", ...subject(e) })

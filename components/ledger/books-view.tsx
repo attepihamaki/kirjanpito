@@ -36,7 +36,7 @@ function useBookData() {
   return { entries, catMap, year }
 }
 
-export function ReportPage({
+function ReportPage({
   title,
   subtitle,
   children,

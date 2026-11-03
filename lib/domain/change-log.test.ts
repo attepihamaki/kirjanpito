@@ -82,15 +82,14 @@ describe("entryChanges", () => {
     expect(entryChanges([], [entry()], AT, "restore")[0].action).toBe("restore")
   })
 
-  it("gives one record for clearing", () => {
-    expect(entryChanges([entry()], [], AT, "clear")).toEqual([
-      { at: AT, action: "clear", count: 1 },
-    ])
+  it("gives each voucher its own record when all are cleared", () => {
+    const rows = [entry(), entry({ id: "b", voucher: 2 })]
+    expect(entryChanges(rows, [], AT).map((r) => r.entryId)).toEqual(["a", "b"])
   })
 
-  it("gives one record for renumbering", () => {
-    expect(
-      entryChanges([entry()], [entry({ voucher: 2 })], AT, "renumber")
-    ).toEqual([{ at: AT, action: "renumber", count: 1 }])
+  it("records a new number on the voucher itself", () => {
+    const [record] = entryChanges([entry()], [entry({ voucher: 2 })], AT)
+    expect(record.entryId).toBe("a")
+    expect(record.changes).toEqual([{ field: "voucher", from: 1, to: 2 }])
   })
 })

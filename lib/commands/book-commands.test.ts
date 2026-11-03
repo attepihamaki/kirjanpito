@@ -146,6 +146,17 @@ describe("changes to a filed period", () => {
     expect(useBookStore.getState().entries).toHaveLength(before)
   })
 
+  it("still deletes an entry the filed return does not count", async () => {
+    useBookStore.setState({ vatFiled: { "2026-10": "2026-12-14" } })
+    const fee = useBookStore
+      .getState()
+      .entries.find((e) => e.date === "2026-10-30")!
+    vi.mocked(confirm).mockResolvedValueOnce(true)
+
+    expect(await deleteEntry(ctx, fee)).toBe(true)
+    clickUndo()
+  })
+
   it("refuses to clear a book with an entry in a filed period", async () => {
     useBookStore.setState({ vatFiled: { "2026-10": "2026-12-14" } })
     const before = useBookStore.getState().entries.length

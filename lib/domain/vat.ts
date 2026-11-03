@@ -82,6 +82,26 @@ function finish(side: MutableSide): VatSide {
  * §10 assume. Rounding the period's net instead would shift the sample year's
  * purchase VAT by a cent.
  */
+/**
+ * Whether the VAT return counts an entry (§6.1). Settling the tax, the owner's
+ * transfers and loans are not taxable events (§6.6 to §6.8). 0 % income counts
+ * as a zero-rated sale only on line 300, since grants, dividends and interest
+ * are not VAT-relevant, and a 0 % expense such as wages, YEL or a bank fee has
+ * no VAT to deduct.
+ */
+export function countsOnVatReturn(
+  e: Pick<Entry, "type" | "catId" | "vatRate">,
+  cats: CategoryMap
+): boolean {
+  const cat = cats.get(e.catId)
+  const line = cat && LINE_BY_KEY.get(cat.line)
+  if (line?.settlement || line?.owner || line?.loan) return false
+  const rate = Number(e.vatRate) || 0
+  if (e.type === "expense") return rate !== 0
+  if (cat?.kind && cat.kind !== "domestic") return true
+  return rate !== 0 || cat?.line === "300"
+}
+
 export function vatReport(
   entries: readonly Entry[],
   cats: CategoryMap
@@ -98,12 +118,10 @@ export function vatReport(
   const anomalies: VatAnomaly[] = []
 
   for (const e of entries) {
+    if (!countsOnVatReturn(e, cats)) continue
     const cat = cats.get(e.catId)
     const { net, vat } = calcEntry(e)
     const rate = Number(e.vatRate) || 0
-    // Settling the tax, the owner's transfers and loans are not taxable events (§6.6 to §6.8).
-    const line = cat && LINE_BY_KEY.get(cat.line)
-    if (line?.settlement || line?.owner || line?.loan) continue
 
     if (e.type === "income") {
       /*
@@ -123,15 +141,8 @@ export function vatReport(
         }
         continue
       }
-      /*
-       * 0 % income only counts as a (zero-rated) sale when it is on line 300.
-       * Grants, dividends and interest are not VAT-relevant.
-       */
-      if (rate === 0 && cat?.line !== "300") continue
       add(sales, rate, net, vat)
     } else {
-      // 0 % expenses — wages, YEL, bank fees — are not deductible VAT.
-      if (rate === 0) continue
       add(purchases, rate, net, vat)
     }
   }

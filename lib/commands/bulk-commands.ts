@@ -12,8 +12,8 @@ import { confirm } from "@/lib/ui/confirm"
 import { useBookStore } from "@/stores/book-store"
 
 /**
- * Changes to several ledger rows at once (§8.4). Both refuse entries in a filed
- * VAT period or a stored year (§8.11) and can be undone from the toast.
+ * Changes to several ledger rows at once (§8.4). Both refuse locked entries
+ * (§8.11) and can be undone from the toast.
  */
 
 /** Delete the selected entries. False when the user cancels. */
@@ -91,6 +91,10 @@ export async function recategorizeEntries(
   if (changed.length === 0) return false
   if (refuseLocked(ctx, changed)) return false
   const moved = changed.map((e) => ({ ...e, catId }))
+  // An entry the return did not count can start to, on another category.
+  const byId = new Map(moved.map((e) => [e.id, e]))
+  const after = useBookStore.getState().entries.map((e) => byId.get(e.id) ?? e)
+  if (!(await confirmFiledChange(after))) return false
 
   const store = useBookStore.getState()
   const epoch = store.bookEpoch

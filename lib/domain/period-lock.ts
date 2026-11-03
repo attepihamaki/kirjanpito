@@ -1,10 +1,13 @@
-import type { Entry } from "@/lib/domain/types"
+import type { CategoryMap, Entry } from "@/lib/domain/types"
+import { countsOnVatReturn } from "@/lib/domain/vat"
 
 /**
  * KPL 2:7: the content of a voucher or a book may not be changed or deleted
  * after a periodic return has been made from it, or after the financial
- * statements are prepared. So an entry in a VAT period marked as filed, or in a
- * year marked as stored, is read-only. A fix is a correction entry.
+ * statements are prepared. So an entry the VAT return counts, in a period marked
+ * as filed, is read-only, and so is any entry in a year marked as stored. A fix
+ * is a correction entry. An entry the return does not count, such as a YEL
+ * payment or a bank fee, was not reported by filing it and stays open.
  *
  * Its payment date stays open, since a later payment adds to what is known and
  * alters nothing that was reported. Removing the mark unlocks the entry and
@@ -33,9 +36,21 @@ export function lockOn(date: string, marks: LockMarks): PeriodLock | null {
   return null
 }
 
+/** The lock on one entry, if any: a filed period holds only what its return counts. */
+export function entryLock(
+  entry: Entry,
+  marks: LockMarks,
+  cats: CategoryMap
+): PeriodLock | null {
+  const lock = lockOn(entry.date, marks)
+  if (lock?.kind === "filed" && !countsOnVatReturn(entry, cats)) return null
+  return lock
+}
+
 export function lockedEntries(
   entries: readonly Entry[],
-  marks: LockMarks
+  marks: LockMarks,
+  cats: CategoryMap
 ): Entry[] {
-  return entries.filter((e) => lockOn(e.date, marks) !== null)
+  return entries.filter((e) => entryLock(e, marks, cats) !== null)
 }

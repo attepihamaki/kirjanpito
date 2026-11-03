@@ -576,7 +576,7 @@ const clearedFilters = {
 function withLog(
   state: Pick<BookState, "entries" | "changeLog">,
   entries: Entry[],
-  kind?: "restore" | "renumber" | "clear"
+  kind?: "restore"
 ): Pick<BookState, "entries" | "changeLog"> {
   const at = new Date().toISOString()
   return {
@@ -756,14 +756,14 @@ export const useBookStore = create<BookStore>()(
           return voucher === undefined ? e : { ...e, voucher }
         })
         set({
-          ...withLog(get(), [...assignVouchers(entries)], "renumber"),
+          ...withLog(get(), [...assignVouchers(entries)]),
           dirty: true,
         })
       },
 
       clearEntries: () =>
         set({
-          ...withLog(get(), [], "clear"),
+          ...withLog(get(), []),
           dirty: true,
           ledgerPage: 1,
           gcTick: get().gcTick + 1,
