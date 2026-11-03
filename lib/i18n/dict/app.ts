@@ -664,6 +664,7 @@ export const APP_DICT = {
   "entry.logFieldSettles": ["Verokausi", "Tax period"],
   "entry.logFieldPaid": ["Maksettu", "Paid"],
   "entry.logFieldBuyer": ["Ostajan ALV-numero", "Buyer’s VAT number"],
+  "entry.logFieldEuPurchase": ["EU-osto", "EU purchase"],
   "entry.logFieldVoucher": ["Tositenumero", "Voucher number"],
   "entry.logFieldReceipts": ["Tositteet", "Receipts"],
   "ledger.chartTab": ["Tililuettelo", "Account list"],
@@ -738,6 +739,7 @@ export const APP_DICT = {
   "ledger.allCategories": ["Kaikki luokat", "All categories"],
   "ledger.openItems": ["Avoimet", "Open"],
   "ledger.openPill": ["Avoin", "Open"],
+  "ledger.euPill": ["EU-osto", "EU purchase"],
   "ledger.checkFilter": ["Tarkistettavat", "Needs a look"],
   "ledger.checkAll": ["Kaikki kirjaukset", "All entries"],
   "ledger.withoutReceipt": ["Ilman tositetta", "Without a receipt"],
@@ -816,6 +818,25 @@ export const APP_DICT = {
     "Correction: voucher {n}, {x}",
   ],
   "entry.historyTitle": ["Muutoshistoria", "Change history"],
+  "entry.euPurchase": [
+    "Osto muusta EU-maasta",
+    "Purchase from another EU country",
+  ],
+  "entry.euPurchaseNo": ["Ei", "No"],
+  "entry.euPurchaseGoods": ["Kyllä, tavara", "Yes, goods"],
+  "entry.euPurchaseServices": ["Kyllä, palvelu", "Yes, services"],
+  "entry.euPurchaseHint": [
+    "Valitse tämä, kun toisessa EU-maassa oleva myyjä laskuttaa ilman arvonlisäveroa.",
+    "Choose this when a seller in another EU country invoices without VAT.",
+  ],
+  "entry.euPurchaseVat": [
+    "Kirjaa laskun summa. Vero {a} menee ALV-ilmoitukselle sekä verona että vähennyksenä, joten maksettava vero ei muutu.",
+    "Book the invoice amount. The tax of {a} goes on the VAT return both as tax and as a deduction, so the tax payable does not change.",
+  ],
+  "entry.euPurchaseNoDeduction": [
+    "Tämän kulun veroa ei saa vähentää, joten se kasvattaa maksettavaa veroa. Vero ei tule tuloslaskelmaan tästä kirjauksesta, joten kirjaa se omana 0 %:n kulunaan.",
+    "The tax on this cost can’t be deducted, so it adds to the tax payable. It does not reach the income statement from this entry, so book it as a cost of its own at 0%.",
+  ],
   "entry.buyerVat": ["Ostajan ALV-numero", "Buyer’s VAT number"],
   "entry.buyerVatHint": [
     "Tarvitaan yhteenvetoilmoitukseen.",
@@ -904,6 +925,10 @@ export const APP_DICT = {
     "Deducted as VAT on purchases",
   ],
   "receipt.noVatBadge": ["Ei arvonlisäveroa", "No VAT"],
+  "receipt.euPurchaseBadge": [
+    "Vero {a} ilmoitetaan itse ALV-ilmoituksella",
+    "The tax of {a} is reported on the VAT return",
+  ],
   "receipt.sectionTitle": ["Tositteet", "Receipts"],
   "receipt.add": ["Lisää tosite", "Add receipt"],
   "receipt.hint": [
@@ -1059,6 +1084,19 @@ export const APP_DICT = {
     "Deductible VAT on purchases",
   ],
   "vat.otherRates": ["Muut verokannat", "Other rates"],
+  "vat.formulaEu": [
+    "Myynnin ja EU-ostojen vero {a} − vähennettävä vero {b}",
+    "VAT on sales and EU purchases {a} − deductible VAT {b}",
+  ],
+  "vat.euPurchases": [
+    "Ostot muista EU-maista",
+    "Purchases from other EU countries",
+  ],
+  "vat.euGoodsPurchases": ["Tavaraostot", "Purchases of goods"],
+  "vat.euGoodsTax": ["Vero tavaraostoista", "Tax on goods"],
+  "vat.euServicesPurchases": ["Palveluostot", "Purchases of services"],
+  "vat.euServicesTax": ["Vero palveluostoista", "Tax on services"],
+  "vat.euDeductible": ["Tästä vähennettävä vero", "Of which deductible"],
   "vat.otherSales": ["Muut ilmoitettavat myynnit", "Other sales to report"],
   "vat.euGoodsSales": [
     "Tavaroiden myynti muihin EU-maihin",
@@ -1108,8 +1146,8 @@ export const APP_DICT = {
     "This period has sales at a rate the return has no field for ({v} of VAT). It is not in the fields, but it is included in the tax payable. Check the rates on the entries.",
   ],
   "vat.returnPurchases": [
-    "Kirjanpito ei erottele ostoja muista EU-maista, tuontia EU:n ulkopuolelta eikä rakentamispalvelun ja metalliromun ostoja. Jos sinulla on niitä, täytä niiden vero ja summa OmaVerossa, ja lisää vero myös vähennettävään veroon, jos saat vähentää sen. Maksettava vero muuttuu silloin.",
-    "The bookkeeping does not separate purchases from other EU countries, imports from outside the EU, or purchases of construction services and scrap metal. If you have any, enter their tax and amount in MyTax, and add the tax to the deductible tax if you may deduct it. The tax payable then changes.",
+    "Kirjanpito ei erottele tuontia EU:n ulkopuolelta eikä rakentamispalvelun ja metalliromun ostoja. Jos sinulla on niitä, täytä niiden vero ja summa OmaVerossa, ja lisää vero myös vähennettävään veroon, jos saat vähentää sen. Maksettava vero muuttuu silloin.",
+    "The bookkeeping does not separate imports from outside the EU or purchases of construction services and scrap metal. If you have any, enter their tax and amount in MyTax, and add the tax to the deductible tax if you may deduct it. The tax payable then changes.",
   ],
   "vat.returnCodes": [
     "Numerot ovat Verohallinnon tunnukset tiedoille. Kohtien nimet ja järjestys noudattavat OmaVeron ilmoitusta.",

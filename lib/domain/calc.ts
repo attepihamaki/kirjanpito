@@ -7,7 +7,7 @@ export interface EntryAmounts {
   gross: Cents
 }
 
-type CalcInput = Pick<Entry, "amount" | "vatRate" | "amountMode">
+type CalcInput = Pick<Entry, "amount" | "vatRate" | "amountMode" | "euPurchase">
 
 /**
  * Split an entry's amount into net, VAT and gross (§4).
@@ -19,9 +19,9 @@ type CalcInput = Pick<Entry, "amount" | "vatRate" | "amountMode">
  * value and its meaning are both preserved.
  */
 export function calcEntry(e: CalcInput): EntryAmounts {
-  // A file or browser may hold a rate that import would refuse today.
-  const stored = Number(e.vatRate) || 0
-  const rate = isVatRate(stored) ? stored : 0
+  // The invoice has no VAT, so the whole amount is the cost and the payment (§6.9).
+  if (e.euPurchase) return { net: e.amount, vat: 0, gross: e.amount }
+  const rate = safeRate(e.vatRate)
   if (e.amountMode === "net") {
     const net = e.amount
     const vat = roundCents((net * rate) / 100)
@@ -30,6 +30,17 @@ export function calcEntry(e: CalcInput): EntryAmounts {
   const gross = e.amount
   const vat = roundCents((gross * rate) / (100 + rate))
   return { net: gross - vat, vat, gross }
+}
+
+/** The tax the buyer reports on an EU purchase, which the invoice does not carry (§6.9). */
+export function euPurchaseVat(e: Pick<Entry, "amount" | "vatRate">): Cents {
+  return roundCents((e.amount * safeRate(e.vatRate)) / 100)
+}
+
+/** A file or browser may hold a rate that import would refuse today. */
+function safeRate(vatRate: number): number {
+  const stored = Number(vatRate) || 0
+  return isVatRate(stored) ? stored : 0
 }
 
 /** Gross, negated for expenses — used when sorting the ledger by total. */

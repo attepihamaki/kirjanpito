@@ -61,6 +61,9 @@ export interface Attachment {
  * though the CSV columns they serialize to are Finnish (§7.1). `lib/domain/csv`
  * owns that translation and is the only place the Finnish names appear.
  */
+/** What an expense bought from another EU country was (§6.9). */
+export type EuPurchase = "goods" | "services"
+
 export interface Entry {
   id: string
   /**
@@ -93,6 +96,12 @@ export interface Entry {
   paidOn?: string | null
   /** The buyer's VAT number on a sale to another EU country (§8.7). */
   buyerVatId?: string
+  /**
+   * Set on an expense bought from another EU country with no VAT on the invoice.
+   * The buyer reports the tax, so `amount` is what was paid and `vatRate` is the
+   * rate the buyer reports it at (§6.9).
+   */
+  euPurchase?: EuPurchase
 }
 
 /** A category (luokka) the user books entries to. */

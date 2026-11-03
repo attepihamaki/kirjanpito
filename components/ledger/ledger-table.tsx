@@ -235,6 +235,11 @@ function LedgerRow({
                 {f.t("ledger.openPill")}
               </Pill>
             ) : null}
+            {entry.euPurchase ? (
+              <Pill size="sm" className="ml-2">
+                {f.t("ledger.euPill")}
+              </Pill>
+            ) : null}
           </span>
           {attachments.length ? (
             <Button

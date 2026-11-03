@@ -81,15 +81,21 @@ export function entryWithReceipt(
 
 /**
  * Whether an expense carries VAT on a line whose VAT cannot be deducted
- * (`AccountLine.noVatDeduction`). Its VAT would count as purchase VAT.
+ * (`AccountLine.noVatDeduction`). Its VAT would count as purchase VAT. An EU
+ * purchase is left out: its tax is due either way and is simply not deducted.
  */
 export function vatNotDeductible(
-  entry: Pick<Entry, "type" | "catId" | "vatRate">,
+  entry: Pick<Entry, "type" | "catId" | "vatRate" | "euPurchase">,
   cats: CategoryMap
 ): boolean {
   const cat = cats.get(entry.catId)
   const line = cat && LINE_BY_KEY.get(cat.line)
-  return entry.type === "expense" && entry.vatRate > 0 && !!line?.noVatDeduction
+  return (
+    entry.type === "expense" &&
+    entry.vatRate > 0 &&
+    !entry.euPurchase &&
+    !!line?.noVatDeduction
+  )
 }
 
 /**

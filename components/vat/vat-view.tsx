@@ -23,6 +23,9 @@ export function VatView() {
   const f = useFormatters()
   const { report } = useVatPeriod()
   const refund = report.due < 0
+  const eu = report.euPurchases
+  const euTax = eu.goods.vat + eu.services.vat
+  const hasEu = eu.goods.net !== 0 || eu.services.net !== 0
 
   return (
     <div className="flex flex-col gap-5">
@@ -38,9 +41,9 @@ export function VatView() {
             className="mt-1 block font-heading text-4xl font-semibold tracking-tight"
           />
           <p className="mt-2 text-sm text-muted-foreground">
-            {f.t("vat.formula", {
-              a: f.money(report.sales.total.vat),
-              b: f.money(report.purchases.total.vat),
+            {f.t(hasEu ? "vat.formulaEu" : "vat.formula", {
+              a: f.money(report.sales.total.vat + euTax),
+              b: f.money(report.purchases.total.vat + eu.deductible),
             })}
           </p>
         </div>
@@ -87,6 +90,27 @@ export function VatView() {
           />
         </dl>
       </Panel>
+
+      {hasEu ? (
+        <Panel title={f.t("vat.euPurchases")}>
+          <dl className="divide-y">
+            <OtherRow
+              label={f.t("vat.euGoodsPurchases")}
+              cents={eu.goods.net}
+            />
+            <OtherRow label={f.t("vat.euGoodsTax")} cents={eu.goods.vat} />
+            <OtherRow
+              label={f.t("vat.euServicesPurchases")}
+              cents={eu.services.net}
+            />
+            <OtherRow
+              label={f.t("vat.euServicesTax")}
+              cents={eu.services.vat}
+            />
+            <OtherRow label={f.t("vat.euDeductible")} cents={eu.deductible} />
+          </dl>
+        </Panel>
+      ) : null}
 
       <p className="text-xs text-muted-foreground">{f.t("vat.note")}</p>
     </div>

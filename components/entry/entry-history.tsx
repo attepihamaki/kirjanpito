@@ -20,6 +20,7 @@ const FIELD_LABEL = {
   settles: "entry.logFieldSettles",
   paidOn: "entry.logFieldPaid",
   buyerVatId: "entry.logFieldBuyer",
+  euPurchase: "entry.logFieldEuPurchase",
   voucher: "entry.logFieldVoucher",
   atts: "entry.logFieldReceipts",
 } as const satisfies Record<LoggedField, string>
@@ -46,6 +47,10 @@ function formatValue(
     }
     case "type":
       return value === "income" ? f.t("common.income") : f.t("common.expense")
+    case "euPurchase":
+      return value === "goods"
+        ? f.t("entry.euPurchaseGoods")
+        : f.t("entry.euPurchaseServices")
     default:
       return String(value)
   }

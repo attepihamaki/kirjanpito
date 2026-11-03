@@ -8,8 +8,13 @@ import {
   ReceiptTotal,
 } from "@/components/common/receipt-paper"
 import { useFormatters } from "@/components/lang-provider"
-import { calcEntry } from "@/lib/domain/calc"
-import type { AmountMode, Category, EntryType } from "@/lib/domain/types"
+import { calcEntry, euPurchaseVat } from "@/lib/domain/calc"
+import type {
+  AmountMode,
+  Category,
+  EntryType,
+  EuPurchase,
+} from "@/lib/domain/types"
 
 /**
  * The live paper receipt (§8.5) — the one bold element in the design (§11).
@@ -23,6 +28,7 @@ export function ReceiptPreview({
   amount,
   vatRate,
   amountMode,
+  euPurchase,
 }: {
   date: string
   description: string
@@ -31,16 +37,26 @@ export function ReceiptPreview({
   amount: number
   vatRate: number
   amountMode: AmountMode
+  euPurchase?: EuPurchase
 }) {
   const f = useFormatters()
-  const { net, vat, gross } = calcEntry({ amount, vatRate, amountMode })
+  const { net, vat, gross } = calcEntry({
+    amount,
+    vatRate,
+    amountMode,
+    euPurchase,
+  })
   const income = type === "income"
 
-  const badge = !vatRate
-    ? f.t("receipt.noVatBadge")
-    : income
-      ? f.t("receipt.salesBadge")
-      : f.t("receipt.purchaseBadge")
+  const badge = euPurchase
+    ? f.t("receipt.euPurchaseBadge", {
+        a: f.money(euPurchaseVat({ amount, vatRate })),
+      })
+    : !vatRate
+      ? f.t("receipt.noVatBadge")
+      : income
+        ? f.t("receipt.salesBadge")
+        : f.t("receipt.purchaseBadge")
 
   return (
     <ReceiptPaper>

@@ -11,8 +11,8 @@ import type { VatReport } from "@/lib/domain/vat"
  * them. A sales rate outside RATES has no field at all: it stays out of 301–303
  * but in 308, so the view warns about it.
  *
- * The bookkeeping records no reverse-charge purchases or imports, so 304–306,
- * 310, 313, 314, 318 and 320 stay empty. Sales on the retired EU category could
+ * The bookkeeping records no imports or domestic reverse-charge purchases, so
+ * 304, 310, 318 and 320 stay empty. Sales on the retired EU category could
  * be either 311 or 312, so they get a row of their own, and only when there are
  * any: that row is not a field in OmaVero.
  */
@@ -74,13 +74,13 @@ export function vatReturnSections(report: VatReport): TaxFormSection[] {
           "305",
           "Vero tavaraostoista muista EU-maista",
           "Tax on goods purchased from other EU Member States",
-          0
+          report.euPurchases.goods.vat
         ),
         field(
           "306",
           "Vero palveluostoista muista EU-maista",
           "Tax on services purchased from other EU Member States",
-          0
+          report.euPurchases.services.vat
         ),
         field(
           "304",
@@ -104,7 +104,7 @@ export function vatReturnSections(report: VatReport): TaxFormSection[] {
           "307",
           "Verokauden vähennettävä vero",
           "Tax deductible for the tax period",
-          report.purchases.total.vat
+          report.purchases.total.vat + report.euPurchases.deductible
         ),
       ],
     },
@@ -187,13 +187,13 @@ export function vatReturnSections(report: VatReport): TaxFormSection[] {
           "313",
           "Tavaraostot muista EU-maista",
           "Purchases of goods from other EU Member States",
-          0
+          report.euPurchases.goods.net
         ),
         field(
           "314",
           "Palveluostot muista EU-maista",
           "Purchases of services from other EU Member States",
-          0
+          report.euPurchases.services.net
         ),
         field(
           "310",

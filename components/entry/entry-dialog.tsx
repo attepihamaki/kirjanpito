@@ -54,8 +54,10 @@ import {
   LINE_BY_KEY,
   RATES,
   categoryName,
+  canBeEuPurchase,
   isEuSaleKind,
 } from "@/lib/domain/accounts"
+import { euPurchaseVat } from "@/lib/domain/calc"
 import {
   describeInvoice,
   isEmptyGuess,
@@ -81,6 +83,7 @@ import { confirmFiledChange } from "@/lib/commands/filed-commands"
 import { categoryAccount, categorySide } from "@/stores/selectors"
 import type {
   AmountMode,
+  EuPurchase,
   Attachment,
   Entry,
   EntryType,
@@ -110,7 +113,12 @@ interface FormState {
   paid: string
   /** The buyer's VAT number on an EU sale (§8.7). */
   buyerVatId: string
+  /** What an EU purchase bought, "" for any other entry (§6.9). */
+  euPurchase: EuPurchase | ""
 }
+
+/** The rate an EU purchase starts from when its category is at 0 %. */
+const GENERAL_RATE = 25.5
 
 /** The three fields §8.5 validates, named as they are in `FormState`. */
 type ErrorField = "date" | "amount" | "catId"
@@ -173,6 +181,7 @@ function initialForm({
       settles: prefill?.settles ?? "",
       paid: "",
       buyerVatId: "",
+      euPurchase: "",
     }
   }
   const today = todayIso()
@@ -198,6 +207,7 @@ function initialForm({
           : (editing.paidOn ?? "")
         : "",
     buyerVatId: editing.buyerVatId ?? "",
+    euPurchase: editing.euPurchase ?? "",
   }
 }
 
@@ -510,6 +520,10 @@ function EntryDialogForm({
   const lock =
     mode === "edit" && editing ? entryLock(editing, marks, catMap) : null
   const euSale = isEuSaleKind(selectedCat?.kind)
+  const euPurchasable = canBeEuPurchase(
+    selectedCat && LINE_BY_KEY.get(selectedCat.line)
+  )
+  const euPurchase = (euPurchasable && form.euPurchase) || undefined
   const unpayable = canBeUnpaid(
     selectedCat && LINE_BY_KEY.get(selectedCat.line)
   )
@@ -541,7 +555,7 @@ function EntryDialogForm({
   const dirty = snapshot(form) !== baseline
   // A hint, never a block: corrections can carry an older rate (§5).
   const mismatch = rateMismatch(form.vatRate, form.date)
-  const noDeduction = vatNotDeductible(form, catMap)
+  const noDeduction = vatNotDeductible({ ...form, euPurchase }, catMap)
   const formAmount = parseAmount(form.amount)
   const duplicate =
     formAmount && form.date
@@ -555,6 +569,7 @@ function EntryDialogForm({
             amount: formAmount,
             vatRate: form.vatRate,
             amountMode: form.amountMode,
+            euPurchase,
           },
           entries
         )
@@ -619,7 +634,8 @@ function EntryDialogForm({
       catId: form.catId,
       amount,
       vatRate: form.vatRate,
-      amountMode: form.amountMode,
+      // An EU purchase's amount is always without VAT (§6.9).
+      amountMode: euPurchase ? "net" : form.amountMode,
       ...(form.atts.length ? { atts: form.atts } : {}),
       ...(settlement && settledValue ? { settles: settledValue } : {}),
       ...(unpayable && form.paid && form.paid !== form.date
@@ -628,6 +644,7 @@ function EntryDialogForm({
       ...(euSale && form.buyerVatId.trim()
         ? { buyerVatId: normalizeVatId(form.buyerVatId) }
         : {}),
+      ...(euPurchase ? { euPurchase } : {}),
     }
   }
 
@@ -707,6 +724,7 @@ function EntryDialogForm({
         settles: "",
         paid: "",
         buyerVatId: "",
+        euPurchase: "",
       }
       keepRate.current = false
       setForm(next)
@@ -930,6 +948,51 @@ function EntryDialogForm({
                   )}
                 </Field>
               ) : null}
+              {euPurchasable ? (
+                <Field>
+                  <FieldLabel>{f.t("entry.euPurchase")}</FieldLabel>
+                  <OptionSelect
+                    options={[
+                      { value: "no", label: f.t("entry.euPurchaseNo") },
+                      { value: "goods", label: f.t("entry.euPurchaseGoods") },
+                      {
+                        value: "services",
+                        label: f.t("entry.euPurchaseServices"),
+                      },
+                    ]}
+                    value={euPurchase ?? "no"}
+                    onChange={(value) =>
+                      update({
+                        euPurchase: value === "no" ? "" : (value as EuPurchase),
+                        // A category at 0 % says nothing of the tax due here.
+                        ...(value !== "no" && !form.vatRate
+                          ? { vatRate: rateOnDate(GENERAL_RATE, form.date) }
+                          : {}),
+                      })
+                    }
+                    label={f.t("entry.euPurchase")}
+                  />
+                  <FieldDescription>
+                    {euPurchase
+                      ? f.t("entry.euPurchaseVat", {
+                          a: f.money(
+                            euPurchaseVat({
+                              amount: formAmount ?? 0,
+                              vatRate: form.vatRate,
+                            })
+                          ),
+                        })
+                      : f.t("entry.euPurchaseHint")}
+                  </FieldDescription>
+                  {euPurchase &&
+                  selectedCat &&
+                  LINE_BY_KEY.get(selectedCat.line)?.noVatDeduction ? (
+                    <FieldDescription className="text-warning">
+                      {f.t("entry.euPurchaseNoDeduction")}
+                    </FieldDescription>
+                  ) : null}
+                </Field>
+              ) : null}
             </fieldset>
 
             {unpayable ? (
@@ -1052,24 +1115,26 @@ function EntryDialogForm({
                 </Field>
               </div>
 
-              <Field>
-                <FieldLabel>{f.t("entry.amountMode")}</FieldLabel>
-                <ToggleGroup
-                  aria-label={f.t("entry.amountMode")}
-                  value={[form.amountMode]}
-                  onValueChange={(value) => {
-                    const next = value[0] as AmountMode | undefined
-                    if (next) update({ amountMode: next })
-                  }}
-                >
-                  <ToggleGroupItem value="gross">
-                    {f.t("common.gross")}
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="net">
-                    {f.t("common.net")}
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </Field>
+              {euPurchase ? null : (
+                <Field>
+                  <FieldLabel>{f.t("entry.amountMode")}</FieldLabel>
+                  <ToggleGroup
+                    aria-label={f.t("entry.amountMode")}
+                    value={[form.amountMode]}
+                    onValueChange={(value) => {
+                      const next = value[0] as AmountMode | undefined
+                      if (next) update({ amountMode: next })
+                    }}
+                  >
+                    <ToggleGroupItem value="gross">
+                      {f.t("common.gross")}
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="net">
+                      {f.t("common.net")}
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                </Field>
+              )}
 
               <Field orientation="horizontal">
                 <Checkbox
@@ -1101,6 +1166,7 @@ function EntryDialogForm({
               amount={parseAmount(form.amount) ?? 0}
               vatRate={form.vatRate}
               amountMode={form.amountMode}
+              euPurchase={euPurchase}
             />
             <AttachmentGrid
               attachments={form.atts}

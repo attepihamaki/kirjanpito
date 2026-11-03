@@ -10,7 +10,7 @@ import {
 } from "@/lib/domain/accounts"
 import { CSV_HEADER, CSV_HEADER_LINE } from "@/lib/domain/csv-header"
 import { parseCsvDate, yearOf } from "@/lib/domain/dates"
-import { isEuSaleKind } from "@/lib/domain/accounts"
+import { canBeEuPurchase, isEuSaleKind } from "@/lib/domain/accounts"
 import { canBeUnpaid } from "@/lib/domain/open-items"
 import { uid } from "@/lib/domain/id"
 import {
@@ -32,6 +32,7 @@ import {
   type CategoryMap,
   type Entry,
   type EntryType,
+  type EuPurchase,
 } from "@/lib/domain/types"
 
 /**
@@ -63,6 +64,7 @@ const FINNISH_COLUMNS: ReadonlyMap<string, string> = new Map([
   ["verokausi", "settles"],
   ["maksettu", "paid"],
   ["ostajan_alv", "buyer_vat"],
+  ["eu_osto", "eu_purchase"],
 ])
 
 /** The column a header cell names, ignoring case and either language. */
@@ -79,6 +81,16 @@ const TYPE_TO_CSV: Readonly<Record<EntryType, string>> = {
 const TYPE_FROM_CSV: Readonly<Record<string, EntryType>> = {
   tulo: "income",
   kulu: "expense",
+}
+
+/** An EU purchase ⇄ the `eu_purchase` column. */
+const EU_PURCHASE_TO_CSV: Readonly<Record<EuPurchase, string>> = {
+  goods: "tavara",
+  services: "palvelu",
+}
+const EU_PURCHASE_FROM_CSV: Readonly<Record<string, EuPurchase>> = {
+  tavara: "goods",
+  palvelu: "services",
 }
 
 /** The `paid` column's value for an entry still open. */
@@ -168,6 +180,7 @@ export function serializeCsv(
         e.settles ?? "",
         e.paidOn === null ? PAID_OPEN : (e.paidOn ?? ""),
         defuseFormula(e.buyerVatId ?? ""),
+        e.euPurchase ? EU_PURCHASE_TO_CSV[e.euPurchase] : "",
       ]
         .map(quote)
         .join(";")
@@ -446,6 +459,7 @@ export function parseCsv(
       ...settledPeriod(get("settles"), cat),
       ...paidColumn(get("paid"), date, cat),
       ...buyerColumn(restoreFormula(get("buyer_vat")), cat),
+      ...euPurchaseColumn(get("eu_purchase"), cat),
     })
 
     const y = yearOf(date)
@@ -471,6 +485,17 @@ export function parseCsv(
     latestYear,
     delimiter,
   }
+}
+
+/** What an EU purchase bought, kept only on a line that can be one (§6.9). */
+function euPurchaseColumn(
+  value: string,
+  cat: Category
+): { euPurchase?: EuPurchase } {
+  const euPurchase = EU_PURCHASE_FROM_CSV[value.trim().toLowerCase()]
+  return euPurchase && canBeEuPurchase(LINE_BY_KEY.get(cat.line))
+    ? { euPurchase }
+    : {}
 }
 
 /** The buyer's VAT number, kept only on an EU sale (§8.7). */

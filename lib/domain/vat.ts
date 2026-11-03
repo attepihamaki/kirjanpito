@@ -1,5 +1,5 @@
 import { LINE_BY_KEY, RATES, offStatement } from "@/lib/domain/accounts"
-import { calcEntry } from "@/lib/domain/calc"
+import { calcEntry, euPurchaseVat } from "@/lib/domain/calc"
 import type { Cents, CategoryMap, Entry, SalesKind } from "@/lib/domain/types"
 
 export interface VatBucket {
@@ -35,11 +35,20 @@ export type VatAnomaly = {
   vat: Cents
 }
 
+export interface EuPurchases {
+  goods: VatBucket
+  services: VatBucket
+  /** The part of their tax that may be deducted (§6.9). */
+  deductible: Cents
+}
+
 export interface VatReport {
   sales: VatSide
+  /** Purchases with VAT on the invoice. EU purchases are in `euPurchases`. */
   purchases: VatSide
   otherSales: OtherSales
-  /** Sales VAT − purchase VAT. Negative means refundable. */
+  euPurchases: EuPurchases
+  /** Tax on sales and EU purchases − deductible tax. Negative means refundable. */
   due: Cents
   anomalies: readonly VatAnomaly[]
 }
@@ -87,17 +96,18 @@ function finish(side: MutableSide): VatSide {
  * transfers and loans are not taxable events (§6.6 to §6.8). 0 % income counts
  * as a zero-rated sale only on line 300, since grants, dividends and interest
  * are not VAT-relevant, and a 0 % expense such as wages, YEL or a bank fee has
- * no VAT to deduct.
+ * no VAT to deduct. An EU purchase counts at any rate, since the return asks for
+ * its amount even when no tax falls on it (§6.9).
  */
 export function countsOnVatReturn(
-  e: Pick<Entry, "type" | "catId" | "vatRate">,
+  e: Pick<Entry, "type" | "catId" | "vatRate" | "euPurchase">,
   cats: CategoryMap
 ): boolean {
   const cat = cats.get(e.catId)
   const line = cat && LINE_BY_KEY.get(cat.line)
   if (line?.settlement || line?.owner || line?.loan) return false
   const rate = Number(e.vatRate) || 0
-  if (e.type === "expense") return rate !== 0
+  if (e.type === "expense") return rate !== 0 || !!e.euPurchase
   if (cat?.kind && cat.kind !== "domestic") return true
   return rate !== 0 || cat?.line === "300"
 }
@@ -114,6 +124,11 @@ export function vatReport(
     eu: 0,
     nonEu: 0,
     reverse: 0,
+  }
+  const euPurchases: EuPurchases = {
+    goods: { net: 0, vat: 0 },
+    services: { net: 0, vat: 0 },
+    deductible: 0,
   }
   const anomalies: VatAnomaly[] = []
 
@@ -142,6 +157,14 @@ export function vatReport(
         continue
       }
       add(sales, rate, net, vat)
+    } else if (e.euPurchase) {
+      const tax = euPurchaseVat(e)
+      const bucket = euPurchases[e.euPurchase]
+      bucket.net += net
+      bucket.vat += tax
+      if (!(cat && LINE_BY_KEY.get(cat.line))?.noVatDeduction) {
+        euPurchases.deductible += tax
+      }
     } else {
       add(purchases, rate, net, vat)
     }
@@ -153,7 +176,14 @@ export function vatReport(
     sales: s,
     purchases: p,
     otherSales,
-    due: s.total.vat - p.total.vat + 0,
+    euPurchases,
+    due:
+      s.total.vat +
+      euPurchases.goods.vat +
+      euPurchases.services.vat -
+      p.total.vat -
+      euPurchases.deductible +
+      0,
     anomalies,
   }
 }

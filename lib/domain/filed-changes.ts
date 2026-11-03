@@ -19,6 +19,8 @@ const TAX_FIELDS: ReadonlySet<string> = new Set([
   "301",
   "302",
   "303",
+  "305",
+  "306",
   "307",
   "308",
 ])
@@ -59,7 +61,8 @@ function sameEntry(a: Entry, b: Entry): boolean {
     a.catId === b.catId &&
     a.amount === b.amount &&
     a.vatRate === b.vatRate &&
-    a.amountMode === b.amountMode
+    a.amountMode === b.amountMode &&
+    a.euPurchase === b.euPurchase
   )
 }
 

@@ -113,6 +113,7 @@ function parseRecurring(value: unknown): RecurringEntry | null {
     amount,
     vatRate,
     amountMode,
+    euPurchase,
     day,
     from,
   } = value
@@ -135,6 +136,9 @@ function parseRecurring(value: unknown): RecurringEntry | null {
     amount: amount as number,
     vatRate,
     amountMode,
+    ...(euPurchase === "goods" || euPurchase === "services"
+      ? { euPurchase }
+      : {}),
     day: day as number,
     from,
   }

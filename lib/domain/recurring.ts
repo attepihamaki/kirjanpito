@@ -1,5 +1,11 @@
 import { isoDate, monthOf, yearOf } from "@/lib/domain/dates"
-import type { AmountMode, Cents, Entry, EntryType } from "@/lib/domain/types"
+import type {
+  AmountMode,
+  Cents,
+  Entry,
+  EntryType,
+  EuPurchase,
+} from "@/lib/domain/types"
 import { rateOnDate } from "@/lib/domain/vat-rates"
 
 /**
@@ -20,6 +26,7 @@ export interface RecurringEntry {
   amount: Cents
   vatRate: number
   amountMode: AmountMode
+  euPurchase?: EuPurchase
   /** 1 to 31. A shorter month uses its last day. */
   day: number
   /** `"2026-10"`: the first month it is due. */
@@ -97,6 +104,7 @@ export function recurringToEntry(
     amount: r.amount,
     vatRate: rateOnDate(r.vatRate, date),
     amountMode: r.amountMode,
+    ...(r.euPurchase ? { euPurchase: r.euPurchase } : {}),
   }
 }
 
@@ -114,6 +122,7 @@ export function entryToRecurring(
     amount: entry.amount,
     vatRate: entry.vatRate,
     amountMode: entry.amountMode,
+    ...(entry.euPurchase ? { euPurchase: entry.euPurchase } : {}),
     day: Number(entry.date.slice(8, 10)),
     from,
   }

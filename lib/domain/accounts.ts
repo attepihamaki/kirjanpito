@@ -63,6 +63,13 @@ export function offStatement(line: AccountLine | undefined): boolean {
   return !!line && (line.capital || line.settlement || line.owner || line.loan)
 }
 
+/** Lines an EU purchase can sit on: costs and fixed assets, not money only moving (§6.9). */
+export function canBeEuPurchase(line: AccountLine | undefined): boolean {
+  return (
+    line?.side === "expense" && !line.settlement && !line.owner && !line.loan
+  )
+}
+
 /** Sales the EC Sales List covers, the retired category included (§5, §8.7). */
 export function isEuSaleKind(kind: SalesKind | undefined): boolean {
   return kind === "euGoods" || kind === "euServices" || kind === "eu"

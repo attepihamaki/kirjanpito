@@ -43,6 +43,7 @@ export const LOGGED_FIELDS = [
   "settles",
   "paidOn",
   "buyerVatId",
+  "euPurchase",
   "voucher",
   "atts",
 ] as const

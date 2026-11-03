@@ -153,6 +153,7 @@ interface Entry {
   settles?: string // VAT payment or refund only: the period key it settles (§6.6)
   paidOn?: string | null // payment date if not `date`; null while open (§6.3)
   buyerVatId?: string // the buyer's VAT number on an EU sale (§8.7)
+  euPurchase?: "goods" | "services" // bought from another EU country with no VAT on the invoice (§6.9)
 }
 ```
 
@@ -363,6 +364,17 @@ For the selected year, by month (net amounts):
 
 `loan-drawdown` "Lainan nosto" and `loan-repayment` "Lainan lyhennys", on account 2600 at 0 %. KPL 2:1 has the books record financing transactions, and a loan is neither income nor an expense, so `offStatement` covers both and the VAT report skips them. Interest stays an expense on 346. 2600 is the app's own number, like 2939 and 2000. They move the bank estimate, and they are left out of the "unusually large amount" check. `ALL_LINES` is the 30 statement lines and eight off-statement ones.
 
+### 6.9 Purchases from other EU countries
+
+A seller in another EU country invoices a VAT-registered buyer without VAT, and the buyer reports the tax (vero.fi, "Ilmoituksen täyttöohje"). `Entry.euPurchase` marks such an expense as `goods` or `services`. It belongs to the entry and not to the category, because the same cost can be bought at home or abroad, so software from Ireland stays on 344.
+
+- **`amount` is what the invoice says and what was paid.** `calcEntry` gives it no VAT, so the statement, the ledger, the bank estimate and open items all read it as they should. `amountMode` is always `net`. `vatRate` is only the rate the tax is reported at, and `euPurchaseVat` works that tax out.
+- **On the return**, goods fill 313 and 305, services 314 and 306, and the deductible tax joins 307, so the tax payable does not change. The return asks for the amount even when no tax falls on it, so an EU purchase at 0 % counts too (`countsOnVatReturn`).
+- **On a line with `noVatDeduction`** the tax is reported but not deducted, so it adds to the tax payable. It is not a cost in the statement by itself, and the dialog says to book it as a 0 % cost of its own. The dialog's advice to book the gross at 0 % does not fit an EU purchase, and `vatNotDeductible` leaves these out.
+- **It can sit on any cost or on a fixed asset** (`canBeEuPurchase`), not on a VAT settlement, an owner's transfer or a loan. A recurring template keeps it, since a monthly subscription is the usual case.
+- A category at 0 % starts the entry at the general rate. The dialog hides "Summa on", and the ledger shows a pill.
+- **Not handled:** a business that is not VAT registered, which reports these on its own, and imports from outside the EU.
+
 ---
 
 ## 7. File formats
@@ -370,7 +382,7 @@ For the selected year, by month (net amounts):
 ### 7.1 CSV
 
 - **Header row**, always exactly these columns in this order:
-  `voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat`
+  `voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase`
 - **The column names are English and the values stay Finnish.** This is the
   user's file, and it opens in Finnish Excel with decimal commas, Finnish category
   names, `tulo`/`kulu` and `brutto`/`netto`. The header is the same in both UI
@@ -378,7 +390,7 @@ For the selected year, by month (net amounts):
   `TYPE_FROM_CSV` for `tulo`/`kulu`, `MODE_TO_CSV` for `brutto`/`netto`.
 - **Files with the Finnish header must keep opening.** `FINNISH_COLUMNS` in
   `lib/domain/csv.ts` maps `tositenro` (or `tositenumero`), `pvm`, `selite`,
-  `tyyppi`, `tili`, `luokka`, `summa`, `alv`, `syotto`, `tosite`, `verokausi`, `maksettu` and `ostajan_alv`
+  `tyyppi`, `tili`, `luokka`, `summa`, `alv`, `syotto`, `tosite`, `verokausi`, `maksettu`, `ostajan_alv` and `eu_osto`
   to the columns above, and both the header match and the delimiter detection go
   through it. Saving such a file writes the English header. Nothing else in the
   codebase may spell a Finnish column name.
@@ -391,6 +403,7 @@ For the selected year, by month (net amounts):
   - `settles` is the period a VAT payment or refund settles (`2026-10`, `2026-Q4`, `2026`), empty on every other row (§6.6).
   - `paid` is the payment date when it is not the entry's own, `avoin` while the entry is open, and otherwise empty (§6.3).
   - `buyer_vat` is the buyer's VAT number on an EU sale (§8.7), empty on every other row.
+  - `eu_purchase` is `tavara` or `palvelu` on an EU purchase (§6.9), empty on every other row.
   - Rows are sorted by date, then by voucher number. The format is identical in both UI languages, so it opens directly in Finnish Excel.
   - **A text cell that Excel would run as a formula gets a leading apostrophe.** That is `description`, `category` or `receipts` starting with `=`, `+`, `-`, `@`, a tab or a carriage return. A value that already starts with apostrophes before one of those gets one more, and the import takes exactly one off, so every value round-trips. The amount and rate columns are left alone, so a negative amount stays a number. Excel may show the apostrophe in the cell.
 - **Import (be lenient):**
@@ -743,7 +756,8 @@ The view has two sub-pages, as tabs shaped like the settings tabs (`SubPageTabs`
   - 301 holds 25,5 % and 24 %, 302 holds 13,5 % and 14 %, 303 holds 10 %. 307 is all purchase VAT.
   - 309 (zero-rated turnover) is line 300 sales at 0 % plus non-EU sales. Its hint says to leave out exempt sales whose purchase VAT cannot be deducted, such as healthcare, because the book cannot tell them apart. 319 is reverse-charge sales.
   - 311 and 312 are the sales on `300-eu-goods` and `300-eu-services`. Their hints say these sales also go on the EC Sales List (yhteenvetoilmoitus). Sales on the retired `300-eu` (§5) get an extra "311/312" row, only while there are any.
-  - The book records no EU purchases, imports or reverse-charge purchases, so 304–306, 310, 313, 314, 318 and 320 stay empty. "Mitä laskelma ei sisällä" says to enter them in OmaVero and add their tax to 307 if deductible.
+  - EU purchases fill 305, 306, 313 and 314, and their deductible tax joins 307 (§6.9).
+  - The book records no imports or domestic reverse-charge purchases, so 304, 310, 318 and 320 stay empty. "Mitä laskelma ei sisällä" says to enter them in OmaVero and add their tax to 307 if deductible.
   - A sales rate outside `RATES` has no field. It stays in 308 and the view warns about it.
   - With no amounts, the checklist points to "Ei toimintaa verokaudella".
 
@@ -1294,7 +1308,7 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 - Form 5 fields the app does not work out: 338 and 347, the deductible parts of depreciation (337) and interest (346), which it fills with the full amounts (§8.8); co-operative surplus (325–328); and the additional deductions of 364, which come from fields 388 and 392 elsewhere on the return.
 - The VAT return of a business that stops trading (§6.5).
 - Asset classes other than machinery and equipment, and templates repeating less often than monthly.
-- VAT return fields the book cannot fill (§8.7): EU purchases, imports and reverse-charge purchases.
+- VAT return fields the book cannot fill (§8.7): imports and domestic reverse-charge purchases.
 - Whether a VAT payment or refund booked on account 2939 (§6.6) is what an accountant would expect in a single-entry book, and whether 2939 should be another number. The same goes for the owner's transfers on 2000 (§6.7).
 
 ### Legal gaps
