@@ -350,6 +350,7 @@ function applyImport(
           yearsArchived: settings.yearsArchived,
           recurring: settings.recurring,
           assetOpening: settings.assetOpening,
+          bankBalance: settings.bankBalance,
           overviewLayout: settings.overviewLayout,
           autosave: settings.autosave,
           ledgerSize: settings.pageSize?.ledger,
@@ -401,6 +402,7 @@ function bookVersion() {
     s.overviewLayout,
     s.recurring,
     s.assetOpening,
+    s.bankBalance,
   ] as const
 }
 
@@ -431,6 +433,7 @@ function currentSettingsText(): string {
     pageSize: { ledger: s.ledgerSize, categories: s.ctSize },
     recurring: s.recurring,
     assetOpening: s.assetOpening,
+    bankBalance: s.bankBalance,
   })
 }
 

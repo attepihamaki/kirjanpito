@@ -248,11 +248,40 @@ export const APP_DICT = {
 
   "overview.widgetResult": ["Tulos", "Result"],
   "overview.widgetVat": ["Seuraava ALV-ilmoitus", "Next VAT return"],
+  "overview.widgetBank": ["Pankkitili", "Bank account"],
   "overview.widgetMonths": ["Kuukaudet", "Months"],
   "overview.widgetSales": ["Myynti", "Sales"],
   "overview.widgetExpenses": ["Kulut ryhmittäin", "Expenses by group"],
   "overview.widgetRecent": ["Viimeisimmät kirjaukset", "Latest entries"],
   "overview.widgetChecks": ["Tarkistettavaa", "To check"],
+
+  "overview.bankOn": ["Pankkitilin saldo {d}", "Bank balance on {d}"],
+  "overview.bankMovement": [
+    "Kirjaukset sen jälkeen ({n})",
+    "Entries since then ({n})",
+  ],
+  "overview.bankEstimate": ["Arvio tänään", "Estimate for today"],
+  "overview.bankEstimateNote": [
+    "Arvio laskee kirjaukset päivämäärän mukaan, ei maksupäivän. Siinä eivät näy verojen maksut, yksityisotot eivätkä omat talletukset.",
+    "The estimate goes by each entry’s date, not the day it was paid. It leaves out tax payments, private withdrawals and your own deposits.",
+  ],
+  "overview.bankUpdate": ["Päivitä saldo", "Update balance"],
+  "overview.bankEmpty": [
+    "Kirjanpito ei näe pankkiasi. Syötä saldo pankista, niin se näkyy tässä.",
+    "The app cannot see your bank. Enter the balance from your bank and it shows here.",
+  ],
+  "overview.bankAmount": ["Saldo (€)", "Balance (€)"],
+  "overview.bankDate": ["Päivä", "Date"],
+  "overview.bankSave": ["Tallenna saldo", "Save balance"],
+  "overview.bankRemove": ["Poista saldo", "Remove balance"],
+  "overview.bankAmountError": [
+    "Anna saldo, esim. 1 250,00.",
+    "Enter the balance, e.g. 1 250,00.",
+  ],
+  "overview.bankDateError": [
+    "Anna päivä, joka ei ole tulevaisuudessa.",
+    "Enter a date that is not in the future.",
+  ],
 
   "overview.range": ["{a}–{b}", "{a} – {b}"],
   "overview.resultFormula": [

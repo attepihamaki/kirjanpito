@@ -46,6 +46,7 @@ function settings(): BookSettings {
       },
     ],
     assetOpening: { year: 2026, amount: 300_000 },
+    bankBalance: { amount: -12_345, date: "2026-10-31" },
     overviewLayout: normalizeLayout([
       { id: "checks", size: "L", hidden: false },
     ]),
@@ -179,6 +180,36 @@ describe("overview layout", () => {
     )
   })
 
+  it("puts a missing widget after the one it follows by default", () => {
+    const ids = normalizeLayout([
+      { id: "checks", size: "S", hidden: false },
+      { id: "result", size: "L", hidden: false },
+      { id: "vat", size: "S", hidden: false },
+      { id: "months", size: "L", hidden: false },
+      { id: "sales", size: "S", hidden: false },
+      { id: "expenses", size: "S", hidden: false },
+      { id: "recent", size: "L", hidden: false },
+    ]).map((w) => w.id)
+    expect(ids).toEqual([
+      "checks",
+      "result",
+      "vat",
+      "bank",
+      "months",
+      "sales",
+      "expenses",
+      "recent",
+    ])
+  })
+
+  it("keeps the stored first widget first when the default's first is missing", () => {
+    const ids = normalizeLayout(
+      DEFAULT_LAYOUT.filter((w) => w.id !== "result")
+    ).map((w) => w.id)
+    expect(ids[0]).toBe("vat")
+    expect(ids.at(-1)).toBe("result")
+  })
+
   it("returns the default for something that is not a list", () => {
     expect(normalizeLayout(null)).toEqual(DEFAULT_LAYOUT)
   })
@@ -190,7 +221,7 @@ describe("overview layout", () => {
 
   it("steps over hidden widgets", () => {
     const layout = DEFAULT_LAYOUT.map((w) =>
-      w.id === "vat" ? { ...w, hidden: true } : w
+      w.id === "vat" || w.id === "bank" ? { ...w, hidden: true } : w
     )
     const ids = stepWidget(layout, "result", 1).map((w) => w.id)
     expect(ids.indexOf("months")).toBeLessThan(ids.indexOf("result"))

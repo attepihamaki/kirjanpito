@@ -10,6 +10,7 @@
 export const OVERVIEW_WIDGETS = [
   "result",
   "vat",
+  "bank",
   "months",
   "sales",
   "expenses",
@@ -33,8 +34,9 @@ export interface OverviewWidget {
  * one widget that also spans two rows when wide, beside sales and expenses.
  */
 export const DEFAULT_LAYOUT: readonly OverviewWidget[] = [
-  { id: "result", size: "L", hidden: false },
+  { id: "result", size: "S", hidden: false },
   { id: "vat", size: "S", hidden: false },
+  { id: "bank", size: "S", hidden: false },
   { id: "months", size: "L", hidden: false },
   { id: "sales", size: "S", hidden: false },
   { id: "expenses", size: "S", hidden: false },
@@ -48,8 +50,12 @@ function isWidgetId(value: unknown): value is OverviewWidgetId {
 
 /**
  * Every known widget exactly once, in the stored order. An unknown id is
- * dropped, a duplicate keeps its first place, a missing widget is appended
- * at its default size, and a malformed field falls back to its default.
+ * dropped, a duplicate keeps its first place, a missing widget goes right
+ * after the widget it follows in the default layout, at its default size, and
+ * a malformed field falls back to its default. A widget new to the app then
+ * appears where it was designed to be, not at the bottom of a long page. The
+ * default's first widget follows nothing, so it goes last when missing and the
+ * stored first widget stays first.
  */
 export function normalizeLayout(stored: unknown): OverviewWidget[] {
   const out: OverviewWidget[] = []
@@ -68,7 +74,11 @@ export function normalizeLayout(stored: unknown): OverviewWidget[] {
       seen.add(id)
     }
   }
-  for (const w of DEFAULT_LAYOUT) if (!seen.has(w.id)) out.push({ ...w })
+  DEFAULT_LAYOUT.forEach((w, i) => {
+    if (seen.has(w.id)) return
+    const previous = out.findIndex((o) => o.id === DEFAULT_LAYOUT[i - 1]?.id)
+    out.splice(previous === -1 ? out.length : previous + 1, 0, { ...w })
+  })
   return out
 }
 

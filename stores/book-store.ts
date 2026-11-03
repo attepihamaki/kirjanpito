@@ -5,6 +5,7 @@ import { persist, type PersistStorage } from "zustand/middleware"
 
 import { defaultCategories } from "@/lib/domain/accounts"
 import type { AssetOpening } from "@/lib/domain/assets"
+import type { BankBalance } from "@/lib/domain/bank-balance"
 import type { EntryCheck } from "@/lib/domain/entry-checks"
 import type { RecurringEntry } from "@/lib/domain/recurring"
 import { mergeCategories } from "@/lib/domain/settings-file"
@@ -152,6 +153,8 @@ export interface BookState {
   recurring: RecurringEntry[]
   /** The balance the asset register starts from (§8.8). Saved in settings.json. */
   assetOpening: AssetOpening | null
+  /** The bank balance as last read (§8.12). Saved in settings.json. */
+  bankBalance: BankBalance | null
 
   // ---- ephemeral ----
   hydrated: boolean
@@ -245,6 +248,7 @@ export interface BookActions {
       yearsArchived?: Record<string, string>
       recurring?: RecurringEntry[]
       assetOpening?: AssetOpening | null
+      bankBalance?: BankBalance | null
       overviewLayout?: OverviewWidget[]
       autosave?: boolean
       ledgerSize?: PageSize
@@ -297,6 +301,7 @@ export interface BookActions {
   upsertRecurring(template: RecurringEntry): void
   removeRecurring(id: string): void
   setAssetOpening(opening: AssetOpening | null): void
+  setBankBalance(balance: BankBalance | null): void
 
   upsertCategory(category: Category): void
   removeCategory(id: string): void
@@ -353,6 +358,7 @@ function initialState(): BookState {
     autosave: false,
     recurring: [],
     assetOpening: null,
+    bankBalance: null,
 
     hydrated: false,
     importing: false,
@@ -404,6 +410,7 @@ type PersistedBook = Pick<
   | "autosave"
   | "recurring"
   | "assetOpening"
+  | "bankBalance"
 >
 
 /**
@@ -542,6 +549,7 @@ export const useBookStore = create<BookStore>()(
           yearsArchived: {},
           recurring: [],
           assetOpening: null,
+          bankBalance: null,
           undoAttachmentIds: [],
           bookEpoch: get().bookEpoch + 1,
           gcTick: get().gcTick + 1,
@@ -560,6 +568,7 @@ export const useBookStore = create<BookStore>()(
           yearsArchived: {},
           recurring: [],
           assetOpening: null,
+          bankBalance: null,
           dialog: { kind: "none" },
           draftAttachmentIds: [],
           undoAttachmentIds: [],
@@ -587,6 +596,7 @@ export const useBookStore = create<BookStore>()(
           yearsArchived: s.yearsArchived ?? {},
           recurring: s.recurring ?? [],
           assetOpening: s.assetOpening ?? null,
+          bankBalance: s.bankBalance ?? null,
           overviewLayout: s.overviewLayout ?? get().overviewLayout,
           autosave: s.autosave ?? get().autosave,
           autosavePaused: false,
@@ -735,6 +745,7 @@ export const useBookStore = create<BookStore>()(
           dirty: true,
         }),
       setAssetOpening: (assetOpening) => set({ assetOpening, dirty: true }),
+      setBankBalance: (bankBalance) => set({ bankBalance, dirty: true }),
       /*
        * A preference, like the language: it travels in settings.json but
        * turning it on or off does not change the bookkeeping.
@@ -839,6 +850,7 @@ export const useBookStore = create<BookStore>()(
         autosave: s.autosave,
         recurring: s.recurring,
         assetOpening: s.assetOpening,
+        bankBalance: s.bankBalance,
       }),
       migrate: (persisted) => {
         const blob = (persisted ?? {}) as Record<string, unknown>

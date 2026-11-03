@@ -35,6 +35,7 @@ export function useAutosave() {
   const layout = useBookStore((s) => s.overviewLayout)
   const recurring = useBookStore((s) => s.recurring)
   const assetOpening = useBookStore((s) => s.assetOpening)
+  const bankBalance = useBookStore((s) => s.bankBalance)
 
   React.useEffect(() => {
     if (!canSave || !autosave || paused || !dirty || !linked || busy) return
@@ -59,5 +60,6 @@ export function useAutosave() {
     layout,
     recurring,
     assetOpening,
+    bankBalance,
   ])
 }

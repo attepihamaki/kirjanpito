@@ -37,6 +37,7 @@ import {
   ExpensesWidget,
   SalesWidget,
 } from "@/components/overview/breakdown-widgets"
+import { BankWidget } from "@/components/overview/bank-widget"
 import { MonthsWidget } from "@/components/overview/months-widget"
 import { ResultWidget } from "@/components/overview/result-widget"
 import { VatWidget } from "@/components/overview/vat-widget"
@@ -57,6 +58,7 @@ const WIDGETS: Record<
 > = {
   result: { title: "overview.widgetResult", Component: ResultWidget },
   vat: { title: "overview.widgetVat", Component: VatWidget },
+  bank: { title: "overview.widgetBank", Component: BankWidget },
   months: {
     title: "overview.widgetMonths",
     Component: MonthsWidget,

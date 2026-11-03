@@ -67,6 +67,49 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
+describe("bank widget", () => {
+  it("saves a typed balance and estimates today's from later entries", async () => {
+    vi.useRealTimers()
+    vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true })
+    vi.setSystemTime(new Date(2026, 9, 31, 9, 0))
+    load()
+    mount()
+    const user = userEvent.setup()
+    await user.type(screen.getByLabelText("Saldo (€)"), "1 000,50")
+    const date = screen.getByLabelText("Päivä")
+    await user.clear(date)
+    await user.type(date, "2026-10-20")
+    await user.click(screen.getByRole("button", { name: "Tallenna saldo" }))
+
+    expect(useBookStore.getState().bankBalance).toEqual({
+      amount: 100_050,
+      date: "2026-10-20",
+    })
+    expect(useBookStore.getState().dirty).toBe(true)
+    /* 1 882,50 of sales, less 8,50 of bank fees, both after 20 October. */
+    const bank = widget(/Arvio tänään/)
+    expect(flat(bank.querySelector(".text-4xl")?.textContent ?? "")).toBe(
+      "2 874,50 €"
+    )
+    expect(flat(bank.textContent)).toContain("1 000,50 €")
+    expect(flat(bank.textContent)).toContain("Kirjaukset sen jälkeen (2)")
+    expect(flat(bank.textContent)).toContain("2 874,50 €")
+  })
+
+  it("refuses an amount it cannot read", async () => {
+    vi.useRealTimers()
+    load()
+    mount()
+    const user = userEvent.setup()
+    await user.type(screen.getByLabelText("Saldo (€)"), "paljon")
+    await user.click(screen.getByRole("button", { name: "Tallenna saldo" }))
+    expect(
+      screen.getByLabelText("Saldo (€)").getAttribute("aria-invalid")
+    ).toBe("true")
+    expect(useBookStore.getState().bankBalance).toBeNull()
+  })
+})
+
 describe("overview", () => {
   it("shows the §10 result for the year", () => {
     load()

@@ -487,17 +487,18 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
   "autosave": false,
   "pageSize": { "ledger": 10, "categories": 25 },
   "recurring": [{ "id": "r1", "description": "Vuokra", "type": "expense", "catId": "343", "amount": 45000, "vatRate": 25.5, "amountMode": "gross", "day": 20, "from": "2026-02" }],
-  "assetOpening": { "year": 2026, "amount": 300000 }
+  "assetOpening": { "year": 2026, "amount": 300000 },
+  "bankBalance": { "amount": 125000, "date": "2026-10-31" }
 }
 ```
 
 - **Keys are English**, like browser storage (§12). Nobody opens this file in Excel.
 - **Reading is lenient**, like the CSV. A missing file means defaults. A bad or unknown value is dropped on its own and the rest is kept. `version` leaves room for a migration.
 - **Categories**: the full list. A default category keeps its id, line, name and kind from the chart of accounts and takes only `enabled` and `vatRate` from the file, and one the file does not list comes in with its defaults. `persist.migrate` runs a stored list through the same merge. Custom categories come across whole. The CSV is then matched against this list, so a custom category comes back with its own id instead of being recreated from its name.
-- **The overview layout** goes through `normalizeLayout` in `lib/domain/overview-layout.ts`: an unknown widget id is dropped and a missing one is appended at its default size, so a file from an older or newer version still opens.
+- **The overview layout** goes through `normalizeLayout` in `lib/domain/overview-layout.ts`: an unknown widget id is dropped and a missing one goes right after the widget it follows in the default layout, at its default size, so a file from an older or newer version still opens and a new widget does not land at the bottom of the page.
 - **Language and theme** are written from the browser's own keys (§12) at save. Opening a file switches the app to them. They are preferences of the browser as much as of the book, so changing them does not mark the book dirty, and the landing page goes on using the browser's keys. The theme is applied through `Ctx.setTheme`, because only React can reach next-themes.
 - **Page sizes and autosave** are saved the same way: written at save, applied on open, never dirty.
-- **The VAT period, the start month, the filed marks, the archived years, the layout, the categories, the recurring templates and the asset opening balance do mark the book dirty**, since the file no longer matches.
+- **The VAT period, the start month, the filed marks, the archived years, the layout, the categories, the recurring templates, the asset opening balance and the bank balance do mark the book dirty**, since the file no longer matches.
 - A plain CSV has no settings. Opening one starts with no filed marks and no start month, and keeps the rest as it was.
 - `lib/domain/settings-file.test.ts` covers the round trip and the lenient reading; `lib/commands/io-commands.test.ts` covers opening a ZIP with settings.
 
@@ -770,8 +771,9 @@ The app's front page, at `/app/overview`. `/app`, "Jatka kirjanpitoa", opening a
 
 - **`components/overview/`.** `overview-data.tsx` computes everything once, in a context, from the selected year: the summary, the income statement, VAT per month, and the VAT timeline from today (§6.5). The widgets read it.
 - **Widgets**, in their default order and size:
-  - **Tulos** (wide): line 358 or 359 from 1.1. to today, or to 31.12. for a past year; the formula line; a sparkline of the cumulative result; the entry count, the profit margin and the year's VAT. With entries in the year before, also its result to the same date and its same month, beside this year's (`sameTimeLastYear` in `lib/domain/year-compare.ts`), so part of a year is never set against all of the last. Links to Tuloslaskelma.
+  - **Tulos**: line 358 or 359 from 1.1. to today, or to 31.12. for a past year; the formula line; a sparkline of the cumulative result; the entry count, the profit margin and the year's VAT. With entries in the year before, also its result to the same date and its same month, beside this year's (`sameTimeLastYear` in `lib/domain/year-compare.ts`), so part of a year is never set against all of the last. Links to Tuloslaskelma.
   - **Seuraava ALV-ilmoitus**: the next period not yet filed, its amount as payable, refundable or "Nollailmoitus", a due-date row with the weekday and a days-left pill (amber at 14 days or fewer, red with "pv myöhässä" once overdue), a note when EU or reverse-charge sales must be reported too, and the period after it. "Merkitse ilmoitetuksi" for a closed period, with "Peru" right after. Links to ALV-laskelma on that period.
+  - **Pankkitili**: the bank balance the user typed in, with its date (`bankBalance`, `lib/domain/bank-balance.ts`). The app has no connection to a bank, and a static export could not hold one. With entries dated after the reading and up to today, the big figure is an estimate for today, labelled as one, with the balance and the entries' gross total under it: entries go by their own date rather than the payment date, and tax payments, private withdrawals and the owner's own deposits are not in the book. Lines where no money moves (312 to 315, 337, 353, 354) stay out; fixed assets count. The balance goes in `settings.json`, not on any report.
   - **Kuukaudet** (wide, two rows tall): `IncomeExpenseChart`, shared with Yhteenveto. Net income above the axis and net expenses below it, one axis. **The bars are mirrored on purpose**: the income green and expense red fail a deuteranopia check side by side (ΔE 5.3 light, 3.5 dark, against 8), and position gives the two series a difference every reader sees. A hover gives the month's income, expenses, VAT and result, the result by the income statement's rules (`monthFigures` in `summary.ts`), so the months add up to 358; a click opens the ledger on that month. Four figures under it: the best month, average income and expenses per elapsed month, months with entries.
   - **Myynti**: line 300 split into Suomi, EU, muut maat and käänteinen, as a stacked bar and a list; lines 301 to 324 below as other income.
   - **Kulut ryhmittäin**: the §6.4 buckets with expenses, largest first; empty ones are counted.
@@ -1128,7 +1130,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
 
 - localStorage `bookkeeping` — exported as `BOOK_STORAGE_KEY` from
   `stores/book-store.ts`, so nothing hard-codes the string twice:
-  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, vatPeriod, bookStart, vatFiled, yearsArchived, overviewLayout, autosave, recurring, assetOpening }`.
+  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, vatPeriod, bookStart, vatFiled, yearsArchived, overviewLayout, autosave, recurring, assetOpening, bankBalance }`.
   The book's settings are kept twice: here, as the working buffer, and in the
   file's `settings.json` (§7.6), as the record. A reload restores them from
   here; opening a file replaces them from there.

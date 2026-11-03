@@ -5,6 +5,7 @@ import {
 } from "@/lib/domain/accounts"
 import { isVatRate } from "@/lib/domain/money"
 import type { AssetOpening } from "@/lib/domain/assets"
+import type { BankBalance } from "@/lib/domain/bank-balance"
 import {
   normalizeLayout,
   type OverviewWidget,
@@ -55,6 +56,8 @@ export interface BookSettings {
   recurring: RecurringEntry[]
   /** The fixed asset balance the register starts from, or null (§8.8). */
   assetOpening: AssetOpening | null
+  /** The bank balance as last read, or null (§8.12). */
+  bankBalance: BankBalance | null
 }
 
 /**
@@ -244,6 +247,18 @@ export function parseSettings(text: string): ParsedSettings {
       amount: raw.assetOpening.amount as number,
     }
   }
+  if (raw.bankBalance === null) out.bankBalance = null
+  else if (
+    isRecord(raw.bankBalance) &&
+    Number.isInteger(raw.bankBalance.amount) &&
+    typeof raw.bankBalance.date === "string" &&
+    ISO_DATE.test(raw.bankBalance.date)
+  ) {
+    out.bankBalance = {
+      amount: raw.bankBalance.amount as number,
+      date: raw.bankBalance.date,
+    }
+  }
   if (isRecord(raw.pageSize)) {
     const ledger = pageSize(raw.pageSize.ledger)
     const categories = pageSize(raw.pageSize.categories)
@@ -280,6 +295,7 @@ export function serializeSettings(s: BookSettings): string {
     pageSize: s.pageSize,
     recurring: s.recurring,
     assetOpening: s.assetOpening,
+    bankBalance: s.bankBalance,
   }
   return `${JSON.stringify(file, null, 2)}\n`
 }
