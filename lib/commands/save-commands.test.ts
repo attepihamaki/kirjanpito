@@ -299,18 +299,10 @@ describe("downloading a copy", () => {
 
   /* With no file behind it, the copy is the only place the work exists. */
   it("clears the dirty flag when there is no linked file", async () => {
-    await exportBook(ctx, "kirjanpito", false)
+    await exportBook(ctx, "kirjanpito")
 
     expect(useBookStore.getState().dirty).toBe(false)
     expect(useBookStore.getState().fileName).toBe("kirjanpito.zip")
-  })
-
-  /* The receipts and the settings are not in it, so it is not a saved book. */
-  it("leaves the dirty flag alone after a bare CSV", async () => {
-    await exportBook(ctx, "kirjanpito", true)
-
-    expect(useBookStore.getState().dirty).toBe(true)
-    expect(useBookStore.getState().fileName).toBeNull()
   })
 
   /*
@@ -324,7 +316,7 @@ describe("downloading a copy", () => {
       fileName: "oma.csv",
     })
 
-    await exportBook(ctx, "kopio", false)
+    await exportBook(ctx, "kopio")
 
     expect(useBookStore.getState().dirty).toBe(true)
     expect(useBookStore.getState().fileName).toBe("oma.csv")

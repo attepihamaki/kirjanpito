@@ -1692,15 +1692,6 @@ export const APP_DICT = {
     "The file includes the entries of all financial years.",
   ],
   "io.exportAction": ["Lataa", "Download"],
-  "io.csvOnly": ["Lataa vain CSV-tiedosto", "Download only the CSV file"],
-  /*
-   * The paths are written either way, so a re-import still knows the receipts
-   * existed — it just marks them missing. The settings have no such fallback.
-   */
-  "io.csvOnlyHint": [
-    "CSV-tiedostoon tulevat vain kirjaukset. Tositteet ja asetukset, kuten ilmoitetuiksi merkityt ALV-jaksot, jäävät pois. Tositteiden polut säilyvät, joten ne voi yhdistää myöhemmin uudelleen.",
-    "The CSV holds the entries only. Receipts and settings, such as the VAT returns marked as filed, are left out. Receipt paths are kept, so they can be reconnected later.",
-  ],
   "io.zipHint": [
     pl(
       "ZIP-tiedosto sisältää kirjanpidon CSV-tiedoston, asetukset ja 1 tositteen kansiossa vuoden ja kuukauden mukaan.",

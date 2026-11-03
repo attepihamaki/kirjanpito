@@ -5,7 +5,6 @@ import { DownloadIcon } from "lucide-react"
 
 import { BusyButton } from "@/components/common/busy-button"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -48,16 +47,12 @@ function ExportDialogForm({ onClose }: { onClose: () => void }) {
   const [name, setName] = React.useState(() =>
     suggestedBaseName(useBookStore.getState().fileName, f.lang)
   )
-  const [csvOnly, setCsvOnly] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
-
-  // A bookkeeping is a ZIP; a bare CSV is the one export that is not (§7.6).
-  const extension = csvOnly ? ".csv" : ".zip"
 
   const run = async () => {
     setBusy(true)
     try {
-      await exportBook(ctx, name, csvOnly)
+      await exportBook(ctx, name)
       onClose()
     } finally {
       setBusy(false)
@@ -86,30 +81,17 @@ function ExportDialogForm({ onClose }: { onClose: () => void }) {
                 }}
               />
               <span className="tabular shrink-0 text-sm text-muted-foreground">
-                {extension}
+                .zip
               </span>
             </div>
-          </Field>
-
-          <Field orientation="horizontal">
-            <Checkbox
-              id="export-csv-only"
-              checked={csvOnly}
-              onCheckedChange={(checked) => setCsvOnly(checked === true)}
-            />
-            <FieldLabel htmlFor="export-csv-only" className="font-normal">
-              {f.t("io.csvOnly")}
-            </FieldLabel>
           </Field>
         </FieldGroup>
 
         <p className="text-xs text-muted-foreground">
           {f.t("io.exportHint")}{" "}
-          {csvOnly
-            ? f.t("io.csvOnlyHint")
-            : receiptCount > 0
-              ? f.t("io.zipHint", { n: receiptCount })
-              : f.t("io.zipHintNoReceipts")}
+          {receiptCount > 0
+            ? f.t("io.zipHint", { n: receiptCount })
+            : f.t("io.zipHintNoReceipts")}
         </p>
 
         <DialogFooter>

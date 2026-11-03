@@ -58,7 +58,6 @@ import { useLangStore } from "@/stores/lang-store"
  * landing page so jszip and papaparse stay out of its bundle.
  */
 
-const CSV_MIME = "text/csv;charset=utf-8"
 const ZIP_MIME = "application/zip"
 
 /* -------------------------------------------------------------------------
@@ -381,7 +380,6 @@ function applyImport(
 interface BookFile {
   name: string
   blob: Blob
-  isZip: boolean
   /** The state it was built from, to tell whether it is still current. */
   version: BookVersion
   /** Receipts the CSV lists that are not in this file. */
@@ -473,40 +471,23 @@ function carryFrom(
   }
 }
 
-function bookFileName(baseName: string, csvOnly: boolean): string {
-  return `${cleanFileName(baseName) || "kirjanpito"}${csvOnly ? ".csv" : ".zip"}`
+function bookFileName(baseName: string, extension = ".zip"): string {
+  return `${cleanFileName(baseName) || "kirjanpito"}${extension}`
 }
 
+/** A bookkeeping is a ZIP, because settings.json has to travel with the entries (§7.6). */
 async function buildBookFile(
   baseName: string,
-  csvOnly: boolean,
   source: FileSystemFileHandle | null = null
 ): Promise<BookFile> {
   const { entries, cats } = useBookStore.getState()
   const version = bookVersion()
-  const name = bookFileName(baseName, csvOnly)
   const paths = buildReceiptPaths(entries)
   /*
-   * Paths are always written, so a CSV-only export still records which
-   * receipts existed (§7.1).
+   * Paths are always written, so a CSV taken out of the ZIP still records
+   * which receipts existed (§7.1).
    */
   const csvText = serializeCsv(entries, indexCategories(cats), paths)
-  /*
-   * A bookkeeping is a ZIP, because settings.json has to travel with the
-   * entries (§7.6). A bare CSV is only ever an explicit export.
-   */
-  const isZip = !csvOnly
-
-  if (!isZip) {
-    return {
-      name,
-      blob: new Blob([csvText], { type: CSV_MIME }),
-      isZip,
-      version,
-      absentReceipts: 0,
-      lostReceipts: 0,
-    }
-  }
 
   const attachmentIds = new Map<string, string>()
   for (const e of entries) {
@@ -517,7 +498,7 @@ async function buildBookFile(
   let absentReceipts = 0
   let lostReceipts = 0
   const bytes = await packZip({
-    csvName: bookFileName(baseName, true),
+    csvName: bookFileName(baseName, ".csv"),
     csvText,
     paths,
     attachmentIds,
@@ -530,9 +511,8 @@ async function buildBookFile(
     },
   })
   return {
-    name,
+    name: bookFileName(baseName),
     blob: new Blob([bytes as BlobPart], { type: ZIP_MIME }),
-    isZip,
     version,
     absentReceipts,
     lostReceipts,
@@ -547,14 +527,9 @@ function baseOf(fileName: string): string {
 /**
  * Download a copy (§7.3). This never touches the linked file, so it clears
  * the dirty flag only when there is no linked file to go stale, or the dot
- * would claim the user's bookkeeping was written when it was not. A bare CSV
- * never clears it: the receipts and the settings are not in that file.
+ * would claim the user's bookkeeping was written when it was not.
  */
-export async function exportBook(
-  ctx: Ctx,
-  baseName: string,
-  csvOnly: boolean
-): Promise<void> {
+export async function exportBook(ctx: Ctx, baseName: string): Promise<void> {
   const { entries, dirty, fileHandle } = useBookStore.getState()
   if (!entries.length && !dirty) {
     toast.add({ title: ctx.t("io.nothingToExport") })
@@ -562,12 +537,12 @@ export async function exportBook(
   }
 
   try {
-    const file = await buildBookFile(baseName, csvOnly, fileHandle)
+    const file = await buildBookFile(baseName, fileHandle)
     if (file.absentReceipts) {
       toast.add({ title: ctx.t("io.receiptsLost", { n: file.absentReceipts }) })
     }
     saveBlob(file.blob, file.name)
-    if (!fileHandle && !csvOnly) {
+    if (!fileHandle) {
       useBookStore.getState().markSaved({
         fileName: file.name,
         dirty: changedSince(file.version),
@@ -616,10 +591,10 @@ export async function saveBook(ctx: Ctx, suggestedBase: string): Promise<void> {
      * and a user who backs out should not have to wait for the packing.
      */
     const base = state.fileName ? baseOf(state.fileName) : suggestedBase
-    const handle = await handleToWrite(ctx, bookFileName(base, false))
+    const handle = await handleToWrite(ctx, bookFileName(base))
     if (!handle || replacedSince(state.bookEpoch)) return
 
-    const file = await buildBookFile(base, false, state.fileHandle)
+    const file = await buildBookFile(base, state.fileHandle)
     if (file.lostReceipts && handle === state.fileHandle) {
       const goAhead = await confirm({
         title: ctx.t("confirm.receiptsLostTitle"),
@@ -737,7 +712,7 @@ export async function autosaveBook(ctx: Ctx): Promise<boolean> {
     if (state.savedAt !== null && onDisk !== state.savedAt) return pause()
     if (replacedSince(state.bookEpoch)) return false
 
-    const file = await buildBookFile(baseOf(handle.name), false, handle)
+    const file = await buildBookFile(baseOf(handle.name), handle)
     // A manual save can ask about this. Nothing unattended may drop a receipt.
     if (file.lostReceipts) return pause()
     if (replacedSince(state.bookEpoch)) return false

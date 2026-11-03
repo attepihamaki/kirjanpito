@@ -27,8 +27,8 @@ from a file, work on it, and write it back to a file.
   else that belongs to the bookkeeping, and the receipt files in folders by year
   and month. The CSV is semicolon-separated, UTF-8 with a BOM, so it opens
   directly in a Finnish Excel.
-- A bare **CSV** can still be opened, and downloaded on request, but it holds the
-  entries only.
+- A bare **CSV** can still be opened, but it holds the entries only. The app
+  always writes a ZIP.
 - On Chromium browsers the app saves straight back to the file you opened, by
   hand or with opt-in autosave. Elsewhere you download a copy.
 

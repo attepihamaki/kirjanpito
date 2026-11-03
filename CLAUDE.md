@@ -24,7 +24,7 @@ The app does not file anything and is not tax advice. A short disclaimer to this
 There is **no backend, no account and no database**. The user opens their bookkeeping from a file, works on it in the browser, and writes it back to a file.
 
 - The file is a **ZIP**: the entries as a CSV, a `settings.json` with everything else that belongs to the bookkeeping (§7.6), and the receipt files in folders by year and month.
-- A bare **CSV** is still read, and can still be downloaded on request, but it holds the entries only.
+- A bare **CSV** can still be opened, but it holds the entries only. The app always writes a ZIP.
 - Where the browser allows it, the app **saves straight back to the file that was opened** (§7.5). Where it does not, the user **downloads a copy**. Either way the file on disk is the user's real, safe copy.
 - Between saves, work is kept in the browser (localStorage for entries and settings, IndexedDB for receipt files), so a page reload doesn't lose anything — but the browser is a working buffer, not the record.
 
@@ -387,7 +387,7 @@ For the selected year, by month (net amounts):
   - `voucher` is the voucher number (§4). `date` is ISO `YYYY-MM-DD`. `type` is `tulo` or `kulu`. `account` is the account number.
   - `category` is the category's **Finnish** name (stable across UI languages).
   - `amount` uses a decimal comma with no thousands separator (`1882,50`). `vat` is the rate, with a decimal comma (`25,5`). `mode` is `brutto` or `netto`.
-  - `receipts` holds the receipt paths inside the ZIP, separated by `|`. **These are written even when exporting CSV only**, so a plain CSV still records which receipts existed and a re-import can mark them missing per §7.2. The prototype dropped them, which made a CSV-only export lossy.
+  - `receipts` holds the receipt paths inside the ZIP, separated by `|`. A CSV taken out of the ZIP and opened on its own still records which receipts existed, and the import marks them missing per §7.2.
   - `settles` is the period a VAT payment or refund settles (`2026-10`, `2026-Q4`, `2026`), empty on every other row (§6.6).
   - `paid` is the payment date when it is not the entry's own, `avoin` while the entry is open, and otherwise empty (§6.3).
   - `buyer_vat` is the buyer's VAT number on an EU sale (§8.7), empty on every other row.
@@ -406,7 +406,7 @@ For the selected year, by month (net amounts):
 
 ### 7.2 ZIP (the bookkeeping file)
 
-A bookkeeping is always written as a ZIP, because `settings.json` (§7.6) has to travel with the entries, receipts or not. The download dialog's "Lataa vain CSV-tiedosto" writes the bare CSV instead, and its hint says that the receipts and the settings stay out. The structure is:
+A bookkeeping is always written as a ZIP, because `settings.json` (§7.6) has to travel with the entries, receipts or not. The structure is:
 
 ```
 kirjanpito_2026-10-24.csv
@@ -429,7 +429,7 @@ tositteet/
 
 ### 7.3 File naming when downloading a copy
 
-The download dialog lets the user edit the base name, with a fixed extension shown beside the field (`.csv` or `.zip`). The default is **the last opened or saved name**, as it was, date included, without its extension (`suggestedBaseName` in `lib/domain/receipt-path.ts`). With no file behind the book it is `kirjanpito_{YYYY-MM-DD}` in Finnish or `accounting_{YYYY-MM-DD}` in English, using **today's date**. Characters `\ / : * ? " < > |` and control characters are stripped, and a trailing `.csv` or `.zip` is removed. An empty name falls back to the dated default.
+The download dialog lets the user edit the base name, with the fixed extension `.zip` shown beside the field. The default is **the last opened or saved name**, as it was, date included, without its extension (`suggestedBaseName` in `lib/domain/receipt-path.ts`). With no file behind the book it is `kirjanpito_{YYYY-MM-DD}` in Finnish or `accounting_{YYYY-MM-DD}` in English, using **today's date**. Characters `\ / : * ? " < > |` and control characters are stripped, and a trailing `.csv` or `.zip` is removed. An empty name falls back to the dated default.
 
 `fileName` in the store holds that name **with its extension** (`kirjanpito_2026-10-24.zip`), for display only, and is set by opening, saving and downloading alike. Opening a file and finding the box still reading "Uusi kirjanpito" is the bug this format fixes: the first port hard-coded `fileName: null` on import, and the display site appended a literal `.csv`, which was wrong for a ZIP. `lib/commands/io-commands.test.ts` covers it.
 
@@ -480,11 +480,10 @@ asks anything (below).
   timestamp, so the baseline follows it or the app would mistake its own save
   for someone else's edit. `savedAt` is persisted with the book, so the check
   also holds after a reload.
-- **Downloading a copy clears the dirty flag only when no file is linked,
-  and never for a bare CSV.** With a linked file, the copy says nothing about
-  that file, and claiming otherwise would let the user close a bookkeeping
-  whose own file is still stale. A bare CSV leaves out the receipts and the
-  settings, and closing would then delete those receipts without a question.
+- **Downloading a copy clears the dirty flag only when no file is linked.**
+  With a linked file, the copy says nothing about that file, and claiming
+  otherwise would let the user close a bookkeeping whose own file is still
+  stale.
 - **A change made during a write keeps the book dirty.** Packing and writing
   take time and the UI stays usable, so `markSaved` compares the state the file
   was built from with the state now. Autosave then runs again.
