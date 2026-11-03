@@ -935,6 +935,7 @@ export const APP_DICT = {
     "Kuva tai PDF. Voit myös raahata tiedoston tähän.",
     "Image or PDF. You can also drag a file here.",
   ],
+  "receipt.nameLabel": ["Tositteen nimi", "Receipt name"],
   "receipt.remove": ["Poista tosite", "Remove receipt"],
   "receipt.open": ["Avaa tosite", "Open receipt"],
   "receipt.missing": ["Tiedosto puuttuu", "File missing"],
