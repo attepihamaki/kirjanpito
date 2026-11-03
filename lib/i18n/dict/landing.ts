@@ -159,8 +159,8 @@ export const LANDING_DICT = {
     "What happens if I close the browser?",
   ],
   "landing.a4": [
-    "Kirjaukset säilyvät tässä selaimessa, kunnes suljet tiedoston tai tyhjennät selaimen tiedot. Tallenna työsi tiedostoon säännöllisesti, niin kirjanpitosi on aina tallessa. Chromessa ja Edgessä sovellus kirjoittaa suoraan avaamaasi tiedostoon; muissa selaimissa lataat kopion.",
-    "Entries stay in this browser until you close the file or clear your browser data. Save your work to a file regularly so your bookkeeping is always safe. In Chrome and Edge the app writes straight back to the file you opened; in other browsers you download a copy.",
+    "Kirjaukset säilyvät tässä selaimessa, kunnes suljet tiedoston tai tyhjennät selaimen tiedot. Tallenna työsi tiedostoon säännöllisesti, niin kirjanpitosi on aina tallessa. Chromessa ja Edgessä sovellus kirjoittaa suoraan avaamaasi tiedostoon; muissa selaimissa lataat kopion. Tiedostoon kulkee myös muutosloki, joka kertoo sovelluksen käytöstä, mutta ei todista, ettei tiedostoa ole muokattu muuten.",
+    "Entries stay in this browser until you close the file or clear your browser data. Save your work to a file regularly so your bookkeeping is always safe. In Chrome and Edge the app writes straight back to the file you opened; in other browsers you download a copy. The file also carries a change log, which records use of the app but does not prove the file was not edited in other ways.",
   ],
 
   "landing.endTitle": [

@@ -175,6 +175,8 @@ export function AttachmentGrid({
 }) {
   const f = useFormatters()
 
+  if (readOnly && attachments.length === 0) return null
+
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       <h3 className="text-sm font-medium">{f.t("receipt.sectionTitle")}</h3>
