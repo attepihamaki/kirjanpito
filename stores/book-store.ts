@@ -135,6 +135,8 @@ export type DialogState =
     }
   | { kind: "viewer"; entryId: string; index: number }
   | { kind: "export" }
+  /** The settings a new bookkeeping is started with (§8.3). */
+  | { kind: "setup" }
   /** Add a month's recurring entries (§8.5). `month` is `"2026-10"`. */
   | { kind: "recurring"; month: string }
 
@@ -269,6 +271,17 @@ export interface BookActions {
   setHydrated(partial: Partial<BookState>): void
   /** Start an empty bookkeeping, written out in `exportLang` (§7.1). */
   newBook(year: number, exportLang: Lang): void
+  /**
+   * Apply the settings the setup dialog collected (§8.3), all at once and
+   * without marking the book dirty: a brand-new bookkeeping nobody has typed
+   * into has nothing unsaved to warn about.
+   */
+  startBook(settings: {
+    exportLang: Lang
+    vatPeriod: VatPeriodKind
+    bookStart: string | null
+    autosave: boolean
+  }): void
   closeBook(): void
   replaceBook(next: {
     entries: Entry[]
@@ -657,6 +670,19 @@ export const useBookStore = create<BookStore>()(
           undoAttachmentIds: [],
           bookEpoch: get().bookEpoch + 1,
           gcTick: get().gcTick + 1,
+        }),
+
+      startBook: (settings) =>
+        set({
+          ...settings,
+          vatIndex: clampVatIndex(
+            get().vatIndex,
+            get().vatPeriod,
+            settings.vatPeriod
+          ),
+          autosavePaused: false,
+          dirty: false,
+          dialog: { kind: "none" },
         }),
 
       closeBook: () =>

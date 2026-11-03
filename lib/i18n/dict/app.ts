@@ -1580,6 +1580,15 @@ export const APP_DICT = {
 
   "settings.sections": ["Asetusten osiot", "Settings sections"],
   "settings.general": ["Yleiset", "General"],
+  /* The dialog a new bookkeeping opens with (§8.3). */
+  "settings.setupTitle": ["Uusi kirjanpito", "New bookkeeping"],
+  "settings.setupIntro": [
+    "Valitse kirjanpidon asetukset. Voit muuttaa näitä myöhemmin Asetuksista.",
+    "Choose the settings for this bookkeeping. You can change them later in Settings.",
+  ],
+  "settings.setupSkip": ["Ohita", "Skip"],
+  "settings.setupStart": ["Aloita", "Start"],
+
   "settings.exportLang": ["Tiedoston kieli", "File language"],
   "settings.exportLangHint": [
     "Kieli, jolla kirjanpito tallennetaan: tiedoston nimi, CSV:n sarakkeet ja arvot sekä liitekansio. Summat, päivämäärät ja erotin pysyvät samoina molemmilla kielillä.",

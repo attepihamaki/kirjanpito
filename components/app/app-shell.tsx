@@ -9,6 +9,7 @@ import { AppTopbar } from "@/components/app/app-topbar"
 import { ImportOverlay } from "@/components/app/import-overlay"
 import { ExportDialog } from "@/components/export/export-dialog"
 import { RecurringDialog } from "@/components/ledger/recurring-dialog"
+import { SetupDialog } from "@/components/settings/setup-dialog"
 import { EntryDialog } from "@/components/entry/entry-dialog"
 import { Overlay } from "@/components/common/overlay"
 import { ReceiptViewer } from "@/components/receipt/receipt-viewer"
@@ -227,6 +228,7 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
         <ReceiptViewer />
         <ExportDialog />
         <RecurringDialog />
+        <SetupDialog />
       </SidebarProvider>
     </TooltipProvider>
   )

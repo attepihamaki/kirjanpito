@@ -100,6 +100,11 @@ export async function startNewBook(ctx: Ctx): Promise<void> {
     .getState()
     .newBook(new Date().getFullYear(), useLangStore.getState().lang)
   ctx.navigate(APP_ROUTES.overview)
+  /*
+   * §8.3: ask for the book's settings rather than leaving the defaults
+   * unspoken. The host is in AppShell, which the route above mounts.
+   */
+  useBookStore.getState().openDialog({ kind: "setup" })
 }
 
 export async function closeBook(ctx: Ctx): Promise<void> {
