@@ -116,6 +116,8 @@ export interface Category {
   vatRate: number
   /** Set on income categories; drives the §6.1 VAT treatment. */
   kind?: SalesKind
+  /** Set on expense categories bought from another EU country (§6.9). */
+  euPurchase?: EuPurchase
   /** Shown in the entry dialog's dropdown. */
   enabled: boolean
   /** User-created. */

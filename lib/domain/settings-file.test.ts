@@ -23,6 +23,7 @@ function settings(): BookSettings {
     line: "334",
     name: "Ohjelmistot",
     vatRate: 25.5,
+    euPurchase: "services",
     enabled: true,
     custom: true,
   })

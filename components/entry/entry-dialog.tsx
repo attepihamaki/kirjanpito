@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { CopyIcon, LockIcon, Trash2Icon } from "lucide-react"
+import { CopyIcon, InfoIcon, LockIcon, Trash2Icon } from "lucide-react"
 
 import { EntryTypeToggle } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
@@ -10,7 +10,7 @@ import { AttachmentGrid } from "@/components/entry/attachment-grid"
 import { EntryHistory } from "@/components/entry/entry-history"
 import { ReceiptPreview } from "@/components/entry/receipt-preview"
 import { AttachmentViewer } from "@/components/receipt/receipt-viewer"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
@@ -54,7 +54,6 @@ import {
   LINE_BY_KEY,
   RATES,
   categoryName,
-  canBeEuPurchase,
   isEuSaleKind,
 } from "@/lib/domain/accounts"
 import { euPurchaseVat } from "@/lib/domain/calc"
@@ -80,10 +79,9 @@ import { periodLabel } from "@/lib/i18n/period-label"
 import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
 import { deleteEntry } from "@/lib/commands/book-commands"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
-import { categoryAccount, categorySide } from "@/stores/selectors"
+import { categorySide, compareCategories } from "@/stores/selectors"
 import type {
   AmountMode,
-  EuPurchase,
   Attachment,
   Entry,
   EntryType,
@@ -114,11 +112,9 @@ interface FormState {
   /** The buyer's VAT number on an EU sale (§8.7). */
   buyerVatId: string
   /** What an EU purchase bought, "" for any other entry (§6.9). */
-  euPurchase: EuPurchase | ""
 }
 
 /** The rate an EU purchase starts from when its category is at 0 %. */
-const GENERAL_RATE = 25.5
 
 /** The three fields §8.5 validates, named as they are in `FormState`. */
 type ErrorField = "date" | "amount" | "catId"
@@ -181,7 +177,6 @@ function initialForm({
       settles: prefill?.settles ?? "",
       paid: "",
       buyerVatId: "",
-      euPurchase: "",
     }
   }
   const today = todayIso()
@@ -207,7 +202,6 @@ function initialForm({
           : (editing.paidOn ?? "")
         : "",
     buyerVatId: editing.buyerVatId ?? "",
-    euPurchase: editing.euPurchase ?? "",
   }
 }
 
@@ -363,7 +357,15 @@ function EntryDialogForm({
       const description = describeInvoice(guess, (number) =>
         f.t("receipt.invoiceDescription", { number })
       )
-      if (guess.vatRate != null) keepRate.current = true
+      /*
+       * The rate an EU invoice prints says nothing of the tax the buyer
+       * reports, so an EU category keeps the seller's earlier rate (§6.9).
+       */
+      const euCategory = !!(
+        previousCat && cats.find((c) => c.id === previousCat.catId)?.euPurchase
+      )
+      const readRate = euCategory ? null : guess.vatRate
+      if (readRate != null) keepRate.current = true
 
       setForm((prev) => ({
         ...prev,
@@ -376,7 +378,7 @@ function EntryDialogForm({
             : {}),
         amount: guess.amount != null ? formatMoneyPlain(guess.amount) : "",
         vatRate:
-          guess.vatRate ??
+          readRate ??
           rateOnDate(
             previousCat?.vatRate ?? suggested?.vatRate ?? prev.vatRate,
             guess.date ?? prev.date
@@ -485,13 +487,11 @@ function EntryDialogForm({
           // The entry's own category stays listed even when disabled (§8.5).
           return c.enabled || c.id === form.catId
         })
-        /* By account number, as the settings table lists them (§8.10), with the
-         * name deciding the several categories that share one account.
-         */
-        .sort(
-          (a, b) =>
-            categoryAccount(a) - categoryAccount(b) ||
-            f.collator.compare(categoryName(a, f.lang), categoryName(b, f.lang))
+        // In the order the settings table lists them (§8.10).
+        .sort((a, b) =>
+          compareCategories(a, b, (x, y) =>
+            f.collator.compare(categoryName(x, f.lang), categoryName(y, f.lang))
+          )
         )
     )
   }, [cats, form.type, form.catId, f.collator, f.lang])
@@ -520,10 +520,7 @@ function EntryDialogForm({
   const lock =
     mode === "edit" && editing ? entryLock(editing, marks, catMap) : null
   const euSale = isEuSaleKind(selectedCat?.kind)
-  const euPurchasable = canBeEuPurchase(
-    selectedCat && LINE_BY_KEY.get(selectedCat.line)
-  )
-  const euPurchase = (euPurchasable && form.euPurchase) || undefined
+  const euPurchase = selectedCat?.euPurchase
   const unpayable = canBeUnpaid(
     selectedCat && LINE_BY_KEY.get(selectedCat.line)
   )
@@ -724,7 +721,6 @@ function EntryDialogForm({
         settles: "",
         paid: "",
         buyerVatId: "",
-        euPurchase: "",
       }
       keepRate.current = false
       setForm(next)
@@ -885,7 +881,48 @@ function EntryDialogForm({
               </Field>
 
               <Field data-invalid={invalid("catId")}>
-                <FieldLabel>{f.t("entry.category")}</FieldLabel>
+                <div className="flex items-center gap-1">
+                  <FieldLabel>{f.t("entry.category")}</FieldLabel>
+                  {euPurchase ? (
+                    <Popover>
+                      {/*
+                       * Not a native button: a locked entry's fieldset would
+                       * disable one, and this text is still worth reading.
+                       */}
+                      <PopoverTrigger
+                        openOnHover
+                        delay={0}
+                        nativeButton={false}
+                        aria-label={f.t("entry.euPurchaseInfo")}
+                        render={
+                          <span
+                            className={buttonVariants({
+                              variant: "ghost",
+                              size: "icon-sm",
+                              className: "-my-1 text-muted-foreground",
+                            })}
+                          />
+                        }
+                      >
+                        <InfoIcon />
+                      </PopoverTrigger>
+                      <PopoverContent
+                        align="start"
+                        aria-label={f.t("entry.euPurchaseInfo")}
+                      >
+                        {f.t("entry.euPurchaseVat", {
+                          a: f.money(
+                            euPurchaseVat({
+                              amount: formAmount ?? 0,
+                              vatRate: form.vatRate,
+                            })
+                          ),
+                          r: f.rate(form.vatRate),
+                        })}
+                      </PopoverContent>
+                    </Popover>
+                  ) : null}
+                </div>
                 <OptionSelect
                   invalid={invalid("catId")}
                   options={catOptions}
@@ -895,8 +932,9 @@ function EntryDialogForm({
                     // Picking a category pre-fills its default rate (§8.5).
                     update({
                       catId: value,
+                      // An EU category hides the rate, so it sets it (§6.9).
                       vatRate:
-                        cat && !keepRate.current
+                        cat && (cat.euPurchase || !keepRate.current)
                           ? rateOnDate(cat.vatRate, form.date)
                           : form.vatRate,
                     })
@@ -948,49 +986,13 @@ function EntryDialogForm({
                   )}
                 </Field>
               ) : null}
-              {euPurchasable ? (
+              {euPurchase &&
+              selectedCat &&
+              LINE_BY_KEY.get(selectedCat.line)?.noVatDeduction ? (
                 <Field>
-                  <FieldLabel>{f.t("entry.euPurchase")}</FieldLabel>
-                  <OptionSelect
-                    options={[
-                      { value: "no", label: f.t("entry.euPurchaseNo") },
-                      { value: "goods", label: f.t("entry.euPurchaseGoods") },
-                      {
-                        value: "services",
-                        label: f.t("entry.euPurchaseServices"),
-                      },
-                    ]}
-                    value={euPurchase ?? "no"}
-                    onChange={(value) =>
-                      update({
-                        euPurchase: value === "no" ? "" : (value as EuPurchase),
-                        // A category at 0 % says nothing of the tax due here.
-                        ...(value !== "no" && !form.vatRate
-                          ? { vatRate: rateOnDate(GENERAL_RATE, form.date) }
-                          : {}),
-                      })
-                    }
-                    label={f.t("entry.euPurchase")}
-                  />
-                  <FieldDescription>
-                    {euPurchase
-                      ? f.t("entry.euPurchaseVat", {
-                          a: f.money(
-                            euPurchaseVat({
-                              amount: formAmount ?? 0,
-                              vatRate: form.vatRate,
-                            })
-                          ),
-                        })
-                      : f.t("entry.euPurchaseHint")}
+                  <FieldDescription className="text-warning">
+                    {f.t("entry.euPurchaseNoDeduction")}
                   </FieldDescription>
-                  {euPurchase &&
-                  selectedCat &&
-                  LINE_BY_KEY.get(selectedCat.line)?.noVatDeduction ? (
-                    <FieldDescription className="text-warning">
-                      {f.t("entry.euPurchaseNoDeduction")}
-                    </FieldDescription>
-                  ) : null}
                 </Field>
               ) : null}
             </fieldset>
@@ -1053,7 +1055,13 @@ function EntryDialogForm({
               ) : null}
 
               {/* Paired for the same reason as date and type above. */}
-              <div className="grid gap-5 min-[560px]:grid-cols-2">
+              <div
+                className={
+                  euPurchase
+                    ? "grid gap-5"
+                    : "grid gap-5 min-[560px]:grid-cols-2"
+                }
+              >
                 <Field data-invalid={invalid("amount")}>
                   <FieldLabel htmlFor="entry-sum">
                     {f.t("entry.amount")}
@@ -1076,43 +1084,45 @@ function EntryDialogForm({
                   ) : null}
                 </Field>
 
-                <Field>
-                  <FieldLabel>{f.t("entry.vatRate")}</FieldLabel>
-                  <OptionSelect
-                    options={rateOptions.map((rate) => ({
-                      value: String(rate),
-                      label: f.rate(rate),
-                    }))}
-                    value={String(form.vatRate)}
-                    onChange={(value) => {
-                      keepRate.current = true
-                      update({ vatRate: Number(value) })
-                    }}
-                    label={f.t("entry.vatRate")}
-                  />
-                  {mismatch ? (
-                    <FieldDescription className="text-warning">
-                      {mismatch.kind === "notYet"
-                        ? f.t("entry.rateNotYet", {
-                            r: f.rate(mismatch.rate),
-                            d: f.date(mismatch.since),
-                            s: f.rate(mismatch.suggested),
-                          })
-                        : f.t("entry.rateEnded", {
-                            r: f.rate(mismatch.rate),
-                            d: f.date(mismatch.until),
-                            s: f.rate(mismatch.suggested),
-                          })}
-                    </FieldDescription>
-                  ) : null}
-                  {noDeduction ? (
-                    <FieldDescription className="text-warning">
-                      {selectedCat?.line === "341"
-                        ? f.t("entry.vatNotDeductible341")
-                        : f.t("entry.vatNotDeductible")}
-                    </FieldDescription>
-                  ) : null}
-                </Field>
+                {euPurchase ? null : (
+                  <Field>
+                    <FieldLabel>{f.t("entry.vatRate")}</FieldLabel>
+                    <OptionSelect
+                      options={rateOptions.map((rate) => ({
+                        value: String(rate),
+                        label: f.rate(rate),
+                      }))}
+                      value={String(form.vatRate)}
+                      onChange={(value) => {
+                        keepRate.current = true
+                        update({ vatRate: Number(value) })
+                      }}
+                      label={f.t("entry.vatRate")}
+                    />
+                    {mismatch ? (
+                      <FieldDescription className="text-warning">
+                        {mismatch.kind === "notYet"
+                          ? f.t("entry.rateNotYet", {
+                              r: f.rate(mismatch.rate),
+                              d: f.date(mismatch.since),
+                              s: f.rate(mismatch.suggested),
+                            })
+                          : f.t("entry.rateEnded", {
+                              r: f.rate(mismatch.rate),
+                              d: f.date(mismatch.until),
+                              s: f.rate(mismatch.suggested),
+                            })}
+                      </FieldDescription>
+                    ) : null}
+                    {noDeduction ? (
+                      <FieldDescription className="text-warning">
+                        {selectedCat?.line === "341"
+                          ? f.t("entry.vatNotDeductible341")
+                          : f.t("entry.vatNotDeductible")}
+                      </FieldDescription>
+                    ) : null}
+                  </Field>
+                )}
               </div>
 
               {euPurchase ? null : (

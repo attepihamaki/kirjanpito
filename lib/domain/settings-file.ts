@@ -1,6 +1,7 @@
 import {
   LINE_BY_KEY,
   RETIRED_CATEGORY_ID,
+  canBeEuPurchase,
   defaultCategories,
 } from "@/lib/domain/accounts"
 import { isVatRate } from "@/lib/domain/money"
@@ -146,7 +147,7 @@ function parseRecurring(value: unknown): RecurringEntry | null {
 
 function parseCategory(value: unknown): Category | null {
   if (!isRecord(value)) return null
-  const { id, line, name, vatRate, kind, enabled, custom } = value
+  const { id, line, name, vatRate, kind, euPurchase, enabled, custom } = value
   if (typeof id !== "string" || !id) return null
   if (typeof line !== "string" || !LINE_BY_KEY.has(line)) return null
   if (typeof name !== "string" || !name.trim()) return null
@@ -161,6 +162,12 @@ function parseCategory(value: unknown): Category | null {
     custom: custom === true,
   }
   if (SALES_KINDS.includes(kind as SalesKind)) cat.kind = kind as SalesKind
+  if (
+    (euPurchase === "goods" || euPurchase === "services") &&
+    canBeEuPurchase(LINE_BY_KEY.get(line))
+  ) {
+    cat.euPurchase = euPurchase
+  }
   return cat
 }
 
@@ -352,6 +359,7 @@ export function serializeSettings(s: BookSettings): string {
       name: c.name,
       vatRate: c.vatRate,
       ...(c.kind ? { kind: c.kind } : {}),
+      ...(c.euPurchase ? { euPurchase: c.euPurchase } : {}),
       enabled: c.enabled,
       custom: c.custom,
     })),

@@ -106,6 +106,36 @@ describe("persisted preferences and bookkeeping (§12)", () => {
     expect(byId.get("333")?.vatRate).toBe(24)
   })
 
+  it("moves a stored EU purchase to an EU category on its line", async () => {
+    const cats = defaultCategories().filter((c) => !c.euPurchase)
+    const entries = [
+      {
+        id: "a",
+        voucher: 1,
+        date: "2026-03-10",
+        description: "Pilvipalvelu",
+        type: "expense",
+        catId: "344-other",
+        amount: 10_000,
+        vatRate: 25.5,
+        amountMode: "net",
+        euPurchase: "services",
+      },
+    ]
+    localStorage.setItem(
+      BOOK_STORAGE_KEY,
+      JSON.stringify({ version: 9, state: { open: true, cats, entries } })
+    )
+
+    await useBookStore.persist.rehydrate()
+
+    expect(useBookStore.getState().entries[0]).toMatchObject({
+      catId: "344-eu-services",
+      euPurchase: "services",
+      amount: 10_000,
+    })
+  })
+
   it("adds the VAT payment and refund categories to a stored list", async () => {
     const cats = defaultCategories().filter((c) => !c.id.startsWith("vat-"))
     localStorage.setItem(

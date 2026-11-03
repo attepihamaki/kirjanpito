@@ -416,6 +416,11 @@ export function parseCsv(
     })
     if (resolved.created) newCategoryCount++
     const cat = resolved.cat
+    // A category the row itself brings in takes its EU status from the row (§6.9).
+    if (resolved.created) {
+      const eu = euPurchaseColumn(get("eu_purchase"), cat).euPurchase
+      if (eu) cat.euPurchase = eu
+    }
 
     const rateRaw = get("vat")
     // "" means "use the category default"; "0" is an explicit zero.
@@ -487,11 +492,16 @@ export function parseCsv(
   }
 }
 
-/** What an EU purchase bought, kept only on a line that can be one (§6.9). */
+/**
+ * What an EU purchase bought, kept only on a line that can be one (§6.9). The
+ * category decides when it says. A row marked on any other category is moved
+ * to an EU category when the book opens (`moveEuPurchasesToCategories`).
+ */
 function euPurchaseColumn(
   value: string,
   cat: Category
 ): { euPurchase?: EuPurchase } {
+  if (cat.euPurchase) return { euPurchase: cat.euPurchase }
   const euPurchase = EU_PURCHASE_FROM_CSV[value.trim().toLowerCase()]
   return euPurchase && canBeEuPurchase(LINE_BY_KEY.get(cat.line))
     ? { euPurchase }

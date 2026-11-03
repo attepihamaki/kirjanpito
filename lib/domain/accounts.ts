@@ -2,6 +2,7 @@ import type {
   Bucket,
   Category,
   EntryType,
+  EuPurchase,
   Lang,
   SalesKind,
 } from "@/lib/domain/types"
@@ -69,6 +70,9 @@ export function canBeEuPurchase(line: AccountLine | undefined): boolean {
     line?.side === "expense" && !line.settlement && !line.owner && !line.loan
   )
 }
+
+/** The rate an EU category starts from: what a Finnish buyer usually reports (§6.9). */
+export const GENERAL_RATE = 25.5
 
 /** Sales the EC Sales List covers, the retired category included (§5, §8.7). */
 export function isEuSaleKind(kind: SalesKind | undefined): boolean {
@@ -627,6 +631,52 @@ export const SALES: readonly SalesCategoryDef[] = [
   { id: "300-eu", fi: "Myynti – EU", en: "Sales – EU", vatRate: 0, kind: "eu" },
 ]
 
+export interface EuPurchaseCategoryDef {
+  id: string
+  line: string
+  fi: string
+  en: string
+  euPurchase: EuPurchase
+}
+
+/**
+ * Purchases from other EU countries, the counterpart of the EU sales (§6.9).
+ * Each sits on a line of its own rather than on one shared line like the sales,
+ * because Form 5 has no single line for purchases. A custom category covers any
+ * other line (§8.10). They come after the other categories, so a CSV row with
+ * no category name still finds its line's own category.
+ */
+export const EU_PURCHASES: readonly EuPurchaseCategoryDef[] = [
+  {
+    id: "333-eu-goods",
+    line: "333",
+    fi: "Ostot ja varastojen muutokset – EU",
+    en: "Purchases and changes in inventory – EU",
+    euPurchase: "goods",
+  },
+  {
+    id: "334-eu-services",
+    line: "334",
+    fi: "Ulkopuoliset palvelut – EU",
+    en: "External services – EU",
+    euPurchase: "services",
+  },
+  {
+    id: "344-eu-services",
+    line: "344-other",
+    fi: "Muut vähennyskelpoiset kulut – EU, palvelut",
+    en: "Other deductible expenses – EU, services",
+    euPurchase: "services",
+  },
+  {
+    id: "asset-purchase-eu",
+    line: "asset-purchase",
+    fi: "Koneiden ja kaluston hankinta – EU",
+    en: "Purchase of machinery and equipment – EU",
+    euPurchase: "goods",
+  },
+]
+
 /**
  * A category that no new entry should use. It stays in the list so that older
  * entries and files keep their category, and the VAT return asks the user to
@@ -641,6 +691,7 @@ export const RETIRED_CATEGORY_ID = "300-eu"
 export const DEFAULT_EN_NAMES: Readonly<Record<string, string>> =
   Object.fromEntries([
     ...SALES.map((s) => [s.id, s.en]),
+    ...EU_PURCHASES.map((p) => [p.id, p.en]),
     ...ALL_LINES.filter((x) => x.key !== "300").map((x) => [x.key, x.name.en]),
   ])
 
@@ -679,7 +730,7 @@ export const FORMER_NAMES: Readonly<Record<string, readonly string[]>> = {
   "asset-sale": ["Käyttöomaisuuden myynti", "Sale of fixed assets"],
 }
 
-/** The 41 built-in categories: six sales plus one per remaining line. */
+/** The built-in categories: six sales, one per remaining line and four EU purchases. */
 export function defaultCategories(): Category[] {
   const sales: Category[] = SALES.map((s) => ({
     id: s.id,
@@ -701,7 +752,16 @@ export function defaultCategories(): Category[] {
       custom: false,
     })
   )
-  return [...sales, ...rest]
+  const euPurchases: Category[] = EU_PURCHASES.map((p) => ({
+    id: p.id,
+    line: p.line,
+    name: p.fi,
+    vatRate: GENERAL_RATE,
+    euPurchase: p.euPurchase,
+    enabled: true,
+    custom: false,
+  }))
+  return [...sales, ...rest, ...euPurchases]
 }
 
 export function lineOf(cat: Category): AccountLine | undefined {

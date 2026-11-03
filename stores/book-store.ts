@@ -11,6 +11,11 @@ import type { RecurringEntry } from "@/lib/domain/recurring"
 import { mergeCategories } from "@/lib/domain/settings-file"
 import { assignVouchers, keepVoucher } from "@/lib/domain/voucher"
 import {
+  moveEuPurchasesToCategories,
+  syncEuPurchase,
+} from "@/lib/domain/eu-purchase-category"
+import { uid } from "@/lib/domain/id"
+import {
   DEFAULT_LAYOUT,
   type OverviewWidget,
 } from "@/lib/domain/overview-layout"
@@ -115,6 +120,14 @@ export type EntryPrefill = Partial<
     | "settles"
   >
 >
+
+/** Voucher numbers, and each entry's EU status from its category (§6.9). */
+function numbered(
+  entries: readonly Entry[],
+  cats: readonly Category[]
+): Entry[] {
+  return [...assignVouchers(syncEuPurchase(entries, cats))]
+}
 
 export type DialogState =
   | { kind: "none" }
@@ -661,11 +674,19 @@ export const useBookStore = create<BookStore>()(
       replaceBook: (next) => {
         const s = next.settings ?? {}
         const vatPeriod = s.vatPeriod ?? get().vatPeriod
+        const book = moveEuPurchasesToCategories(
+          {
+            entries: next.entries,
+            recurring: s.recurring ?? [],
+            cats: next.cats,
+          },
+          uid
+        )
         set({
           ...clearedFilters,
           open: true,
-          entries: [...assignVouchers(next.entries)],
-          cats: next.cats,
+          entries: [...assignVouchers(syncEuPurchase(book.entries, book.cats))],
+          cats: book.cats,
           fileName: next.fileName,
           fileHandle: next.fileHandle,
           savedAt: next.savedAt,
@@ -677,7 +698,7 @@ export const useBookStore = create<BookStore>()(
           vatFiled: s.vatFiled ?? {},
           yearsArchived: s.yearsArchived ?? {},
           form5Filed: s.form5Filed ?? {},
-          recurring: s.recurring ?? [],
+          recurring: book.recurring,
           assetOpening: s.assetOpening ?? null,
           bankBalance: s.bankBalance ?? null,
           loanOpening: s.loanOpening ?? null,
@@ -702,7 +723,7 @@ export const useBookStore = create<BookStore>()(
         if (i >= 0) entries[i] = keepVoucher(entry, entries[i])
         else entries.push(entry)
         set({
-          ...withLog(get(), [...assignVouchers(entries)]),
+          ...withLog(get(), numbered(entries, get().cats)),
           dirty: true,
           gcTick: get().gcTick + 1,
         })
@@ -710,7 +731,7 @@ export const useBookStore = create<BookStore>()(
 
       addEntries: (added) =>
         set({
-          ...withLog(get(), [...assignVouchers([...get().entries, ...added])]),
+          ...withLog(get(), numbered([...get().entries, ...added], get().cats)),
           dirty: true,
           gcTick: get().gcTick + 1,
         }),
@@ -744,7 +765,7 @@ export const useBookStore = create<BookStore>()(
           return next ? keepVoucher(next, e) : e
         })
         set({
-          ...withLog(get(), [...assignVouchers(entries)]),
+          ...withLog(get(), numbered(entries, get().cats)),
           dirty: true,
           gcTick: get().gcTick + 1,
         })
@@ -780,7 +801,7 @@ export const useBookStore = create<BookStore>()(
         set({
           ...withLog(
             get(),
-            [...assignVouchers([...back, ...get().entries])],
+            numbered([...back, ...get().entries], get().cats),
             "restore"
           ),
           dirty: true,
@@ -955,7 +976,7 @@ export const useBookStore = create<BookStore>()(
     }),
     {
       name: BOOK_STORAGE_KEY,
-      version: 9,
+      version: 10,
       storage: bookStorage,
       /*
        * Prerender must not touch localStorage; StoreHydrator rehydrates after
@@ -1022,6 +1043,22 @@ export const useBookStore = create<BookStore>()(
         // A stored list may predate a default category or its current name (§5).
         if (Array.isArray(blob.cats)) {
           blob.cats = mergeCategories(blob.cats as Category[])
+        }
+        // An EU purchase marked on the entry moves to an EU category (§6.9).
+        if (Array.isArray(blob.entries) && Array.isArray(blob.cats)) {
+          const book = moveEuPurchasesToCategories(
+            {
+              entries: blob.entries as Entry[],
+              recurring: Array.isArray(blob.recurring)
+                ? (blob.recurring as RecurringEntry[])
+                : [],
+              cats: blob.cats as Category[],
+            },
+            uid
+          )
+          blob.entries = syncEuPurchase(book.entries, book.cats)
+          blob.recurring = book.recurring
+          blob.cats = book.cats
         }
         return blob as unknown as PersistedBook
       },

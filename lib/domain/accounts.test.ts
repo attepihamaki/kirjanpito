@@ -12,6 +12,7 @@ import {
   categoryLabel,
   categoryName,
   defaultCategories,
+  EU_PURCHASES,
   groupName,
   lineName,
 } from "@/lib/domain/accounts"
@@ -117,9 +118,11 @@ describe("SALES", () => {
 describe("defaultCategories", () => {
   const cats = defaultCategories()
 
-  it("returns 41 categories: six sales plus one per remaining line", () => {
-    expect(cats).toHaveLength(43)
-    expect(cats).toHaveLength(SALES.length + ALL_LINES.length - 1)
+  it("returns six sales, one per remaining line and four EU purchases", () => {
+    expect(cats).toHaveLength(47)
+    expect(cats).toHaveLength(
+      SALES.length + ALL_LINES.length - 1 + EU_PURCHASES.length
+    )
   })
 
   it("enables all but the retired one and marks none custom", () => {

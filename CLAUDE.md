@@ -153,7 +153,7 @@ interface Entry {
   settles?: string // VAT payment or refund only: the period key it settles (§6.6)
   paidOn?: string | null // payment date if not `date`; null while open (§6.3)
   buyerVatId?: string // the buyer's VAT number on an EU sale (§8.7)
-  euPurchase?: "goods" | "services" // bought from another EU country with no VAT on the invoice (§6.9)
+  euPurchase?: "goods" | "services" // a copy of its category's, for `calcEntry` (§6.9)
 }
 ```
 
@@ -189,6 +189,7 @@ interface Category {
   name: string // Finnish name (custom categories: the user's name)
   vatRate: number // default VAT %
   kind?: "domestic" | "euGoods" | "euServices" | "eu" | "nonEu" | "reverse" // for income categories
+  euPurchase?: "goods" | "services" // for expense categories bought from another EU country (§6.9)
   enabled: boolean // shown in the entry dialog's dropdown
   custom: boolean // user-created
 }
@@ -269,7 +270,18 @@ The table order is also the display order of the income statement. **It is not q
 
 **So are the owner's own transfers.** `OWNER_LINES` holds `owner-withdrawal` "Yksityisotto" (expense) and `owner-investment` "Yksityissijoitus" (income), both on account 2000 at 0 %. Like 2939, 2000 is the app's own number and was not checked against a published chart. `AccountLine.owner` marks them, `offStatement` covers them, and the VAT report skips them like settlements (§6.7). `ALL_LINES` is the 30 statement lines and these, with the loan lines of §6.8.
 
-**Default categories:** the six sales categories, plus one category per remaining line, with `id = line key`, `name = Finnish line name`, `vatRate = line default VAT`, and `kind = "domestic"` for income lines.
+**EU purchases have categories of their own**, the counterpart of the EU sales (§6.9):
+
+| id                | line           | Finnish                                     | English                                  | euPurchase |
+| ----------------- | -------------- | ------------------------------------------- | ---------------------------------------- | ---------- |
+| 333-eu-goods      | 333            | Ostot ja varastojen muutokset – EU                         | Purchases and changes in inventory – EU                    | goods      |
+| 334-eu-services   | 334            | Ulkopuoliset palvelut – EU                  | External services – EU                   | services   |
+| 344-eu-services   | 344-other      | Muut vähennyskelpoiset kulut – EU, palvelut | Other deductible expenses – EU, services | services   |
+| asset-purchase-eu | asset-purchase | Koneiden ja kaluston hankinta – EU          | Purchase of machinery and equipment – EU | goods      |
+
+All start at 25,5 %. They come last in the list, so a CSV row with no category name still finds its line's own category. The dropdowns and the settings table list a line's own category before its EU one (`compareCategories`), whatever the names.
+
+**Default categories:** the six sales categories, the four EU purchases, plus one category per remaining line, with `id = line key`, `name = Finnish line name`, `vatRate = line default VAT`, and `kind = "domestic"` for income lines.
 
 **Expense summary buckets** (Yhteenveto columns): `purchases` = Ostot ja ulkopuoliset palvelut, `personnel` = Henkilöstökulut, `depreciation` = Tilat, poistot ja edustus, `otherDeductible` = Muut vähennyskelpoiset kulut, `financial` = Rahoituskulut, `provisions` = Varausten muutokset, `nondeductible` = Vähennyskelvottomat kulut.
 
@@ -366,13 +378,17 @@ For the selected year, by month (net amounts):
 
 ### 6.9 Purchases from other EU countries
 
-A seller in another EU country invoices a VAT-registered buyer without VAT, and the buyer reports the tax (vero.fi, "Ilmoituksen täyttöohje"). `Entry.euPurchase` marks such an expense as `goods` or `services`. It belongs to the entry and not to the category, because the same cost can be bought at home or abroad, so software from Ireland stays on 344.
+A seller in another EU country invoices a VAT-registered buyer without VAT, and the buyer reports the tax (vero.fi, "Ilmoituksen täyttöohje"). **The category says so**, as it does for an EU sale: `Category.euPurchase` is `goods` or `services`, on the four defaults of §5 or on a custom category. The purchase categories sit on several lines rather than on one like the sales, because Form 5 has no single line for purchases, and a custom category with "Osto muusta EU-maasta" set (§8.10) covers any other line.
+
+- **`Entry.euPurchase` is a copy of the category's**, because `calcEntry` works from the entry alone and is called everywhere. `syncEuPurchase` keeps the two equal on every add, edit and opened file (`lib/domain/eu-purchase-category.ts`), and the category wins.
+- **An entry marked on a category that does not say so moves** to an EU category on the same line (`moveEuPurchasesToCategories`), when a file opens and in `persist.migrate` (version 10). A stored book or an older file can hold these. A default category moves to the default on its line if there is one. Otherwise a custom category "{name} – EU, palvelut" or "– EU, tavarat" is made. Only the category changes, so the Form 5 line, the return and a filed period stay as they were, and the change log records nothing.
 
 - **`amount` is what the invoice says and what was paid.** `calcEntry` gives it no VAT, so the statement, the ledger, the bank estimate and open items all read it as they should. `amountMode` is always `net`. `vatRate` is only the rate the tax is reported at, and `euPurchaseVat` works that tax out.
 - **On the return**, goods fill 313 and 305, services 314 and 306, and the deductible tax joins 307, so the tax payable does not change. The return asks for the amount even when no tax falls on it, so an EU purchase at 0 % counts too (`countsOnVatReturn`).
 - **On a line with `noVatDeduction`** the tax is reported but not deducted, so it adds to the tax payable. It is not a cost in the statement by itself, and the dialog says to book it as a 0 % cost of its own. The dialog's advice to book the gross at 0 % does not fit an EU purchase, and `vatNotDeductible` leaves these out.
-- **It can sit on any cost or on a fixed asset** (`canBeEuPurchase`), not on a VAT settlement, an owner's transfer or a loan. A recurring template keeps it, since a monthly subscription is the usual case.
-- A category at 0 % starts the entry at the general rate. The dialog hides "Summa on", and the ledger shows a pill.
+- **A custom category can be one on any cost line** (`canBeEuPurchase`), and the settings file drops the status from any other. A recurring template follows its category, since a monthly subscription is the usual case.
+- **Bulk category changes do not cross the line** (§8.4). An EU purchase's amount is without VAT and any other entry's follows its mode, so moving one across would change what was paid. The entry dialog can change it, with the amount in view.
+- **The rate comes from the category.** The dialog hides "ALV %" and "Summa on" on an EU category. An info icon beside "Luokka" opens a popover on hover or tap that says what the category is for and names the tax and the rate, and the receipt preview shows them too. The warning about a tax that cannot be deducted stays in view. Picking one sets the category's rate as it was on the entry's date, whatever was there before. A purchase taxed at another rate takes a custom EU category at that rate (§8.10), and an entry saved at another rate keeps it. A rate read from an invoice PDF is ignored on an EU category, since the invoice prints no Finnish tax. The ledger shows a pill.
 - **Not handled:** a business that is not VAT registered, which reports these on its own, and imports from outside the EU.
 
 ---
@@ -403,7 +419,7 @@ A seller in another EU country invoices a VAT-registered buyer without VAT, and 
   - `settles` is the period a VAT payment or refund settles (`2026-10`, `2026-Q4`, `2026`), empty on every other row (§6.6).
   - `paid` is the payment date when it is not the entry's own, `avoin` while the entry is open, and otherwise empty (§6.3).
   - `buyer_vat` is the buyer's VAT number on an EU sale (§8.7), empty on every other row.
-  - `eu_purchase` is `tavara` or `palvelu` on an EU purchase (§6.9), empty on every other row.
+  - `eu_purchase` is `tavara` or `palvelu` on an EU purchase (§6.9), empty on every other row. A CSV opened on its own has no `settings.json`, so this is what tells a custom EU category it is one. A row marked on any other category moves to an EU category when the book opens.
   - Rows are sorted by date, then by voucher number. The format is identical in both UI languages, so it opens directly in Finnish Excel.
   - **A text cell that Excel would run as a formula gets a leading apostrophe.** That is `description`, `category` or `receipts` starting with `=`, `+`, `-`, `@`, a tab or a carriage return. A value that already starts with apostrophes before one of those gets one more, and the import takes exactly one off, so every value round-trips. The amount and rate columns are left alone, so a negative amount stays a number. Excel may show the apostrophe in the cell.
 - **Import (be lenient):**
@@ -678,7 +694,7 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
   - Row actions: **edit (pencil)**, **copy as new**, and delete. Clicking or pressing Enter on a row also edits it.
   - Responsive: the category column is hidden under 1240 px. Under 560 px, the type, net, VAT and actions columns are hidden (tap the row to edit); the signed gross is what still tells income from expense there.
 - **Bulk actions.** Ticking rows, or the header box for the whole page, shows a bar above the table (`components/ledger/bulk-bar.tsx`) with the count, "Vaihda luokka" and "Poista valitut".
-  - The category list offers the enabled categories of the selected side. A mix of income and expenses cannot share a category, so the bar says so instead of offering one. Each entry keeps its own VAT rate and its voucher number.
+  - The category list offers the enabled categories of the selected side, EU purchases only for EU purchases (§6.9). A mix of income and expenses, or of EU purchases and other costs, cannot share a category, so the bar says so instead of offering one. Each entry keeps its own VAT rate and its voucher number.
   - Both go through `lib/commands/bulk-commands.ts`: the delete asks first, both refuse an entry in a locked period (§8.11), and both can be undone from the toast for 10 seconds.
   - The selection belongs to the period and filters it was made under. Changing either starts over, so the bar never acts on rows that are no longer listed. It is component state, not stored.
 - **Pagination:** the row count ("16 kirjausta") at the left-hand end, and at the right "Rivejä sivulla" with a 10/25/50/100 select (default 10), "Sivu 1 / 2", and first / previous / next / last icon buttons. The strip reads as "what you are looking at" / "how to move through it", which is why the count lives here rather than in the toolbar. The page resets to 1 when filters, sorting or the month change. It sits **inside the table's surface**, as the categories table places it (§8.10) — `ledger-table.tsx` renders the table alone and the view composes the `Surface` around both. `TablePagination` owns that strip, its padding and the rule above it: the table body drops the last row's own bottom border, which in a table that ends its surface would land on the surface's edge. **It is always shown**, even on a single page: the rows-per-page select is how the page length is set, so hiding the row until the list outgrows that length would hide the only control that changes it.
@@ -699,7 +715,7 @@ A two-column modal. On mobile the columns stack.
   - Description (placeholder "Esim. Lasku 1006 – Asiakas Oy").
   - Category select: only enabled categories of the chosen type, plus the entry's current category even if disabled.
   - Amount, right-aligned with tabular figures.
-  - VAT % select. Picking a category sets its default rate **as it was on the entry's date** (§5), and changing the date moves an unchosen rate across a rate change. A rate the user picked, one read from a PDF, and the rate of an entry being edited or copied count as chosen and stay. When the rate does not fit the date, a warning-coloured line under the field says so ("25,5 % on voimassa 1.9.2024 alkaen. Tälle päivälle verokanta on 24 %."). Saving is never blocked by it. A second warning line follows when the category's VAT cannot be deducted and the rate is above 0 %, saying to book the gross amount at 0 % (`vatNotDeductible`).
+  - VAT % select, hidden on an EU purchase category, where the amount takes the whole row (§6.9). Picking a category sets its default rate **as it was on the entry's date** (§5), and changing the date moves an unchosen rate across a rate change. A rate the user picked, one read from a PDF, and the rate of an entry being edited or copied count as chosen and stay. When the rate does not fit the date, a warning-coloured line under the field says so ("25,5 % on voimassa 1.9.2024 alkaen. Tälle päivälle verokanta on 24 %."). Saving is never blocked by it. A second warning line follows when the category's VAT cannot be deducted and the rate is above 0 %, saying to book the gross amount at 0 % (`vatNotDeductible`).
   - "Summa on" segmented control (Verollinen / Veroton).
   - A warning-coloured line under the amount when another entry has the same date, side and gross amount, naming its voucher number and description (`duplicateOf`). Attaching a file that another entry already holds raises a toast naming that entry (`entryWithReceipt`). Both are hints: two equal purchases on one day, or one receipt covering two entries, can be right.
   - An inline error line.
@@ -804,7 +820,8 @@ On **Luokat**:
   - Type — the same `EntryTypeToggle` the entry dialog uses, so the two controls read alike: Tulo before Kulu, coloured when selected.
   - Income statement line, filtered by type.
   - Name (required).
-  - Default VAT % (validated as 0 ≤ x < 100).
+  - Default VAT % (validated as 0 ≤ x < 100). Left empty, 0, or 25,5 on an EU purchase.
+  - "Osto muusta EU-maasta" (Ei / Kyllä, tavara / Kyllä, palvelu), on the expense side only (§6.9). It is fixed once the category exists.
   - **"Lisää" sits on the panel's footer strip**, not in the grid. It used to share the fourth cell with the VAT input, which cramped both.
   - New income categories get `kind: "domestic"`.
   - One error line (`FieldError`) under the grid, and **the field it is about carries `aria-invalid`** — the error is stored as `{ field, message }`. A bad VAT rate used to light up the name input, because the message was a bare string with nowhere to point. Typing in the offending field clears it.
@@ -1240,7 +1257,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
   Its pre-paint inline script reads that key before any of our JS runs, so a
   second source of truth would drift.
 - Both preferences used to live in the `bookkeeping` blob. `persist.migrate`
-  (`version: 3`; the store is now at 9, §4, §5, §6.6, §6.7) moves each into its own key and drops the field,
+  (`version: 3`; the store is now at 10, §4, §5, §6.6, §6.7, §6.9) moves each into its own key and drops the field,
   seeding only a key that is still empty — the separate key is the newer truth.
 - IndexedDB `bookkeeping-receipts`, store `files`: receipt Blobs keyed by
   attachment id.

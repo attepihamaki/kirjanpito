@@ -34,12 +34,13 @@ import { toast } from "@/components/ui/toast"
 import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { resetCategories } from "@/lib/commands/book-commands"
-import { LINES, categoryName } from "@/lib/domain/accounts"
+import { GENERAL_RATE, LINES, categoryName } from "@/lib/domain/accounts"
 import { uid } from "@/lib/domain/id"
 import { isVatRate, parseRate } from "@/lib/domain/money"
-import type { Category, EntryType } from "@/lib/domain/types"
+import type { Category, EntryType, EuPurchase } from "@/lib/domain/types"
 import {
   categoryAccount,
+  compareCategories,
   categorySide,
   paginate,
   usedCategoryIds,
@@ -70,6 +71,7 @@ function AddCategoryForm() {
   const [side, setSide] = React.useState<EntryType>("expense")
   const [lineChoice, setLine] = React.useState<string | null>(null)
   const [rate, setRate] = React.useState("")
+  const [eu, setEu] = React.useState<EuPurchase | "">("")
   /*
    * The message and the field it is about, so the error line and the
    * `aria-invalid` on the offending input always agree (§8.10).
@@ -101,7 +103,9 @@ function AddCategoryForm() {
       setError({ field: "name", message: f.t("settings.nameRequired") })
       return
     }
-    const parsed = rate.trim() === "" ? 0 : parseRate(rate)
+    const euPurchase = side === "expense" && eu ? eu : undefined
+    const parsed =
+      rate.trim() === "" ? (euPurchase ? GENERAL_RATE : 0) : parseRate(rate)
     if (parsed == null || !isVatRate(parsed)) {
       setError({ field: "rate", message: f.t("settings.vatInvalid") })
       return
@@ -112,6 +116,7 @@ function AddCategoryForm() {
       name: name.trim(),
       vatRate: parsed,
       ...(side === "income" ? { kind: "domestic" as const } : {}),
+      ...(euPurchase ? { euPurchase } : {}),
       enabled: true,
       custom: true,
     }
@@ -119,6 +124,7 @@ function AddCategoryForm() {
     toast.add({ title: f.t("settings.categoryAdded", { c: category.name }) })
     setName("")
     setRate("")
+    setEu("")
     setError(null)
   }
 
@@ -186,6 +192,24 @@ function AddCategoryForm() {
             onKeyDown={(e) => e.key === "Enter" && submit()}
           />
         </Field>
+
+        {side === "expense" ? (
+          <Field>
+            <FieldLabel>{f.t("settings.euPurchase")}</FieldLabel>
+            <OptionSelect
+              options={[
+                { value: "no", label: f.t("settings.euPurchaseNo") },
+                { value: "goods", label: f.t("entry.euPurchaseGoods") },
+                { value: "services", label: f.t("entry.euPurchaseServices") },
+              ]}
+              value={eu || "no"}
+              onChange={(value) =>
+                setEu(value === "no" ? "" : (value as EuPurchase))
+              }
+              label={f.t("settings.euPurchase")}
+            />
+          </Field>
+        ) : null}
       </FieldGroup>
 
       <FieldError className="mt-3">{error?.message}</FieldError>
@@ -251,12 +275,12 @@ function CategoryTable() {
         typeof av === "number" && typeof bv === "number"
           ? av - bv
           : f.collator.compare(String(av), String(bv))
+      const names = (x: Category, y: Category) =>
+        f.collator.compare(categoryName(x, f.lang), categoryName(y, f.lang))
       return (
-        (cmp ||
-          f.collator.compare(
-            categoryName(a, f.lang),
-            categoryName(b, f.lang)
-          )) * dir
+        (key === "account"
+          ? compareCategories(a, b, names)
+          : cmp || names(a, b)) * dir
       )
     })
   }, [cats, query, typeFilter, sort, f.lang, f.collator])

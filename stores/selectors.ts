@@ -186,6 +186,22 @@ export function categoryAccount(cat: Category) {
   return LINE_BY_KEY.get(cat.line)?.account ?? 0
 }
 
+/**
+ * The order categories are listed in: by account number, a line's own category
+ * before its EU purchases (§6.9), then by name.
+ */
+export function compareCategories(
+  a: Category,
+  b: Category,
+  compareNames: (a: Category, b: Category) => number
+): number {
+  return (
+    categoryAccount(a) - categoryAccount(b) ||
+    Number(!!a.euPurchase) - Number(!!b.euPurchase) ||
+    compareNames(a, b)
+  )
+}
+
 /** Clamp a page to the available range and return the visible slice. */
 export function paginate<T>(rows: readonly T[], page: number, size: number) {
   const pages = Math.max(1, Math.ceil(rows.length / size))

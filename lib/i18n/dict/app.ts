@@ -639,6 +639,10 @@ export const APP_DICT = {
     pl("1 selected", "{n} selected"),
   ],
   "ledger.bulkCategory": ["Vaihda luokka", "Change category"],
+  "ledger.bulkMixedEu": [
+    "Luokan voi vaihtaa, kun valitut ovat kaikki EU-ostoja tai kaikki muita kuluja.",
+    "To change the category, select only EU purchases or only other expenses.",
+  ],
   "ledger.bulkMixed": [
     "Luokan voi vaihtaa, kun valitut ovat kaikki tuloja tai kaikki kuluja.",
     "To change the category, select only income or only expenses.",
@@ -818,20 +822,12 @@ export const APP_DICT = {
     "Correction: voucher {n}, {x}",
   ],
   "entry.historyTitle": ["Muutoshistoria", "Change history"],
-  "entry.euPurchase": [
-    "Osto muusta EU-maasta",
-    "Purchase from another EU country",
-  ],
-  "entry.euPurchaseNo": ["Ei", "No"],
   "entry.euPurchaseGoods": ["Kyllä, tavara", "Yes, goods"],
   "entry.euPurchaseServices": ["Kyllä, palvelu", "Yes, services"],
-  "entry.euPurchaseHint": [
-    "Valitse tämä, kun toisessa EU-maassa oleva myyjä laskuttaa ilman arvonlisäveroa.",
-    "Choose this when a seller in another EU country invoices without VAT.",
-  ],
+  "entry.euPurchaseInfo": ["Mikä on EU-osto?", "What is an EU purchase?"],
   "entry.euPurchaseVat": [
-    "Kirjaa laskun summa. Vero {a} menee ALV-ilmoitukselle sekä verona että vähennyksenä, joten maksettava vero ei muutu.",
-    "Book the invoice amount. The tax of {a} goes on the VAT return both as tax and as a deduction, so the tax payable does not change.",
+    "Tämä luokka on ostoille, jotka toisessa EU-maassa oleva myyjä laskuttaa ilman arvonlisäveroa. Kirjaa laskun summa. Vero {a} ({r}) menee ALV-ilmoitukselle sekä verona että vähennyksenä, joten maksettava vero ei muutu.",
+    "This category is for purchases a seller in another EU country invoices without VAT. Book the invoice amount. The tax of {a} ({r}) goes on the VAT return both as tax and as a deduction, so the tax payable does not change.",
   ],
   "entry.euPurchaseNoDeduction": [
     "Tämän kulun veroa ei saa vähentää, joten se kasvattaa maksettavaa veroa. Vero ei tule tuloslaskelmaan tästä kirjauksesta, joten kirjaa se omana 0 %:n kulunaan.",
@@ -1602,6 +1598,11 @@ export const APP_DICT = {
     "The bookkeeping is saved to the opened file a few seconds after each change. You can undo a delete from its notification for 10 seconds, and the restored entry is saved the same way. Edits to an entry can’t be undone, and the file keeps no earlier versions. If the browser would have to ask anything, autosave waits until you save once yourself.",
   ],
   "settings.addCategory": ["Lisää oma luokka", "Add a category"],
+  "settings.euPurchase": [
+    "Osto muusta EU-maasta",
+    "Purchase from another EU country",
+  ],
+  "settings.euPurchaseNo": ["Ei", "No"],
   "settings.line": ["Tuloslaskelman rivi", "Income statement line"],
   "settings.namePlaceholder": ["Esim. Työkalut", "E.g. Tools"],
   "settings.defaultVat": ["Oletus ALV %", "Default VAT %"],

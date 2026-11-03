@@ -13,7 +13,7 @@ import {
 } from "@/lib/commands/bulk-commands"
 import type { Entry } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
-import { categoryAccount, categorySide } from "@/stores/selectors"
+import { categorySide, compareCategories } from "@/stores/selectors"
 
 /**
  * What can be done to the selected ledger rows (§8.4): move them to another
@@ -36,17 +36,26 @@ export function BulkBar({
     ? selected[0]?.type
     : undefined
 
+  /*
+   * An EU purchase's amount is without VAT and any other's follows its own
+   * mode, so moving one across would change what was paid (§6.9).
+   */
+  const eu = !!selected[0]?.euPurchase
+  const euMixed = selected.some((e) => !!e.euPurchase !== eu)
+
   const options = React.useMemo(
     () =>
       cats
-        .filter((c) => c.enabled && categorySide(c) === type)
-        .sort(
-          (a, b) =>
-            categoryAccount(a) - categoryAccount(b) ||
-            f.collator.compare(f.catName(a), f.catName(b))
+        .filter(
+          (c) => c.enabled && categorySide(c) === type && !!c.euPurchase === eu
+        )
+        .sort((a, b) =>
+          compareCategories(a, b, (x, y) =>
+            f.collator.compare(f.catName(x), f.catName(y))
+          )
         )
         .map((c) => ({ value: c.id, label: f.catLabel(c) })),
-    [cats, type, f]
+    [cats, type, eu, f]
   )
 
   const recategorize = async (catId: string) => {
@@ -66,7 +75,7 @@ export function BulkBar({
         {f.t("ledger.selected", { n: selected.length })}
       </span>
 
-      {type ? (
+      {type && !euMixed ? (
         <OptionSelect
           options={options}
           value=""
@@ -78,7 +87,7 @@ export function BulkBar({
         />
       ) : (
         <span className="text-xs text-muted-foreground">
-          {f.t("ledger.bulkMixed")}
+          {type ? f.t("ledger.bulkMixedEu") : f.t("ledger.bulkMixed")}
         </span>
       )}
 

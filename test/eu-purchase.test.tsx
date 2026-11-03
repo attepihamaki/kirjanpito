@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { EntryDialog } from "@/components/entry/entry-dialog"
 import { LangProvider } from "@/components/lang-provider"
+import { BulkBar } from "@/components/ledger/bulk-bar"
 import { VatView } from "@/components/vat/vat-view"
 import { defaultCategories } from "@/lib/domain/accounts"
 import type { Entry } from "@/lib/domain/types"
@@ -19,7 +20,7 @@ const subscription: Entry = {
   date: "2026-03-10",
   description: "Pilvipalvelu",
   type: "expense",
-  catId: "344-other",
+  catId: "344-eu-services",
   amount: 10_000,
   vatRate: 25.5,
   amountMode: "net",
@@ -54,12 +55,57 @@ describe("an EU purchase in the entry dialog", () => {
     mount()
 
     expect(
-      screen.getByText(/Vero 25,50.*menee ALV-ilmoitukselle/)
-    ).toBeVisible()
-    expect(
       screen.getByText(/Vero 25,50.*ilmoitetaan itse ALV-ilmoituksella/)
     ).toBeVisible()
     expect(screen.queryByText("Summa on")).not.toBeInTheDocument()
+  })
+
+  it("hides the rate and names it behind the info icon", async () => {
+    mount()
+
+    expect(screen.queryByText("ALV %")).not.toBeInTheDocument()
+    expect(screen.queryByText(/menee ALV-ilmoitukselle/)).toBeNull()
+
+    fireEvent.click(screen.getByLabelText("Mikä on EU-osto?"))
+
+    expect(
+      await screen.findByText(/Vero 25,50 € \(25,5 %\) menee ALV-ilmoitukselle/)
+    ).toBeVisible()
+  })
+
+  it("has no info icon on any other category", () => {
+    useBookStore.setState({
+      entries: [{ ...subscription, catId: "344-other", euPurchase: undefined }],
+    })
+    mount()
+
+    expect(screen.queryByLabelText("Mikä on EU-osto?")).toBeNull()
+  })
+
+  it("keeps a saved rate of its own", async () => {
+    useBookStore.setState({ entries: [{ ...subscription, vatRate: 13.5 }] })
+    mount()
+    fireEvent.click(screen.getByRole("button", { name: "Tallenna" }))
+
+    await waitFor(() =>
+      expect(useBookStore.getState().dialog.kind).toBe("none")
+    )
+    expect(useBookStore.getState().entries[0].vatRate).toBe(13.5)
+  })
+
+  it("shows the rate again on any other category", () => {
+    useBookStore.setState({
+      entries: [{ ...subscription, catId: "344-other", euPurchase: undefined }],
+    })
+    mount()
+
+    expect(screen.getByText("ALV %")).toBeVisible()
+  })
+
+  it("has no choice of its own, since the category says it", () => {
+    mount()
+
+    expect(screen.queryByText("Osto muusta EU-maasta")).not.toBeInTheDocument()
   })
 
   it("keeps the mark when saved", async () => {
@@ -73,6 +119,38 @@ describe("an EU purchase in the entry dialog", () => {
     const [saved] = useBookStore.getState().entries
     expect(saved.euPurchase).toBe("services")
     expect(saved.amountMode).toBe("net")
+  })
+})
+
+describe("changing several entries' category", () => {
+  const other: Entry = {
+    ...subscription,
+    id: "b",
+    voucher: 2,
+    catId: "344-other",
+    amountMode: "gross",
+    euPurchase: undefined,
+  }
+  const bar = (selected: Entry[]) =>
+    render(
+      <LangProvider lang="fi">
+        <BulkBar selected={selected} onDone={() => {}} />
+      </LangProvider>
+    )
+
+  it("says why a mix of EU purchases and other costs cannot share one", () => {
+    bar([subscription, other])
+
+    expect(
+      screen.getByText(/kaikki EU-ostoja tai kaikki muita kuluja/)
+    ).toBeVisible()
+  })
+
+  it("offers a selection of one kind a category", () => {
+    bar([other])
+
+    expect(screen.queryByText(/kaikki EU-ostoja/)).not.toBeInTheDocument()
+    expect(screen.getAllByText("Vaihda luokka").length).toBeGreaterThan(0)
   })
 })
 
@@ -95,7 +173,7 @@ describe("an EU purchase in the VAT view", () => {
 
   it("has no EU panel without EU purchases", () => {
     useBookStore.setState({
-      entries: [{ ...subscription, euPurchase: undefined }],
+      entries: [{ ...subscription, catId: "344-other", euPurchase: undefined }],
     })
     render(
       <LangProvider lang="fi">
