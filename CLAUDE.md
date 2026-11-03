@@ -130,9 +130,10 @@ This is what the app replaces. Useful for understanding the domain and for check
 ### Entry (kirjaus)
 
 **Identifiers are English everywhere in the code and in browser storage.** The
-CSV columns and their `tulo`/`kulu` and `brutto`/`netto` values stay Finnish —
-that is the file format (§7.1), and `lib/domain/csv.ts` is the only module that
-knows the Finnish names. Nothing else, including `Entry`, mentions them.
+CSV columns are English too. Their `tulo`/`kulu` and `brutto`/`netto` values
+stay Finnish, because that is the file format (§7.1), and `lib/domain/csv.ts` is
+the only module that knows those values and the Finnish column names older files
+carry. Nothing else, including `Entry`, mentions them.
 
 ```ts
 type EntryType = "income" | "expense"
@@ -259,7 +260,7 @@ The table order is also the display order of the income statement. **It is not q
 
 **Fixed assets are off the statement.** `CAPITAL_LINES` holds two more lines, both on account 1100: `asset-purchase` "Käyttöomaisuuden hankinta" (expense) and `asset-sale` "Käyttöomaisuuden myynti" (income), each at 25,5 %. Their VAT goes on the VAT return like any other entry's, but they are neither income nor an expense: the income statement, Form 5, the summary and the ledger's totals cards all leave them out, and the journal's totals too, though its rows and the general ledger list them. The cost reaches the result as depreciation (§8.8). `LINES` stays the statement's 30 lines, and `ALL_LINES` is what a category can sit on. Custom categories cannot be added to these two.
 
-**VAT payments and refunds are off the statement too.** `SETTLEMENT_LINES` holds `vat-payment` "Arvonlisäveron maksu" (expense) and `vat-refund` "Arvonlisäveron palautus" (income), both on account 2939 at 0 %. Single-entry books have no balance sheet, so 2939 is the app's own number for the CSV's `tili` column; it is not one Form 5 asks for and was not checked against a published chart. `AccountLine.settlement` marks them, and `offStatement` is the one test for "capital or settlement" that the statement, the summary, the journal's totals and the ledger's totals cards use. The VAT report skips settlement lines whatever their rate (§6.6).
+**VAT payments and refunds are off the statement too.** `SETTLEMENT_LINES` holds `vat-payment` "Arvonlisäveron maksu" (expense) and `vat-refund` "Arvonlisäveron palautus" (income), both on account 2939 at 0 %. Single-entry books have no balance sheet, so 2939 is the app's own number for the CSV's `account` column; it is not one Form 5 asks for and was not checked against a published chart. `AccountLine.settlement` marks them, and `offStatement` is the one test for "capital or settlement" that the statement, the summary, the journal's totals and the ledger's totals cards use. The VAT report skips settlement lines whatever their rate (§6.6).
 
 **So are the owner's own transfers.** `OWNER_LINES` holds `owner-withdrawal` "Yksityisotto" (expense) and `owner-investment` "Yksityissijoitus" (income), both on account 2000 at 0 %. Like 2939, 2000 is the app's own number and was not checked against a published chart. `AccountLine.owner` marks them, `offStatement` covers them, and the VAT report skips them like settlements (§6.7). `ALL_LINES` is the 30 statement lines and these six.
 
@@ -333,7 +334,7 @@ For the selected year, by month (net amounts):
 
 - **Each payment or refund is an entry**, on `vat-payment` or `vat-refund` (§5), so it takes the next voucher number in the year's series and can carry the bank statement as its receipt. KPL 2:1 has the books record financing transactions as well as income and expenses, and KPL 2:5 has every entry rest on a dated, numbered voucher. Vero's guidance on VAT bookkeeping only covers the transactions that set the tax, and says nothing about the payment itself, so this follows the Accounting Act.
 - **It is neither income nor an expense.** VAT is a debt to the state or a claim on it (the Accounting Board's general guideline on recording VAT, 31.10.2017), so the entry stays out of the income statement, Form 5, the summary, the VAT return and the ledger's and journal's totals. It is in the journal's rows and under account 2939 in the general ledger.
-- **`Entry.settles` names the return it pays**, a period key of §6.5. The entry dialog shows "Verokausi" for a settlement category, offering this year's and last year's periods. Unset, it is the period before the one the date falls in (`defaultSettledKey`): September's tax is paid in November. The CSV carries it in `verokausi` (§7.1).
+- **`Entry.settles` names the return it pays**, a period key of §6.5. The entry dialog shows "Verokausi" for a settlement category, offering this year's and last year's periods. Unset, it is the period before the one the date falls in (`defaultSettledKey`): September's tax is paid in November. The CSV carries it in `settles` (§7.1).
 - **An entry counts whatever period it was booked under** (`settlementSummary`), like a filed mark: three monthly payments add up under their quarter. A quarter's payment seen from one of its months is listed but not compared, since it cannot be split.
 - The sum is compared with the period's calculated due. A difference is shown, not treated as an error: a part payment, a refund Vero used for other taxes, or an entry changed after filing all cause one.
 - **The record is the user's**, like the filed mark: the app cannot see the bank or OmaVero and never books one by itself.
@@ -356,29 +357,34 @@ For the selected year, by month (net amounts):
 ### 7.1 CSV
 
 - **Header row**, always exactly these columns in this order:
-  `tositenro;pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite;verokausi`
-- **The column names and their values are Finnish and must stay Finnish** — this
-  is the user's file, it opens in Finnish Excel, and files already exported have
-  to keep importing. The in-memory and stored field names are English (§4), and
-  `lib/domain/csv.ts` is the single translation layer: `TYPE_TO_CSV` /
-  `TYPE_FROM_CSV` for `tulo`/`kulu` and `MODE_TO_CSV` for `brutto`/`netto`.
-  Nothing else in the codebase may spell a Finnish column name.
+  `voucher;date;description;type;account;category;amount;vat;mode;receipts;settles`
+- **The column names are English and the values stay Finnish.** This is the
+  user's file, and it opens in Finnish Excel with decimal commas, Finnish category
+  names, `tulo`/`kulu` and `brutto`/`netto`. The header is the same in both UI
+  languages. `lib/domain/csv.ts` is the single translation layer: `TYPE_TO_CSV` /
+  `TYPE_FROM_CSV` for `tulo`/`kulu`, `MODE_TO_CSV` for `brutto`/`netto`.
+- **Files with the Finnish header must keep opening.** `FINNISH_COLUMNS` in
+  `lib/domain/csv.ts` maps `tositenro` (or `tositenumero`), `pvm`, `selite`,
+  `tyyppi`, `tili`, `luokka`, `summa`, `alv`, `syotto`, `tosite` and `verokausi`
+  to the columns above, and both the header match and the delimiter detection go
+  through it. Saving such a file writes the English header. Nothing else in the
+  codebase may spell a Finnish column name.
 - **Export:**
   - UTF-8 with BOM, `;` delimiter, CRLF line endings. Fields containing `;`, `"` or line breaks are quoted with `"` (doubled inside).
-  - `tositenro` is the voucher number (§4). `pvm` is ISO `YYYY-MM-DD`. `tyyppi` is `tulo` or `kulu`. `tili` is the account number.
-  - `luokka` is the category's **Finnish** name (stable across UI languages).
-  - `summa` uses a decimal comma with no thousands separator (`1882,50`). `alv` uses a decimal comma (`25,5`). `syotto` is `brutto` or `netto`.
-  - `tosite` holds the receipt paths inside the ZIP, separated by `|`. **These are written even when exporting CSV only**, so a plain CSV still records which receipts existed and a re-import can mark them missing per §7.2. The prototype dropped them, which made a CSV-only export lossy.
-  - `verokausi` is the period a VAT payment or refund settles (`2026-10`, `2026-Q4`, `2026`), empty on every other row (§6.6).
+  - `voucher` is the voucher number (§4). `date` is ISO `YYYY-MM-DD`. `type` is `tulo` or `kulu`. `account` is the account number.
+  - `category` is the category's **Finnish** name (stable across UI languages).
+  - `amount` uses a decimal comma with no thousands separator (`1882,50`). `vat` is the rate, with a decimal comma (`25,5`). `mode` is `brutto` or `netto`.
+  - `receipts` holds the receipt paths inside the ZIP, separated by `|`. **These are written even when exporting CSV only**, so a plain CSV still records which receipts existed and a re-import can mark them missing per §7.2. The prototype dropped them, which made a CSV-only export lossy.
+  - `settles` is the period a VAT payment or refund settles (`2026-10`, `2026-Q4`, `2026`), empty on every other row (§6.6).
   - Rows are sorted by date, then by voucher number. The format is identical in both UI languages, so it opens directly in Finnish Excel.
-  - **A text cell that Excel would run as a formula gets a leading apostrophe.** That is `selite`, `luokka` or `tosite` starting with `=`, `+`, `-`, `@`, a tab or a carriage return. A value that already starts with apostrophes before one of those gets one more, and the import takes exactly one off, so every value round-trips. The amount and rate columns are left alone, so a negative amount stays a number. Excel may show the apostrophe in the cell.
+  - **A text cell that Excel would run as a formula gets a leading apostrophe.** That is `description`, `category` or `receipts` starting with `=`, `+`, `-`, `@`, a tab or a carriage return. A value that already starts with apostrophes before one of those gets one more, and the import takes exactly one off, so every value round-trips. The amount and rate columns are left alone, so a negative amount stays a number. Excel may show the apostrophe in the cell.
 - **Import (be lenient):**
-  - `decodeCsv` reads the bytes: a UTF-16 BOM decides, then strict UTF-8, then windows-1252, which is what Excel's plain "CSV (semicolon delimited)" writes. Strip a BOM. Detect the delimiter from the header line (`;`, tab or `,`, whichever splits it most). Headers are matched case-insensitively. `pvm`, `tyyppi` and `summa` are required; the rest are optional.
+  - `decodeCsv` reads the bytes: a UTF-16 BOM decides, then strict UTF-8, then windows-1252, which is what Excel's plain "CSV (semicolon delimited)" writes. Strip a BOM. Detect the delimiter from the header line (`;`, tab or `,`, whichever splits it most). Headers are matched case-insensitively. `date`, `type` and `amount` are required; the rest are optional.
   - Dates are accepted as `YYYY-MM-DD` or `D.M.YYYY` and validated as real dates.
-  - `verokausi` is optional. It is kept only on a settlement category and only when it names a period; otherwise the entry goes by its date (§6.6).
-  - `tositenro` (or `tositenumero`) is optional. A positive whole number is kept; a missing, malformed or repeated one is numbered when the book opens (§4), so an older file without the column opens with its entries numbered by date.
+  - `settles` is optional. It is kept only on a settlement category and only when it names a period; otherwise the entry goes by its date (§6.6).
+  - `voucher` is optional. A positive whole number is kept; a missing, malformed or repeated one is numbered when the book opens (§4), so an older file without the column opens with its entries numbered by date.
   - Amounts may contain spaces, NBSP, `€` and a Unicode minus. If both `,` and `.` appear, the last one is the decimal separator. A lone comma is a decimal comma in both languages, so a file reads the same in either. More than two decimals is refused, in a file and in the entry dialog: `1,234` could mean 1,23 € or 1 234 €, and a guess would be silently wrong by a factor of a thousand.
-  - `syotto` values `netto` or `veroton` mean net; anything else means gross. An empty `alv` uses the category default, and so does one that is not a number from 0 up to 100 (`isVatRate`).
+  - `mode` values `netto` or `veroton` mean net; anything else means gross. An empty `vat` uses the category default, and so does one that is not a number from 0 up to 100 (`isVatRate`).
   - Category matching: same account number and side, and the name matches the Finnish name or the English default name (case-insensitive). If no name is given, the first category on that account is used. If there's no match but the account number exists, a **custom category** is created with that name. If the account is unknown, the entry is booked to 301 (income) or 344-other (expense) with a warning.
   - Invalid rows (bad date, type or amount) are skipped. A toast summarises: N entries imported, new categories, receipts imported, missing or rejected, and the first skipped rows.
   - After import, the selected year is the latest year found in the file.
@@ -399,11 +405,11 @@ tositteet/
       2026-10-28_lasku-1005-makinen-rakennus-oy.pdf
 ```
 
-- Path: `tositteet/{YYYY}/{MM}/{YYYY-MM-DD}_{slug(selite)}[_{n}].{ext}`. `_{n}` (1-based) is added only when the entry has several receipts. On a name collision, `-2`, `-3`, … is appended before the extension.
+- Path: `tositteet/{YYYY}/{MM}/{YYYY-MM-DD}_{slug(description)}[_{n}].{ext}`. `_{n}` (1-based) is added only when the entry has several receipts. On a name collision, `-2`, `-3`, … is appended before the extension.
 - Slug: lowercase; å/ä → a, ö → o; strip other diacritics; non-alphanumeric runs → `-`; trim dashes; at most 40 characters; fall back to `tosite`.
 - The extension comes from the file name (`jpeg` → `jpg`), otherwise from the MIME type.
 - Receipt files are stored without compression (STORE); the CSV and `settings.json` are DEFLATE-compressed.
-- **Import:** the user picks a ZIP. Use the shallowest `.csv` in it (ignoring `__MACOSX`). Paths in `tosite` are resolved relative to the CSV's folder, falling back to the ZIP root. Files found are stored in IndexedDB. Listed files that aren't found become `missing` attachments that keep their path, so re-exporting doesn't lose the reference. Importing a plain CSV that has `tosite` paths marks those receipts as missing in the same way. A listed path that names neither an image nor a PDF is not a receipt at all: it is dropped rather than kept as missing, so it cannot reappear in the next export, and the toast counts it.
+- **Import:** the user picks a ZIP. Use the shallowest `.csv` in it (ignoring `__MACOSX`). Paths in `receipts` are resolved relative to the CSV's folder, falling back to the ZIP root. Files found are stored in IndexedDB. Listed files that aren't found become `missing` attachments that keep their path, so re-exporting doesn't lose the reference. Importing a plain CSV that has `receipts` paths marks those receipts as missing in the same way. A listed path that names neither an image nor a PDF is not a receipt at all: it is dropped rather than kept as missing, so it cannot reappear in the next export, and the toast counts it.
 - Unpacking, decoding and writing every receipt to IndexedDB takes seconds for a real ZIP, so the import raises `importing` in the store and the UI shows progress once it passes 400 ms — see §8.2.
 
 ### 7.3 File naming when downloading a copy
@@ -414,7 +420,7 @@ The download dialog lets the user edit the base name, with a fixed extension sho
 
 ### 7.4 Receipt files
 
-- Accepted: images (`image/*`, including `.heic`/`.heif`) and PDF. Several per entry. **`isReceiptFile` in `lib/domain/receipt-path.ts` is the one place that decides this**, and every route in and out goes through it: the file picker (whose `accept` is only a hint, so the picked files are filtered again), drag and drop, and the `tosite` paths of an imported CSV or ZIP. Export applies it too — an attachment outside the rule gets no ZIP path and no `tosite` entry — so nothing a browser still holds from before the rule can leak back into a file.
+- Accepted: images (`image/*`, including `.heic`/`.heif`) and PDF. Several per entry. **`isReceiptFile` in `lib/domain/receipt-path.ts` is the one place that decides this**, and every route in and out goes through it: the file picker (whose `accept` is only a hint, so the picked files are filtered again), drag and drop, and the `receipts` paths of an imported CSV or ZIP. Export applies it too — an attachment outside the rule gets no ZIP path and no `receipts` entry — so nothing a browser still holds from before the rule can leak back into a file.
 - Images: if the long edge is ≤ 2000 px, the file is ≤ 1.5 MB and the type is JPEG/PNG/WebP, the original is kept. Otherwise it is redrawn onto a white canvas with the long edge at 2000 px and saved as JPEG at quality 0.85, with the extension renamed to `.jpg`. If the browser can't decode it (e.g. HEIC outside Safari), the original is kept and the preview shows the file name instead.
 - PDFs are stored as they are.
 - Stored in IndexedDB: database `bookkeeping-receipts`, object store `files`, key = attachment id, value = Blob. (The prototype used `kirjanpito-tositteet`; see §12.)
@@ -500,7 +506,7 @@ asks anything (below).
 ### 7.6 settings.json
 
 `lib/domain/settings-file.ts` parses and serialises it; `lib/domain/zip.ts`
-reads and writes it beside the CSV. The CSV stays the Finnish, Excel-friendly
+reads and writes it beside the CSV. The CSV stays the Excel-friendly
 format of §7.1. Everything else that belongs to a bookkeeping is here.
 
 ```json
@@ -606,7 +612,7 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
 2. **"Tositteesta veroilmoitukseen neljässä vaiheessa".** Four numbered steps: open or start, record receipts (including attaching), check the figures, export (a ZIP organised by year and month).
 3. **"Mitä kirjanpito laskee puolestasi".** Three cards: VAT (with rate chips), income statement (a mini statement), and monthly summary (a mini bar chart).
 4. **"Ei tiliä, ei tietokantaa".** A privacy explanation next to a CSV sample block.
-5. **"Kysyttyä".** An accordion with four questions: who it's for, whether it files returns, moving over from Excel (lists the columns; `tosite` is optional), and what happens when the browser is closed.
+5. **"Kysyttyä".** An accordion with four questions: who it's for, whether it files returns, moving over from Excel (lists the columns; `receipts` is optional), and what happens when the browser is closed.
 6. A closing call to action, "Aloita tämän kuun tositteista.", and a footer disclaimer: "Laskelmat eivät ole vero- tai kirjanpitoneuvontaa."
 
 - "Aloita uusi kirjanpito" opens the empty overview and sets the year to the current year. If there are unsaved changes, it asks first.
@@ -1152,9 +1158,9 @@ static files, so any static host would do.
 ## 12. Persistence keys
 
 **Storage names and the field names inside them are English**, so what a
-browser holds is legible without Finnish. The CSV and the ZIP's `tositteet/`
-folder are the file format and stay Finnish (§7.1, §7.2) — the two vocabularies
-meet only in `lib/domain/csv.ts`.
+browser holds is legible without Finnish. The CSV's values and the ZIP's
+`tositteet/` folder are the file format and stay Finnish (§7.1, §7.2), and the
+two vocabularies meet only in `lib/domain/csv.ts`.
 
 **The two app-level preferences each own a key**, outside the bookkeeping
 blob, and each holds a bare value rather than JSON. They belong to the
@@ -1239,7 +1245,7 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 ### Acceptance checklist
 
 - [ ] The §10 fixture gives the figures in §10.
-- [ ] Exporting a CSV and importing it back reproduces the same entries (including custom categories and the `syotto` mode).
+- [ ] Exporting a CSV and importing it back reproduces the same entries (including custom categories and the `mode` column).
 - [ ] Exporting a ZIP with receipts and importing it back restores the receipts. A plain CSV import keeps their paths as missing.
 - [ ] On Chrome, a file opened through the picker saves back to itself, survives a reload, and asks before overwriting a file edited elsewhere (§7.5). On Firefox and Safari the save row is absent and nothing else changes.
 - [ ] Every confirmation in §8.11 appears in the right situations, and only then.

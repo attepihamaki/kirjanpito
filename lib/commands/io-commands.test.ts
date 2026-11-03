@@ -12,7 +12,7 @@ import type { Ctx } from "@/lib/commands/ctx"
 const ctx: Ctx = { t: createAppT("fi"), navigate: vi.fn() }
 
 const CSV = [
-  "pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite",
+  "date;description;type;account;category;amount;vat;mode;receipts",
   "2026-01-08;Lasku 1001;tulo;300;Myynti – Suomi;2510,00;25,5;brutto;",
 ].join("\r\n")
 
@@ -130,7 +130,7 @@ describe("settings.json", () => {
     zip.file(
       "kirjanpito.csv",
       [
-        "pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite",
+        "date;description;type;account;category;amount;vat;mode;receipts",
         "2026-01-08;Lasku 1001;tulo;300;Myynti – Suomi;2510,00;25,5;brutto;",
         "2026-02-01;Adobe;kulu;334;Ohjelmistot;24,00;25,5;brutto;",
       ].join("\r\n")

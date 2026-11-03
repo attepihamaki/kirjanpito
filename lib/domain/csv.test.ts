@@ -67,7 +67,7 @@ describe("serializeCsv", () => {
   it("starts with a BOM and the exact header", () => {
     expect(out.startsWith(`﻿${HEADER}\r\n`)).toBe(true)
     expect(HEADER).toBe(
-      "tositenro;pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite;verokausi"
+      "voucher;date;description;type;account;category;amount;vat;mode;receipts;settles"
     )
   })
 
@@ -180,7 +180,7 @@ describe("detectDelimiter", () => {
   })
 
   it("is not fooled by a quoted field containing another delimiter", () => {
-    const header = 'pvm,selite,"a;b;c;d;e",summa,tyyppi'
+    const header = 'date,description,"a;b;c;d;e",amount,type'
     expect(detectDelimiter(csvText([header]))).toBe(",")
   })
 })
@@ -200,7 +200,10 @@ describe("parseCsv — happy path", () => {
   it("matches headers case-insensitively", () => {
     const r = ok(
       parseCsv(
-        csvText(["PVM;Selite;TYYPPI;summa", "2026-01-08;Lasku;tulo;100,00"]),
+        csvText([
+          "DATE;Description;TYPE;amount",
+          "2026-01-08;Lasku;tulo;100,00",
+        ]),
         baseCats
       )
     )
@@ -209,7 +212,7 @@ describe("parseCsv — happy path", () => {
 
   it("strips a BOM and tolerates LF, CRLF and trailing blank lines", () => {
     const r = ok(
-      parseCsv("﻿pvm;tyyppi;summa\n2026-01-08;tulo;100,00\r\n\r\n", baseCats)
+      parseCsv("﻿date;type;amount\n2026-01-08;tulo;100,00\r\n\r\n", baseCats)
     )
     expect(r.entries).toHaveLength(1)
   })
@@ -217,7 +220,7 @@ describe("parseCsv — happy path", () => {
   it("ignores unknown extra columns", () => {
     const r = ok(
       parseCsv(
-        csvText(["pvm;tyyppi;summa;muuta", "2026-01-08;tulo;100,00;roskaa"]),
+        csvText(["date;type;amount;muuta", "2026-01-08;tulo;100,00;roskaa"]),
         baseCats
       )
     )
@@ -228,7 +231,7 @@ describe("parseCsv — happy path", () => {
     const r = ok(
       parseCsv(
         csvText([
-          "pvm;tyyppi;summa",
+          "date;type;amount",
           "2024-01-08;tulo;100,00",
           "2027-05-01;tulo;100,00",
           "2026-01-08;tulo;100,00",
@@ -237,6 +240,89 @@ describe("parseCsv — happy path", () => {
       )
     )
     expect(r.latestYear).toBe(2027)
+  })
+})
+
+describe("parseCsv — Finnish column names", () => {
+  const FINNISH_HEADER =
+    "tositenro;pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite;verokausi"
+  const ROW =
+    "7;2026-11-12;ALV-maksu;kulu;2939;Arvonlisäveron maksu;362,18;0;netto;tositteet/2026/11/a.pdf;2026-10"
+  const EXPECTED = {
+    voucher: 7,
+    date: "2026-11-12",
+    description: "ALV-maksu",
+    type: "expense",
+    catId: "vat-payment",
+    amount: 36218,
+    vatRate: 0,
+    amountMode: "net",
+    paths: ["tositteet/2026/11/a.pdf"],
+    settles: "2026-10",
+  }
+
+  it("reads every column of a file with the Finnish header", () => {
+    const r = ok(parseCsv(csvText([FINNISH_HEADER, ROW]), baseCats))
+    expect(r.entries[0]).toMatchObject(EXPECTED)
+  })
+
+  it("reads the same row under the English header", () => {
+    const r = ok(parseCsv(csvText([HEADER, ROW]), baseCats))
+    expect(r.entries[0]).toMatchObject(EXPECTED)
+  })
+
+  it.each([",", "\t"] as const)(
+    "detects %j in a Finnish header",
+    (delimiter) => {
+      const header = FINNISH_HEADER.replaceAll(";", delimiter)
+      expect(detectDelimiter(csvText([header]))).toBe(delimiter)
+    }
+  )
+
+  it("matches Finnish names case-insensitively", () => {
+    const r = ok(
+      parseCsv(
+        csvText(["PVM;Selite;TYYPPI;summa", "2026-01-08;Lasku;tulo;100,00"]),
+        baseCats
+      )
+    )
+    expect(r.entries[0].amount).toBe(10000)
+  })
+
+  it("accepts tositenumero for the voucher number", () => {
+    const r = ok(
+      parseCsv(
+        csvText(["tositenumero;pvm;tyyppi;summa", "4;2026-01-08;tulo;1,00"]),
+        baseCats
+      )
+    )
+    expect(r.entries[0].voucher).toBe(4)
+  })
+
+  it("accepts a header that mixes the two languages", () => {
+    const r = ok(
+      parseCsv(csvText(["pvm;type;summa", "2026-01-08;tulo;1,00"]), baseCats)
+    )
+    expect(r.entries).toHaveLength(1)
+  })
+
+  it("names a missing column in English", () => {
+    expect(parseCsv(csvText(["pvm;selite", "a;b"]), baseCats)).toEqual({
+      ok: false,
+      code: "missing-columns",
+      missing: ["type", "amount"],
+    })
+  })
+
+  it("writes the English header when a Finnish file is saved again", () => {
+    const r = ok(parseCsv(csvText([FINNISH_HEADER, ROW]), baseCats))
+    const again = serializeCsv(
+      entriesFromImport(r.entries),
+      indexCategories(r.categories)
+    )
+    expect(again.split("\r\n")[0]).toBe(`﻿${HEADER}`)
+    expect(again).toContain(";kulu;")
+    expect(again).toContain(";netto;")
   })
 })
 
@@ -250,16 +336,18 @@ describe("parseCsv — required columns", () => {
   })
 
   it("names the missing required columns", () => {
-    expect(parseCsv(csvText(["selite;luokka", "a;b"]), baseCats)).toEqual({
+    expect(
+      parseCsv(csvText(["description;category", "a;b"]), baseCats)
+    ).toEqual({
       ok: false,
       code: "missing-columns",
-      missing: ["pvm", "tyyppi", "summa"],
+      missing: ["date", "type", "amount"],
     })
   })
 
   it("accepts a file with only the three required columns", () => {
     const r = ok(
-      parseCsv(csvText(["pvm;tyyppi;summa", "8.1.2026;kulu;12,50"]), baseCats)
+      parseCsv(csvText(["date;type;amount", "8.1.2026;kulu;12,50"]), baseCats)
     )
     expect(r.entries[0]).toMatchObject({
       date: "2026-01-08",
@@ -275,7 +363,7 @@ describe("parseCsv — leniency", () => {
     const r = ok(
       parseCsv(
         csvText([
-          "pvm;tyyppi;summa",
+          "date;type;amount",
           "2026-01-08;tulo;1,00",
           "9.1.2026;tulo;1,00",
         ]),
@@ -289,7 +377,7 @@ describe("parseCsv — leniency", () => {
     const r = ok(
       parseCsv(
         csvText([
-          "pvm;tyyppi;summa",
+          "date;type;amount",
           "2026-01-08;tulo;1 882,50 €",
           `2026-01-09;tulo;1${NBSP}882,50`,
           `2026-01-10;kulu;${MINUS}12,00`,
@@ -301,7 +389,7 @@ describe("parseCsv — leniency", () => {
   })
 
   /*
-   * The input is the CSV's own `syotto` value and stays Finnish; the expected
+   * The input is the CSV's own `mode` value and stays Finnish; the expected
    * value is the English AmountMode the parser maps it to.
    */
   it.each([
@@ -312,21 +400,21 @@ describe("parseCsv — leniency", () => {
     ["verollinen", "gross"],
     ["", "gross"],
     ["roskaa", "gross"],
-  ])("maps syotto %j to %s", (input, expected) => {
+  ])("maps mode %j to %s", (input, expected) => {
     const r = ok(
       parseCsv(
-        csvText(["pvm;tyyppi;summa;syotto", `2026-01-08;tulo;1,00;${input}`]),
+        csvText(["date;type;amount;mode", `2026-01-08;tulo;1,00;${input}`]),
         baseCats
       )
     )
     expect(r.entries[0].amountMode).toBe(expected)
   })
 
-  it("falls back to the category default when alv is empty", () => {
+  it("falls back to the category default when vat is empty", () => {
     const r = ok(
       parseCsv(
         csvText([
-          "pvm;tyyppi;tili;luokka;summa;alv",
+          "date;type;account;category;amount;vat",
           "2026-01-08;kulu;333;Ostot ja varastojen muutokset;100,00;",
         ]),
         baseCats
@@ -335,11 +423,11 @@ describe("parseCsv — leniency", () => {
     expect(r.entries[0].vatRate).toBe(25.5)
   })
 
-  it("falls back to the category default when alv is unparseable", () => {
+  it("falls back to the category default when vat is unparseable", () => {
     const r = ok(
       parseCsv(
         csvText([
-          "pvm;tyyppi;tili;luokka;summa;alv",
+          "date;type;account;category;amount;vat",
           "2026-01-08;kulu;333;Ostot ja varastojen muutokset;100,00;roskaa",
         ]),
         baseCats
@@ -349,12 +437,12 @@ describe("parseCsv — leniency", () => {
   })
 
   it.each(["-100", "100", "150"])(
-    "falls back to the category default when alv is %s",
+    "falls back to the category default when vat is %s",
     (rate) => {
       const r = ok(
         parseCsv(
           csvText([
-            "pvm;tyyppi;tili;luokka;summa;alv",
+            "date;type;account;category;amount;vat",
             `2026-01-08;kulu;333;Ostot ja varastojen muutokset;100,00;${rate}`,
           ]),
           baseCats
@@ -368,7 +456,7 @@ describe("parseCsv — leniency", () => {
     const r = ok(
       parseCsv(
         csvText([
-          "pvm;tyyppi;tili;luokka;summa;alv",
+          "date;type;account;category;amount;vat",
           "2026-01-08;kulu;344;Pilvipalvelut;100,00;-100",
         ]),
         baseCats
@@ -383,7 +471,7 @@ describe("parseCsv — leniency", () => {
     const r = ok(
       parseCsv(
         csvText([
-          "pvm;tyyppi;tili;luokka;summa;alv",
+          "date;type;account;category;amount;vat",
           "2026-01-08;kulu;333;Ostot ja varastojen muutokset;100,00;0",
         ]),
         baseCats
@@ -397,7 +485,7 @@ describe("parseCsv — category matching", () => {
   const parse = (rows: string[]) =>
     ok(
       parseCsv(
-        csvText(["pvm;tyyppi;tili;luokka;summa;alv", ...rows]),
+        csvText(["date;type;account;category;amount;vat", ...rows]),
         baseCats,
         createIdFactory("c")
       )
@@ -422,13 +510,13 @@ describe("parseCsv — category matching", () => {
     expect(r.newCategoryCount).toBe(0)
   })
 
-  it("books an empty luokka on 344 to Muut vähennyskelpoiset kulut", () => {
+  it("books an empty category on 344 to Muut vähennyskelpoiset kulut", () => {
     expect(parse(["2026-01-08;kulu;344;;1,00;"]).entries[0].catId).toBe(
       "344-other"
     )
   })
 
-  it("books an empty luokka on 300 to Myynti – Suomi", () => {
+  it("books an empty category on 300 to Myynti – Suomi", () => {
     expect(parse(["2026-01-08;tulo;300;;1,00;"]).entries[0].catId).toBe(
       "300-domestic"
     )
@@ -500,7 +588,7 @@ describe("parseCsv — skipped rows", () => {
   it("reports bad dates, types and amounts with codes", () => {
     const r = parseCsv(
       csvText([
-        "pvm;tyyppi;summa",
+        "date;type;amount",
         "2026-02-30;tulo;1,00",
         "2026-01-08;jotain;1,00",
         "2026-01-08;tulo;roskaa",
@@ -519,7 +607,7 @@ describe("parseCsv — skipped rows", () => {
     const r = ok(
       parseCsv(
         csvText([
-          "pvm;tyyppi;summa",
+          "date;type;amount",
           "",
           "2026-01-08;tulo;1,00",
           "",
@@ -533,13 +621,13 @@ describe("parseCsv — skipped rows", () => {
 
   /* What saving a bookkeeping with no entries writes. */
   it("reads a header with no rows as a bookkeeping with no entries", () => {
-    const r = parseCsv(csvText(["pvm;tyyppi;summa"]), baseCats)
+    const r = parseCsv(csvText(["date;type;amount"]), baseCats)
     expect(r.ok && r.entries).toEqual([])
   })
 
   it("fails with no-rows-read when every row is bad", () => {
     expect(
-      parseCsv(csvText(["pvm;tyyppi;summa", "roskaa;tulo;1,00"]), baseCats)
+      parseCsv(csvText(["date;type;amount", "roskaa;tulo;1,00"]), baseCats)
     ).toEqual({
       ok: false,
       code: "no-rows-read",
@@ -550,7 +638,7 @@ describe("parseCsv — skipped rows", () => {
   it("never emits translated text, only codes and params", () => {
     const r = parseCsv(
       csvText([
-        "pvm;tyyppi;tili;luokka;summa",
+        "date;type;account;category;amount",
         "2026-02-30;tulo;300;;1,00",
         "2026-01-08;tulo;999;Jotain;1,00",
       ]),
@@ -629,7 +717,7 @@ describe("voucher numbers", () => {
 
   it("leaves the number to the book when the file has none", () => {
     const text = csvText([
-      "pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite",
+      "date;description;type;account;category;amount;vat;mode;receipts",
       "2026-10-28;Lasku;tulo;300;;100,00;25,5;brutto;",
     ])
     const r = ok(parseCsv(text, baseCats, createIdFactory("v")))
@@ -847,7 +935,7 @@ describe("CSV round trip", () => {
   it("round-trips through a comma-delimited file", () => {
     /*
      * Re-emit the same cells with commas, quoting as a real comma file must:
-     * the decimal commas in `summa` force every amount to be quoted.
+     * the decimal commas in `amount` force every amount to be quoted.
      */
     const cells = Papa.parse<string[]>(serializeCsv(sample, cats).slice(1), {
       header: false,
@@ -892,7 +980,7 @@ describe("decodeCsv", () => {
 
   it("lets an Excel file match the standard categories", () => {
     const text =
-      "pvm;tyyppi;tili;luokka;summa\n8.1.2026;kulu;336;Eläke- ja henkilösivukulut;1,00\n"
+      "date;type;account;category;amount\n8.1.2026;kulu;336;Eläke- ja henkilösivukulut;1,00\n"
     const bytes = Uint8Array.from([...text].map((c) => c.charCodeAt(0)))
     const r = parseCsv(decodeCsv(bytes), defaultCategories())
     expect(r.ok && r.newCategoryCount).toBe(0)

@@ -112,7 +112,7 @@ describe("packZip", () => {
   it("reads an archive without settings.json as having none", async () => {
     const JSZip = (await import("jszip")).default
     const zip = new JSZip()
-    zip.file("a.csv", "pvm;tyyppi;summa")
+    zip.file("a.csv", "date;type;amount")
     const bytes = await zip.generateAsync({ type: "uint8array" })
     expect((await unpackZip(bytes))?.settingsText).toBeNull()
   })
@@ -121,7 +121,7 @@ describe("packZip", () => {
     // Incompressible receipt bytes next to a highly repetitive CSV.
     const random = new Uint8Array(64 * 1024)
     for (let i = 0; i < random.length; i++) random[i] = (i * 2654435761) & 0xff
-    const csvText = "pvm;tyyppi;summa\r\n".repeat(4000)
+    const csvText = "date;type;amount\r\n".repeat(4000)
 
     const bytes = await packZip({
       csvName: "a.csv",
@@ -187,7 +187,7 @@ describe("readReceipt", () => {
   const archive = (csvName: string, path: string) =>
     packZip({
       csvName,
-      csvText: "pvm;tyyppi;summa\r\n",
+      csvText: "date;type;amount\r\n",
       paths: new Map([["e#0", path]]),
       attachmentIds: new Map([["e#0", "a1"]]),
       read: async () => enc.encode("kuitti"),
@@ -286,7 +286,7 @@ describe("carrying receipts from the file being replaced", () => {
   const packed = (over: Partial<Parameters<typeof packZip>[0]> = {}) =>
     packZip({
       csvName: "kirjanpito.csv",
-      csvText: "pvm;tyyppi;summa\r\n",
+      csvText: "date;type;amount\r\n",
       paths: new Map([["e#0", PATH]]),
       attachmentIds: new Map(),
       read: async () => null,

@@ -600,7 +600,7 @@ export const DEFAULT_EN_NAMES: Readonly<Record<string, string>> =
   ])
 
 /**
- * Which category a CSV row with no `luokka` books to, by account number. Only
+ * Which category a CSV row with no `category` books to, by account number. Only
  * accounts carrying several categories need an entry here; the rest resolve to
  * their single category.
  */

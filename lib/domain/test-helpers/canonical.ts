@@ -15,23 +15,23 @@ import type {
  * regenerated on import. Category identity across the file boundary is
  * (account number, side, Finnish name) — exactly what the CSV carries.
  *
- * The field names are the CSV's own Finnish column names, not `Entry`'s
- * English ones: this type is the file row, and naming it after the columns is
- * what makes a failing assertion point at a column.
+ * The field names are the CSV's own column names, not `Entry`'s: this type is
+ * the file row, and naming it after the columns is what makes a failing
+ * assertion point at a column.
  */
 export interface CanonicalEntry {
-  pvm: string
-  selite: string
-  tyyppi: EntryType
-  tili: number | null
-  luokka: string
-  summa: number
-  alv: number
-  syotto: AmountMode
-  tosite: readonly string[]
+  date: string
+  description: string
+  type: EntryType
+  account: number | null
+  category: string
+  amount: number
+  vat: number
+  mode: AmountMode
+  receipts: readonly string[]
 }
 
-const byKey = (e: CanonicalEntry) => `${e.pvm}|${e.selite}|${e.summa}`
+const byKey = (e: CanonicalEntry) => `${e.date}|${e.description}|${e.amount}`
 
 function sort(rows: CanonicalEntry[]): CanonicalEntry[] {
   return rows.sort((a, b) => byKey(a).localeCompare(byKey(b)))
@@ -47,15 +47,15 @@ export function canonical(
       const cat = cats.get(e.catId)
       const line = cat ? LINE_BY_KEY.get(cat.line) : undefined
       return {
-        pvm: e.date,
-        selite: e.description.trim(),
-        tyyppi: e.type,
-        tili: line ? line.account : null,
-        luokka: cat ? cat.name : "",
-        summa: e.amount,
-        alv: e.vatRate,
-        syotto: e.amountMode,
-        tosite: (e.atts ?? [])
+        date: e.date,
+        description: e.description.trim(),
+        type: e.type,
+        account: line ? line.account : null,
+        category: cat ? cat.name : "",
+        amount: e.amount,
+        vat: e.vatRate,
+        mode: e.amountMode,
+        receipts: (e.atts ?? [])
           .map((a, i) => paths.get(attachmentKey(e.id, i)) ?? a.path ?? "")
           .filter(Boolean),
       }
@@ -72,15 +72,15 @@ export function canonicalImported(
       const cat = cats.get(e.catId)
       const line = cat ? LINE_BY_KEY.get(cat.line) : undefined
       return {
-        pvm: e.date,
-        selite: e.description.trim(),
-        tyyppi: e.type,
-        tili: line ? line.account : null,
-        luokka: cat ? cat.name : "",
-        summa: e.amount,
-        alv: e.vatRate,
-        syotto: e.amountMode,
-        tosite: e.paths,
+        date: e.date,
+        description: e.description.trim(),
+        type: e.type,
+        account: line ? line.account : null,
+        category: cat ? cat.name : "",
+        amount: e.amount,
+        vat: e.vatRate,
+        mode: e.amountMode,
+        receipts: e.paths,
       }
     })
   )
@@ -95,7 +95,7 @@ export function csvText(lines: readonly string[], bom = true): string {
 }
 
 /**
- * Turn an import result back into entries, with the `tosite` paths restored
+ * Turn an import result back into entries, with the `receipts` paths restored
  * as missing attachments — what a plain-CSV import produces (§7.2).
  */
 export function entriesFromImport(imported: readonly ImportedEntry[]): Entry[] {

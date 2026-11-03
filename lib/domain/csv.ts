@@ -36,13 +36,38 @@ import {
  * The column names live in `csv-header.ts`, which has no dependencies, so the
  * landing page and the import command can name them without pulling papaparse
  * into their bundles. This module is the only place the `tulo`/`kulu` and
- * `brutto`/`netto` *values* appear.
+ * `brutto`/`netto` *values* and the Finnish column names appear.
  */
 export { CSV_HEADER, CSV_HEADER_LINE }
 
-const REQUIRED = ["pvm", "tyyppi", "summa"] as const
+const REQUIRED = ["date", "type", "amount"] as const
 
-/** Entry type ⇄ the `tyyppi` column. */
+/**
+ * The Finnish column names, which files already exported carry. The import
+ * reads them as the English ones for good, and the export never writes them.
+ */
+const FINNISH_COLUMNS: ReadonlyMap<string, string> = new Map([
+  ["tositenro", "voucher"],
+  ["tositenumero", "voucher"],
+  ["pvm", "date"],
+  ["selite", "description"],
+  ["tyyppi", "type"],
+  ["tili", "account"],
+  ["luokka", "category"],
+  ["summa", "amount"],
+  ["alv", "vat"],
+  ["syotto", "mode"],
+  ["tosite", "receipts"],
+  ["verokausi", "settles"],
+])
+
+/** The column a header cell names, ignoring case and either language. */
+function columnName(cell: string): string {
+  const name = cell.trim().toLowerCase()
+  return FINNISH_COLUMNS.get(name) ?? name
+}
+
+/** Entry type ⇄ the `type` column. */
 const TYPE_TO_CSV: Readonly<Record<EntryType, string>> = {
   income: "tulo",
   expense: "kulu",
@@ -52,7 +77,7 @@ const TYPE_FROM_CSV: Readonly<Record<string, EntryType>> = {
   kulu: "expense",
 }
 
-/** Amount mode ⇄ the `syotto` column. "veroton" is accepted on import only. */
+/** Amount mode ⇄ the `mode` column. "veroton" is accepted on import only. */
 const MODE_TO_CSV: Readonly<Record<AmountMode, string>> = {
   gross: "brutto",
   net: "netto",
@@ -116,7 +141,7 @@ export function serializeCsv(
      * The path itself is what the rule is applied to: `buildReceiptPaths`
      * already drops the rest, but a caller-supplied map is not bound by it.
      */
-    const tosite = (e.atts ?? [])
+    const receipts = (e.atts ?? [])
       .map((a, i) => paths.get(attachmentKey(e.id, i)) ?? a.path ?? "")
       .filter((p) => p && isReceiptFile({ name: p, type: "" }))
       .join("|")
@@ -132,7 +157,7 @@ export function serializeCsv(
         formatAmountForCsv(e.amount),
         String(e.vatRate).replace(".", ","),
         MODE_TO_CSV[e.amountMode],
-        defuseFormula(tosite),
+        defuseFormula(receipts),
         e.settles ?? "",
       ]
         .map(quote)
@@ -175,7 +200,7 @@ export function decodeCsv(bytes: Uint8Array): string {
   }
 }
 
-/** The rate in the `alv` column, or null when it is not a usable one. */
+/** The rate in the `vat` column, or null when it is not a usable one. */
 function parseRateCell(cell: string): number | null {
   const rate = parseRate(cell)
   return rate != null && isVatRate(rate) ? rate : null
@@ -201,7 +226,7 @@ export function detectDelimiter(text: string): DetectedDelimiter {
       preview: 1,
     }).data[0]
     if (!row) continue
-    const names = new Set(row.map((c) => c.trim().toLowerCase()))
+    const names = new Set(row.map(columnName))
     const score = CSV_HEADER.filter((h) => names.has(h)).length
     // Ties keep the earlier candidate: ";" > "\t" > ",".
     if (score > bestScore) {
@@ -247,7 +272,7 @@ export interface ImportSuccess {
   /** The supplied categories plus any created during the import. */
   categories: Category[]
   newCategoryCount: number
-  /** Paths in `tosite` that named neither an image nor a PDF, and were dropped. */
+  /** Paths in `receipts` that named neither an image nor a PDF, and were dropped. */
   rejectedReceiptCount: number
   skipped: readonly SkippedRow[]
   warnings: readonly ImportWarning[]
@@ -312,7 +337,7 @@ export function parseCsv(
 
   const columns = new Map<string, number>()
   headerRow.cells.forEach((cell, i) => {
-    const name = cell.trim().toLowerCase()
+    const name = columnName(cell)
     if (name && !columns.has(name)) columns.set(name, i)
   })
 
@@ -334,26 +359,26 @@ export function parseCsv(
       return i == null ? "" : (cells[i] ?? "").trim()
     }
 
-    const date = parseCsvDate(get("pvm"))
+    const date = parseCsvDate(get("date"))
     if (!date) {
       skipped.push({ line, code: "bad-date" })
       continue
     }
 
-    const type = TYPE_FROM_CSV[get("tyyppi").toLowerCase()]
+    const type = TYPE_FROM_CSV[get("type").toLowerCase()]
     if (!type) {
       skipped.push({ line, code: "bad-type" })
       continue
     }
 
-    const amount = parseAmount(get("summa"))
+    const amount = parseAmount(get("amount"))
     if (amount == null) {
       skipped.push({ line, code: "bad-amount" })
       continue
     }
 
-    const name = restoreFormula(get("luokka"))
-    const accountRaw = get("tili")
+    const name = restoreFormula(get("category"))
+    const accountRaw = get("account")
     const account = /^\d+$/.test(accountRaw) ? Number(accountRaw) : null
 
     const resolved = resolveCategory({
@@ -365,21 +390,21 @@ export function parseCsv(
       byId,
       makeId,
       warnings,
-      rateHint: parseRateCell(get("alv")),
+      rateHint: parseRateCell(get("vat")),
     })
     if (resolved.created) newCategoryCount++
     const cat = resolved.cat
 
-    const rateRaw = get("alv")
+    const rateRaw = get("vat")
     // "" means "use the category default"; "0" is an explicit zero.
     const vatRate =
       rateRaw === "" ? cat.vatRate : (parseRateCell(rateRaw) ?? cat.vatRate)
 
-    const modeRaw = get("syotto").toLowerCase()
+    const modeRaw = get("mode").toLowerCase()
     const amountMode: AmountMode =
       modeRaw === "netto" || modeRaw === "veroton" ? "net" : "gross"
 
-    const listed = restoreFormula(get("tosite"))
+    const listed = restoreFormula(get("receipts"))
       .split("|")
       .map((p) => p.trim())
       .filter(Boolean)
@@ -395,21 +420,21 @@ export function parseCsv(
      * A number the file gives is kept. A missing, malformed or repeated one
      * is filled in by `assignVouchers` when the book is opened (§4).
      */
-    const voucherRaw = get("tositenro") || get("tositenumero")
+    const voucherRaw = get("voucher")
     const voucher = /^\d+$/.test(voucherRaw) ? Number(voucherRaw) : null
 
     entries.push({
       id: makeId(),
       ...(isVoucherNumber(voucher) ? { voucher } : {}),
       date,
-      description: restoreFormula(get("selite")),
+      description: restoreFormula(get("description")),
       type,
       catId: cat.id,
       amount,
       vatRate,
       amountMode,
       paths,
-      ...settledPeriod(get("verokausi"), cat),
+      ...settledPeriod(get("settles"), cat),
     })
 
     const y = yearOf(date)

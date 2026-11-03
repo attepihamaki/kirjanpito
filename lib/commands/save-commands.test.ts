@@ -26,7 +26,7 @@ vi.mock("@/lib/browser/receipt-store", async (original) => {
 const ctx: Ctx = { t: createAppT("fi"), navigate: vi.fn() }
 
 const CSV = [
-  "pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite",
+  "date;description;type;account;category;amount;vat;mode;receipts",
   "2026-01-08;Lasku 1001;tulo;300;Myynti – Suomi;2510,00;25,5;brutto;",
 ].join("\r\n")
 
@@ -151,7 +151,7 @@ describe("saving back to the opened file", () => {
     expect(csv.written).toHaveLength(0)
     expect(zip.written).toHaveLength(1)
     const archive = await unzipped(zip.written[0])
-    expect(archive?.csvText).toContain("pvm;selite")
+    expect(archive?.csvText).toContain("date;description")
     expect(archive?.settingsText).toContain('"vatPeriod"')
     expect(useBookStore.getState().dirty).toBe(false)
 
@@ -574,7 +574,7 @@ describe("receipts the browser does not hold", () => {
 
 describe("another book taking over during a save (§7.5)", () => {
   const OTHER_CSV =
-    "pvm;selite;tyyppi;tili;luokka;summa;alv\n2026-02-01;Toinen;kulu;333;;1,00;0\n"
+    "date;description;type;account;category;amount;vat\n2026-02-01;Toinen;kulu;333;;1,00;0\n"
 
   /** A linked ZIP whose write waits until the test lets it finish. */
   function slowZip() {
