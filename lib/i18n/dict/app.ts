@@ -533,14 +533,6 @@ export const APP_DICT = {
     "Määräpäivä on keväällä. Tarkista se OmaVerosta.",
     "It is due in the spring. Check the date in OmaVero.",
   ],
-  "overview.traderType": [
-    "Kerro, oletko liikkeen- vai ammatinharjoittaja",
-    "Say whether you are a liikkeenharjoittaja or an ammatinharjoittaja",
-  ],
-  "overview.traderTypeSub": [
-    "Asetukset, Yleiset. Se ratkaisee, kummalle vuodelle tulot ja kulut verotuksessa kuuluvat.",
-    "Settings, General. It decides which year income and expenses belong to for tax.",
-  ],
   "overview.yearClosed": [
     "Tilikausi {y} on päättynyt",
     "Financial year {y} has ended",
@@ -1162,12 +1154,8 @@ export const APP_DICT = {
     "Depreciation (337) and interest expenses (346) are counted as fully deductible, so 338 and 347 are the same amounts. If part of them is not deductible, change those fields in OmaVero, and 355 and the result change with them.",
   ],
   "statement.cashNote": [
-    "Maksuperuste (EVL 27 a §): tulot ja kulut ovat maksupäivän mukaan, eikä avoimia kirjauksia ole mukana. Myyntisaamiset {d}: {r}. Ostovelat {d}: {p}.",
-    "Cash basis (EVL 27 a §): income and expenses go by payment date, and open entries are left out. Receivables on {d}: {r}. Payables on {d}: {p}.",
-  ],
-  "statement.accrualNote": [
-    "Suoriteperuste: tulot ja kulut ovat kirjauksen päivän mukaan, avoimet mukaan lukien. Myyntisaamiset {d}: {r}. Ostovelat {d}: {p}.",
-    "Accrual basis: income and expenses go by the entry’s date, open ones included. Receivables on {d}: {r}. Payables on {d}: {p}.",
+    "Ammatinharjoittajan maksuperuste (EVL 27 a §): tulot ja kulut ovat maksupäivän mukaan, eikä avoimia kirjauksia ole mukana. Myyntisaamiset {d}: {r}. Ostovelat {d}: {p}.",
+    "An ammatinharjoittaja’s cash basis (EVL 27 a §): income and expenses go by payment date, and open entries are left out. Receivables on {d}: {r}. Payables on {d}: {p}.",
   ],
   "statement.form5FileStep": ["Merkitse ilmoitetuksi", "Mark as filed"],
   "statement.form5FileHint": [
@@ -1557,13 +1545,6 @@ export const APP_DICT = {
   "settings.sections": ["Asetusten osiot", "Settings sections"],
   "settings.general": ["Yleiset", "General"],
   "settings.vatPeriod": ["ALV-ilmoitusjakso", "VAT reporting period"],
-  "settings.traderType": ["Toiminnan laji", "Type of business"],
-  "settings.traderTypeHint": [
-    "Ammatinharjoittajan yhdenkertaisessa kirjanpidossa tulot ja kulut kuuluvat verotuksessa maksuvuodelle. Liikkeenharjoittajan on oikaistava ne suoriteperusteisiksi. Jos et ole varma, tarkista asia Verohallinnosta.",
-    "For an ammatinharjoittaja with single-entry books, income and expenses belong to the year of payment for tax. A liikkeenharjoittaja adjusts them to accrual basis. If you are unsure, check with the Tax Administration.",
-  ],
-  "settings.traderBusiness": ["Liikkeenharjoittaja", "Liikkeenharjoittaja"],
-  "settings.traderProfessional": ["Ammatinharjoittaja", "Ammatinharjoittaja"],
   "settings.vatPeriodHint": [
     "Kuinka usein annat arvonlisäveroilmoituksen. Yleiskatsauksen eräpäivät lasketaan tämän mukaan.",
     "How often you file a VAT return. The due dates on the overview follow it.",

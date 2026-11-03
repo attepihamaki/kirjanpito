@@ -16,7 +16,7 @@ import {
 } from "@/lib/domain/overview-layout"
 import { entryChanges, type ChangeRecord } from "@/lib/domain/change-log"
 import type { LoanOpening, YearEnd } from "@/lib/domain/form5-balance"
-import type { PageSize, TraderType } from "@/lib/domain/settings-file"
+import type { PageSize } from "@/lib/domain/settings-file"
 import type { AmountMode, Category, Entry, EntryType } from "@/lib/domain/types"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 import { LANG_STORAGE_KEY, writeLang } from "@/stores/lang-store"
@@ -173,8 +173,6 @@ export interface BookState {
   autosave: boolean
   /** Monthly templates (§8.5). Saved in settings.json. */
   recurring: RecurringEntry[]
-  /** Liikkeenharjoittaja or ammatinharjoittaja (§6.3). Saved in settings.json. */
-  traderType: TraderType | null
   /** The balance the asset register starts from (§8.8). Saved in settings.json. */
   assetOpening: AssetOpening | null
   /** The bank balance as last read (§8.12). Saved in settings.json. */
@@ -278,7 +276,6 @@ export interface BookActions {
       yearsArchived?: Record<string, string>
       form5Filed?: Record<string, string>
       recurring?: RecurringEntry[]
-      traderType?: TraderType | null
       assetOpening?: AssetOpening | null
       bankBalance?: BankBalance | null
       loanOpening?: LoanOpening | null
@@ -342,7 +339,6 @@ export interface BookActions {
   setAutosavePaused(paused: boolean): void
   upsertRecurring(template: RecurringEntry): void
   removeRecurring(id: string): void
-  setTraderType(traderType: TraderType | null): void
   setLoanOpening(loanOpening: LoanOpening | null): void
   setYearEnd(year: number, values: YearEnd): void
   setAssetOpening(opening: AssetOpening | null): void
@@ -403,7 +399,6 @@ function initialState(): BookState {
     overviewLayout: DEFAULT_LAYOUT.map((w) => ({ ...w })),
     autosave: false,
     recurring: [],
-    traderType: null,
     assetOpening: null,
     bankBalance: null,
     loanOpening: null,
@@ -460,7 +455,6 @@ type PersistedBook = Pick<
   | "overviewLayout"
   | "autosave"
   | "recurring"
-  | "traderType"
   | "assetOpening"
   | "bankBalance"
   | "loanOpening"
@@ -629,7 +623,6 @@ export const useBookStore = create<BookStore>()(
           yearsArchived: {},
           form5Filed: {},
           recurring: [],
-          traderType: null,
           assetOpening: null,
           bankBalance: null,
           loanOpening: null,
@@ -653,7 +646,6 @@ export const useBookStore = create<BookStore>()(
           yearsArchived: {},
           form5Filed: {},
           recurring: [],
-          traderType: null,
           assetOpening: null,
           bankBalance: null,
           loanOpening: null,
@@ -686,7 +678,6 @@ export const useBookStore = create<BookStore>()(
           yearsArchived: s.yearsArchived ?? {},
           form5Filed: s.form5Filed ?? {},
           recurring: s.recurring ?? [],
-          traderType: s.traderType ?? null,
           assetOpening: s.assetOpening ?? null,
           bankBalance: s.bankBalance ?? null,
           loanOpening: s.loanOpening ?? null,
@@ -880,7 +871,6 @@ export const useBookStore = create<BookStore>()(
           recurring: get().recurring.filter((r) => r.id !== id),
           dirty: true,
         }),
-      setTraderType: (traderType) => set({ traderType, dirty: true }),
       setAssetOpening: (assetOpening) => set({ assetOpening, dirty: true }),
       setBankBalance: (bankBalance) => set({ bankBalance, dirty: true }),
       setLoanOpening: (loanOpening) => set({ loanOpening, dirty: true }),
@@ -993,7 +983,6 @@ export const useBookStore = create<BookStore>()(
         overviewLayout: s.overviewLayout,
         autosave: s.autosave,
         recurring: s.recurring,
-        traderType: s.traderType,
         assetOpening: s.assetOpening,
         bankBalance: s.bankBalance,
         loanOpening: s.loanOpening,

@@ -1,6 +1,5 @@
 import { LINE_BY_KEY, type AccountLine } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
-import type { TraderType } from "@/lib/domain/settings-file"
 import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
 
 /**
@@ -78,16 +77,11 @@ export function balancesAt(
 }
 
 /**
- * The entries as the income statement and Form 5 read them (§6.3). An
- * ammatinharjoittaja's are placed on their payment dates and an open one is
- * left out. Everyone else's stay on their own dates, which is the accrual basis
- * a liikkeenharjoittaja adjusts to.
+ * The entries as the income statement and Form 5 read them (§6.3). The app
+ * treats every user as an ammatinharjoittaja, so each entry is placed on its
+ * payment date and an open one is left out.
  */
-export function taxBasisEntries(
-  entries: readonly Entry[],
-  traderType: TraderType | null
-): readonly Entry[] {
-  if (traderType !== "professional") return entries
+export function taxBasisEntries(entries: readonly Entry[]): readonly Entry[] {
   return entries.flatMap((e) => {
     const paid = paidDate(e)
     if (paid === null) return []

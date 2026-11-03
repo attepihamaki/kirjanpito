@@ -350,7 +350,6 @@ export function ChecksWidget() {
   const yearEnds = useBookStore((s) => s.yearEnd)
   const assetOpening = useBookStore((s) => s.assetOpening)
   const loanOpening = useBookStore((s) => s.loanOpening)
-  const traderType = useBookStore((s) => s.traderType)
   const threshold = vatThreshold(data.entries, data.catMap, data.today)
   if (threshold) {
     const figures = {
@@ -466,15 +465,6 @@ export function ChecksWidget() {
       sub: form5.due
         ? f.t("overview.form5DueOn", { d: f.date(form5.due) })
         : f.t("overview.form5DueUnknown"),
-    })
-  }
-
-  if (!traderType) {
-    items.push({
-      key: "traderType",
-      tone: "info",
-      title: f.t("overview.traderType"),
-      sub: f.t("overview.traderTypeSub"),
     })
   }
 

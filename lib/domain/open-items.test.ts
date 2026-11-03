@@ -91,34 +91,26 @@ describe("canBeUnpaid", () => {
 })
 
 describe("taxBasisEntries", () => {
-  const invoice = sale({ paidOn: "2027-01-10" })
-  const result = (traderType: "business" | "professional" | null, y: number) =>
-    incomeStatement(taxBasisEntries([invoice], traderType), cats, y).result
+  const result = (y: number) =>
+    incomeStatement(
+      taxBasisEntries([sale({ paidOn: "2027-01-10" })]),
+      cats,
+      y
+    ).result
 
-  it("puts an ammatinharjoittaja's income in the year of payment", () => {
-    expect(result("professional", 2026)).toBe(0)
-    expect(result("professional", 2027)).toBe(100_000)
+  it("puts income in the year of payment", () => {
+    expect(result(2026)).toBe(0)
+    expect(result(2027)).toBe(100_000)
   })
 
-  it("keeps a liikkeenharjoittaja's on the delivery date", () => {
-    expect(result("business", 2026)).toBe(100_000)
-    expect(result("business", 2027)).toBe(0)
-  })
-
-  it("reads an unset type as today's dates", () => {
-    expect(result(null, 2026)).toBe(100_000)
-  })
-
-  it("leaves an ammatinharjoittaja's open invoice out", () => {
-    const open = [sale({ paidOn: null })]
-    expect(taxBasisEntries(open, "professional")).toEqual([])
+  it("leaves an open invoice out", () => {
+    expect(taxBasisEntries([sale({ paidOn: null })])).toEqual([])
   })
 
   it("leaves the reference figures alone when nothing is paid late", () => {
     const rows = sampleEntries(createIdFactory("o"))
-    const of = (t: "business" | "professional") =>
-      incomeStatement(taxBasisEntries(rows, t), cats, 2026).result
-    expect(of("professional")).toBe(1_064_253)
-    expect(of("business")).toBe(1_064_253)
+    expect(incomeStatement(taxBasisEntries(rows), cats, 2026).result).toBe(
+      1_064_253
+    )
   })
 })

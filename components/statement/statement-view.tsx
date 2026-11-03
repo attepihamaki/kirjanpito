@@ -23,7 +23,6 @@ export function StatementView() {
   const basis = useTaxBasisEntries()
   const cats = useBookStore((s) => s.cats)
   const year = useBookStore((s) => s.year)
-  const traderType = useBookStore((s) => s.traderType)
 
   const statement = React.useMemo(
     () => incomeStatement(basis, indexCategories(cats), year),
@@ -214,20 +213,13 @@ export function StatementView() {
           </p>
         ) : null}
 
-        {traderType ? (
-          <p className="mt-3 text-xs text-muted-foreground">
-            {f.t(
-              traderType === "professional"
-                ? "statement.cashNote"
-                : "statement.accrualNote",
-              {
-                d: f.date(`${year}-12-31`),
-                r: f.money(open.receivables),
-                p: f.money(open.payables),
-              }
-            )}
-          </p>
-        ) : null}
+        <p className="mt-3 text-xs text-muted-foreground">
+          {f.t("statement.cashNote", {
+            d: f.date(`${year}-12-31`),
+            r: f.money(open.receivables),
+            p: f.money(open.payables),
+          })}
+        </p>
 
         <p className="mt-6 border-t border-sheet-edge pt-3 text-xs text-muted-foreground">
           {f.t("landing.footer")}

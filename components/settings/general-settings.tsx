@@ -13,7 +13,6 @@ import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { useCanSaveToFile } from "@/hooks/use-save-book"
 import { clearAllEntries, renumberVouchers } from "@/lib/commands/book-commands"
-import type { TraderType } from "@/lib/domain/settings-file"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 import { renumberYear } from "@/lib/domain/voucher"
 import { useBookStore } from "@/stores/book-store"
@@ -22,44 +21,12 @@ import { useBookStore } from "@/stores/book-store"
 export function GeneralSettings() {
   return (
     <div className="flex flex-col gap-6">
-      <TraderTypeSetting />
       <VatPeriodSetting />
       <BookStartSetting />
       <AutosaveSetting />
       <VoucherNumbers />
       <ClearEntries />
     </div>
-  )
-}
-
-/** Which kind of sole trader this is: the year an amount belongs to for tax follows it (§6.3). */
-function TraderTypeSetting() {
-  const f = useFormatters()
-  const traderType = useBookStore((s) => s.traderType)
-  const setTraderType = useBookStore((s) => s.setTraderType)
-
-  return (
-    <Panel
-      title={f.t("settings.traderType")}
-      description={f.t("settings.traderTypeHint")}
-      bodyClassName="p-4"
-    >
-      <ToggleGroup
-        aria-label={f.t("settings.traderType")}
-        value={traderType ? [traderType] : []}
-        onValueChange={(value) => {
-          const next = value[0] as TraderType | undefined
-          if (next) setTraderType(next)
-        }}
-      >
-        <ToggleGroupItem value="business">
-          {f.t("settings.traderBusiness")}
-        </ToggleGroupItem>
-        <ToggleGroupItem value="professional">
-          {f.t("settings.traderProfessional")}
-        </ToggleGroupItem>
-      </ToggleGroup>
-    </Panel>
   )
 }
 
