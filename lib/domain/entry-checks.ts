@@ -160,13 +160,13 @@ export function flaggedEntryIds(
       const out = new Set<string>()
       /*
        * A VAT payment is a quarter's or a year's tax in one sum, and the owner
-       * moves money in round sums, so both are large next to a receipt by
-       * nature (§6.6, §6.7).
+       * and a loan move money in round sums, so all are large next to a receipt
+       * by nature (§6.6 to §6.8).
        */
       const exempt = (e: Entry) => {
         const cat = cats.get(e.catId)
         const line = cat && LINE_BY_KEY.get(cat.line)
-        return !!line && (line.settlement || line.owner)
+        return !!line && (line.settlement || line.owner || line.loan)
       }
       for (const type of ["income", "expense"] as const) {
         const ofType = entries.filter((e) => e.type === type && !exempt(e))

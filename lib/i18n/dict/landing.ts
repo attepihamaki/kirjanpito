@@ -151,8 +151,8 @@ export const LANDING_DICT = {
     "Can I move my old Excel bookkeeping over?",
   ],
   "landing.a3": [
-    "Kyllä. Tallenna kirjaukset CSV-tiedostoksi sarakkeilla date, description, type, account, category, amount, vat ja mode, ja tuo tiedosto. Sarakkeet voucher, receipts ja settles ovat valinnaisia. Ilman tositenumeroita kirjaukset numeroidaan päivämäärän mukaan. Myös suomenkieliset sarakenimet (pvm, selite ja niin edelleen) käyvät.",
-    "Yes. Save your entries as a CSV file with the columns date, description, type, account, category, amount, vat and mode, then import it. The voucher, receipts and settles columns are optional. Without voucher numbers, the entries are numbered by date. The Finnish column names (pvm, selite and so on) work too.",
+    "Kyllä. Tallenna kirjaukset CSV-tiedostoksi sarakkeilla date, description, type, account, category, amount, vat ja mode, ja tuo tiedosto. Sarakkeet voucher, receipts, settles ja paid ovat valinnaisia. Ilman tositenumeroita kirjaukset numeroidaan päivämäärän mukaan. Myös suomenkieliset sarakenimet (pvm, selite ja niin edelleen) käyvät.",
+    "Yes. Save your entries as a CSV file with the columns date, description, type, account, category, amount, vat and mode, then import it. The voucher, receipts, settles and paid columns are optional. Without voucher numbers, the entries are numbered by date. The Finnish column names (pvm, selite and so on) work too.",
   ],
   "landing.q4": [
     "Mitä tapahtuu, jos suljen selaimen?",

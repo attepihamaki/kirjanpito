@@ -485,6 +485,14 @@ export const APP_DICT = {
     "Oma käyttö ylittää vuodessa 850 €. Ylittävä osa on arvonlisäverollista, jos tavaran ostosta on vähennetty vero.",
     "Private use is over 850 € this year. The part above that carries VAT if the VAT on the goods was deducted.",
   ],
+  "overview.openItems": [
+    pl("1 avoin kirjaus", "{n} avointa kirjausta"),
+    pl("1 open entry", "{n} open entries"),
+  ],
+  "overview.openItemsSub": [
+    "Myyntisaamiset {r}, ostovelat {p}.",
+    "Receivables {r}, payables {p}.",
+  ],
   "overview.vatPeriodLimit": [
     "Liikevaihto {y} oli {a}",
     "Turnover in {y} was {a}",
@@ -700,6 +708,8 @@ export const APP_DICT = {
   "ledger.noEntriesFor": ["Ei kirjauksia: {p}.", "No entries: {p}."],
   "ledger.clearFilters": ["Tyhjennä suodattimet", "Clear filters"],
   "ledger.allCategories": ["Kaikki luokat", "All categories"],
+  "ledger.openItems": ["Avoimet", "Open"],
+  "ledger.openPill": ["Avoin", "Open"],
   "ledger.checkFilter": ["Tarkistettavat", "Needs a look"],
   "ledger.checkAll": ["Kaikki kirjaukset", "All entries"],
   "ledger.withoutReceipt": ["Ilman tositetta", "Without a receipt"],
@@ -737,6 +747,15 @@ export const APP_DICT = {
   ],
   "entry.category": ["Luokka", "Category"],
   "entry.amount": ["Summa (€)", "Amount (€)"],
+  "entry.paid": ["Maksettu", "Paid"],
+  "entry.paidSame": ["Samana päivänä", "On the same day"],
+  "entry.paidLater": ["Toisena päivänä", "On another day"],
+  "entry.paidOpen": ["Avoin, ei vielä maksettu", "Open, not paid yet"],
+  "entry.paidDate": ["Maksupäivä", "Payment date"],
+  "entry.paidHint": [
+    "Kirjauksen päivä on toimitus- tai laskupäivä. Arvonlisävero menee sen mukaan.",
+    "The entry’s date is the delivery or invoice date. VAT goes by it.",
+  ],
   "entry.privateUseHint": [
     "Tavaran oma käyttö on arvonlisäverollista, jos ostosta on vähennetty vero, ja 850 € vuodessa on verotonta. Auton kohdalla asia riippuu siitä, paljonko autosta on vähennetty.",
     "Taking goods into private use carries VAT if the VAT on the purchase was deducted, and the first 850 € a year is free. For a car it depends on how much of the car was deducted.",
@@ -1038,6 +1057,14 @@ export const APP_DICT = {
   "statement.form5Assumed": [
     "Poistot (337) ja korkokulut (346) on laskettu kokonaan vähennyskelpoisiksi, joten 338 ja 347 ovat samat summat. Jos osa ei ole vähennyskelpoista, muuta kohtia OmaVerossa, jolloin myös 355 ja tulos muuttuvat.",
     "Depreciation (337) and interest expenses (346) are counted as fully deductible, so 338 and 347 are the same amounts. If part of them is not deductible, change those fields in OmaVero, and 355 and the result change with them.",
+  ],
+  "statement.cashNote": [
+    "Maksuperuste (EVL 27 a §): tulot ja kulut ovat maksupäivän mukaan, eikä avoimia kirjauksia ole mukana. Myyntisaamiset {d}: {r}. Ostovelat {d}: {p}.",
+    "Cash basis (EVL 27 a §): income and expenses go by payment date, and open entries are left out. Receivables on {d}: {r}. Payables on {d}: {p}.",
+  ],
+  "statement.accrualNote": [
+    "Suoriteperuste: tulot ja kulut ovat kirjauksen päivän mukaan, avoimet mukaan lukien. Myyntisaamiset {d}: {r}. Ostovelat {d}: {p}.",
+    "Accrual basis: income and expenses go by the entry’s date, open ones included. Receivables on {d}: {r}. Payables on {d}: {p}.",
   ],
   "statement.form5Payroll": [
     "Kirjanpito ei sisällä palkkakirjanpitoa eikä tulorekisteri-ilmoituksia.",

@@ -144,13 +144,19 @@ export interface MonthFigures {
   result: readonly Cents[]
 }
 
-/** The per-month figures the income and expense chart shows on hover. */
+/**
+ * The per-month figures the income and expense chart shows on hover. VAT goes
+ * by `entries`, as the return does, and the result by `basis`, as the income
+ * statement does (§6.3), so the months still add up to 358.
+ */
 export function monthFigures(
   entries: readonly Entry[],
   cats: CategoryMap,
-  year: number
+  year: number,
+  basis: readonly Entry[] = entries
 ): MonthFigures {
   const yearEntries = entries.filter((e) => yearOf(e.date) === year)
+  const basisEntries = basis.filter((e) => yearOf(e.date) === year)
   const months = Array.from({ length: 12 }, (_, i) =>
     filterPeriod(yearEntries, { kind: "month", year, month: i + 1 })
   )
@@ -159,7 +165,7 @@ export function monthFigures(
     ...months.map(
       (_, i) =>
         incomeStatement(
-          yearEntries.filter((e) => monthOf(e.date) <= i + 1),
+          basisEntries.filter((e) => monthOf(e.date) <= i + 1),
           cats,
           year
         ).result

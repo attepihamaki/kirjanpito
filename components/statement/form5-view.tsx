@@ -7,6 +7,7 @@ import { useFormatters } from "@/components/lang-provider"
 import { form5Sections } from "@/lib/domain/form5"
 import { incomeStatement } from "@/lib/domain/income-statement"
 import { indexCategories } from "@/lib/domain/types"
+import { useTaxBasisEntries } from "@/hooks/use-tax-basis"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -16,13 +17,13 @@ import { useBookStore } from "@/stores/book-store"
  */
 export function Form5View() {
   const f = useFormatters()
-  const entries = useBookStore((s) => s.entries)
+  const basis = useTaxBasisEntries()
   const cats = useBookStore((s) => s.cats)
   const year = useBookStore((s) => s.year)
 
   const sections = React.useMemo(
-    () => form5Sections(incomeStatement(entries, indexCategories(cats), year)),
-    [entries, cats, year]
+    () => form5Sections(incomeStatement(basis, indexCategories(cats), year)),
+    [basis, cats, year]
   )
 
   return (

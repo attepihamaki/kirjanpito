@@ -33,6 +33,7 @@ import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { useShortcut } from "@/hooks/use-save-book"
 import { isMediaFile } from "@/hooks/use-file-drop"
+import { canBeUnpaid } from "@/lib/domain/open-items"
 import {
   isReceiptStorageSupported,
   putReceipt,
@@ -88,6 +89,8 @@ interface FormState {
   repeat: boolean
   /** The VAT period a payment or refund settles, "" to go by the date (§6.6). */
   settles: string
+  /** "" when paid on the date, "open" while unpaid, else the payment date (§6.3). */
+  paid: string
 }
 
 /** The three fields §8.5 validates, named as they are in `FormState`. */
@@ -149,6 +152,7 @@ function initialForm({
       atts: [],
       repeat: false,
       settles: prefill?.settles ?? "",
+      paid: "",
     }
   }
   const today = todayIso()
@@ -167,6 +171,12 @@ function initialForm({
     atts: mode === "copy" ? [] : [...(editing.atts ?? [])],
     repeat: mode === "edit" && matchRecurring(recurring, editing) !== undefined,
     settles: editing.settles ?? "",
+    paid:
+      mode === "edit"
+        ? editing.paidOn === null
+          ? "open"
+          : (editing.paidOn ?? "")
+        : "",
   }
 }
 
@@ -456,6 +466,9 @@ function EntryDialogForm({
   const settlement = !!(
     selectedCat && LINE_BY_KEY.get(selectedCat.line)?.settlement
   )
+  const unpayable = canBeUnpaid(
+    selectedCat && LINE_BY_KEY.get(selectedCat.line)
+  )
   const ownerTransfer = !!(
     selectedCat && LINE_BY_KEY.get(selectedCat.line)?.owner
   )
@@ -565,6 +578,9 @@ function EntryDialogForm({
       amountMode: form.amountMode,
       ...(form.atts.length ? { atts: form.atts } : {}),
       ...(settlement && settledValue ? { settles: settledValue } : {}),
+      ...(unpayable && form.paid && form.paid !== form.date
+        ? { paidOn: form.paid === "open" ? null : form.paid }
+        : {}),
     }
   }
 
@@ -622,6 +638,7 @@ function EntryDialogForm({
         atts: [],
         repeat: false,
         settles: "",
+        paid: "",
       }
       keepRate.current = false
       setForm(next)
@@ -782,6 +799,50 @@ function EntryDialogForm({
 
             {ownerTransfer ? (
               <FieldDescription>{f.t("entry.ownerHint")}</FieldDescription>
+            ) : null}
+
+            {unpayable ? (
+              <Field>
+                <FieldLabel>{f.t("entry.paid")}</FieldLabel>
+                <div className="flex flex-wrap gap-2">
+                  <OptionSelect
+                    options={[
+                      { value: "same", label: f.t("entry.paidSame") },
+                      { value: "later", label: f.t("entry.paidLater") },
+                      { value: "open", label: f.t("entry.paidOpen") },
+                    ]}
+                    value={
+                      form.paid === ""
+                        ? "same"
+                        : form.paid === "open"
+                          ? "open"
+                          : "later"
+                    }
+                    onChange={(value) =>
+                      update({
+                        paid:
+                          value === "same"
+                            ? ""
+                            : value === "open"
+                              ? "open"
+                              : form.date,
+                      })
+                    }
+                    label={f.t("entry.paid")}
+                    className="w-48"
+                  />
+                  {form.paid && form.paid !== "open" ? (
+                    <Input
+                      type="date"
+                      aria-label={f.t("entry.paidDate")}
+                      value={form.paid}
+                      onChange={(e) => update({ paid: e.target.value })}
+                      className="w-44"
+                    />
+                  ) : null}
+                </div>
+                <FieldDescription>{f.t("entry.paidHint")}</FieldDescription>
+              </Field>
             ) : null}
 
             {selectedCat?.line === "313" ||

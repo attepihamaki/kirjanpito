@@ -67,7 +67,7 @@ describe("serializeCsv", () => {
   it("starts with a BOM and the exact header", () => {
     expect(out.startsWith(`﻿${HEADER}\r\n`)).toBe(true)
     expect(HEADER).toBe(
-      "voucher;date;description;type;account;category;amount;vat;mode;receipts;settles"
+      "voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid"
     )
   })
 
@@ -245,7 +245,7 @@ describe("parseCsv — happy path", () => {
 
 describe("parseCsv — Finnish column names", () => {
   const FINNISH_HEADER =
-    "tositenro;pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite;verokausi"
+    "tositenro;pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite;verokausi;maksettu"
   const ROW =
     "7;2026-11-12;ALV-maksu;kulu;2939;Arvonlisäveron maksu;362,18;0;netto;tositteet/2026/11/a.pdf;2026-10"
   const EXPECTED = {
@@ -760,7 +760,7 @@ describe("VAT settlements", () => {
   it("writes and reads back the period a payment settles", () => {
     const text = serializeCsv([payment], cats)
     expect(text).toContain(
-      ";2939;Arvonlisäveron maksu;362,18;0;brutto;;2026-10\r\n"
+      ";2939;Arvonlisäveron maksu;362,18;0;brutto;;2026-10;\r\n"
     )
 
     const back = ok(parseCsv(text, baseCats)).entries[0]
@@ -984,5 +984,41 @@ describe("decodeCsv", () => {
     const bytes = Uint8Array.from([...text].map((c) => c.charCodeAt(0)))
     const r = parseCsv(decodeCsv(bytes), defaultCategories())
     expect(r.ok && r.newCategoryCount).toBe(0)
+  })
+})
+
+describe("paid column", () => {
+  const roundTrip = (over: Partial<Entry>) => {
+    const entry: Entry = {
+      id: "p",
+      date: "2026-12-15",
+      description: "Lasku",
+      type: "income",
+      catId: "300-domestic",
+      amount: 10_000,
+      vatRate: 25.5,
+      amountMode: "gross",
+      ...over,
+    }
+    return ok(parseCsv(serializeCsv([entry], cats), baseCats)).entries[0]
+  }
+
+  it("round-trips a payment date and an open entry", () => {
+    expect(roundTrip({ paidOn: "2027-01-10" }).paidOn).toBe("2027-01-10")
+    expect(roundTrip({ paidOn: null }).paidOn).toBeNull()
+  })
+
+  it("leaves the field absent on an entry paid on its date", () => {
+    expect(roundTrip({}).paidOn).toBeUndefined()
+  })
+
+  it("drops it on a line with no separate payment", () => {
+    const owner = roundTrip({
+      type: "expense",
+      catId: "owner-withdrawal",
+      vatRate: 0,
+      paidOn: null,
+    })
+    expect(owner.paidOn).toBeUndefined()
   })
 })

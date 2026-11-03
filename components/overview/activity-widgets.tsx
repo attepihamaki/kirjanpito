@@ -42,6 +42,7 @@ import { APP_ROUTES } from "@/lib/site"
 import { cn } from "@/lib/utils"
 import { toast } from "@/components/ui/toast"
 import { retentionDates, yearsToArchive } from "@/lib/domain/retention"
+import { balancesAt } from "@/lib/domain/open-items"
 import { form5Reminder } from "@/lib/domain/tax-return-deadline"
 import {
   VAT_THRESHOLD,
@@ -373,6 +374,24 @@ export function ChecksWidget() {
             ),
           }
     )
+  }
+
+  const unpaid = balancesAt(data.entries, data.catMap, data.today)
+  if (unpaid.count) {
+    items.push({
+      key: "openItems",
+      tone: "info",
+      title: f.t("overview.openItems", { n: unpaid.count }),
+      sub: f.t("overview.openItemsSub", {
+        r: f.money(unpaid.receivables),
+        p: f.money(unpaid.payables),
+      }),
+      action: (
+        <Button variant="ghost" size="sm" onClick={() => showInLedger("open")}>
+          {f.t("overview.showThem")}
+        </Button>
+      ),
+    })
   }
 
   const overPeriod = vatPeriodOverLimit(

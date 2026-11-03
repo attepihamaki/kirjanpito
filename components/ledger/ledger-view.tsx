@@ -43,6 +43,7 @@ import {
   searchHitsElsewhere,
   usedCategoryIds,
 } from "@/stores/selectors"
+import { paidDate } from "@/lib/domain/open-items"
 import { useBookStore, type CheckFilter } from "@/stores/book-store"
 
 const CHECK_LABEL = {
@@ -101,12 +102,18 @@ export function LedgerView() {
     () =>
       checkFilter === "all"
         ? null
-        : flaggedEntryIds(
-            checkFilter,
-            entriesInPeriod(entries, year, 0),
-            catMap,
-            todayIso()
-          ),
+        : checkFilter === "open"
+          ? new Set(
+              entriesInPeriod(entries, year, 0)
+                .filter((e) => paidDate(e) === null)
+                .map((e) => e.id)
+            )
+          : flaggedEntryIds(
+              checkFilter,
+              entriesInPeriod(entries, year, 0),
+              catMap,
+              todayIso()
+            ),
     [checkFilter, entries, year, catMap]
   )
 
@@ -304,6 +311,7 @@ export function LedgerView() {
               <OptionSelect
                 options={[
                   { value: "all", label: f.t("ledger.checkAll") },
+                  { value: "open", label: f.t("ledger.openItems") },
                   ...ENTRY_CHECKS.map((check) => ({
                     value: check,
                     label: f.t(CHECK_LABEL[check]),

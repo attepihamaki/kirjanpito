@@ -86,6 +86,11 @@ export interface Entry {
    * `"2026-09"`, `"2026-Q3"` or `"2026"`. Absent on every other entry.
    */
   settles?: string
+  /**
+   * When it was paid, if not on `date`: an ISO date, or null while it is open.
+   * `date` itself is the delivery or invoice date (§6.3).
+   */
+  paidOn?: string | null
 }
 
 /** A category (luokka) the user books entries to. */

@@ -51,11 +51,16 @@ export interface AccountLine {
    * equity, so neither income nor an expense, and not on the VAT return.
    */
   owner: boolean
+  /**
+   * A loan drawn or repaid (§6.8): a financing transaction, so neither income
+   * nor an expense, and not on the VAT return. Interest stays on 346.
+   */
+  loan: boolean
 }
 
-/** Lines off the income statement: fixed assets, VAT settlements and the owner's transfers (§5). */
+/** Lines off the income statement: fixed assets, VAT settlements, the owner's transfers and loans (§5). */
 export function offStatement(line: AccountLine | undefined): boolean {
-  return !!line && (line.capital || line.settlement || line.owner)
+  return !!line && (line.capital || line.settlement || line.owner || line.loan)
 }
 
 /**
@@ -478,12 +483,45 @@ export const OWNER_LINES: readonly AccountLine[] = [
   },
 ]
 
+/**
+ * Loans drawn and repaid (§6.8). KPL 2:1 has the books record financing
+ * transactions. Single-entry books have no balance sheet, so 2600 is the app's
+ * own account for the CSV's `account` column, not one Form 5 asks for.
+ */
+export const LOAN_LINES: readonly AccountLine[] = [
+  {
+    ...l(
+      "loan-drawdown",
+      2600,
+      "income",
+      "Lainan nosto",
+      "Loan drawdown",
+      null,
+      0
+    ),
+    loan: true,
+  },
+  {
+    ...l(
+      "loan-repayment",
+      2600,
+      "expense",
+      "Lainan lyhennys",
+      "Loan repayment",
+      null,
+      0
+    ),
+    loan: true,
+  },
+]
+
 /** Every line a category can sit on: the statement's, then the off-statement ones above. */
 export const ALL_LINES: readonly AccountLine[] = [
   ...LINES,
   ...CAPITAL_LINES,
   ...SETTLEMENT_LINES,
   ...OWNER_LINES,
+  ...LOAN_LINES,
 ]
 
 function l(
@@ -513,6 +551,7 @@ function l(
     capital: false,
     settlement: false,
     owner: false,
+    loan: false,
   }
 }
 

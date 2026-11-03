@@ -33,7 +33,8 @@ export type { PageSize }
 export type MonthFilter = number // 0 = whole year, 1-12 = that month
 export type TypeFilter = "all" | EntryType
 /** Entries that need a second look (§8.4), by the checks in `entry-checks.ts`. */
-export type CheckFilter = "all" | EntryCheck
+/** "open" is not a check: an unpaid invoice is ordinary (§8.4). */
+export type CheckFilter = "all" | "open" | EntryCheck
 
 export interface SortState<K extends string> {
   key: K
@@ -863,7 +864,7 @@ export const useBookStore = create<BookStore>()(
     }),
     {
       name: BOOK_STORAGE_KEY,
-      version: 7,
+      version: 8,
       storage: bookStorage,
       /*
        * Prerender must not touch localStorage; StoreHydrator rehydrates after

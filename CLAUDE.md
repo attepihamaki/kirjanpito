@@ -151,6 +151,7 @@ interface Entry {
   amountMode: AmountMode // stored per entry (the Excel had one switch per month)
   atts?: Attachment[] // receipts, may be several
   settles?: string // VAT payment or refund only: the period key it settles (§6.6)
+  paidOn?: string | null // payment date if not `date`; null while open (§6.3)
 }
 ```
 
@@ -262,7 +263,7 @@ The table order is also the display order of the income statement. **It is not q
 
 **VAT payments and refunds are off the statement too.** `SETTLEMENT_LINES` holds `vat-payment` "Arvonlisäveron maksu" (expense) and `vat-refund` "Arvonlisäveron palautus" (income), both on account 2939 at 0 %. Single-entry books have no balance sheet, so 2939 is the app's own number for the CSV's `account` column; it is not one Form 5 asks for and was not checked against a published chart. `AccountLine.settlement` marks them, and `offStatement` is the one test for "capital or settlement" that the statement, the summary, the journal's totals and the ledger's totals cards use. The VAT report skips settlement lines whatever their rate (§6.6).
 
-**So are the owner's own transfers.** `OWNER_LINES` holds `owner-withdrawal` "Yksityisotto" (expense) and `owner-investment` "Yksityissijoitus" (income), both on account 2000 at 0 %. Like 2939, 2000 is the app's own number and was not checked against a published chart. `AccountLine.owner` marks them, `offStatement` covers them, and the VAT report skips them like settlements (§6.7). `ALL_LINES` is the 30 statement lines and these six.
+**So are the owner's own transfers.** `OWNER_LINES` holds `owner-withdrawal` "Yksityisotto" (expense) and `owner-investment` "Yksityissijoitus" (income), both on account 2000 at 0 %. Like 2939, 2000 is the app's own number and was not checked against a published chart. `AccountLine.owner` marks them, `offStatement` covers them, and the VAT report skips them like settlements (§6.7). `ALL_LINES` is the 30 statement lines and these, with the loan lines of §6.8.
 
 **Default categories:** the six sales categories, plus one category per remaining line, with `id = line key`, `name = Finnish line name`, `vatRate = line default VAT`, and `kind = "domestic"` for income lines.
 
@@ -303,6 +304,9 @@ For the selected month (or the whole year): income net total, expense net total,
 - These rules were checked against Verohallinto's Form 5 instructions (vero.fi, "Instructions for filing", Form 5): tax-exempt income is not part of taxable revenue, 354 is deductible, and 365–367 may not be deducted.
 - **Dividends count only their taxable share.** Form 5 splits them into listed companies (319, taxable portion in 320) and others (321, taxable portion in 322), and its taxable income (316) adds only 320 and 322. In a sole trader's business income source, 85 % of a listed company's dividend is taxable and 75 % of any other (vero.fi, Osinkotulojen verotus, 2.4; EVL 6 a § 6 mom.). `AccountLine.taxableShare` holds the percentage, and the share is rounded to the cent. The sheet lists both lines in full and says what was counted in a note.
 - **Every line has a `counted` part**, the amount that enters the result: the taxable part of an income line, the deductible part of an expense line. Revenue (316) and deductible expenses (355) are sums of it; the section headings are sums of the lines in full (`incomeTotal`, `expenseTotal`).
+
+- **Which year an amount belongs to depends on the trader type** (`traderType`, `lib/domain/open-items.ts`). `Entry.date` is the delivery or invoice date, and `Entry.paidOn` the payment date when that differs, or null while the entry is open. An ammatinharjoittaja with single-entry books is taxed on payment (EVL 27 a §), so `taxBasisEntries` moves each entry to its payment date and leaves out an open one. A liikkeenharjoittaja adjusts to accrual basis, which is the entries' own dates. The income statement, Form 5, the summary and the overview's result all read the entries this way, and the VAT views never do, since the return goes by `date`. A note under the statement names the basis and gives the year-end receivables and payables. An unset type reads as the entries' dates.
+- **Receivables and payables** (`balancesAt`) are the gross amounts of entries open on a date, which KPL 1:1a requires a sole trader of either kind to be able to determine. A non-cash line, a VAT settlement, an owner's transfer and a loan movement cannot be open (`canBeUnpaid`).
 
 ### 6.4 Summary (Yhteenveto)
 
@@ -352,12 +356,18 @@ For the selected year, by month (net amounts):
 
 ---
 
+### 6.8 Loans
+
+`loan-drawdown` "Lainan nosto" and `loan-repayment` "Lainan lyhennys", on account 2600 at 0 %. KPL 2:1 has the books record financing transactions, and a loan is neither income nor an expense, so `offStatement` covers both and the VAT report skips them. Interest stays an expense on 346. 2600 is the app's own number, like 2939 and 2000. They move the bank estimate, and they are left out of the "unusually large amount" check. `ALL_LINES` is the 30 statement lines and eight off-statement ones.
+
+---
+
 ## 7. File formats
 
 ### 7.1 CSV
 
 - **Header row**, always exactly these columns in this order:
-  `voucher;date;description;type;account;category;amount;vat;mode;receipts;settles`
+  `voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid`
 - **The column names are English and the values stay Finnish.** This is the
   user's file, and it opens in Finnish Excel with decimal commas, Finnish category
   names, `tulo`/`kulu` and `brutto`/`netto`. The header is the same in both UI
@@ -365,7 +375,7 @@ For the selected year, by month (net amounts):
   `TYPE_FROM_CSV` for `tulo`/`kulu`, `MODE_TO_CSV` for `brutto`/`netto`.
 - **Files with the Finnish header must keep opening.** `FINNISH_COLUMNS` in
   `lib/domain/csv.ts` maps `tositenro` (or `tositenumero`), `pvm`, `selite`,
-  `tyyppi`, `tili`, `luokka`, `summa`, `alv`, `syotto`, `tosite` and `verokausi`
+  `tyyppi`, `tili`, `luokka`, `summa`, `alv`, `syotto`, `tosite`, `verokausi` and `maksettu`
   to the columns above, and both the header match and the delimiter detection go
   through it. Saving such a file writes the English header. Nothing else in the
   codebase may spell a Finnish column name.
@@ -376,6 +386,7 @@ For the selected year, by month (net amounts):
   - `amount` uses a decimal comma with no thousands separator (`1882,50`). `vat` is the rate, with a decimal comma (`25,5`). `mode` is `brutto` or `netto`.
   - `receipts` holds the receipt paths inside the ZIP, separated by `|`. **These are written even when exporting CSV only**, so a plain CSV still records which receipts existed and a re-import can mark them missing per §7.2. The prototype dropped them, which made a CSV-only export lossy.
   - `settles` is the period a VAT payment or refund settles (`2026-10`, `2026-Q4`, `2026`), empty on every other row (§6.6).
+  - `paid` is the payment date when it is not the entry's own, `avoin` while the entry is open, and otherwise empty (§6.3).
   - Rows are sorted by date, then by voucher number. The format is identical in both UI languages, so it opens directly in Finnish Excel.
   - **A text cell that Excel would run as a formula gets a leading apostrophe.** That is `description`, `category` or `receipts` starting with `=`, `+`, `-`, `@`, a tab or a carriage return. A value that already starts with apostrophes before one of those gets one more, and the import takes exactly one off, so every value round-trips. The amount and rate columns are left alone, so a negative amount stays a number. Excel may show the apostrophe in the cell.
 - **Import (be lenient):**
@@ -628,7 +639,7 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
   - **A search also reports where else it matches.** Under the toolbar, "Osumia myös muualla:" lists the other years with a match as buttons, "2025 (2)", newest first (`searchHitsElsewhere` in `stores/selectors.ts`). With one month on screen the selected year is listed too, for its other months. A button opens that whole year, keeps the search and clears the other filters, so the count is what the user then sees. The list stays out of the way until there is a search, and the table and totals remain one year's, since voucher numbers and totals only mean something within a year.
   - A type filter (Kaikki tyypit / Tulot / Kulut) as a **select**, like the category filter beside it. A segmented control would be the one control here shaped unlike the others, and it grows with the language. `EntryTypeToggle` (§8.5, §8.10) stays segmented because it is a form field, not a filter.
   - A category filter, listing only the categories used in the period.
-  - "Tarkistettavat": Kaikki kirjaukset / Ilman tositetta / Verokanta ei vastaa päivää / Päivä tulevaisuudessa / Kotimaan myynti ilman ALV:tä / Poikkeuksellisen suuri summa / Mahdollinen kaksoiskirjaus / ALV ei vähennettävää (`ledgerCheck`). `lib/domain/entry-checks.ts` decides each one, for this filter and the overview's checklist alike, and it is given the whole selected year, so a month on screen does not change what stands out.
+  - "Tarkistettavat": Kaikki kirjaukset / Avoimet (entries not yet paid, §6.3; not a check, so it has no warning row) / Ilman tositetta / Verokanta ei vastaa päivää / Päivä tulevaisuudessa / Kotimaan myynti ilman ALV:tä / Poikkeuksellisen suuri summa / Mahdollinen kaksoiskirjaus / ALV ei vähennettävää (`ledgerCheck`). `lib/domain/entry-checks.ts` decides each one, for this filter and the overview's checklist alike, and it is given the whole selected year, so a month on screen does not change what stands out.
     - An entry counts as having a receipt only when a file is available; one listed in the CSV but missing from the ZIP does not.
     - A rate mismatch is `rateMismatch` (§5).
     - A future date is any date after today.
@@ -684,6 +695,7 @@ A two-column modal. On mobile the columns stack.
 - **Pre-fill from a PDF:** adding an invoice PDF to an untouched form (no amount, no description) reads its text layer and fills the date, a description "Lasku {nro} – {myyjä} – {first row}" (whichever parts it found), the total as a gross amount and the VAT rate. A previous entry naming the same seller supplies the type and category; failing that, `suggestCategory` picks an expense category from words in the seller's name and the rows, falling back to 333. The seller is the company name printed beside a business ID, which is often only in the footer. A rate read this way survives picking a category. `lib/domain/invoice-text.ts` does the reading and is pure; `extractPdfText` in `lib/browser/pdf.ts` feeds it. The virtual barcode, when printed, wins over any labelled total or due date. A credit note keeps its minus, wherever it is printed, and its total is the largest amount by size. An amount like "2 123,00" reads as 2 123,00 €, since a quantity beside a price in the same text run cannot be told from a thousands separator. A scanned PDF has no text layer and pre-fills nothing; there is no OCR.
 - **Nothing saves while a receipt is being stored:** "Tallenna" and "Tallenna ja uusi" are disabled and `Ctrl`/`⌘`+`Enter` waits, because the receipt is not in the form yet.
 - **Toista joka kuukausi** keeps the entry as a monthly template (`lib/domain/recurring.ts`), in `settings.json` as `recurring`. Nothing books itself. When a month lacks a template's entry, the ledger shows a line for the selected month, or this month on the current year's whole-year view, and the overview's checklist has a row for this calendar month; both open a dialog that lists them, ticked, and adds them with an undo. **Whether a month has its entry is read from the entries, not stored**: the same side, category and description count, so a changed amount still counts, a deleted entry comes due again, and it survives the CSV. The date is the template's day, or the month's last day, and the rate follows it (§5). A template is monthly only. Unticking the box on an edited entry removes its template, and Asetukset, Toistuvat lists them with the amount and day editable.
+- **Maksettu** offers the same day, another day with a date, or "Avoin", on any line that can be unpaid (§6.3). An open entry carries a pill in the ledger.
 - **Verokausi** appears under the category when it is a VAT payment or refund (§6.6), and the entry dialog can be opened with fields filled in (`DialogState.prefill`), which is how the VAT view books one.
 - **Yksityisotto or Yksityissijoitus** as the category shows a line under it: neither income nor an expense, no effect on the result or VAT, and the bank statement as the receipt (`entry.ownerHint`, §6.7).
 - **Tallenna ja uusi** saves, keeps the date, resets the rest for the next entry, and puts the focus back on the date.
@@ -816,7 +828,7 @@ The app's front page, at `/app/overview`. `/app`, "Jatka kirjanpitoa", opening a
 - **Widgets**, in their default order and size:
   - **Tulos**: line 358 or 359 from 1.1. to today, or to 31.12. for a past year; the formula line; a sparkline of the cumulative result; the entry count, the profit margin and the year's VAT. With entries in the year before, also its result to the same date and its same month, beside this year's (`sameTimeLastYear` in `lib/domain/year-compare.ts`), so part of a year is never set against all of the last. Links to Tuloslaskelma.
   - **Seuraava ALV-ilmoitus**: the next period not yet filed, its amount as payable, refundable or "Nollailmoitus", a due-date row with the weekday and a days-left pill (amber at 14 days or fewer, red with "pv myöhässä" once overdue), a note when EU or reverse-charge sales must be reported too, and the period after it. "Merkitse ilmoitetuksi" for a closed period, with "Peru" right after. Links to ALV-laskelma on that period.
-  - **Pankkitili**: the bank balance the user typed in, with its date (`bankBalance`, `lib/domain/bank-balance.ts`). The app has no connection to a bank, and a static export could not hold one. With entries dated after the reading and up to today, the big figure is an estimate for today, labelled as one, with the balance and the entries' gross total under it: entries go by their own date rather than the payment date, and tax payments other than booked VAT (§6.6) are not in the book. The owner's withdrawals and investments count once booked (§6.7). Lines where no money moves (312 to 315, 337, 353, 354) stay out; fixed assets count. The balance goes in `settings.json`, not on any report.
+  - **Pankkitili**: the bank balance the user typed in, with its date (`bankBalance`, `lib/domain/bank-balance.ts`). The app has no connection to a bank, and a static export could not hold one. With entries paid after the reading and up to today, the big figure is an estimate for today, labelled as one, with the balance and the entries' gross total under it: an open entry is left out until it is paid, and tax payments other than booked VAT (§6.6) are not in the book. The owner's withdrawals and investments count once booked (§6.7). Lines where no money moves (312 to 315, 337, 353, 354) stay out; fixed assets count. The balance goes in `settings.json`, not on any report.
   - **Kuukaudet** (wide, two rows tall): `IncomeExpenseChart`, shared with Yhteenveto. Net income above the axis and net expenses below it, one axis. **The bars are mirrored on purpose**: the income green and expense red fail a deuteranopia check side by side (ΔE 5.3 light, 3.5 dark, against 8), and position gives the two series a difference every reader sees. A hover gives the month's income, expenses, VAT and result, the result by the income statement's rules (`monthFigures` in `summary.ts`), so the months add up to 358; a click opens the ledger on that month. Four figures under it: the best month, average income and expenses per elapsed month, months with entries.
   - **Myynti**: line 300 split into Suomi, EU, muut maat and käänteinen, as a stacked bar and a list; lines 301 to 324 below as other income.
   - **Kulut ryhmittäin**: the §6.4 buckets with expenses, largest first; empty ones are counted.
@@ -1295,9 +1307,7 @@ Questions for an accountant. Building proceeds on the answer given:
 
 The gaps themselves, in the order they are being closed:
 
-- **Payment basis and sales ledger.** An entry has one date and cannot be open, so neither the cash basis nor the receivables above can be worked out.
 - **Form 5's assets and liabilities.** Vero splits the profit into capital and earned income from the net assets, and the app fills none of the fields above.
-- **Loans.** KPL 2:1 has the books record financing transactions, and no off-statement line takes a drawdown or repayment.
 - **Inventory.** Line 333 includes the change in inventory, but nothing records the stock.
 - **EC Sales List.** An entry has no buyer VAT number.
 - **Edits and deletes leave no trace, and nothing locks.** An entry in a filed period can be changed after a warning, which KPL 2:7 does not allow.

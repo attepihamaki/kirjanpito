@@ -230,6 +230,11 @@ function LedgerRow({
             )}
           >
             {entry.description || f.t("ledger.noDescription")}
+            {entry.paidOn === null ? (
+              <Pill size="sm" className="ml-2">
+                {f.t("ledger.openPill")}
+              </Pill>
+            ) : null}
           </span>
           {attachments.length ? (
             <Button

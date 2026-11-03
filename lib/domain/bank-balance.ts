@@ -1,4 +1,5 @@
 import { signedGross } from "@/lib/domain/calc"
+import { NON_CASH_LINES, paidDate } from "@/lib/domain/open-items"
 import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
 
 /**
@@ -12,17 +13,6 @@ export interface BankBalance {
   date: string
 }
 
-/** Lines booked without any money moving: depreciation, provisions, private use and deductions outside the books. */
-const NON_CASH_LINES: ReadonlySet<string> = new Set([
-  "312",
-  "313",
-  "314",
-  "315",
-  "337",
-  "353",
-  "354",
-])
-
 export interface BankEstimate {
   /** How many entries moved the balance. */
   count: number
@@ -33,11 +23,10 @@ export interface BankEstimate {
 }
 
 /**
- * The balance carried forward through the entries dated after it, up to today.
- * A future-dated entry has not happened yet, so it stays out. An entry is dated
- * by its invoice or receipt rather than by its payment, so this drifts between
- * readings, as it does with anything the book does not record, such as tax
- * payments other than booked VAT. The owner's transfers count once booked (§6.7).
+ * The balance carried forward through the entries paid after it, up to today.
+ * An open entry and a payment still to come stay out. This drifts between
+ * readings with anything the book does not record, such as tax payments other
+ * than booked VAT. The owner's transfers count once booked (§6.7).
  */
 export function bankEstimate(
   balance: BankBalance,
@@ -48,7 +37,8 @@ export function bankEstimate(
   let count = 0
   let movement = 0
   for (const e of entries) {
-    if (e.date <= balance.date || e.date > today) continue
+    const paid = paidDate(e)
+    if (paid === null || paid <= balance.date || paid > today) continue
     const line = catMap.get(e.catId)?.line
     if (line && NON_CASH_LINES.has(line)) continue
     count += 1

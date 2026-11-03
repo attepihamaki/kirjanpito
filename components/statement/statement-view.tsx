@@ -7,6 +7,8 @@ import { useFormatters } from "@/components/lang-provider"
 import { incomeStatement } from "@/lib/domain/income-statement"
 import { indexCategories } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
+import { useTaxBasisEntries } from "@/hooks/use-tax-basis"
+import { balancesAt } from "@/lib/domain/open-items"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -18,11 +20,17 @@ import { useBookStore } from "@/stores/book-store"
 export function StatementView() {
   const f = useFormatters()
   const entries = useBookStore((s) => s.entries)
+  const basis = useTaxBasisEntries()
   const cats = useBookStore((s) => s.cats)
   const year = useBookStore((s) => s.year)
+  const traderType = useBookStore((s) => s.traderType)
 
   const statement = React.useMemo(
-    () => incomeStatement(entries, indexCategories(cats), year),
+    () => incomeStatement(basis, indexCategories(cats), year),
+    [basis, cats, year]
+  )
+  const open = React.useMemo(
+    () => balancesAt(entries, indexCategories(cats), `${year}-12-31`),
     [entries, cats, year]
   )
 
@@ -203,6 +211,21 @@ export function StatementView() {
             {f.t("statement.note", {
               a: f.money(statement.nonDeductibleTotal),
             })}
+          </p>
+        ) : null}
+
+        {traderType ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            {f.t(
+              traderType === "professional"
+                ? "statement.cashNote"
+                : "statement.accrualNote",
+              {
+                d: f.date(`${year}-12-31`),
+                r: f.money(open.receivables),
+                p: f.money(open.payables),
+              }
+            )}
           </p>
         ) : null}
 

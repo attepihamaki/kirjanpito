@@ -101,9 +101,9 @@ export function vatReport(
     const cat = cats.get(e.catId)
     const { net, vat } = calcEntry(e)
     const rate = Number(e.vatRate) || 0
-    // Settling the tax and the owner's transfers are not taxable events (§6.6, §6.7).
+    // Settling the tax, the owner's transfers and loans are not taxable events (§6.6 to §6.8).
     const line = cat && LINE_BY_KEY.get(cat.line)
-    if (line?.settlement || line?.owner) continue
+    if (line?.settlement || line?.owner || line?.loan) continue
 
     if (e.type === "income") {
       /*

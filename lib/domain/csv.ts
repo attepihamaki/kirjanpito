@@ -10,6 +10,7 @@ import {
 } from "@/lib/domain/accounts"
 import { CSV_HEADER, CSV_HEADER_LINE } from "@/lib/domain/csv-header"
 import { parseCsvDate, yearOf } from "@/lib/domain/dates"
+import { canBeUnpaid } from "@/lib/domain/open-items"
 import { uid } from "@/lib/domain/id"
 import {
   formatAmountForCsv,
@@ -59,6 +60,7 @@ const FINNISH_COLUMNS: ReadonlyMap<string, string> = new Map([
   ["syotto", "mode"],
   ["tosite", "receipts"],
   ["verokausi", "settles"],
+  ["maksettu", "paid"],
 ])
 
 /** The column a header cell names, ignoring case and either language. */
@@ -76,6 +78,9 @@ const TYPE_FROM_CSV: Readonly<Record<string, EntryType>> = {
   tulo: "income",
   kulu: "expense",
 }
+
+/** The `paid` column's value for an entry still open. */
+const PAID_OPEN = "avoin"
 
 /** Amount mode ⇄ the `mode` column. "veroton" is accepted on import only. */
 const MODE_TO_CSV: Readonly<Record<AmountMode, string>> = {
@@ -159,6 +164,7 @@ export function serializeCsv(
         MODE_TO_CSV[e.amountMode],
         defuseFormula(receipts),
         e.settles ?? "",
+        e.paidOn === null ? PAID_OPEN : (e.paidOn ?? ""),
       ]
         .map(quote)
         .join(";")
@@ -435,6 +441,7 @@ export function parseCsv(
       amountMode,
       paths,
       ...settledPeriod(get("settles"), cat),
+      ...paidColumn(get("paid"), date, cat),
     })
 
     const y = yearOf(date)
@@ -460,6 +467,21 @@ export function parseCsv(
     latestYear,
     delimiter,
   }
+}
+
+/**
+ * When an entry was paid (§6.3). An unreadable date, and a date on a line with
+ * no separate payment, read as paid on the entry's own date.
+ */
+function paidColumn(
+  value: string,
+  date: string,
+  cat: Category
+): { paidOn?: string | null } {
+  if (!value || !canBeUnpaid(LINE_BY_KEY.get(cat.line))) return {}
+  if (value.toLowerCase() === PAID_OPEN) return { paidOn: null }
+  const paid = parseCsvDate(value)
+  return paid && paid !== date ? { paidOn: paid } : {}
 }
 
 /**
