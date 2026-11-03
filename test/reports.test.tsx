@@ -136,7 +136,9 @@ describe("VatView", () => {
     useBookStore.setState({ bookStart: "2026-10", vatIndex: 9 })
     mount(<VatView />)
 
-    expect(screen.getAllByText("Ei ilmoitusta")).toHaveLength(9)
+    // Only the selected one of them is left in the strip, to carry the banner.
+    expect(screen.queryByText("Tammi")).toBeNull()
+    expect(screen.getAllByText("Ei ilmoitusta")).toHaveLength(1)
     expect(screen.queryByText("Myöhässä")).toBeNull()
     expect(screen.getByText(/ennen kirjanpidon aloituskuukautta/)).toBeVisible()
     expect(

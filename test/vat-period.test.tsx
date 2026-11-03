@@ -76,15 +76,34 @@ describe("the VAT view's period", () => {
     expect(useBookStore.getState().vatIndex).toBe(4)
   })
 
-  it("owes nothing for the months before the start month", () => {
+  it("leaves out the months before the start month", () => {
     useBookStore.setState({ vatPeriod: "month", bookStart: "2026-10" })
     const { periods, statuses } = period()
-    const status = (key: string) =>
-      statuses[periods.findIndex((p) => p.key === key)]
 
-    expect(status("2026-09")).toBe("before")
-    expect(status("2026-01")).toBe("before")
-    expect(status("2026-10")).toBe("due")
+    expect(periods.map((p) => p.key)).toEqual(["2026-10", "2026-11", "2026-12"])
+    expect(statuses[0]).toBe("due")
+  })
+
+  it("leaves them out even when they hold entries", () => {
+    useBookStore.setState({
+      vatPeriod: "month",
+      bookStart: "2026-10",
+      entries: [october, { ...october, id: "mar", date: "2026-03-18" }],
+    })
+
+    expect(period().periods.map((p) => p.key)).not.toContain("2026-03")
+  })
+
+  it("keeps the period on screen even when it owes no return", () => {
+    useBookStore.setState({
+      vatPeriod: "month",
+      bookStart: "2026-10",
+      vatIndex: 5,
+    })
+    const { periods, current } = period()
+
+    expect(current.key).toBe("2026-05")
+    expect(periods.map((p) => p.key)).toContain("2026-05")
   })
 
   it("owes nothing at all before the first entry of a book with none", () => {
