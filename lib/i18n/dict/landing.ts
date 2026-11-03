@@ -132,6 +132,20 @@ export const LANDING_DICT = {
     "Entries are in a plain CSV file you can open in Excel. Receipts travel with it in the same ZIP file, in folders by year and month.",
   ],
 
+  /*
+   * Three rows of a real export, under the header the reader's language is
+   * written with. The words follow the language and the numbers never do, so
+   * the sample shows the file as it really comes out (§7.1).
+   */
+  "landing.csvSample": [
+    "14;2026-10-10;Osto – K-Rauta – tarvikkeet;kulu;333;Ostot ja varastojen muutokset;100,00;25,5;brutto;liitteet/2026/10/…jpg\n" +
+      "15;2026-10-28;Lasku 1005 – Mäkinen Rakennus Oy;tulo;300;Myynti – Suomi;1882,50;25,5;brutto;liitteet/2026/10/…pdf\n" +
+      "16;2026-10-30;Pankin palvelumaksut;kulu;349;Muut rahoituskulut;8,50;0;brutto;",
+    "14;2026-10-10;Purchase – K-Rauta – supplies;expense;333;Purchases and changes in inventory;100,00;25,5;gross;attachments/2026/10/…jpg\n" +
+      "15;2026-10-28;Invoice 1005 – Mäkinen Rakennus Oy;income;300;Sales – Finland;1882,50;25,5;gross;attachments/2026/10/…pdf\n" +
+      "16;2026-10-30;Bank service charges;expense;349;Other financial costs;8,50;0;gross;",
+  ],
+
   "landing.faqTitle": ["Kysyttyä", "Questions"],
   "landing.q1": ["Kenelle kirjanpito on tarkoitettu?", "Who is it for?"],
   "landing.a1": [

@@ -42,8 +42,17 @@ export type Cents = number
 export interface Attachment {
   /** IndexedDB key, or null when the file itself is not available. */
   id: string | null
-  /** Display / original file name. */
+  /**
+   * The original file name. It is what the extension, the MIME type and the
+   * duplicate check are read from, so it always names the real file and a
+   * rename never touches it.
+   */
   name: string
+  /**
+   * The name the user gave this receipt, which becomes its file name in the
+   * ZIP (§7.2). Absent when the entry's own description names it.
+   */
+  label?: string
   /** MIME type. */
   type: string
   /** Size in bytes. */

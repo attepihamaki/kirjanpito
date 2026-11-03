@@ -16,6 +16,7 @@ import {
   type BookRow,
   type Totals,
 } from "@/lib/domain/books"
+import { receiptFolder } from "@/lib/domain/receipt-path"
 import { retentionDates } from "@/lib/domain/retention"
 import { indexCategories, type Category } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
@@ -365,6 +366,7 @@ export function AccountListView() {
   const entries = useBookStore((s) => s.entries)
   const cats = useBookStore((s) => s.cats)
   const year = useBookStore((s) => s.year)
+  const exportLang = useBookStore((s) => s.exportLang)
   const rows = React.useMemo(
     () => accountList(entries, cats, year),
     [entries, cats, year]
@@ -423,7 +425,10 @@ export function AccountListView() {
         {BOOK_LIST.map(([name, kept]) => (
           <div key={name}>
             <dt className="font-medium">{f.t(name)}</dt>
-            <dd className="text-muted-foreground">{f.t(kept)}</dd>
+            {/* `d` is the receipt folder, which follows the export language. */}
+            <dd className="text-muted-foreground">
+              {f.t(kept, { d: receiptFolder(exportLang) })}
+            </dd>
           </div>
         ))}
       </dl>

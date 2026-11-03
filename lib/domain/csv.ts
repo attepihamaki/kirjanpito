@@ -6,9 +6,16 @@ import {
   FORMER_NAMES,
   ALL_LINES,
   LINE_BY_KEY,
+  categoryName,
   type AccountLine,
 } from "@/lib/domain/accounts"
-import { CSV_HEADER, CSV_HEADER_LINE } from "@/lib/domain/csv-header"
+import {
+  CSV_HEADER,
+  columnName,
+  csvColumnLabel,
+  csvHeaderLine,
+  type CsvColumn,
+} from "@/lib/domain/csv-header"
 import { parseCsvDate, yearOf } from "@/lib/domain/dates"
 import { canBeEuPurchase, isEuSaleKind } from "@/lib/domain/accounts"
 import { canBeUnpaid } from "@/lib/domain/open-items"
@@ -33,74 +40,67 @@ import {
   type Entry,
   type EntryType,
   type EuPurchase,
+  type Lang,
 } from "@/lib/domain/types"
 
 /**
  * The column names live in `csv-header.ts`, which has no dependencies, so the
  * landing page and the import command can name them without pulling papaparse
- * into their bundles. This module is the only place the `tulo`/`kulu` and
- * `brutto`/`netto` *values* and the Finnish column names appear.
+ * into their bundles. This module is the only place the *values* appear.
  */
-export { CSV_HEADER, CSV_HEADER_LINE }
+export { CSV_HEADER, csvHeaderLine, csvColumnLabel }
 
 const REQUIRED = ["date", "type", "amount"] as const
 
-/**
- * The Finnish column names, which files already exported carry. The import
- * reads them as the English ones for good, and the export never writes them.
+/*
+ * The words in a cell follow the book's export language (§7.1), so each map
+ * below writes one language and reads both: a file in either language has to
+ * open the same way. The number formats never follow the language — the
+ * decimal comma, the ";" delimiter and the ISO date are what let the file
+ * open in a European Excel, and they are the same in both.
  */
-const FINNISH_COLUMNS: ReadonlyMap<string, string> = new Map([
-  ["tositenro", "voucher"],
-  ["tositenumero", "voucher"],
-  ["pvm", "date"],
-  ["selite", "description"],
-  ["tyyppi", "type"],
-  ["tili", "account"],
-  ["luokka", "category"],
-  ["summa", "amount"],
-  ["alv", "vat"],
-  ["syotto", "mode"],
-  ["tosite", "receipts"],
-  ["verokausi", "settles"],
-  ["maksettu", "paid"],
-  ["ostajan_alv", "buyer_vat"],
-  ["eu_osto", "eu_purchase"],
-])
-
-/** The column a header cell names, ignoring case and either language. */
-function columnName(cell: string): string {
-  const name = cell.trim().toLowerCase()
-  return FINNISH_COLUMNS.get(name) ?? name
-}
 
 /** Entry type ⇄ the `type` column. */
-const TYPE_TO_CSV: Readonly<Record<EntryType, string>> = {
-  income: "tulo",
-  expense: "kulu",
+const TYPE_TO_CSV: Readonly<Record<Lang, Record<EntryType, string>>> = {
+  fi: { income: "tulo", expense: "kulu" },
+  en: { income: "income", expense: "expense" },
 }
 const TYPE_FROM_CSV: Readonly<Record<string, EntryType>> = {
   tulo: "income",
   kulu: "expense",
+  income: "income",
+  expense: "expense",
 }
 
 /** An EU purchase ⇄ the `eu_purchase` column. */
-const EU_PURCHASE_TO_CSV: Readonly<Record<EuPurchase, string>> = {
-  goods: "tavara",
-  services: "palvelu",
+const EU_PURCHASE_TO_CSV: Readonly<Record<Lang, Record<EuPurchase, string>>> = {
+  fi: { goods: "tavara", services: "palvelu" },
+  en: { goods: "goods", services: "services" },
 }
 const EU_PURCHASE_FROM_CSV: Readonly<Record<string, EuPurchase>> = {
   tavara: "goods",
   palvelu: "services",
+  goods: "goods",
+  services: "services",
 }
 
 /** The `paid` column's value for an entry still open. */
-const PAID_OPEN = "avoin"
+const PAID_OPEN: Readonly<Record<Lang, string>> = { fi: "avoin", en: "open" }
+const PAID_OPEN_VALUES: readonly string[] = ["avoin", "open"]
 
-/** Amount mode ⇄ the `mode` column. "veroton" is accepted on import only. */
-const MODE_TO_CSV: Readonly<Record<AmountMode, string>> = {
-  gross: "brutto",
-  net: "netto",
+/**
+ * Amount mode ⇄ the `mode` column.
+ *
+ * Reading has to name every word that means net, because anything it does not
+ * recognise is read as gross: a net row misread as gross keeps its number and
+ * changes what the number means, which no later check would catch. "veroton"
+ * is accepted but never written.
+ */
+const MODE_TO_CSV: Readonly<Record<Lang, Record<AmountMode, string>>> = {
+  fi: { gross: "brutto", net: "netto" },
+  en: { gross: "gross", net: "net" },
 }
+const NET_VALUES: readonly string[] = ["netto", "veroton", "net"]
 
 /* -------------------------------------------------------------------------
  * Serialize
@@ -135,7 +135,10 @@ function quote(value: string): string {
 
 /**
  * Serialize to the export format: UTF-8 BOM, ";" delimiter, CRLF endings,
- * rows sorted by date, Finnish category names, decimal commas.
+ * rows sorted by date, decimal commas.
+ *
+ * The header, the words in the cells and the category names follow `lang`
+ * (§7.1); the numbers and the date never do.
  *
  * Receipt paths are always written, whether or not a ZIP is being produced:
  * §7.2 relies on a plain CSV carrying the paths so a re-import can mark those
@@ -144,9 +147,11 @@ function quote(value: string): string {
 export function serializeCsv(
   entries: readonly Entry[],
   cats: CategoryMap,
-  paths: ReadonlyMap<string, string> = buildReceiptPaths(entries)
+  opts: { lang?: Lang; paths?: ReadonlyMap<string, string> } = {}
 ): string {
-  const lines: string[] = [CSV_HEADER_LINE]
+  const lang = opts.lang ?? "fi"
+  const paths = opts.paths ?? buildReceiptPaths(entries, lang)
+  const lines: string[] = [csvHeaderLine(lang)]
   const sorted = [...entries].sort(
     (a, b) =>
       a.date.localeCompare(b.date) || (a.voucher ?? 0) - (b.voucher ?? 0)
@@ -170,17 +175,17 @@ export function serializeCsv(
         isVoucherNumber(e.voucher) ? String(e.voucher) : "",
         e.date,
         defuseFormula(e.description.trim()),
-        TYPE_TO_CSV[e.type],
+        TYPE_TO_CSV[lang][e.type],
         line ? String(line.account) : "",
-        defuseFormula(cat ? cat.name : ""),
+        defuseFormula(cat ? categoryName(cat, lang) : ""),
         formatAmountForCsv(e.amount),
         String(e.vatRate).replace(".", ","),
-        MODE_TO_CSV[e.amountMode],
+        MODE_TO_CSV[lang][e.amountMode],
         defuseFormula(receipts),
         e.settles ?? "",
-        e.paidOn === null ? PAID_OPEN : (e.paidOn ?? ""),
+        e.paidOn === null ? PAID_OPEN[lang] : (e.paidOn ?? ""),
         defuseFormula(e.buyerVatId ?? ""),
-        e.euPurchase ? EU_PURCHASE_TO_CSV[e.euPurchase] : "",
+        e.euPurchase ? EU_PURCHASE_TO_CSV[lang][e.euPurchase] : "",
       ]
         .map(quote)
         .join(";")
@@ -285,7 +290,7 @@ export type ImportWarning =
 
 export type ImportFailure =
   | { ok: false; code: "empty-file" }
-  | { ok: false; code: "missing-columns"; missing: readonly string[] }
+  | { ok: false; code: "missing-columns"; missing: readonly CsvColumn[] }
   | { ok: false; code: "no-rows-read"; skipped: readonly SkippedRow[] }
 
 export interface ImportSuccess {
@@ -422,9 +427,10 @@ export function parseCsv(
     const vatRate =
       rateRaw === "" ? cat.vatRate : (parseRateCell(rateRaw) ?? cat.vatRate)
 
-    const modeRaw = get("mode").toLowerCase()
-    const amountMode: AmountMode =
-      modeRaw === "netto" || modeRaw === "veroton" ? "net" : "gross"
+    const modeRaw = get("mode").trim().toLowerCase()
+    const amountMode: AmountMode = NET_VALUES.includes(modeRaw)
+      ? "net"
+      : "gross"
 
     const listed = restoreFormula(get("receipts"))
       .split("|")
@@ -513,7 +519,9 @@ function paidColumn(
   cat: Category
 ): { paidOn?: string | null } {
   if (!value || !canBeUnpaid(LINE_BY_KEY.get(cat.line))) return {}
-  if (value.toLowerCase() === PAID_OPEN) return { paidOn: null }
+  if (PAID_OPEN_VALUES.includes(value.trim().toLowerCase())) {
+    return { paidOn: null }
+  }
   const paid = parseCsvDate(value)
   return paid && paid !== date ? { paidOn: paid } : {}
 }

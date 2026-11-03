@@ -691,8 +691,8 @@ export const APP_DICT = {
   ],
   "ledger.bookVouchers": ["Tositteet", "Vouchers"],
   "ledger.bookVouchersKept": [
-    "Alkuperäiset tiedostot kirjanpitotiedoston kansiossa tositteet/vuosi/kuukausi. CSV:n rivi kertoo kirjauksen tositteet.",
-    "The original files in the bookkeeping file, in the folder tositteet/year/month. A CSV row names its entry’s receipts.",
+    "Alkuperäiset tiedostot kirjanpitotiedoston kansiossa {d}/vuosi/kuukausi. CSV:n rivi kertoo kirjauksen tositteet.",
+    "The original files in the bookkeeping file, in the folder {d}/year/month. A CSV row names its entry’s receipts.",
   ],
   "ledger.bookReports": [
     "Tuloslaskelma ja arvonlisäveroilmoitukset",

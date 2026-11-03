@@ -25,18 +25,22 @@ import {
   serializeCsv,
   type ImportSuccess,
 } from "@/lib/domain/csv"
-import { CSV_HEADER_LINE } from "@/lib/domain/csv-header"
+import { csvColumnLabel, csvHeaderLine } from "@/lib/domain/csv-header"
 import { uid } from "@/lib/domain/id"
 import {
+  CSV_FILE_NAME,
   attachmentKey,
   buildReceiptPaths,
   cleanFileName,
+  defaultFileBaseName,
+  labelFromPath,
   mimeForName,
 } from "@/lib/domain/receipt-path"
 import {
   indexCategories,
   type Attachment,
   type Entry,
+  type Lang,
 } from "@/lib/domain/types"
 import {
   parseSettings,
@@ -200,7 +204,13 @@ async function importCsv(
     missing += paths.length
     return {
       ...entry,
-      ...(paths.length ? { atts: paths.map(missingAttachment) } : {}),
+      ...(paths.length
+        ? {
+            atts: paths.map((path, i) =>
+              missingAttachment(path, entry, i, paths.length)
+            ),
+          }
+        : {}),
     }
   })
 
@@ -252,11 +262,11 @@ async function importZip(
   const entries: Entry[] = []
   for (const { paths, ...entry } of result.entries) {
     const atts: Attachment[] = []
-    for (const path of paths) {
+    for (const [i, path] of paths.entries()) {
       const bytes = canStore ? await unpacked.readReceipt(path) : null
       if (!bytes) {
         missing += 1
-        atts.push(missingAttachment(path))
+        atts.push(missingAttachment(path, entry, i, paths.length))
         continue
       }
       const id = `a-${uid()}`
@@ -269,11 +279,17 @@ async function importZip(
       const blob = new Blob([bytes as BlobPart], { type })
       try {
         await putReceipt(id, blob)
-        atts.push({ id, name, type, size: blob.size })
+        atts.push({
+          id,
+          name,
+          ...labelOf(path, entry, i, paths.length),
+          type,
+          size: blob.size,
+        })
         imported += 1
       } catch {
         missing += 1
-        atts.push(missingAttachment(path))
+        atts.push(missingAttachment(path, entry, i, paths.length))
       }
     }
     entries.push({ ...entry, ...(atts.length ? { atts } : {}) })
@@ -291,10 +307,30 @@ async function importZip(
   return true
 }
 
-function missingAttachment(path: string): Attachment {
+/**
+ * The name the user gave a receipt, read back from the path it was written to
+ * (§7.2). Spread into the attachment, so one it never had stays absent.
+ */
+function labelOf(
+  path: string,
+  entry: { date: string; description: string },
+  index: number,
+  count: number
+): { label?: string } {
+  const label = labelFromPath(path, entry, index, count)
+  return label ? { label } : {}
+}
+
+function missingAttachment(
+  path: string,
+  entry: { date: string; description: string },
+  index: number,
+  count: number
+): Attachment {
   return {
     id: null,
     name: path.split("/").pop() ?? path,
+    ...labelOf(path, entry, index, count),
     type: "",
     size: 0,
     missing: true,
@@ -308,9 +344,14 @@ function failureMessage(
 ): string {
   if (result.code === "empty-file") return ctx.t("io.fileEmpty")
   if (result.code === "missing-columns") {
+    /*
+     * The UI language, not the book's: this is a message about a file that
+     * has just been refused, so there is no book whose language to follow.
+     */
+    const lang = useLangStore.getState().lang
     return ctx.t("io.missingColumn", {
-      c: result.missing.join(", "),
-      h: CSV_HEADER_LINE,
+      c: result.missing.map((m) => csvColumnLabel(m, lang)).join(", "),
+      h: csvHeaderLine(lang),
     })
   }
   return ctx.t("io.noRows", { e: String(result.skipped.length) })
@@ -474,8 +515,9 @@ function carryFrom(
   }
 }
 
-function bookFileName(baseName: string, extension = ".zip"): string {
-  return `${cleanFileName(baseName) || "kirjanpito"}${extension}`
+/** The ZIP's own name. A name cleaned away falls back to the default (§7.3). */
+function bookFileName(baseName: string, lang: Lang): string {
+  return `${cleanFileName(baseName) || defaultFileBaseName(lang)}.zip`
 }
 
 /** A bookkeeping is a ZIP, because settings.json has to travel with the entries (§7.6). */
@@ -483,14 +525,17 @@ async function buildBookFile(
   baseName: string,
   source: FileSystemFileHandle | null = null
 ): Promise<BookFile> {
-  const { entries, cats } = useBookStore.getState()
+  const { entries, cats, exportLang } = useBookStore.getState()
   const version = bookVersion()
-  const paths = buildReceiptPaths(entries)
+  const paths = buildReceiptPaths(entries, exportLang)
   /*
    * Paths are always written, so a CSV taken out of the ZIP still records
    * which receipts existed (§7.1).
    */
-  const csvText = serializeCsv(entries, indexCategories(cats), paths)
+  const csvText = serializeCsv(entries, indexCategories(cats), {
+    lang: exportLang,
+    paths,
+  })
 
   const attachmentIds = new Map<string, string>()
   for (const e of entries) {
@@ -501,7 +546,7 @@ async function buildBookFile(
   let absentReceipts = 0
   let lostReceipts = 0
   const bytes = await packZip({
-    csvName: bookFileName(baseName, ".csv"),
+    csvName: CSV_FILE_NAME[exportLang],
     csvText,
     paths,
     attachmentIds,
@@ -514,7 +559,7 @@ async function buildBookFile(
     },
   })
   return {
-    name: bookFileName(baseName),
+    name: bookFileName(baseName, exportLang),
     blob: new Blob([bytes as BlobPart], { type: ZIP_MIME }),
     version,
     absentReceipts,
@@ -594,7 +639,10 @@ export async function saveBook(ctx: Ctx, suggestedBase: string): Promise<void> {
      * and a user who backs out should not have to wait for the packing.
      */
     const base = state.fileName ? baseOf(state.fileName) : suggestedBase
-    const handle = await handleToWrite(ctx, bookFileName(base))
+    const handle = await handleToWrite(
+      ctx,
+      bookFileName(base, state.exportLang)
+    )
     if (!handle || replacedSince(state.bookEpoch)) return
 
     const file = await buildBookFile(base, state.fileHandle)

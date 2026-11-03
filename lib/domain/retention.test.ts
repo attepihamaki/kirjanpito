@@ -40,8 +40,6 @@ describe("yearsToArchive", () => {
 
   it("leaves out a year whose books no longer have to be kept", () => {
     expect(yearsToArchive([on("2014-05-05")], "2026-11-02", {})).toEqual([])
-    expect(yearsToArchive([on("2016-05-05")], "2026-11-02", {})).toEqual([
-      2016,
-    ])
+    expect(yearsToArchive([on("2016-05-05")], "2026-11-02", {})).toEqual([2016])
   })
 })

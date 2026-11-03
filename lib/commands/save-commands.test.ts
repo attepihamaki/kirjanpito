@@ -9,6 +9,8 @@ import {
 } from "@/lib/commands/io-commands"
 import { getReceipt } from "@/lib/browser/receipt-store"
 import { defaultCategories } from "@/lib/domain/accounts"
+import { csvHeaderLine } from "@/lib/domain/csv-header"
+import { CSV_FILE_NAME } from "@/lib/domain/receipt-path"
 import type { Attachment } from "@/lib/domain/types"
 import { packZip, unpackZip } from "@/lib/domain/zip"
 import { registerConfirmHandler } from "@/lib/ui/confirm"
@@ -151,7 +153,8 @@ describe("saving back to the opened file", () => {
     expect(csv.written).toHaveLength(0)
     expect(zip.written).toHaveLength(1)
     const archive = await unzipped(zip.written[0])
-    expect(archive?.csvText).toContain("date;description")
+    expect(archive?.csvPath).toBe(CSV_FILE_NAME.fi)
+    expect(archive?.csvText).toContain(csvHeaderLine("fi"))
     expect(archive?.settingsText).toContain('"vatPeriod"')
     expect(useBookStore.getState().dirty).toBe(false)
 
@@ -417,7 +420,7 @@ describe("autosave", () => {
 })
 
 describe("receipts the browser does not hold", () => {
-  const PATH = "tositteet/2026/01/kuitti.jpg"
+  const PATH = "liitteet/2026/01/kuitti.jpg"
   const bytes = new TextEncoder().encode("kuitti")
   const missing: Attachment = {
     id: null,
@@ -434,13 +437,17 @@ describe("receipts the browser does not hold", () => {
     size: 6,
   }
 
-  /** A linked ZIP on disk that holds the receipt at `PATH`, or none at all. */
-  async function zipOnDisk(att: Attachment, withReceipt: boolean) {
+  /** A linked ZIP on disk that holds the receipt at `at`, or none at all. */
+  async function zipOnDisk(
+    att: Attachment,
+    withReceipt: boolean,
+    at: string = PATH
+  ) {
     const handle = fakeHandle("kirjanpito.zip")
     const data = await packZip({
       csvName: "kirjanpito.csv",
       csvText: CSV,
-      paths: new Map(withReceipt ? [["x#0", PATH]] : []),
+      paths: new Map(withReceipt ? [["x#0", at]] : []),
       attachmentIds: new Map([["x#0", "x"]]),
       read: async () => bytes,
       settingsText: "{}",
@@ -475,6 +482,33 @@ describe("receipts the browser does not hold", () => {
     expect(handle.written).toHaveLength(1)
     const saved = await unzipped(handle.written[0])
     expect(new TextDecoder().decode((await saved?.readReceipt(PATH))!)).toBe(
+      "kuitti"
+    )
+  })
+
+  /*
+   * Changing the export language renames the receipt folder, so every path
+   * moves at once. A receipt whose bytes this browser no longer holds has to
+   * be found in the file being replaced all the same, or one switch would
+   * offer to drop the lot (§7.2).
+   */
+  it("carries a receipt across when the export language changes", async () => {
+    // Where this book's receipt sits while the file is still Finnish.
+    const was = "liitteet/2026/01/2026-01-08_lasku-1001.jpg"
+    const handle = await zipOnDisk(gone, true, was)
+    const asked = vi.fn(async () => false)
+    registerConfirmHandler(asked)
+    useBookStore.setState({ exportLang: "en" })
+
+    await saveBook(ctx, "kirjanpito")
+
+    expect(asked).not.toHaveBeenCalled()
+    expect(handle.written).toHaveLength(1)
+    const saved = await unzipped(handle.written[0])
+    expect(saved?.csvPath).toBe(CSV_FILE_NAME.en)
+    const moved = was.replace("liitteet/", "attachments/")
+    expect(saved?.otherFiles).toEqual([moved])
+    expect(new TextDecoder().decode((await saved?.readReceipt(moved))!)).toBe(
       "kuitti"
     )
   })

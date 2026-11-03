@@ -1,5 +1,27 @@
 import type { Attachment, Entry, Lang } from "@/lib/domain/types"
-import { todayIso } from "@/lib/domain/dates"
+
+/**
+ * What an exported archive calls its parts, per export language (§7.2).
+ *
+ * The CSV is the vouchers and the folder holds their attachments, so the two
+ * are named for what they are rather than after the ZIP around them. The
+ * CSV's name is fixed per language: the archive then reads the same whatever
+ * the user called the file.
+ */
+const RECEIPT_FOLDER: Readonly<Record<Lang, string>> = {
+  fi: "liitteet",
+  en: "attachments",
+}
+
+export const CSV_FILE_NAME: Readonly<Record<Lang, string>> = {
+  fi: "tositteet.csv",
+  en: "vouchers.csv",
+}
+
+/** The folder name, for copy that tells the user where the receipts are. */
+export function receiptFolder(lang: Lang): string {
+  return RECEIPT_FOLDER[lang]
+}
 
 /**
  * Combining marks in the range U+0300 to U+036F: what `normalize("NFD")`
@@ -112,19 +134,41 @@ export function attachmentKey(entryId: string, index: number): string {
 }
 
 /**
+ * The file name a receipt takes when the user has not named it: the entry's
+ * own description, with the index telling several receipts of one entry apart.
+ *
+ * Shared with the entry dialog, which shows it as the name box's placeholder,
+ * so the suggestion on screen is the name the file will really get.
+ */
+export function defaultAttachmentStem(
+  description: string,
+  index: number,
+  count: number
+): string {
+  return `${slug(description)}${count > 1 ? `_${index + 1}` : ""}`
+}
+
+/**
  * Build the ZIP path for every attachment (§7.2):
- * `tositteet/{YYYY}/{MM}/{YYYY-MM-DD}_{slug}[_{n}].{ext}`, with `_{n}` added
- * only when the entry has several receipts, and `-2`, `-3`, … appended before
- * the extension on a collision.
+ * `{folder}/{YYYY}/{MM}/{YYYY-MM-DD}_{stem}.{ext}`, where the stem is the name
+ * the user gave the receipt, or `defaultAttachmentStem` when they gave none.
+ * `-2`, `-3`, … is appended before the extension on a collision, which is also
+ * what two receipts named the same thing get.
+ *
+ * A named receipt takes no index: the name already tells it from its siblings,
+ * and numbering only the unnamed ones keeps a path from moving when a
+ * neighbour is renamed.
  *
  * Missing attachments keep their stored path and reserve it, so a real
- * attachment colliding with one gets the suffix instead.
+ * attachment colliding with one gets the suffix instead — a pinned path beats
+ * a name.
  *
  * Anything that is not an image or a PDF gets no path at all, which is what
- * keeps it out of both the ZIP and the CSV's `tosite` column.
+ * keeps it out of both the ZIP and the CSV's receipts column.
  */
 export function buildReceiptPaths(
-  entries: readonly Entry[]
+  entries: readonly Entry[],
+  lang: Lang = "fi"
 ): ReadonlyMap<string, string> {
   const paths = new Map<string, string>()
   const used = new Set<string>()
@@ -153,8 +197,11 @@ export function buildReceiptPaths(
     for (const [i, a] of atts.entries()) {
       if (a.missing || !isReceiptFile(a)) continue
       const [y, mo] = e.date.split("-")
-      const suffix = atts.length > 1 ? `_${i + 1}` : ""
-      const base = `tositteet/${y}/${mo}/${e.date}_${slug(e.description)}${suffix}`
+      const named = a.label?.trim()
+      const stem = named
+        ? slug(named)
+        : defaultAttachmentStem(e.description, i, atts.length)
+      const base = `${RECEIPT_FOLDER[lang]}/${y}/${mo}/${e.date}_${stem}`
       const ext = extensionFor(a)
       let path = `${base}.${ext}`
       let n = 2
@@ -192,18 +239,57 @@ export function cleanFileName(input: string): string {
  * The name the download dialog suggests (§7.3): the last file opened or
  * saved, without its extension, or the dated default when there is none.
  */
-export function suggestedBaseName(
-  fileName: string | null,
-  lang: Lang,
-  now: Date = new Date()
-): string {
-  return (fileName && cleanFileName(fileName)) || defaultFileBaseName(lang, now)
+export function suggestedBaseName(fileName: string | null, lang: Lang): string {
+  return (fileName && cleanFileName(fileName)) || defaultFileBaseName(lang)
 }
 
-/** "kirjanpito_2026-10-24" / "accounting_2026-10-24", using today's date. */
-export function defaultFileBaseName(
-  lang: Lang,
-  now: Date = new Date()
-): string {
-  return `${lang === "en" ? "accounting" : "kirjanpito"}_${todayIso(now)}`
+/** "kirjanpito" / "bookkeeping". */
+export function defaultFileBaseName(lang: Lang): string {
+  return lang === "en" ? "bookkeeping" : "kirjanpito"
+}
+
+/**
+ * The name a receipt was given, read back from the path it was written to
+ * (§7.2). Null when the path is the one the entry's own description would
+ * have produced, which is what an unnamed receipt gets.
+ *
+ * This is what carries a name through a file and back: the path is the only
+ * record of it, so a name returns slugged. Reading it back makes the path a
+ * fixed point — exporting the recovered name reproduces the same path — so a
+ * book can go round any number of times without its receipts being renamed.
+ */
+export function labelFromPath(
+  path: string,
+  entry: { date: string; description: string },
+  index: number,
+  count: number
+): string | null {
+  const base = path.split("/").pop() ?? path
+  const ext = extFromName(base)
+  const stem = ext ? base.slice(0, -(ext.length + 1)) : base
+
+  const expected = `${entry.date}_${defaultAttachmentStem(entry.description, index, count)}`
+  // A collision tail belongs to the path, not to the name (`-2`, `-3`, …).
+  const withoutTail = stem.replace(/-\d+$/, "")
+  if (
+    stem.toLowerCase() === expected.toLowerCase() ||
+    withoutTail.toLowerCase() === expected.toLowerCase()
+  ) {
+    return null
+  }
+
+  const prefix = `${entry.date}_`
+  if (!stem.toLowerCase().startsWith(prefix.toLowerCase())) return null
+  let name = stem.slice(prefix.length)
+  /*
+   * An unnamed sibling's index is part of the path, not of the name. A slug
+   * never contains "_", so the only thing that can precede one here is an
+   * index — but something has to precede it, or a receipt the user called
+   * "2" would read as unnamed and move on the next save.
+   */
+  const indexTail = `_${index + 1}`
+  if (count > 1 && name.length > indexTail.length && name.endsWith(indexTail)) {
+    name = name.slice(0, -indexTail.length)
+  }
+  return name || null
 }
