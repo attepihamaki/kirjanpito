@@ -1,4 +1,9 @@
-import { BUCKETS, LINE_BY_KEY, RATES } from "@/lib/domain/accounts"
+import {
+  BUCKETS,
+  LINE_BY_KEY,
+  RATES,
+  offStatement,
+} from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
 import { monthOf, yearOf } from "@/lib/domain/dates"
 import { incomeStatement } from "@/lib/domain/income-statement"
@@ -86,8 +91,8 @@ export function summary(
     if (!row) continue
 
     const cat = cats.get(e.catId)
-    // A fixed asset is neither income nor an expense (§5).
-    if (cat && LINE_BY_KEY.get(cat.line)?.capital) continue
+    // A fixed asset or a VAT settlement is neither income nor an expense (§5).
+    if (cat && offStatement(LINE_BY_KEY.get(cat.line))) continue
     const { net } = calcEntry(e)
     const rate = Number(e.vatRate) || 0
 

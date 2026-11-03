@@ -67,7 +67,7 @@ describe("serializeCsv", () => {
   it("starts with a BOM and the exact header", () => {
     expect(out.startsWith(`﻿${HEADER}\r\n`)).toBe(true)
     expect(HEADER).toBe(
-      "tositenro;pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite"
+      "tositenro;pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite;verokausi"
     )
   })
 
@@ -653,6 +653,44 @@ describe("voucher numbers", () => {
     const lines = text.split("\r\n")
     expect(lines[1].startsWith("3;")).toBe(true)
     expect(lines[2].startsWith("9;")).toBe(true)
+  })
+})
+
+describe("VAT settlements", () => {
+  const payment = entry({
+    id: "p1",
+    voucher: 7,
+    date: "2026-11-12",
+    description: "ALV-maksu",
+    type: "expense",
+    catId: "vat-payment",
+    amount: 36_218,
+    vatRate: 0,
+    settles: "2026-10",
+  })
+
+  it("writes and reads back the period a payment settles", () => {
+    const text = serializeCsv([payment], cats)
+    expect(text).toContain(
+      ";2939;Arvonlisäveron maksu;362,18;0;brutto;;2026-10\r\n"
+    )
+
+    const back = ok(parseCsv(text, baseCats)).entries[0]
+    expect(back.catId).toBe("vat-payment")
+    expect(back.settles).toBe("2026-10")
+  })
+
+  it("drops a period on any other entry, and one that names no period", () => {
+    const rows = [
+      HEADER,
+      "1;2026-10-28;Lasku;tulo;300;Myynti – Suomi;100;25,5;brutto;;2026-10",
+      "2;2026-11-12;ALV;kulu;2939;Arvonlisäveron maksu;100;0;brutto;;pian",
+    ].join("\n")
+    const [sale, vat] = ok(parseCsv(rows, baseCats)).entries
+
+    expect(sale.settles).toBeUndefined()
+    expect(vat.catId).toBe("vat-payment")
+    expect(vat.settles).toBeUndefined()
   })
 })
 

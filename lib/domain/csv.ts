@@ -17,6 +17,7 @@ import {
   parseAmount,
   parseRate,
 } from "@/lib/domain/money"
+import { periodFromKey } from "@/lib/domain/vat-deadline"
 import { isVoucherNumber } from "@/lib/domain/voucher"
 import {
   attachmentKey,
@@ -132,6 +133,7 @@ export function serializeCsv(
         String(e.vatRate).replace(".", ","),
         MODE_TO_CSV[e.amountMode],
         defuseFormula(tosite),
+        e.settles ?? "",
       ]
         .map(quote)
         .join(";")
@@ -407,6 +409,7 @@ export function parseCsv(
       vatRate,
       amountMode,
       paths,
+      ...settledPeriod(get("verokausi"), cat),
     })
 
     const y = yearOf(date)
@@ -432,6 +435,16 @@ export function parseCsv(
     latestYear,
     delimiter,
   }
+}
+
+/**
+ * The period a VAT payment or refund settles (§6.6). Kept only on a settlement
+ * category and only when it names a period, so a stray value elsewhere is
+ * dropped rather than carried into the next export.
+ */
+function settledPeriod(value: string, cat: Category): { settles?: string } {
+  if (!LINE_BY_KEY.get(cat.line)?.settlement) return {}
+  return periodFromKey(value) ? { settles: value } : {}
 }
 
 interface ResolveArgs {

@@ -151,8 +151,8 @@ export const LANDING_DICT = {
     "Can I move my old Excel bookkeeping over?",
   ],
   "landing.a3": [
-    "Kyllä. Tallenna kirjaukset CSV-tiedostoksi sarakkeilla pvm, selite, tyyppi, tili, luokka, summa, alv ja syotto, ja tuo tiedosto. Sarakkeet tositenro ja tosite ovat valinnaisia. Ilman tositenumeroita kirjaukset numeroidaan päivämäärän mukaan.",
-    "Yes. Save your entries as a CSV file with the columns pvm, selite, tyyppi, tili, luokka, summa, alv and syotto, then import it. The tositenro and tosite columns are optional. Without voucher numbers, the entries are numbered by date.",
+    "Kyllä. Tallenna kirjaukset CSV-tiedostoksi sarakkeilla pvm, selite, tyyppi, tili, luokka, summa, alv ja syotto, ja tuo tiedosto. Sarakkeet tositenro, tosite ja verokausi ovat valinnaisia. Ilman tositenumeroita kirjaukset numeroidaan päivämäärän mukaan.",
+    "Yes. Save your entries as a CSV file with the columns pvm, selite, tyyppi, tili, luokka, summa, alv and syotto, then import it. The tositenro, tosite and verokausi columns are optional. Without voucher numbers, the entries are numbered by date.",
   ],
   "landing.q4": [
     "Mitä tapahtuu, jos suljen selaimen?",

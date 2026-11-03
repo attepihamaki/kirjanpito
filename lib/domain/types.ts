@@ -81,6 +81,11 @@ export interface Entry {
   vatRate: number
   amountMode: AmountMode
   atts?: Attachment[]
+  /**
+   * On a VAT payment or refund (§6.6), the key of the period it settles:
+   * `"2026-09"`, `"2026-Q3"` or `"2026"`. Absent on every other entry.
+   */
+  settles?: string
 }
 
 /** A category (luokka) the user books entries to. */

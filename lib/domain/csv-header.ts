@@ -1,6 +1,7 @@
 /**
- * The ten CSV columns, always in this order (§7.1). `tositenro` leads, as
- * the voucher number does on a printed journal (§4).
+ * The eleven CSV columns, always in this order (§7.1). `tositenro` leads, as
+ * the voucher number does on a printed journal (§4). `verokausi` comes last
+ * and is filled only on a VAT payment or refund (§6.6).
  *
  * The file format is Finnish and stays Finnish whatever the UI language, so a
  * CSV opens directly in Finnish Excel. Everything in memory and in storage
@@ -23,6 +24,7 @@ export const CSV_HEADER = [
   "alv",
   "syotto",
   "tosite",
+  "verokausi",
 ] as const
 
 /** The header as it appears on the first line of an exported file. */

@@ -98,6 +98,21 @@ function clampVatIndex(
   return to === "quarter" ? Math.ceil(index / 3) : index * 3 - 2
 }
 
+/** What a new entry can be opened with. */
+export type EntryPrefill = Partial<
+  Pick<
+    Entry,
+    | "date"
+    | "description"
+    | "type"
+    | "catId"
+    | "amount"
+    | "vatRate"
+    | "amountMode"
+    | "settles"
+  >
+>
+
 export type DialogState =
   | { kind: "none" }
   | {
@@ -106,6 +121,8 @@ export type DialogState =
       entryId?: string
       /** Receipts dropped with no dialog open, attached as the dialog opens. */
       files?: File[]
+      /** Fields a new entry starts from, such as a VAT payment's (§6.6). */
+      prefill?: EntryPrefill
     }
   | { kind: "viewer"; entryId: string; index: number }
   | { kind: "export" }
@@ -822,7 +839,7 @@ export const useBookStore = create<BookStore>()(
     }),
     {
       name: BOOK_STORAGE_KEY,
-      version: 5,
+      version: 6,
       storage: bookStorage,
       /*
        * Prerender must not touch localStorage; StoreHydrator rehydrates after

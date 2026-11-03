@@ -262,8 +262,8 @@ export const APP_DICT = {
   ],
   "overview.bankEstimate": ["Arvio tänään", "Estimate for today"],
   "overview.bankEstimateNote": [
-    "Arvio laskee kirjaukset päivämäärän mukaan, ei maksupäivän. Siinä eivät näy verojen maksut, yksityisotot eivätkä omat talletukset.",
-    "The estimate goes by each entry’s date, not the day it was paid. It leaves out tax payments, private withdrawals and your own deposits.",
+    "Arvio laskee kirjaukset päivämäärän mukaan, ei maksupäivän. Siinä eivät näy muut verojen maksut kuin kirjatut arvonlisäverot, yksityisotot eivätkä omat talletukset.",
+    "The estimate goes by each entry’s date, not the day it was paid. It leaves out tax payments other than booked VAT, private withdrawals and your own deposits.",
   ],
   "overview.bankUpdate": ["Päivitä saldo", "Update balance"],
   "overview.bankEmpty": [
@@ -637,6 +637,11 @@ export const APP_DICT = {
   ],
   "entry.category": ["Luokka", "Category"],
   "entry.amount": ["Summa (€)", "Amount (€)"],
+  "entry.settles": ["Verokausi", "Tax period"],
+  "entry.settlesHint": [
+    "Arvonlisäveroilmoitus, jonka maksu tai palautus tämä on.",
+    "The VAT return this payment or refund is for.",
+  ],
   "entry.vatRate": ["ALV %", "VAT %"],
   "entry.rateNotYet": [
     "{r} on voimassa {d} alkaen. Tälle päivälle verokanta on {s}.",
@@ -781,6 +786,39 @@ export const APP_DICT = {
     "The period ended before the month the bookkeeping began, so no return is filed for it.",
   ],
   "vat.markFiled": ["Merkitse ilmoitetuksi", "Mark as filed"],
+  /* The money that moved for a return, booked as an entry (§6.6). */
+  "vat.settlementTitle": ["Maksu tai palautus", "Payment or refund"],
+  "vat.settlementHint": [
+    "Kirjanpito ei näe pankkia. Kirjaa maksu tai palautus, kun raha on liikkunut, ja liitä tiliote tositteeksi. Kirjaus saa tositenumeron, mutta se ei ole tulo eikä kulu eikä muuta ilmoitusta.",
+    "The bookkeeping cannot see your bank. Book the payment or refund once the money has moved, and attach the bank statement as its receipt. The entry gets a voucher number, but it is neither income nor an expense and does not change the return.",
+  ],
+  "vat.settlementAddPayment": ["Kirjaa maksu", "Book payment"],
+  "vat.settlementAddRefund": ["Kirjaa palautus", "Book refund"],
+  "vat.settlementPaidOn": ["Maksettu {d}", "Paid on {d}"],
+  "vat.settlementReceivedOn": ["Palautus saatu {d}", "Refund received on {d}"],
+  "vat.settlementVoucher": ["tosite {n}", "voucher {n}"],
+  "vat.settlementOpen": ["Avaa kirjaus", "Open entry"],
+  "vat.settlementDescPayment": ["Arvonlisävero, {p}", "VAT, {p}"],
+  "vat.settlementDescRefund": [
+    "Arvonlisäveron palautus, {p}",
+    "VAT refund, {p}",
+  ],
+  "vat.settlementMatches": [
+    "Täsmää laskelman kanssa.",
+    "Matches the calculation.",
+  ],
+  "vat.settlementDifference": [
+    "Ero laskelmaan on {x}. Se voi johtua osamaksusta, palautuksen käyttämisestä muihin veroihin tai kirjauksiin tehdyistä muutoksista.",
+    "This differs from the calculation by {x}. A part payment, a refund used for other taxes or a change to the entries can cause that.",
+  ],
+  "vat.settlementWider": [
+    "Kirjaus koskee pidempää kautta, joten sitä ei verrata tämän kauden laskelmaan.",
+    "This entry covers a longer period, so it is not compared with this period’s calculation.",
+  ],
+  "vat.returnStepSettle": [
+    "Kirjaa maksu tai palautus",
+    "Book the payment or refund",
+  ],
   "vat.unmarkFiled": ["Poista merkintä", "Remove the mark"],
   "vat.payableTitle": ["Maksettava arvonlisävero", "VAT payable"],
   "vat.refundableTitle": ["Palautettava arvonlisävero", "VAT refundable"],

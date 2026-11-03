@@ -59,7 +59,8 @@ send anything to.
   in the amount payable or refundable, and the same figures as the return's fields
   to copy into OmaVero. EU, non-EU and reverse-charge sales are reported separately
   rather than counted as VAT-bearing. A change to a period marked as filed says how
-  to correct the return.
+  to correct the return. The tax paid or refunded is booked as its own numbered
+  entry, outside income and expenses, and checked against the calculation.
 - **Income statement** — the full chart of accounts for form 5, laid out as a
   printable sheet, and the figures in the form's own order to copy into OmaVero.
   Beside it, a register of machinery and equipment with the year's depreciation,

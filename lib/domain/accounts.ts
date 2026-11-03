@@ -41,6 +41,16 @@ export interface AccountLine {
    * 5, since the cost is deducted as depreciation, but on the VAT return.
    */
   capital: boolean
+  /**
+   * VAT paid to Verohallinto or refunded by it (§6.6): a debt to the state
+   * being settled, so neither income nor an expense, and not on the VAT return.
+   */
+  settlement: boolean
+}
+
+/** Lines off the income statement: fixed assets and VAT settlements (§5). */
+export function offStatement(line: AccountLine | undefined): boolean {
+  return !!line && (line.capital || line.settlement)
 }
 
 /**
@@ -397,8 +407,45 @@ export const CAPITAL_LINES: readonly AccountLine[] = [
   },
 ]
 
-/** Every line a category can sit on: the statement's, then the two above. */
-export const ALL_LINES: readonly AccountLine[] = [...LINES, ...CAPITAL_LINES]
+/**
+ * The VAT a return leaves to pay or to receive (§6.6), each payment or refund
+ * an entry with its own voucher number. Single-entry books have no balance
+ * sheet, so 2939 is the app's own account for the CSV's `tili` column, not one
+ * Form 5 asks for.
+ */
+export const SETTLEMENT_LINES: readonly AccountLine[] = [
+  {
+    ...l(
+      "vat-payment",
+      2939,
+      "expense",
+      "Arvonlisäveron maksu",
+      "VAT payment",
+      null,
+      0
+    ),
+    settlement: true,
+  },
+  {
+    ...l(
+      "vat-refund",
+      2939,
+      "income",
+      "Arvonlisäveron palautus",
+      "VAT refund",
+      null,
+      0
+    ),
+    settlement: true,
+  },
+]
+
+/** Every line a category can sit on: the statement's, then the four above. */
+export const ALL_LINES: readonly AccountLine[] = [
+  ...LINES,
+  ...CAPITAL_LINES,
+  ...SETTLEMENT_LINES,
+]
 
 function l(
   key: string,
@@ -425,6 +472,7 @@ function l(
     noVatDeduction: key === "341" || nondeductible,
     taxableShare: TAXABLE_SHARE[key] ?? null,
     capital: false,
+    settlement: false,
   }
 }
 
@@ -529,7 +577,7 @@ export const FORMER_NAMES: Readonly<Record<string, readonly string[]>> = {
   "319": ["Saadut osingot", "Dividends received"],
 }
 
-/** The 37 built-in categories: six sales plus one per remaining line. */
+/** The 39 built-in categories: six sales plus one per remaining line. */
 export function defaultCategories(): Category[] {
   const sales: Category[] = SALES.map((s) => ({
     id: s.id,

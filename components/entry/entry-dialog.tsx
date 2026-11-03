@@ -38,7 +38,7 @@ import {
   isReceiptStorageSupported,
   putReceipt,
 } from "@/lib/browser/receipt-store"
-import { RATES, categoryName } from "@/lib/domain/accounts"
+import { LINE_BY_KEY, RATES, categoryName } from "@/lib/domain/accounts"
 import {
   describeInvoice,
   isEmptyGuess,
@@ -55,6 +55,9 @@ import { isPdf } from "@/lib/domain/receipt-path"
 import { isoDate, monthOf, todayIso, yearOf } from "@/lib/domain/dates"
 import { rateMismatch, rateOnDate } from "@/lib/domain/vat-rates"
 import { uid } from "@/lib/domain/id"
+import { periodFromKey, vatPeriods } from "@/lib/domain/vat-deadline"
+import { defaultSettledKey } from "@/lib/domain/vat-settlement"
+import { periodLabel } from "@/lib/i18n/period-label"
 import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
 import { deleteEntry } from "@/lib/commands/book-commands"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
@@ -71,7 +74,7 @@ import {
   matchRecurring,
   type RecurringEntry,
 } from "@/lib/domain/recurring"
-import { useBookStore } from "@/stores/book-store"
+import { useBookStore, type EntryPrefill } from "@/stores/book-store"
 
 interface FormState {
   date: string
@@ -84,6 +87,8 @@ interface FormState {
   atts: Attachment[]
   /** Keep this entry as a monthly template (§8.5). */
   repeat: boolean
+  /** The VAT period a payment or refund settles, "" to go by the date (§6.6). */
+  settles: string
 }
 
 /** The three fields §8.5 validates, named as they are in `FormState`. */
@@ -122,6 +127,7 @@ function initialForm({
   lastType,
   lastMode,
   recurring,
+  prefill,
 }: {
   editing: Entry | undefined
   mode: "new" | "edit" | "copy"
@@ -130,18 +136,20 @@ function initialForm({
   lastType: EntryType
   lastMode: AmountMode
   recurring: readonly RecurringEntry[]
+  prefill?: EntryPrefill
 }): FormState {
   if (!editing || mode === "new") {
     return {
-      date: defaultDate(year, month),
-      description: "",
-      type: lastType,
-      catId: "",
-      amount: "",
-      vatRate: 0,
-      amountMode: lastMode,
+      date: prefill?.date ?? defaultDate(year, month),
+      description: prefill?.description ?? "",
+      type: prefill?.type ?? lastType,
+      catId: prefill?.catId ?? "",
+      amount: prefill?.amount ? formatMoneyPlain(prefill.amount) : "",
+      vatRate: prefill?.vatRate ?? 0,
+      amountMode: prefill?.amountMode ?? lastMode,
       atts: [],
       repeat: false,
+      settles: prefill?.settles ?? "",
     }
   }
   const today = todayIso()
@@ -159,6 +167,7 @@ function initialForm({
     // §8.5: a copy takes every field except the receipts.
     atts: mode === "copy" ? [] : [...(editing.atts ?? [])],
     repeat: mode === "edit" && matchRecurring(recurring, editing) !== undefined,
+    settles: editing.settles ?? "",
   }
 }
 
@@ -179,6 +188,7 @@ export function EntryDialog({
       mode={dialog.mode}
       entryId={dialog.entryId}
       files={dialog.files}
+      prefill={dialog.prefill}
       registerDropTarget={registerDropTarget}
     />
   )
@@ -188,11 +198,13 @@ function EntryDialogForm({
   mode,
   entryId,
   files,
+  prefill,
   registerDropTarget,
 }: {
   mode: "new" | "edit" | "copy"
   entryId?: string
   files?: File[]
+  prefill?: EntryPrefill
   registerDropTarget: (fn: ((files: File[]) => void) | null) => void
 }) {
   const f = useFormatters()
@@ -213,6 +225,7 @@ function EntryDialogForm({
   const recurring = useBookStore((s) => s.recurring)
   const upsertRecurring = useBookStore((s) => s.upsertRecurring)
   const removeRecurring = useBookStore((s) => s.removeRecurring)
+  const vatPeriodKind = useBookStore((s) => s.vatPeriod)
 
   // Captured at mount: the form owns its values from here on.
   const [editing] = React.useState(() =>
@@ -221,7 +234,16 @@ function EntryDialogForm({
   // The entry the duplicate hints leave out: itself, while it is edited.
   const editingId = mode === "edit" ? editing?.id : undefined
   const [initial] = React.useState(() =>
-    initialForm({ editing, mode, year, month, lastType, lastMode, recurring })
+    initialForm({
+      editing,
+      mode,
+      year,
+      month,
+      lastType,
+      lastMode,
+      recurring,
+      prefill,
+    })
   )
 
   const [form, setForm] = React.useState<FormState>(initial)
@@ -433,6 +455,28 @@ function EntryDialogForm({
     label: f.catLabel(c),
   }))
   const selectedCat = cats.find((c) => c.id === form.catId)
+  const settlement = !!(
+    selectedCat && LINE_BY_KEY.get(selectedCat.line)?.settlement
+  )
+  /*
+   * A payment or refund names the return it settles (§6.6). Unchosen, it goes
+   * by the date, and the periods offered are those of this year and the last.
+   */
+  const settledValue =
+    form.settles ||
+    (form.date ? defaultSettledKey(vatPeriodKind, form.date) : "")
+  const settledOptions = React.useMemo(() => {
+    const y = form.date ? yearOf(form.date) : year
+    const keys = [
+      ...vatPeriods(vatPeriodKind, y - 1),
+      ...vatPeriods(vatPeriodKind, y),
+    ].map((p) => p.key)
+    if (settledValue && !keys.includes(settledValue)) keys.push(settledValue)
+    return keys.flatMap((key) => {
+      const p = periodFromKey(key)
+      return p ? [{ value: key, label: periodLabel(f, p) }] : []
+    })
+  }, [form.date, year, vatPeriodKind, settledValue, f])
   const rateOptions = RATES.includes(form.vatRate)
     ? RATES
     : [...RATES, form.vatRate]
@@ -519,6 +563,7 @@ function EntryDialogForm({
       vatRate: form.vatRate,
       amountMode: form.amountMode,
       ...(form.atts.length ? { atts: form.atts } : {}),
+      ...(settlement && settledValue ? { settles: settledValue } : {}),
     }
   }
 
@@ -575,6 +620,7 @@ function EntryDialogForm({
         vatRate: 0,
         atts: [],
         repeat: false,
+        settles: "",
       }
       keepRate.current = false
       setForm(next)
@@ -719,6 +765,19 @@ function EntryDialogForm({
                 label={f.t("entry.category")}
               />
             </Field>
+
+            {settlement ? (
+              <Field>
+                <FieldLabel>{f.t("entry.settles")}</FieldLabel>
+                <OptionSelect
+                  options={settledOptions}
+                  value={settledValue}
+                  onChange={(value) => update({ settles: value })}
+                  label={f.t("entry.settles")}
+                />
+                <FieldDescription>{f.t("entry.settlesHint")}</FieldDescription>
+              </Field>
+            ) : null}
 
             {/* Paired for the same reason as date and type above. */}
             <div className="grid gap-5 min-[560px]:grid-cols-2">

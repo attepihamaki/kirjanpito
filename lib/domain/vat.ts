@@ -1,4 +1,4 @@
-import { LINE_BY_KEY, RATES } from "@/lib/domain/accounts"
+import { LINE_BY_KEY, RATES, offStatement } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
 import type { Cents, CategoryMap, Entry, SalesKind } from "@/lib/domain/types"
 
@@ -101,6 +101,8 @@ export function vatReport(
     const cat = cats.get(e.catId)
     const { net, vat } = calcEntry(e)
     const rate = Number(e.vatRate) || 0
+    // Paying or receiving the tax is not a taxable event (§6.6).
+    if (cat && LINE_BY_KEY.get(cat.line)?.settlement) continue
 
     if (e.type === "income") {
       /*
@@ -161,7 +163,7 @@ export function ledgerTotals(
   for (const e of entries) {
     const cat = cats.get(e.catId)
     // A fixed asset counts for VAT only (§5).
-    if (cat && LINE_BY_KEY.get(cat.line)?.capital) continue
+    if (cat && offStatement(LINE_BY_KEY.get(cat.line))) continue
     const { net } = calcEntry(e)
     if (e.type === "income") incomeNet += net
     else expenseNet += net

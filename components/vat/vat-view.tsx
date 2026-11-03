@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table"
 import { useFormatters } from "@/components/lang-provider"
 import { VatFiledControl } from "@/components/vat/vat-filed-control"
+import { VatSettlementPanel } from "@/components/vat/vat-settlement-control"
 import { useVatPeriod } from "@/hooks/use-vat-period"
 import type { VatReport, VatSide } from "@/lib/domain/vat"
 import { useBookStore } from "@/stores/book-store"
@@ -45,6 +46,8 @@ export function VatView() {
         </div>
         <VatFiledControl />
       </Panel>
+
+      <VatSettlementPanel />
 
       <VatAnomalyAlert report={report} />
 

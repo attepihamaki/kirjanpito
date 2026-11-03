@@ -163,6 +163,16 @@ export function periodContaining(kind: VatPeriodKind, iso: string): VatPeriod {
   return makePeriod(kind, yearOf(iso), index)
 }
 
+/** The period a stored key names, or null if it names none. */
+export function periodFromKey(key: string): VatPeriod | null {
+  const m = /^(\d{4})(?:-(0[1-9]|1[0-2])|-Q([1-4]))?$/.exec(key)
+  if (!m) return null
+  const year = Number(m[1])
+  if (m[2]) return makePeriod("month", year, Number(m[2]))
+  if (m[3]) return makePeriod("quarter", year, Number(m[3]))
+  return makePeriod("year", year, 1)
+}
+
 /** The same span as a `Period`, for filtering entries. */
 export function asPeriod(p: VatPeriod): Period {
   if (p.kind === "year") return { kind: "year", year: p.year }

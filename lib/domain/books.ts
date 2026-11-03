@@ -1,4 +1,9 @@
-import { ALL_LINES, LINE_BY_KEY, type AccountLine } from "@/lib/domain/accounts"
+import {
+  ALL_LINES,
+  LINE_BY_KEY,
+  offStatement,
+  type AccountLine,
+} from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
 import { monthOf, yearOf } from "@/lib/domain/dates"
 import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
@@ -77,7 +82,7 @@ export function journal(
     const month = monthOf(row.entry.date)
     if (months.at(-1)?.month !== month) months.push({ month, rows: [] })
     months[months.length - 1].rows.push(row)
-    if (!row.line?.capital) {
+    if (!offStatement(row.line ?? undefined)) {
       add(row.entry.type === "income" ? income : expense, row)
     }
   }

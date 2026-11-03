@@ -7,6 +7,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useFormatters } from "@/components/lang-provider"
 import { VatAnomalyAlert } from "@/components/vat/vat-view"
 import { VatFiledControl } from "@/components/vat/vat-filed-control"
+import {
+  useSettlementVisible,
+  VatSettlementControl,
+} from "@/components/vat/vat-settlement-control"
 import { useVatPeriod } from "@/hooks/use-vat-period"
 import { vatReturnSections } from "@/lib/domain/vat-return"
 
@@ -21,6 +25,7 @@ export function VatReturnView() {
 
   const sections = React.useMemo(() => vatReturnSections(report), [report])
   const unfiled = currentStatus === "open" || currentStatus === "future"
+  const settlementVisible = useSettlementVisible()
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4">
@@ -55,6 +60,14 @@ export function VatReturnView() {
             <VatFiledControl />
           </div>
         </section>
+        {settlementVisible ? (
+          <section className="print-hidden flex flex-col gap-3">
+            <TaxFormStep step={4}>{f.t("vat.returnStepSettle")}</TaxFormStep>
+            <div className="ml-[2.125rem]">
+              <VatSettlementControl />
+            </div>
+          </section>
+        ) : null}
       </TaxForm>
     </div>
   )

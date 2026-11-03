@@ -106,6 +106,20 @@ describe("persisted preferences and bookkeeping (§12)", () => {
     expect(byId.get("333")?.vatRate).toBe(24)
   })
 
+  it("adds the VAT payment and refund categories to a stored list", async () => {
+    const cats = defaultCategories().filter((c) => !c.id.startsWith("vat-"))
+    localStorage.setItem(
+      BOOK_STORAGE_KEY,
+      JSON.stringify({ version: 5, state: { open: true, cats } })
+    )
+
+    await useBookStore.persist.rehydrate()
+
+    const ids = useBookStore.getState().cats.map((c) => c.id)
+    expect(ids).toContain("vat-payment")
+    expect(ids).toContain("vat-refund")
+  })
+
   /*
    * The guard against outside edits compares against it (§7.5), so a reload
    * must not turn it off.

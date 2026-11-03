@@ -149,6 +149,7 @@ interface Entry {
   vatRate: number // VAT rate in percent, e.g. 25.5
   amountMode: AmountMode // stored per entry (the Excel had one switch per month)
   atts?: Attachment[] // receipts, may be several
+  settles?: string // VAT payment or refund only: the period key it settles (§6.6)
 }
 ```
 
@@ -257,6 +258,8 @@ The table order is also the display order of the income statement. **It is not q
 
 **Fixed assets are off the statement.** `CAPITAL_LINES` holds two more lines, both on account 1100: `asset-purchase` "Käyttöomaisuuden hankinta" (expense) and `asset-sale` "Käyttöomaisuuden myynti" (income), each at 25,5 %. Their VAT goes on the VAT return like any other entry's, but they are neither income nor an expense: the income statement, Form 5, the summary and the ledger's totals cards all leave them out, and the journal's totals too, though its rows and the general ledger list them. The cost reaches the result as depreciation (§8.8). `LINES` stays the statement's 30 lines, and `ALL_LINES` is what a category can sit on. Custom categories cannot be added to these two.
 
+**VAT payments and refunds are off the statement too.** `SETTLEMENT_LINES` holds `vat-payment` "Arvonlisäveron maksu" (expense) and `vat-refund` "Arvonlisäveron palautus" (income), both on account 2939 at 0 %. Single-entry books have no balance sheet, so 2939 is the app's own number for the CSV's `tili` column; it is not one Form 5 asks for and was not checked against a published chart. `AccountLine.settlement` marks them, and `offStatement` is the one test for "capital or settlement" that the statement, the summary, the journal's totals and the ledger's totals cards use. The VAT report skips settlement lines whatever their rate (§6.6). `ALL_LINES` is the 30 statement lines and these four.
+
 **Default categories:** the six sales categories, plus one category per remaining line, with `id = line key`, `name = Finnish line name`, `vatRate = line default VAT`, and `kind = "domestic"` for income lines.
 
 **Expense summary buckets** (Yhteenveto columns): `purchases` = Ostot ja ulkopuoliset palvelut, `personnel` = Henkilöstökulut, `depreciation` = Poistot, edustuskulut ja vuokrat, `otherDeductible` = Muut vähennyskelpoiset kulut, `financial` = Rahoituskulut, `provisions` = Varausten muutokset, `nondeductible` = Vähennyskelvottomat kulut.
@@ -321,6 +324,19 @@ For the selected year, by month (net amounts):
 - **Source:** vero.fi, "When to file and pay VAT" and the Arvonlisäverovelvollisen opas. The tests assert Verohallinto's own examples: March's return due 12 May, the 2020 yearly return due 1.3.2021, the 2025 one due 2.3.2026. Midsummer Eve and Christmas Eve are in the list because the act on calculating time limits moves a deadline past them too.
 - **Not handled:** a business that stops trading files by the 12th of the second month after the month it ends, whatever its period.
 
+### 6.6 VAT payments and refunds
+
+`lib/domain/vat-settlement.ts`, pure and tested.
+
+- **Each payment or refund is an entry**, on `vat-payment` or `vat-refund` (§5), so it takes the next voucher number in the year's series and can carry the bank statement as its receipt. KPL 2:1 has the books record financing transactions as well as income and expenses, and KPL 2:5 has every entry rest on a dated, numbered voucher. Vero's guidance on VAT bookkeeping only covers the transactions that set the tax, and says nothing about the payment itself, so this follows the Accounting Act.
+- **It is neither income nor an expense.** VAT is a debt to the state or a claim on it (the Accounting Board's general guideline on recording VAT, 31.10.2017), so the entry stays out of the income statement, Form 5, the summary, the VAT return and the ledger's and journal's totals. It is in the journal's rows and under account 2939 in the general ledger.
+- **`Entry.settles` names the return it pays**, a period key of §6.5. The entry dialog shows "Verokausi" for a settlement category, offering this year's and last year's periods. Unset, it is the period before the one the date falls in (`defaultSettledKey`): September's tax is paid in November. The CSV carries it in `verokausi` (§7.1).
+- **An entry counts whatever period it was booked under** (`settlementSummary`), like a filed mark: three monthly payments add up under their quarter. A quarter's payment seen from one of its months is listed but not compared, since it cannot be split.
+- The sum is compared with the period's calculated due. A difference is shown, not treated as an error: a part payment, a refund Vero used for other taxes, or an entry changed after filing all cause one.
+- **The record is the user's**, like the filed mark: the app cannot see the bank or OmaVero and never books one by itself.
+- Settlement entries are left out of the "unusually large amount" check (§8.4), since a period's tax in one sum is large by nature. The "no receipt" check still applies: the bank statement is the voucher.
+- **Not decided:** an accountant has not confirmed that an entry on a 2939 line is the right form for a single-entry book (§14).
+
 ---
 
 ## 7. File formats
@@ -328,7 +344,7 @@ For the selected year, by month (net amounts):
 ### 7.1 CSV
 
 - **Header row**, always exactly these columns in this order:
-  `tositenro;pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite`
+  `tositenro;pvm;selite;tyyppi;tili;luokka;summa;alv;syotto;tosite;verokausi`
 - **The column names and their values are Finnish and must stay Finnish** — this
   is the user's file, it opens in Finnish Excel, and files already exported have
   to keep importing. The in-memory and stored field names are English (§4), and
@@ -341,11 +357,13 @@ For the selected year, by month (net amounts):
   - `luokka` is the category's **Finnish** name (stable across UI languages).
   - `summa` uses a decimal comma with no thousands separator (`1882,50`). `alv` uses a decimal comma (`25,5`). `syotto` is `brutto` or `netto`.
   - `tosite` holds the receipt paths inside the ZIP, separated by `|`. **These are written even when exporting CSV only**, so a plain CSV still records which receipts existed and a re-import can mark them missing per §7.2. The prototype dropped them, which made a CSV-only export lossy.
+  - `verokausi` is the period a VAT payment or refund settles (`2026-10`, `2026-Q4`, `2026`), empty on every other row (§6.6).
   - Rows are sorted by date, then by voucher number. The format is identical in both UI languages, so it opens directly in Finnish Excel.
   - **A text cell that Excel would run as a formula gets a leading apostrophe.** That is `selite`, `luokka` or `tosite` starting with `=`, `+`, `-`, `@`, a tab or a carriage return. A value that already starts with apostrophes before one of those gets one more, and the import takes exactly one off, so every value round-trips. The amount and rate columns are left alone, so a negative amount stays a number. Excel may show the apostrophe in the cell.
 - **Import (be lenient):**
   - `decodeCsv` reads the bytes: a UTF-16 BOM decides, then strict UTF-8, then windows-1252, which is what Excel's plain "CSV (semicolon delimited)" writes. Strip a BOM. Detect the delimiter from the header line (`;`, tab or `,`, whichever splits it most). Headers are matched case-insensitively. `pvm`, `tyyppi` and `summa` are required; the rest are optional.
   - Dates are accepted as `YYYY-MM-DD` or `D.M.YYYY` and validated as real dates.
+  - `verokausi` is optional. It is kept only on a settlement category and only when it names a period; otherwise the entry goes by its date (§6.6).
   - `tositenro` (or `tositenumero`) is optional. A positive whole number is kept; a missing, malformed or repeated one is numbered when the book opens (§4), so an older file without the column opens with its entries numbered by date.
   - Amounts may contain spaces, NBSP, `€` and a Unicode minus. If both `,` and `.` appear, the last one is the decimal separator. A lone comma is a decimal comma in both languages, so a file reads the same in either. More than two decimals is refused, in a file and in the entry dialog: `1,234` could mean 1,23 € or 1 234 €, and a guess would be silently wrong by a factor of a thousand.
   - `syotto` values `netto` or `veroton` mean net; anything else means gross. An empty `alv` uses the category default, and so does one that is not a number from 0 up to 100 (`isVatRate`).
@@ -645,6 +663,7 @@ A two-column modal. On mobile the columns stack.
 - **Pre-fill from a PDF:** adding an invoice PDF to an untouched form (no amount, no description) reads its text layer and fills the date, a description "Lasku {nro} – {myyjä} – {first row}" (whichever parts it found), the total as a gross amount and the VAT rate. A previous entry naming the same seller supplies the type and category; failing that, `suggestCategory` picks an expense category from words in the seller's name and the rows, falling back to 333. The seller is the company name printed beside a business ID, which is often only in the footer. A rate read this way survives picking a category. `lib/domain/invoice-text.ts` does the reading and is pure; `extractPdfText` in `lib/browser/pdf.ts` feeds it. The virtual barcode, when printed, wins over any labelled total or due date. A credit note keeps its minus, wherever it is printed, and its total is the largest amount by size. An amount like "2 123,00" reads as 2 123,00 €, since a quantity beside a price in the same text run cannot be told from a thousands separator. A scanned PDF has no text layer and pre-fills nothing; there is no OCR.
 - **Nothing saves while a receipt is being stored:** "Tallenna" and "Tallenna ja uusi" are disabled and `Ctrl`/`⌘`+`Enter` waits, because the receipt is not in the form yet.
 - **Toista joka kuukausi** keeps the entry as a monthly template (`lib/domain/recurring.ts`), in `settings.json` as `recurring`. Nothing books itself. When a month lacks a template's entry, the ledger shows a line for the selected month, or this month on the current year's whole-year view, and the overview's checklist has a row for this calendar month; both open a dialog that lists them, ticked, and adds them with an undo. **Whether a month has its entry is read from the entries, not stored**: the same side, category and description count, so a changed amount still counts, a deleted entry comes due again, and it survives the CSV. The date is the template's day, or the month's last day, and the rate follows it (§5). A template is monthly only. Unticking the box on an edited entry removes its template, and Asetukset, Toistuvat lists them with the amount and day editable.
+- **Verokausi** appears under the category when it is a VAT payment or refund (§6.6), and the entry dialog can be opened with fields filled in (`DialogState.prefill`), which is how the VAT view books one.
 - **Tallenna ja uusi** saves, keeps the date, resets the rest for the next entry, and puts the focus back on the date.
 - **`Ctrl`/`⌘`+`Enter`** saves from any field: "Tallenna ja uusi" in the new and copy modes, where its button shows the key cap, and "Tallenna" when editing. It waits while a receipt is still being stored. A new or copied entry opens with the focus on the date, so a month's receipts can be entered from the keyboard alone.
 - **Copy as new** (from a row or from the edit dialog): opens a new entry with every field copied **except receipts**. The date becomes today if the year matches, and the date field gets focus. The title is "Kopio kirjaus".
@@ -673,12 +692,13 @@ A near full-screen modal.
 - Each chip shows where its period stands: Ilmoitettu, Myöhässä, the due date, Kesken, Tulossa, or "Ei ilmoitusta" for a period before the book's start (§6.5), whose banner says so instead of offering the filed toggle. The result banner carries the filed toggle for a closed period: "Merkitse ilmoitetuksi", or "Merkitty ilmoitetuksi {date}" with "Poista merkintä".
 - A result banner: "Maksettava arvonlisävero" (or "Palautettava…") as a large number, with the formula line "Myynnin vero X − ostojen vähennettävä vero Y".
 - Two tables side by side, "Myynnin arvonlisävero" and "Ostojen vähennettävä vero", with the columns Verokanta, Veroton, Vero and Yhteensä, plus a totals row.
+- Under the banner, for a closed period with tax to pay or reclaim, a "Maksu tai palautus" panel (`VatSettlementPanel`, §6.6). "Kirjaa maksu" or "Kirjaa palautus" opens the entry dialog filled in: today, the period's due, 0 %, the settlement category and the period. Booked entries are listed with their date and voucher number and "Avaa kirjaus", then whether they match the calculation. The button stays while there is a difference, for the rest of a part payment. An entry already booked shows on any period.
 - A "Muut ilmoitettavat myynnit" panel, and a note explaining 0 % purchases and asking the user to check the figures before filing in OmaVero.
 
 The view has two sub-pages, as tabs shaped like the settings tabs (`SubPageTabs`). `VatShell` holds the title, the tabs and the period strip, and `useVatPeriod` gives both pages the same selected period. The routes are `VAT_ROUTES` in `lib/site.ts`.
 
 - **Laskelma** at `/app/vat`: the banner, tables and panel above.
-- **Ilmoitus** at `/app/vat/return`: the period's figures as the return's fields, on the `TaxForm` that Form 5 also uses (§8.8), in three steps: the fields with an amount as a copy checklist, the tax payable or refundable (308) to check against OmaVero, and the filed mark. `lib/domain/vat-return.ts` maps the report to the fields.
+- **Ilmoitus** at `/app/vat/return`: the period's figures as the return's fields, on the `TaxForm` that Form 5 also uses (§8.8), in three steps: the fields with an amount as a copy checklist, the tax payable or refundable (308) to check against OmaVero, and the filed mark. A fourth step books the payment or refund, with the same control as the panel above. `lib/domain/vat-return.ts` maps the report to the fields.
   - The names and order follow the return in OmaVero. The codes are those of Verohallinto's data file specification VSRALVKV (version 1.10), whose check #1924 the tests run: 308 is the tax fields minus 307. OmaVero is matched by name, so the intro says so.
   - 301 holds 25,5 % and 24 %, 302 holds 13,5 % and 14 %, 303 holds 10 %. 307 is all purchase VAT.
   - 309 (zero-rated turnover) is line 300 sales at 0 % plus non-EU sales. Its hint says to leave out exempt sales whose purchase VAT cannot be deducted, such as healthcare, because the book cannot tell them apart. 319 is reverse-charge sales.
@@ -773,7 +793,7 @@ The app's front page, at `/app/overview`. `/app`, "Jatka kirjanpitoa", opening a
 - **Widgets**, in their default order and size:
   - **Tulos**: line 358 or 359 from 1.1. to today, or to 31.12. for a past year; the formula line; a sparkline of the cumulative result; the entry count, the profit margin and the year's VAT. With entries in the year before, also its result to the same date and its same month, beside this year's (`sameTimeLastYear` in `lib/domain/year-compare.ts`), so part of a year is never set against all of the last. Links to Tuloslaskelma.
   - **Seuraava ALV-ilmoitus**: the next period not yet filed, its amount as payable, refundable or "Nollailmoitus", a due-date row with the weekday and a days-left pill (amber at 14 days or fewer, red with "pv myöhässä" once overdue), a note when EU or reverse-charge sales must be reported too, and the period after it. "Merkitse ilmoitetuksi" for a closed period, with "Peru" right after. Links to ALV-laskelma on that period.
-  - **Pankkitili**: the bank balance the user typed in, with its date (`bankBalance`, `lib/domain/bank-balance.ts`). The app has no connection to a bank, and a static export could not hold one. With entries dated after the reading and up to today, the big figure is an estimate for today, labelled as one, with the balance and the entries' gross total under it: entries go by their own date rather than the payment date, and tax payments, private withdrawals and the owner's own deposits are not in the book. Lines where no money moves (312 to 315, 337, 353, 354) stay out; fixed assets count. The balance goes in `settings.json`, not on any report.
+  - **Pankkitili**: the bank balance the user typed in, with its date (`bankBalance`, `lib/domain/bank-balance.ts`). The app has no connection to a bank, and a static export could not hold one. With entries dated after the reading and up to today, the big figure is an estimate for today, labelled as one, with the balance and the entries' gross total under it: entries go by their own date rather than the payment date, and tax payments other than booked VAT (§6.6), private withdrawals and the owner's own deposits are not in the book. Lines where no money moves (312 to 315, 337, 353, 354) stay out; fixed assets count. The balance goes in `settings.json`, not on any report.
   - **Kuukaudet** (wide, two rows tall): `IncomeExpenseChart`, shared with Yhteenveto. Net income above the axis and net expenses below it, one axis. **The bars are mirrored on purpose**: the income green and expense red fail a deuteranopia check side by side (ΔE 5.3 light, 3.5 dark, against 8), and position gives the two series a difference every reader sees. A hover gives the month's income, expenses, VAT and result, the result by the income statement's rules (`monthFigures` in `summary.ts`), so the months add up to 358; a click opens the ledger on that month. Four figures under it: the best month, average income and expenses per elapsed month, months with entries.
   - **Myynti**: line 300 split into Suomi, EU, muut maat and käänteinen, as a stacked bar and a list; lines 301 to 324 below as other income.
   - **Kulut ryhmittäin**: the §6.4 buckets with expenses, largest first; empty ones are counted.
@@ -1155,7 +1175,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
   Its pre-paint inline script reads that key before any of our JS runs, so a
   second source of truth would drift.
 - Both preferences used to live in the `bookkeeping` blob. `persist.migrate`
-  (`version: 3`; the store is now at 5, §4, §5) moves each into its own key and drops the field,
+  (`version: 3`; the store is now at 6, §4, §5, §6.6) moves each into its own key and drops the field,
   seeding only a key that is still empty — the separate key is the newer truth.
 - IndexedDB `bookkeeping-receipts`, store `files`: receipt Blobs keyed by
   attachment id.
@@ -1223,3 +1243,4 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 - The VAT return of a business that stops trading (§6.5).
 - Asset classes other than machinery and equipment, and templates repeating less often than monthly.
 - VAT return fields the book cannot fill (§8.7): EU purchases, imports and reverse-charge purchases.
+- Whether a VAT payment or refund booked on account 2939 (§6.6) is what an accountant would expect in a single-entry book, and whether 2939 should be another number.
