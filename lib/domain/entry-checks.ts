@@ -151,15 +151,17 @@ export function flaggedEntryIds(
        */
       const out = new Set<string>()
       /*
-       * A VAT payment is a quarter's or a year's tax in one sum, large next to
-       * a receipt by nature (§6.6).
+       * A VAT payment is a quarter's or a year's tax in one sum, and the owner
+       * moves money in round sums, so both are large next to a receipt by
+       * nature (§6.6, §6.7).
        */
-      const settlement = (e: Entry) => {
+      const exempt = (e: Entry) => {
         const cat = cats.get(e.catId)
-        return !!cat && !!LINE_BY_KEY.get(cat.line)?.settlement
+        const line = cat && LINE_BY_KEY.get(cat.line)
+        return !!line && (line.settlement || line.owner)
       }
       for (const type of ["income", "expense"] as const) {
-        const ofType = entries.filter((e) => e.type === type && !settlement(e))
+        const ofType = entries.filter((e) => e.type === type && !exempt(e))
         if (ofType.length < LARGE_MIN_ENTRIES) continue
         const gross = (e: Entry) => Math.abs(calcEntry(e).gross)
         const limit = Math.max(

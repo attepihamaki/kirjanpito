@@ -101,8 +101,9 @@ export function vatReport(
     const cat = cats.get(e.catId)
     const { net, vat } = calcEntry(e)
     const rate = Number(e.vatRate) || 0
-    // Paying or receiving the tax is not a taxable event (§6.6).
-    if (cat && LINE_BY_KEY.get(cat.line)?.settlement) continue
+    // Settling the tax and the owner's transfers are not taxable events (§6.6, §6.7).
+    const line = cat && LINE_BY_KEY.get(cat.line)
+    if (line?.settlement || line?.owner) continue
 
     if (e.type === "income") {
       /*
@@ -162,7 +163,7 @@ export function ledgerTotals(
   let expenseNet = 0
   for (const e of entries) {
     const cat = cats.get(e.catId)
-    // A fixed asset counts for VAT only (§5).
+    // Neither income nor an expense; a fixed asset still counts for VAT (§5).
     if (cat && offStatement(LINE_BY_KEY.get(cat.line))) continue
     const { net } = calcEntry(e)
     if (e.type === "income") incomeNet += net

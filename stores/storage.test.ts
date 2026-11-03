@@ -120,6 +120,20 @@ describe("persisted preferences and bookkeeping (§12)", () => {
     expect(ids).toContain("vat-refund")
   })
 
+  it("adds the owner's transfer categories to a stored list", async () => {
+    const cats = defaultCategories().filter((c) => !c.id.startsWith("owner-"))
+    localStorage.setItem(
+      BOOK_STORAGE_KEY,
+      JSON.stringify({ version: 6, state: { open: true, cats } })
+    )
+
+    await useBookStore.persist.rehydrate()
+
+    const ids = useBookStore.getState().cats.map((c) => c.id)
+    expect(ids).toContain("owner-withdrawal")
+    expect(ids).toContain("owner-investment")
+  })
+
   /*
    * The guard against outside edits compares against it (§7.5), so a reload
    * must not turn it off.

@@ -117,8 +117,8 @@ describe("SALES", () => {
 describe("defaultCategories", () => {
   const cats = defaultCategories()
 
-  it("returns 39 categories: six sales plus one per remaining line", () => {
-    expect(cats).toHaveLength(39)
+  it("returns 41 categories: six sales plus one per remaining line", () => {
+    expect(cats).toHaveLength(41)
     expect(cats).toHaveLength(SALES.length + ALL_LINES.length - 1)
   })
 

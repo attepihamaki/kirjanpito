@@ -36,8 +36,8 @@ export interface BankEstimate {
  * The balance carried forward through the entries dated after it, up to today.
  * A future-dated entry has not happened yet, so it stays out. An entry is dated
  * by its invoice or receipt rather than by its payment, so this drifts between
- * readings, as it does with anything the book does not record: tax payments,
- * private withdrawals and the owner's own deposits.
+ * readings, as it does with anything the book does not record, such as tax
+ * payments other than booked VAT. The owner's transfers count once booked (§6.7).
  */
 export function bankEstimate(
   balance: BankBalance,

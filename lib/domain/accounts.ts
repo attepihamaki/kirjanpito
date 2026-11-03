@@ -46,11 +46,16 @@ export interface AccountLine {
    * being settled, so neither income nor an expense, and not on the VAT return.
    */
   settlement: boolean
+  /**
+   * Money moving between the owner and the business (§6.7): a movement in
+   * equity, so neither income nor an expense, and not on the VAT return.
+   */
+  owner: boolean
 }
 
-/** Lines off the income statement: fixed assets and VAT settlements (§5). */
+/** Lines off the income statement: fixed assets, VAT settlements and the owner's transfers (§5). */
 export function offStatement(line: AccountLine | undefined): boolean {
-  return !!line && (line.capital || line.settlement)
+  return !!line && (line.capital || line.settlement || line.owner)
 }
 
 /**
@@ -440,11 +445,45 @@ export const SETTLEMENT_LINES: readonly AccountLine[] = [
   },
 ]
 
-/** Every line a category can sit on: the statement's, then the four above. */
+/**
+ * The owner's own money going into the business and out of it (§6.7). Vero
+ * places these on the private account (yksityistili), part of equity. Single-
+ * entry books have no balance sheet, so 2000 is the app's own account for the
+ * CSV's `tili` column, not one Form 5 asks for.
+ */
+export const OWNER_LINES: readonly AccountLine[] = [
+  {
+    ...l(
+      "owner-withdrawal",
+      2000,
+      "expense",
+      "Yksityisotto",
+      "Owner’s withdrawal",
+      null,
+      0
+    ),
+    owner: true,
+  },
+  {
+    ...l(
+      "owner-investment",
+      2000,
+      "income",
+      "Yksityissijoitus",
+      "Owner’s investment",
+      null,
+      0
+    ),
+    owner: true,
+  },
+]
+
+/** Every line a category can sit on: the statement's, then the off-statement ones above. */
 export const ALL_LINES: readonly AccountLine[] = [
   ...LINES,
   ...CAPITAL_LINES,
   ...SETTLEMENT_LINES,
+  ...OWNER_LINES,
 ]
 
 function l(
@@ -473,6 +512,7 @@ function l(
     taxableShare: TAXABLE_SHARE[key] ?? null,
     capital: false,
     settlement: false,
+    owner: false,
   }
 }
 
@@ -577,7 +617,7 @@ export const FORMER_NAMES: Readonly<Record<string, readonly string[]>> = {
   "319": ["Saadut osingot", "Dividends received"],
 }
 
-/** The 39 built-in categories: six sales plus one per remaining line. */
+/** The 41 built-in categories: six sales plus one per remaining line. */
 export function defaultCategories(): Category[] {
   const sales: Category[] = SALES.map((s) => ({
     id: s.id,

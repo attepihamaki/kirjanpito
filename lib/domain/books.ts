@@ -64,7 +64,7 @@ export interface JournalMonth {
 
 export interface Journal {
   months: JournalMonth[]
-  /** Fixed assets stay out of both totals, so they match the statement (§5). */
+  /** Off-statement lines stay out of both totals, so they match the statement (§5). */
   income: Totals
   expense: Totals
 }

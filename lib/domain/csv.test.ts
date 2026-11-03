@@ -692,6 +692,18 @@ describe("VAT settlements", () => {
     expect(vat.catId).toBe("vat-payment")
     expect(vat.settles).toBeUndefined()
   })
+
+  it("tells the owner's withdrawal and investment apart on one account", () => {
+    const rows = [
+      HEADER,
+      "1;2026-03-02;Oma raha;tulo;2000;Yksityissijoitus;5000;0;brutto;;",
+      "2;2026-06-30;Nosto;kulu;2000;;1200;0;brutto;;",
+    ].join("\n")
+    const [investment, withdrawal] = ok(parseCsv(rows, baseCats)).entries
+
+    expect(investment.catId).toBe("owner-investment")
+    expect(withdrawal.catId).toBe("owner-withdrawal")
+  })
 })
 
 describe("CSV round trip", () => {

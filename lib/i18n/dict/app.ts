@@ -262,8 +262,8 @@ export const APP_DICT = {
   ],
   "overview.bankEstimate": ["Arvio tänään", "Estimate for today"],
   "overview.bankEstimateNote": [
-    "Arvio laskee kirjaukset päivämäärän mukaan, ei maksupäivän. Siinä eivät näy muut verojen maksut kuin kirjatut arvonlisäverot, yksityisotot eivätkä omat talletukset.",
-    "The estimate goes by each entry’s date, not the day it was paid. It leaves out tax payments other than booked VAT, private withdrawals and your own deposits.",
+    "Arvio laskee kirjaukset päivämäärän mukaan, ei maksupäivän. Siinä eivät näy muut verojen maksut kuin kirjatut arvonlisäverot eivätkä yksityisotot tai -sijoitukset, joita ei ole kirjattu.",
+    "The estimate goes by each entry’s date, not the day it was paid. It leaves out tax payments other than booked VAT, and any owner’s withdrawals or investments not booked.",
   ],
   "overview.bankUpdate": ["Päivitä saldo", "Update balance"],
   "overview.bankEmpty": [
@@ -637,6 +637,10 @@ export const APP_DICT = {
   ],
   "entry.category": ["Luokka", "Category"],
   "entry.amount": ["Summa (€)", "Amount (€)"],
+  "entry.ownerHint": [
+    "Oma raha yrityksen ja oman tilisi välillä ei ole tuloa eikä kulua. Se ei vaikuta tulokseen eikä arvonlisäveroon. Liitä tositteeksi tiliote.",
+    "Your own money moving between the business and your personal account is neither income nor an expense. It doesn’t affect the result or VAT. Attach the bank statement as the receipt.",
+  ],
   "entry.settles": ["Verokausi", "Tax period"],
   "entry.settlesHint": [
     "Arvonlisäveroilmoitus, jonka maksu tai palautus tämä on.",

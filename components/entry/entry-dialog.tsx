@@ -458,6 +458,9 @@ function EntryDialogForm({
   const settlement = !!(
     selectedCat && LINE_BY_KEY.get(selectedCat.line)?.settlement
   )
+  const ownerTransfer = !!(
+    selectedCat && LINE_BY_KEY.get(selectedCat.line)?.owner
+  )
   /*
    * A payment or refund names the return it settles (§6.6). Unchosen, it goes
    * by the date, and the periods offered are those of this year and the last.
@@ -777,6 +780,10 @@ function EntryDialogForm({
                 />
                 <FieldDescription>{f.t("entry.settlesHint")}</FieldDescription>
               </Field>
+            ) : null}
+
+            {ownerTransfer ? (
+              <FieldDescription>{f.t("entry.ownerHint")}</FieldDescription>
             ) : null}
 
             {/* Paired for the same reason as date and type above. */}
