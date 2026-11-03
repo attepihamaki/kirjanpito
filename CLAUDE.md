@@ -765,7 +765,7 @@ A near full-screen modal.
   - Previous/next receipt (when there are several).
   - Previous/next page with "Sivu 1 / 3" (PDFs with several pages).
   - Zoom out, a zoom percentage, and zoom in (1×–4×, steps of 1.5×).
-  - Fit to view, rotate 90°, save original, and close.
+  - Fit to view, rotate 90°, and save original. Closing is the dialog's own ✕ in the top right; the toolbar has no second one.
 - The stage is a scrollable grey area. The content is drawn to a canvas: fitted to the stage at 100 %, sized for the device pixel ratio, with the image or PDF page rotated. Images never upscale beyond 100 % at fit. The view redraws on window resize.
 - Keyboard: ←/→ moves between receipts, and +/− zooms.
 - Missing files show "Tiedosto puuttuu" with the path. Undecodable images or PDFs show a message and a "save original" button.

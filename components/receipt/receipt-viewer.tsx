@@ -7,7 +7,6 @@ import {
   DownloadIcon,
   MaximizeIcon,
   RotateCwIcon,
-  XIcon,
   ZoomInIcon,
   ZoomOutIcon,
 } from "lucide-react"
@@ -400,14 +399,6 @@ function ViewerBody({
                 <DownloadIcon />
               </Button>
             ) : null}
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={f.t("common.close")}
-              onClick={onClose}
-            >
-              <XIcon />
-            </Button>
           </div>
         </div>
 
