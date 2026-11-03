@@ -84,20 +84,15 @@ export const RATES: readonly number[] = [25.5, 24, 14, 13.5, 10, 0]
 const TAXABLE_SHARE: Readonly<Record<string, number>> = { "319": 85, "321": 75 }
 
 const GROUP = {
-  varVah: { fi: "Varausten vähennys", en: "Decrease in provisions" },
   yksityis: { fi: "Yksityiskäyttö", en: "Private use" },
   muutTuotot: { fi: "Muut tuotot", en: "Other income" },
-  henkilosto: { fi: "Henkilöstökulut", en: "Personnel expenses" },
-  poistot: {
-    fi: "Poistot, edustuskulut ja vuokrat",
-    en: "Depreciation, entertainment and rent",
-  },
+  henkilosto: { fi: "Henkilöstökulut", en: "Staff expenses" },
   muutVah: {
     fi: "Muut vähennyskelpoiset kulut",
     en: "Other deductible expenses",
   },
   rahoitus: { fi: "Rahoituskulut", en: "Financial expenses" },
-  varMuutos: { fi: "Varausten muutokset", en: "Changes in provisions" },
+  varMuutos: { fi: "Varausten muutokset", en: "Changes in reserves" },
   vahKelvoton: {
     fi: "Vähennyskelvottomat kulut",
     en: "Non-deductible expenses",
@@ -113,15 +108,23 @@ const GROUP = {
  * the table order is the display order.
  */
 export const LINES: readonly AccountLine[] = [
-  l("300", 300, "income", "Tuotot ammatista", "Business revenue", null, 25.5),
-  l("301", 301, "income", "Muut tuotot", "Other revenue", null, 0),
+  l("300", 300, "income", "Liikevaihto", "Net sales", null, 25.5),
+  l(
+    "301",
+    301,
+    "income",
+    "Liiketoiminnan muut tuotot",
+    "Other operating income",
+    null,
+    0
+  ),
   l(
     "312",
     312,
     "income",
     "Varausten vähennys",
-    "Decrease in provisions",
-    GROUP.varVah,
+    "Relieved write-offs and reserves",
+    null,
     0
   ),
   l(
@@ -129,7 +132,7 @@ export const LINES: readonly AccountLine[] = [
     313,
     "income",
     "Auton yksityiskäyttö",
-    "Private use of car",
+    "Private use of a car",
     GROUP.yksityis,
     0
   ),
@@ -156,7 +159,7 @@ export const LINES: readonly AccountLine[] = [
     317,
     "income",
     "Tuloslaskelman verovapaat tuotot",
-    "Tax-exempt income",
+    "Tax-exempt income in the profit and loss account",
     GROUP.muutTuotot,
     0
   ),
@@ -192,7 +195,7 @@ export const LINES: readonly AccountLine[] = [
     323,
     "income",
     "Korkotuotot ja muut rahoitustuotot",
-    "Interest and other financial income",
+    "Interest income and other financial income",
     GROUP.muutTuotot,
     0
   ),
@@ -200,8 +203,8 @@ export const LINES: readonly AccountLine[] = [
     "324",
     324,
     "income",
-    "Muut veronalaiset tuotot",
-    "Other taxable income",
+    "Muut veronalaiset tuotot (ei tilikauden tuloslaskelmassa)",
+    "Other taxable income (off-income-statement)",
     GROUP.muutTuotot,
     0
   ),
@@ -210,7 +213,7 @@ export const LINES: readonly AccountLine[] = [
     333,
     "expense",
     "Ostot ja varastojen muutokset",
-    "Purchases and change in inventory",
+    "Purchases and changes in inventory",
     null,
     25.5,
     "purchases"
@@ -230,7 +233,7 @@ export const LINES: readonly AccountLine[] = [
     335,
     "expense",
     "Palkat ja palkkiot",
-    "Wages and fees",
+    "Wages, salaries and fringe benefits",
     GROUP.henkilosto,
     0,
     "personnel"
@@ -240,28 +243,19 @@ export const LINES: readonly AccountLine[] = [
     336,
     "expense",
     "Eläke- ja henkilösivukulut",
-    "Pension and other personnel costs",
+    "Pension and other staff expenses",
     GROUP.henkilosto,
     0,
     "personnel"
   ),
-  l(
-    "337",
-    337,
-    "expense",
-    "Poistot",
-    "Depreciation",
-    GROUP.poistot,
-    0,
-    "depreciation"
-  ),
+  l("337", 337, "expense", "Poistot", "Depreciation", null, 0, "depreciation"),
   l(
     "341",
     341,
     "expense",
     "Edustuskulut",
     "Entertainment expenses",
-    GROUP.poistot,
+    null,
     0,
     "depreciation"
   ),
@@ -270,8 +264,8 @@ export const LINES: readonly AccountLine[] = [
     343,
     "expense",
     "Vuokrat",
-    "Rent",
-    GROUP.poistot,
+    "Rental expenses",
+    null,
     25.5,
     "depreciation"
   ),
@@ -282,7 +276,7 @@ export const LINES: readonly AccountLine[] = [
     "Matkakulut",
     "Travel expenses",
     GROUP.muutVah,
-    25.5,
+    13.5,
     "otherDeductible"
   ),
   l(
@@ -320,7 +314,7 @@ export const LINES: readonly AccountLine[] = [
     354,
     "expense",
     "Kirjanpidon ulkopuoliset vähennyskelpoiset kulut",
-    "Deductible expenses outside bookkeeping",
+    "Deductible expenses not entered in accounting",
     GROUP.muutVah,
     0,
     "otherDeductible"
@@ -340,7 +334,7 @@ export const LINES: readonly AccountLine[] = [
     349,
     "expense",
     "Muut rahoituskulut",
-    "Other financial expenses",
+    "Other financial costs",
     GROUP.rahoitus,
     0,
     "financial"
@@ -350,7 +344,7 @@ export const LINES: readonly AccountLine[] = [
     353,
     "expense",
     "Varausten lisäykset",
-    "Increase in provisions",
+    "Increases to reserves",
     GROUP.varMuutos,
     0,
     "provisions"
@@ -359,8 +353,8 @@ export const LINES: readonly AccountLine[] = [
     "365",
     365,
     "expense",
-    "Välittömät verot",
-    "Direct taxes",
+    "Ennakkoverot ja muut välittömät verot",
+    "Advance tax and other direct taxes",
     GROUP.vahKelvoton,
     0,
     "nondeductible",
@@ -371,7 +365,7 @@ export const LINES: readonly AccountLine[] = [
     366,
     "expense",
     "Sakot ja muut rangaistusmaksut",
-    "Fines and penalties",
+    "Fines and other penalty fees",
     GROUP.vahKelvoton,
     0,
     "nondeductible",
@@ -401,8 +395,8 @@ export const CAPITAL_LINES: readonly AccountLine[] = [
       "asset-purchase",
       1100,
       "expense",
-      "Käyttöomaisuuden hankinta",
-      "Purchase of fixed assets",
+      "Koneiden ja kaluston hankinta",
+      "Purchase of machinery and equipment",
       null,
       25.5
     ),
@@ -413,8 +407,8 @@ export const CAPITAL_LINES: readonly AccountLine[] = [
       "asset-sale",
       1100,
       "income",
-      "Käyttöomaisuuden myynti",
-      "Sale of fixed assets",
+      "Koneiden ja kaluston myynti",
+      "Sale of machinery and equipment",
       null,
       25.5
     ),
@@ -658,7 +652,24 @@ export const DEFAULT_CATEGORY_FOR_ACCOUNT: Readonly<Record<number, string>> = {
  * the Finnish and English names (§7.1).
  */
 export const FORMER_NAMES: Readonly<Record<string, readonly string[]>> = {
+  "301": ["Muut tuotot", "Other revenue"],
+  "312": ["Decrease in provisions"],
+  "313": ["Private use of car"],
+  "317": ["Tax-exempt income"],
   "319": ["Saadut osingot", "Dividends received"],
+  "323": ["Interest and other financial income"],
+  "324": ["Muut veronalaiset tuotot", "Other taxable income"],
+  "333": ["Purchases and change in inventory"],
+  "335": ["Wages and fees"],
+  "336": ["Pension and other personnel costs"],
+  "343": ["Rent"],
+  "349": ["Other financial expenses"],
+  "353": ["Increase in provisions"],
+  "354": ["Deductible expenses outside bookkeeping"],
+  "365": ["Välittömät verot", "Direct taxes"],
+  "366": ["Fines and penalties"],
+  "asset-purchase": ["Käyttöomaisuuden hankinta", "Purchase of fixed assets"],
+  "asset-sale": ["Käyttöomaisuuden myynti", "Sale of fixed assets"],
 }
 
 /** The 41 built-in categories: six sales plus one per remaining line. */

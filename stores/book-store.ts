@@ -955,7 +955,7 @@ export const useBookStore = create<BookStore>()(
     }),
     {
       name: BOOK_STORAGE_KEY,
-      version: 8,
+      version: 9,
       storage: bookStorage,
       /*
        * Prerender must not touch localStorage; StoreHydrator rehydrates after
@@ -1019,7 +1019,7 @@ export const useBookStore = create<BookStore>()(
         if (Array.isArray(blob.entries)) {
           blob.entries = assignVouchers(blob.entries as Entry[])
         }
-        // A stored list may predate a default category (§5).
+        // A stored list may predate a default category or its current name (§5).
         if (Array.isArray(blob.cats)) {
           blob.cats = mergeCategories(blob.cats as Category[])
         }

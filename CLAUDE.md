@@ -213,36 +213,38 @@ Each line has a key, an account number (tili), a side, Finnish and English names
 
 | key         | tili | side    | Finnish                                          | English                                 | group (fi / en)                                                         | default VAT            | bucket          |
 | ----------- | ---- | ------- | ------------------------------------------------ | --------------------------------------- | ----------------------------------------------------------------------- | ---------------------- | --------------- |
-| 300         | 300  | income  | Tuotot ammatista                                 | Business revenue                        | –                                                                       | (see sales categories) | –               |
-| 301         | 301  | income  | Muut tuotot                                      | Other revenue                           | –                                                                       | 0                      | –               |
-| 312         | 312  | income  | Varausten vähennys                               | Decrease in provisions                  | Varausten vähennys / Decrease in provisions                             | 0                      | –               |
-| 313         | 313  | income  | Auton yksityiskäyttö                             | Private use of car                      | Yksityiskäyttö / Private use                                            | 0                      | –               |
+| 300         | 300  | income  | Liikevaihto | Net sales | – | (see sales categories) | – |
+| 301         | 301  | income  | Liiketoiminnan muut tuotot | Other operating income | – | 0 | – |
+| 312         | 312  | income  | Varausten vähennys | Relieved write-offs and reserves | – | 0 | – |
+| 313         | 313  | income  | Auton yksityiskäyttö | Private use of a car | Yksityiskäyttö / Private use | 0 | – |
 | 314         | 314  | income  | Tavaroiden yksityiskäyttö                        | Private use of goods                    | Yksityiskäyttö / Private use                                            | 0                      | –               |
 | 315         | 315  | income  | Muu yksityiskäyttö                               | Other private use                       | Yksityiskäyttö / Private use                                            | 0                      | –               |
-| 317         | 317  | income  | Tuloslaskelman verovapaat tuotot                 | Tax-exempt income                       | Muut tuotot / Other income                                              | 0                      | –               |
+| 317         | 317  | income  | Tuloslaskelman verovapaat tuotot | Tax-exempt income in the profit and loss account | Muut tuotot / Other income | 0 | – |
 | 318         | 318  | income  | Saadut avustukset ja tuet                        | Grants and subsidies received           | Muut tuotot / Other income                                              | 0                      | –               |
 | 319         | 319  | income  | Osingot julkisesti noteeratuista yhtiöistä       | Dividends from listed companies         | Muut tuotot / Other income                                              | 0                      | –               |
 | 321         | 321  | income  | Osingot muista kuin julkisesti noteeratuista yhtiöistä | Dividends from non-listed companies | Muut tuotot / Other income                                              | 0                      | –               |
-| 323         | 323  | income  | Korkotuotot ja muut rahoitustuotot               | Interest and other financial income     | Muut tuotot / Other income                                              | 0                      | –               |
-| 324         | 324  | income  | Muut veronalaiset tuotot                         | Other taxable income                    | Muut tuotot / Other income                                              | 0                      | –               |
-| 333         | 333  | expense | Ostot ja varastojen muutokset                    | Purchases and change in inventory       | –                                                                       | 25.5                   | purchases       |
+| 323         | 323  | income  | Korkotuotot ja muut rahoitustuotot | Interest income and other financial income | Muut tuotot / Other income | 0 | – |
+| 324         | 324  | income  | Muut veronalaiset tuotot (ei tilikauden tuloslaskelmassa) | Other taxable income (off-income-statement) | Muut tuotot / Other income | 0 | – |
+| 333         | 333  | expense | Ostot ja varastojen muutokset | Purchases and changes in inventory | – | 25.5 | purchases |
 | 334         | 334  | expense | Ulkopuoliset palvelut                            | External services                       | –                                                                       | 25.5                   | purchases       |
-| 335         | 335  | expense | Palkat ja palkkiot                               | Wages and fees                          | Henkilöstökulut / Personnel expenses                                    | 0                      | personnel       |
-| 336         | 336  | expense | Eläke- ja henkilösivukulut                       | Pension and other personnel costs       | Henkilöstökulut / Personnel expenses                                    | 0                      | personnel       |
-| 337         | 337  | expense | Poistot                                          | Depreciation                            | Poistot, edustuskulut ja vuokrat / Depreciation, entertainment and rent | 0                      | depreciation    |
-| 341         | 341  | expense | Edustuskulut                                     | Entertainment expenses                  | (same)                                                                  | 0                      | depreciation    |
-| 343         | 343  | expense | Vuokrat                                          | Rent                                    | (same)                                                                  | 25.5                   | depreciation    |
-| 344-travel  | 344  | expense | Matkakulut                                       | Travel expenses                         | Muut vähennyskelpoiset kulut / Other deductible expenses                | 25.5                   | otherDeductible |
+| 335         | 335  | expense | Palkat ja palkkiot | Wages, salaries and fringe benefits | Henkilöstökulut / Staff expenses | 0 | personnel |
+| 336         | 336  | expense | Eläke- ja henkilösivukulut | Pension and other staff expenses | Henkilöstökulut / Staff expenses | 0 | personnel |
+| 337         | 337  | expense | Poistot | Depreciation | – | 0 | depreciation |
+| 341         | 341  | expense | Edustuskulut | Entertainment expenses | – | 0 | depreciation |
+| 343         | 343  | expense | Vuokrat | Rental expenses | – | 25.5 | depreciation |
+| 344-travel  | 344  | expense | Matkakulut | Travel expenses | Muut vähennyskelpoiset kulut / Other deductible expenses | 13.5 | otherDeductible |
 | 344-vehicle | 344  | expense | Ajoneuvokulut                                    | Vehicle expenses                        | (same)                                                                  | 25.5                   | otherDeductible |
 | 344-meeting | 344  | expense | Kokous- ja neuvottelukulut                       | Meeting expenses                        | (same)                                                                  | 25.5                   | otherDeductible |
 | 344-other   | 344  | expense | Muut vähennyskelpoiset kulut                     | Other deductible expenses               | (same)                                                                  | 25.5                   | otherDeductible |
-| 354         | 354  | expense | Kirjanpidon ulkopuoliset vähennyskelpoiset kulut | Deductible expenses outside bookkeeping | (same)                                                                  | 0                      | otherDeductible |
+| 354         | 354  | expense | Kirjanpidon ulkopuoliset vähennyskelpoiset kulut | Deductible expenses not entered in accounting | (same) | 0 | otherDeductible |
 | 346         | 346  | expense | Korkokulut                                       | Interest expenses                       | Rahoituskulut / Financial expenses                                      | 0                      | financial       |
-| 349         | 349  | expense | Muut rahoituskulut                               | Other financial expenses                | (same)                                                                  | 0                      | financial       |
-| 353         | 353  | expense | Varausten lisäykset                              | Increase in provisions                  | Varausten muutokset / Changes in provisions                             | 0                      | provisions      |
-| 365         | 365  | expense | Välittömät verot                                 | Direct taxes                            | Vähennyskelvottomat kulut / Non-deductible expenses                     | 0                      | nondeductible   |
-| 366         | 366  | expense | Sakot ja muut rangaistusmaksut                   | Fines and penalties                     | (same)                                                                  | 0                      | nondeductible   |
+| 349         | 349  | expense | Muut rahoituskulut | Other financial costs | (same) | 0 | financial |
+| 353         | 353  | expense | Varausten lisäykset | Increases to reserves | Varausten muutokset / Changes in reserves | 0 | provisions |
+| 365         | 365  | expense | Ennakkoverot ja muut välittömät verot | Advance tax and other direct taxes | Vähennyskelvottomat kulut / Non-deductible expenses | 0 | nondeductible |
+| 366         | 366  | expense | Sakot ja muut rangaistusmaksut | Fines and other penalty fees | (same) | 0 | nondeductible |
 | 367         | 367  | expense | Muut vähennyskelvottomat kulut                   | Other non-deductible expenses           | (same)                                                                  | 0                      | nondeductible   |
+
+The names are the form's, in Finnish and in Verohallinto's English, and `form5.ts` reads them from here. 365 is the one exception: the chart adds "Ennakkoverot" so a user finds it, and Form 5's view keeps the form's "Välittömät verot". On the statement a line under a group heading is indented, so 337 to 343, which have no group, do not read as part of Henkilöstökulut. A renamed default keeps its old name in `FORMER_NAMES`, so an older file still finds its category, and `persist.migrate` gives a stored list the new names.
 
 The table order is also the display order of the income statement. **It is not quite Form 5's order, and that is deliberate.** The form lists the income fields as 300, 318, 301, 313–315, 319–328, 323, 312, 324, 317, so grants come second and reserve decreases late. The app keeps the order above, which groups the lines under their headings. Each line still carries its form number, so copying a figure into OmaVero goes by number, not by position. The expense lines are in the form's order. Checked against Verohallinto's 2026 data file specification for Form 5. The Form 5 view (§8.8) lists the same figures in the form's own order.
 
@@ -260,7 +262,7 @@ The table order is also the display order of the income statement. **It is not q
 
 **`300-eu`, "Myynti – EU", is retired.** The return asks for goods (311) and services (312) separately, and an entry on this category does not say which it was, so nothing moves it automatically. It stays in the list, disabled, so older entries and files keep it (`RETIRED_CATEGORY_ID`; a CSV row with that name still matches it). The VAT views show its total on a row of its own while any entry uses it, and the return's row says to change the category.
 
-**Fixed assets are off the statement.** `CAPITAL_LINES` holds two more lines, both on account 1100: `asset-purchase` "Käyttöomaisuuden hankinta" (expense) and `asset-sale` "Käyttöomaisuuden myynti" (income), each at 25,5 %. Their VAT goes on the VAT return like any other entry's, but they are neither income nor an expense: the income statement, Form 5, the summary and the ledger's totals cards all leave them out, and the journal's totals too, though its rows and the general ledger list them. The cost reaches the result as depreciation (§8.8). `LINES` stays the statement's 30 lines, and `ALL_LINES` is what a category can sit on. Custom categories cannot be added to these two.
+**Fixed assets are off the statement.** `CAPITAL_LINES` holds two more lines, both on account 1100: `asset-purchase` "Koneiden ja kaluston hankinta" (expense) and `asset-sale` "Koneiden ja kaluston myynti" (income), each at 25,5 %. Their VAT goes on the VAT return like any other entry's, but they are neither income nor an expense: the income statement, Form 5, the summary and the ledger's totals cards all leave them out, and the journal's totals too, though its rows and the general ledger list them. The cost reaches the result as depreciation (§8.8). `LINES` stays the statement's 30 lines, and `ALL_LINES` is what a category can sit on. Custom categories cannot be added to these two.
 
 **VAT payments and refunds are off the statement too.** `SETTLEMENT_LINES` holds `vat-payment` "Arvonlisäveron maksu" (expense) and `vat-refund` "Arvonlisäveron palautus" (income), both on account 2939 at 0 %. Single-entry books have no balance sheet, so 2939 is the app's own number for the CSV's `account` column; it is not one Form 5 asks for and was not checked against a published chart. `AccountLine.settlement` marks them, and `offStatement` is the one test for "capital or settlement" that the statement, the summary, the journal's totals and the ledger's totals cards use. The VAT report skips settlement lines whatever their rate (§6.6).
 
@@ -268,7 +270,7 @@ The table order is also the display order of the income statement. **It is not q
 
 **Default categories:** the six sales categories, plus one category per remaining line, with `id = line key`, `name = Finnish line name`, `vatRate = line default VAT`, and `kind = "domestic"` for income lines.
 
-**Expense summary buckets** (Yhteenveto columns): `purchases` = Ostot ja ulkopuoliset palvelut, `personnel` = Henkilöstökulut, `depreciation` = Poistot, edustuskulut ja vuokrat, `otherDeductible` = Muut vähennyskelpoiset kulut, `financial` = Rahoituskulut, `provisions` = Varausten muutokset, `nondeductible` = Vähennyskelvottomat kulut.
+**Expense summary buckets** (Yhteenveto columns): `purchases` = Ostot ja ulkopuoliset palvelut, `personnel` = Henkilöstökulut, `depreciation` = Tilat, poistot ja edustus, `otherDeductible` = Muut vähennyskelpoiset kulut, `financial` = Rahoituskulut, `provisions` = Varausten muutokset, `nondeductible` = Vähennyskelvottomat kulut.
 
 **VAT rates offered** in the entry dialog: 25.5, 24, 14, 13.5, 10, 0, plus the entry's own rate if it differs. Background: the general rate rose to 25.5 % on 1 September 2024, and the 14 % rate was lowered to 13.5 % at the start of 2026. Older rates are kept for older entries and corrections.
 
@@ -1225,7 +1227,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
   Its pre-paint inline script reads that key before any of our JS runs, so a
   second source of truth would drift.
 - Both preferences used to live in the `bookkeeping` blob. `persist.migrate`
-  (`version: 3`; the store is now at 7, §4, §5, §6.6, §6.7) moves each into its own key and drops the field,
+  (`version: 3`; the store is now at 9, §4, §5, §6.6, §6.7) moves each into its own key and drops the field,
   seeding only a key that is still empty — the separate key is the newer truth.
 - IndexedDB `bookkeeping-receipts`, store `files`: receipt Blobs keyed by
   attachment id.

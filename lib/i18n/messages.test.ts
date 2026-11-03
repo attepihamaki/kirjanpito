@@ -173,9 +173,9 @@ describe("createFormatters", () => {
 
   it("translates category and line names", () => {
     expect(fi.catName(byId("333"))).toBe("Ostot ja varastojen muutokset")
-    expect(en.catName(byId("333"))).toBe("Purchases and change in inventory")
+    expect(en.catName(byId("333"))).toBe("Purchases and changes in inventory")
     expect(en.catLabel(byId("333"))).toBe(
-      "333 Purchases and change in inventory"
+      "333 Purchases and changes in inventory"
     )
   })
 

@@ -134,6 +134,26 @@ describe("persisted preferences and bookkeeping (§12)", () => {
     expect(ids).toContain("owner-investment")
   })
 
+  it("gives a stored default its current name and keeps its rate", async () => {
+    const cats = defaultCategories().map((c) =>
+      c.id === "301"
+        ? { ...c, name: "Muut tuotot" }
+        : c.id === "344-travel"
+          ? { ...c, vatRate: 25.5 }
+          : c
+    )
+    localStorage.setItem(
+      BOOK_STORAGE_KEY,
+      JSON.stringify({ version: 8, state: { open: true, cats } })
+    )
+
+    await useBookStore.persist.rehydrate()
+
+    const byId = new Map(useBookStore.getState().cats.map((c) => [c.id, c]))
+    expect(byId.get("301")?.name).toBe("Liiketoiminnan muut tuotot")
+    expect(byId.get("344-travel")?.vatRate).toBe(25.5)
+  })
+
   /*
    * The guard against outside edits compares against it (§7.5), so a reload
    * must not turn it off.

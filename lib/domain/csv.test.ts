@@ -499,9 +499,21 @@ describe("parseCsv — category matching", () => {
 
   it("matches the English default name", () => {
     const r = parse([
-      "2026-01-08;kulu;333;Purchases and change in inventory;1,00;",
+      "2026-01-08;kulu;333;Purchases and changes in inventory;1,00;",
     ])
     expect(r.entries[0].catId).toBe("333")
+  })
+
+  it.each([
+    ["kulu;333;Purchases and change in inventory", "333"],
+    ["tulo;301;Muut tuotot", "301"],
+    ["kulu;365;Välittömät verot", "365"],
+    ["kulu;1100;Käyttöomaisuuden hankinta", "asset-purchase"],
+    ["tulo;1100;Sale of fixed assets", "asset-sale"],
+  ])("keeps a file's older name %s on its category", (row, id) => {
+    const r = parse([`2026-01-08;${row};1,00;`])
+    expect(r.entries[0].catId).toBe(id)
+    expect(r.newCategoryCount).toBe(0)
   })
 
   it("matches a former name of a default category", () => {

@@ -88,7 +88,7 @@ describe("LINES", () => {
   it("matches the §5 default rates", () => {
     expect(LINE_BY_KEY.get("333")!.vatRate).toBe(25.5)
     expect(LINE_BY_KEY.get("343")!.vatRate).toBe(25.5)
-    expect(LINE_BY_KEY.get("344-travel")!.vatRate).toBe(25.5)
+    expect(LINE_BY_KEY.get("344-travel")!.vatRate).toBe(13.5)
     expect(LINE_BY_KEY.get("354")!.vatRate).toBe(0)
     expect(LINE_BY_KEY.get("335")!.vatRate).toBe(0)
     expect(LINE_BY_KEY.get("336")!.vatRate).toBe(0)
@@ -157,7 +157,7 @@ describe("naming", () => {
       "Ostot ja varastojen muutokset"
     )
     expect(categoryName(byId("333"), "en")).toBe(
-      "Purchases and change in inventory"
+      "Purchases and changes in inventory"
     )
     expect(categoryName(byId("300-eu"), "en")).toBe("Sales – EU")
   })
@@ -184,8 +184,9 @@ describe("naming", () => {
   it("resolves line and group names per language", () => {
     const line = LINE_BY_KEY.get("343")!
     expect(lineName(line, "fi")).toBe("Vuokrat")
-    expect(lineName(line, "en")).toBe("Rent")
-    expect(groupName(line, "fi")).toBe("Poistot, edustuskulut ja vuokrat")
+    expect(lineName(line, "en")).toBe("Rental expenses")
+    expect(groupName(line, "fi")).toBeNull()
+    expect(groupName(LINE_BY_KEY.get("336")!, "fi")).toBe("Henkilöstökulut")
     expect(groupName(LINE_BY_KEY.get("300")!, "fi")).toBeNull()
   })
 })

@@ -48,6 +48,7 @@ export function StatementView() {
           id: string
           account: number
           label: string
+          grouped: boolean
           net: number
         }
 
@@ -78,6 +79,7 @@ export function StatementView() {
         id: line.key,
         account: line.account,
         label: f.lineName(line),
+        grouped: !!groupLabel,
         net,
       })
     }
@@ -138,7 +140,8 @@ export function StatementView() {
                     !row.net && "text-muted-foreground"
                   )}
                 >
-                  <td className="py-1.5">
+                  {/* The indent ends a group, so a line with none does not read as part of it. */}
+                  <td className={cn("py-1.5", row.grouped && "pl-3")}>
                     <span className="tabular mr-2 text-xs text-muted-foreground">
                       {row.account}
                     </span>

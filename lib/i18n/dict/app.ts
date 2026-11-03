@@ -1232,10 +1232,10 @@ export const APP_DICT = {
     "Ostot ja ulkopuoliset palvelut",
     "Purchases and external services",
   ],
-  "summary.bucketPersonnel": ["Henkilöstökulut", "Personnel expenses"],
+  "summary.bucketPersonnel": ["Henkilöstökulut", "Staff expenses"],
   "summary.bucketDepreciation": [
-    "Poistot, edustuskulut ja vuokrat",
-    "Depreciation, entertainment and rent",
+    "Tilat, poistot ja edustus",
+    "Premises, depreciation and entertainment",
   ],
   "summary.bucketOtherDeductible": [
     "Muut vähennyskelpoiset kulut",
@@ -1397,8 +1397,8 @@ export const APP_DICT = {
   "assets.tab": ["Poistot", "Depreciation"],
   "assets.title": ["Koneet ja kalusto {y}", "Machinery and equipment {y}"],
   "assets.intro": [
-    "Yli kolme vuotta käytettävä tai yli 1 200 euron hankinta kirjataan luokkaan ”Käyttöomaisuuden hankinta”. Sen alv lasketaan ALV-ilmoitukselle, mutta kulu vähennetään poistoina. Poisto on enintään 25 % menojäännöksestä, ja 1 200 euron tai pienemmän menojäännöksen voi poistaa kerralla.",
-    "A purchase with a life of over three years or a price over €1,200 goes on the “Purchase of fixed assets” category. Its VAT counts on the VAT return, but the cost is deducted as depreciation. Depreciation is at most 25% of the undepreciated balance, and a balance of €1,200 or less can be written off at once.",
+    "Yli kolme vuotta käytettävä tai yli 1 200 euron hankinta kirjataan luokkaan ”Koneiden ja kaluston hankinta”. Sen alv lasketaan ALV-ilmoitukselle, mutta kulu vähennetään poistoina. Poisto on enintään 25 % menojäännöksestä, ja 1 200 euron tai pienemmän menojäännöksen voi poistaa kerralla.",
+    "A purchase with a life of over three years or a price over €1,200 goes on the “Purchase of machinery and equipment” category. Its VAT counts on the VAT return, but the cost is deducted as depreciation. Depreciation is at most 25% of the undepreciated balance, and a balance of €1,200 or less can be written off at once.",
   ],
   "assets.smallNote": [
     "Pienhankinnan (enintään 1 200 euroa, yhteensä enintään 3 600 euroa vuodessa) ja enintään kolme vuotta käytettävän hankinnan voi kirjata suoraan kuluksi. Rivin 337 kirjaukset luetaan tämän menojäännöksen poistoiksi. Rakennukset ja muu poistettava omaisuus eivät kuulu tähän laskelmaan.",
@@ -1406,8 +1406,8 @@ export const APP_DICT = {
   ],
   "assets.noneTitle": ["Ei käyttöomaisuutta", "No fixed assets"],
   "assets.noneBody": [
-    "Kirjaa hankinta luokkaan ”Käyttöomaisuuden hankinta”, tai anna alla menojäännös, jos sinulla on jo poistettavaa omaisuutta.",
-    "Book a purchase on the “Purchase of fixed assets” category, or enter a balance below if you already have assets to depreciate.",
+    "Kirjaa hankinta luokkaan ”Koneiden ja kaluston hankinta”, tai anna alla menojäännös, jos sinulla on jo poistettavaa omaisuutta.",
+    "Book a purchase on the “Purchase of machinery and equipment” category, or enter a balance below if you already have assets to depreciate.",
   ],
   "assets.opening": ["Menojäännös vuoden alussa", "Balance at start of year"],
   "assets.additions": ["Hankinnat", "Purchases"],

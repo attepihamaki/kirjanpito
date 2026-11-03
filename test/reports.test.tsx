@@ -183,8 +183,11 @@ describe("StatementView", () => {
     expect(
       screen.getByText("Kirjanpidon ulkopuoliset vähennyskelpoiset kulut")
     ).toBeInTheDocument()
-    // "Varausten vähennys" is both a group heading and line 312 (§5).
-    expect(screen.getAllByText("Varausten vähennys")).toHaveLength(2)
+    // Line 312 has no group heading repeating its name (§5).
+    expect(screen.getAllByText("Varausten vähennys")).toHaveLength(1)
+    // An indent shows where a group ends, so 337 is not read as a staff cost.
+    expect(screen.getByText("Eläke- ja henkilösivukulut")).toHaveClass("pl-3")
+    expect(screen.getByText("Poistot")).not.toHaveClass("pl-3")
   })
 
   it("covers the period 1.1.-31.12.", () => {
@@ -228,7 +231,7 @@ describe("StatementView", () => {
 
   it("translates the lines into English while keeping Finnish money", () => {
     mount(<StatementView />, "en")
-    expect(screen.getByText("Business revenue")).toBeInTheDocument()
+    expect(screen.getByText("Net sales")).toBeInTheDocument()
     expect(screen.getByText("358 Business profit")).toBeInTheDocument()
     expect(screen.getByText(eur(1064253))).toBeInTheDocument()
   })
@@ -288,11 +291,12 @@ describe("Form5View", () => {
       screen.getByRole("button", { name: "Kopioi kohta 708: 1200,00" })
     ).toBeInTheDocument()
     expect(screen.getByText("Varat yhteensä")).toBeInTheDocument()
-    expect(screen.getByText("Positiivinen nettovarallisuus")).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Muokkaa lukuja" })).toHaveAttribute(
-      "href",
-      expect.stringContaining(STATEMENT_ROUTES.balance)
-    )
+    expect(
+      screen.getByText("Positiivinen nettovarallisuus")
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("link", { name: "Muokkaa lukuja" })
+    ).toHaveAttribute("href", expect.stringContaining(STATEMENT_ROUTES.balance))
   })
 })
 
