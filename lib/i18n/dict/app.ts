@@ -133,6 +133,25 @@ export const APP_DICT = {
     "All entries will be removed from this browser. Save them to a file first if you want to keep them.",
   ],
   "confirm.clearConfirm": ["Tyhjennä", "Clear"],
+  "confirm.renumberTitle": [
+    "Numeroidaanko vuoden {year} tositteet uudelleen?",
+    "Renumber the vouchers of {year}?",
+  ],
+  "confirm.renumberMessage": [
+    pl(
+      "1 kirjauksen numero muuttuu. Jos olet kirjoittanut numeroita kuitteihin tai antanut ne kirjanpitäjälle, ne eivät enää täsmää.",
+      "{n} kirjauksen numero muuttuu. Jos olet kirjoittanut numeroita kuitteihin tai antanut ne kirjanpitäjälle, ne eivät enää täsmää."
+    ),
+    pl(
+      "The number of 1 entry changes. Numbers you have written on receipts or given to an accountant will no longer match.",
+      "The numbers of {n} entries change. Numbers you have written on receipts or given to an accountant will no longer match."
+    ),
+  ],
+  "confirm.renumberArchived": [
+    "Olet merkinnyt vuoden {year} kopion tallessa olevaksi. Siinä säilyvät vanhat numerot.",
+    "You have marked a copy of {year} as stored. It keeps the old numbers.",
+  ],
+  "confirm.renumberConfirm": ["Numeroi uudelleen", "Renumber"],
   "confirm.discardTitle": ["Hylätäänkö muutokset?", "Discard changes?"],
   "confirm.discardConfirm": ["Hylkää muutokset", "Discard changes"],
   "confirm.keepEditing": ["Jatka muokkausta", "Keep editing"],
@@ -1281,6 +1300,34 @@ export const APP_DICT = {
   "settings.categoriesReset": [
     "Oletusluokat palautettu.",
     "Default categories restored.",
+  ],
+  "settings.vouchers": ["Tositenumerot", "Voucher numbers"],
+  "settings.vouchersHint": [
+    "Kirjaus pitää numeronsa, vaikka sen päivä muuttuisi tai väliin lisättäisiin kirjaus. Uudelleennumerointi antaa vuoden kirjauksille numerot 1:stä alkaen päivämääräjärjestyksessä ja poistaa aukot.",
+    "An entry keeps its number when its date changes or an earlier entry is added. Renumbering gives the year’s entries numbers from 1 in date order and closes the gaps.",
+  ],
+  "settings.vouchersInOrder": [
+    "Vuoden {year} tositenumerot ovat jo päivämääräjärjestyksessä.",
+    "The voucher numbers of {year} are already in date order.",
+  ],
+  "settings.vouchersOutOfOrder": [
+    pl(
+      "Uudelleennumerointi muuttaisi vuodelta {year} 1 kirjauksen numeron.",
+      "Uudelleennumerointi muuttaisi vuodelta {year} {n} kirjauksen numeron."
+    ),
+    pl(
+      "Renumbering would change the number of 1 entry in {year}.",
+      "Renumbering would change the numbers of {n} entries in {year}."
+    ),
+  ],
+  "settings.renumber": ["Numeroi vuosi {year} uudelleen", "Renumber {year}"],
+  "settings.renumbered": [
+    pl("1 tositenumero muutettu.", "{n} tositenumeroa muutettu."),
+    pl("1 voucher number changed.", "{n} voucher numbers changed."),
+  ],
+  "settings.renumberUndone": [
+    "Tositenumerot palautettu.",
+    "Voucher numbers restored.",
   ],
   "settings.clearEntries": ["Tyhjennä kirjaukset", "Clear all entries"],
   "settings.clearHint": [

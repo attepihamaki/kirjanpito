@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest"
 import { createIdFactory } from "@/lib/domain/id"
 import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import type { Entry } from "@/lib/domain/types"
-import { assignVouchers, keepVoucher } from "@/lib/domain/voucher"
+import { assignVouchers, keepVoucher, renumberYear } from "@/lib/domain/voucher"
 
-/* Voucher numbers: one series per year, never moved once given (§4). */
+/* Voucher numbers: one series per year, moved only when the user asks (§4). */
 
 function entry(id: string, date: string, voucher?: number): Entry {
   return {
@@ -72,6 +72,40 @@ describe("assignVouchers", () => {
   it("returns the same array when every entry has its number", () => {
     const book = [entry("a", "2026-01-01", 1), entry("b", "2026-01-02", 2)]
     expect(assignVouchers(book)).toBe(book)
+  })
+})
+
+describe("renumberYear", () => {
+  it("numbers the year in date order and closes the gaps", () => {
+    const out = renumberYear(
+      [
+        entry("late", "2026-03-01", 2),
+        entry("early", "2026-01-01", 5),
+        entry("middle", "2026-02-01", 7),
+      ],
+      2026
+    )
+    expect(numbers(out)).toEqual({ early: 1, middle: 2, late: 3 })
+  })
+
+  it("orders entries of one date by their current numbers", () => {
+    const out = renumberYear(
+      [entry("b", "2026-01-01", 4), entry("a", "2026-01-01", 2)],
+      2026
+    )
+    expect(numbers(out)).toEqual({ a: 1, b: 2 })
+  })
+
+  it("leaves other years alone", () => {
+    const other = entry("old", "2025-06-01", 9)
+    const out = renumberYear([other, entry("new", "2026-06-01", 3)], 2026)
+    expect(out[0]).toBe(other)
+    expect(numbers(out)).toEqual({ old: 9, new: 1 })
+  })
+
+  it("returns the same array when the numbers are already in order", () => {
+    const book = [entry("a", "2026-01-01", 1), entry("b", "2026-01-02", 2)]
+    expect(renumberYear(book, 2026)).toBe(book)
   })
 })
 

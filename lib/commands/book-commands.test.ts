@@ -2,7 +2,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { toast } from "@/components/ui/toast"
-import { clearAllEntries, deleteEntry } from "@/lib/commands/book-commands"
+import {
+  clearAllEntries,
+  deleteEntry,
+  renumberVouchers,
+} from "@/lib/commands/book-commands"
 import {
   deleteEntries,
   recategorizeEntries,
@@ -220,5 +224,70 @@ describe("bulk actions (§8.4)", () => {
     expect(await recategorizeEntries(ctx, pick("2026-02-20"), "343")).toBe(
       false
     )
+  })
+})
+
+describe("renumberVouchers", () => {
+  const voucher = (id: string, date: string, n?: number) => ({
+    id,
+    date,
+    ...(n ? { voucher: n } : {}),
+    description: id,
+    type: "expense" as const,
+    catId: "333",
+    amount: 1000,
+    vatRate: 25.5,
+    amountMode: "gross" as const,
+  })
+  const numbers = () =>
+    Object.fromEntries(
+      useBookStore.getState().entries.map((e) => [e.id, e.voucher])
+    )
+
+  beforeEach(() => {
+    vi.mocked(confirm).mockClear()
+    useBookStore.setState({
+      entries: [
+        voucher("late", "2026-03-01", 1),
+        voucher("early", "2026-01-01", 2),
+      ],
+      yearsArchived: {},
+      dirty: false,
+    })
+  })
+
+  it("renumbers after asking, marks the book dirty and can be undone", async () => {
+    expect(await renumberVouchers(ctx, 2026)).toBe(true)
+    expect(confirm).toHaveBeenCalledOnce()
+    expect(numbers()).toEqual({ early: 1, late: 2 })
+    expect(useBookStore.getState().dirty).toBe(true)
+
+    clickUndo()
+    expect(numbers()).toEqual({ late: 1, early: 2 })
+  })
+
+  it("changes nothing when the user cancels", async () => {
+    vi.mocked(confirm).mockResolvedValueOnce(false)
+    expect(await renumberVouchers(ctx, 2026)).toBe(false)
+    expect(numbers()).toEqual({ late: 1, early: 2 })
+  })
+
+  it("does not ask when the numbers are already in order", async () => {
+    useBookStore.setState({ entries: [voucher("a", "2026-01-01", 1)] })
+    expect(await renumberVouchers(ctx, 2026)).toBe(false)
+    expect(confirm).not.toHaveBeenCalled()
+  })
+
+  it("says a stored copy keeps the old numbers", async () => {
+    useBookStore.setState({ yearsArchived: { "2026": "2027-01-20" } })
+    await renumberVouchers(ctx, 2026)
+    expect(vi.mocked(confirm).mock.calls[0][0].message).toContain("tallessa")
+  })
+
+  it("keeps an entry added since when undone", async () => {
+    await renumberVouchers(ctx, 2026)
+    useBookStore.getState().addEntries([voucher("new", "2026-04-01")])
+    clickUndo()
+    expect(numbers()).toEqual({ late: 1, early: 2, new: 3 })
   })
 })

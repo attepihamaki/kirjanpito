@@ -1,6 +1,7 @@
 "use client"
 
-import { Trash2Icon } from "lucide-react"
+import { ListOrderedIcon, Trash2Icon } from "lucide-react"
+import * as React from "react"
 
 import { OptionSelect } from "@/components/common/option-select"
 import { Panel } from "@/components/common/panel"
@@ -11,8 +12,9 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { useCanSaveToFile } from "@/hooks/use-save-book"
-import { clearAllEntries } from "@/lib/commands/book-commands"
+import { clearAllEntries, renumberVouchers } from "@/lib/commands/book-commands"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
+import { renumberYear } from "@/lib/domain/voucher"
 import { useBookStore } from "@/stores/book-store"
 
 /** The first settings page (§8.10): how the book is filed and saved. */
@@ -22,6 +24,7 @@ export function GeneralSettings() {
       <VatPeriodSetting />
       <BookStartSetting />
       <AutosaveSetting />
+      <VoucherNumbers />
       <ClearEntries />
     </div>
   )
@@ -144,6 +147,44 @@ function AutosaveSetting() {
           {f.t("settings.autosave")}
         </FieldLabel>
       </Field>
+    </Panel>
+  )
+}
+
+/**
+ * Renumbering the selected year (§4). The button is off while the numbers are
+ * already in date order, and the count says how many a run would change.
+ */
+function VoucherNumbers() {
+  const f = useFormatters()
+  const ctx = useCommandCtx()
+  const year = useBookStore((s) => s.year)
+  const entries = useBookStore((s) => s.entries)
+
+  const changes = React.useMemo(() => {
+    const after = renumberYear(entries, year)
+    return after.filter((e, i) => e !== entries[i]).length
+  }, [entries, year])
+
+  return (
+    <Panel
+      title={f.t("settings.vouchers")}
+      description={f.t("settings.vouchersHint")}
+      bodyClassName="p-4 text-sm text-muted-foreground"
+      footer={
+        <Button
+          variant="outline"
+          disabled={changes === 0}
+          onClick={() => void renumberVouchers(ctx, year)}
+        >
+          <ListOrderedIcon data-icon="inline-start" />
+          {f.t("settings.renumber", { year })}
+        </Button>
+      }
+    >
+      {changes === 0
+        ? f.t("settings.vouchersInOrder", { year })
+        : f.t("settings.vouchersOutOfOrder", { year, n: changes })}
     </Panel>
   )
 }

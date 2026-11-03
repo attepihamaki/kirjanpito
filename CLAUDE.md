@@ -158,7 +158,8 @@ interface Entry {
 The Accounting Act has every entry rest on a dated voucher that is "järjestelmällisesti numeroitu tai vastaavalla tavalla yksilöity" (KPL 2:5, checked on Finlex). An entry here is its own voucher, so it carries the number. `lib/domain/voucher.ts` owns the rule:
 
 - One series per financial year, starting at 1. A new entry takes the year's highest number plus one.
-- An entry keeps its number while it stays in its year (`keepVoucher`). Moved to another year, it takes the next number there. Nothing is renumbered to close a gap, so a deleted entry leaves one, unless it was the newest.
+- An entry keeps its number while it stays in its year (`keepVoucher`). Moved to another year, it takes the next number there. Nothing renumbers by itself to close a gap, so a deleted entry leaves one, unless it was the newest.
+- **Renumbering is the user's own action** (`renumberYear`, `renumberVouchers` in `book-commands.ts`). Asetukset, Yleiset, Tositenumerot numbers the selected year from 1 in date order, and entries of one date stay in their current order. It asks first, says so if a copy of the year is marked as stored (§8.12), and can be undone from the toast for 10 seconds. It does not touch VAT or the result, so it has no filed-period warning (§8.11).
 - `assignVouchers` numbers whatever has no number, or a number another entry of its year already holds, in date order after the year's highest. The store runs it on every add, on opening a file and on restoring deleted entries, which go first so they keep theirs. `persist.migrate` (version 4) numbers a book stored before this existed.
 - In the UI the field is "Tositenumero" / "Voucher number", and the ledger column is "Nro". "Tosite" on its own stays the receipt file.
 
@@ -739,7 +740,7 @@ See §6.4. Wide tables scroll horizontally with a sticky first column. The chart
 
 Every section is a `Panel` (§11). The page is split into two sub-pages, so the categories table does not bury the handful of book-wide settings:
 
-- **Yleiset** at `/app/settings`: the VAT period, the start month, saving, and clearing the entries.
+- **Yleiset** at `/app/settings`: the VAT period, the start month, saving, the voucher numbers (§4), and clearing the entries.
 - **Luokat** at `/app/settings/categories`: the add form, the categories table, and restoring the defaults.
 - **Toistuvat** at `/app/settings/recurring`: the monthly templates (§8.5).
 
@@ -1255,4 +1256,5 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 - The VAT return of a business that stops trading (§6.5).
 - Asset classes other than machinery and equipment, and templates repeating less often than monthly.
 - VAT return fields the book cannot fill (§8.7): EU purchases, imports and reverse-charge purchases.
+- Whether renumbering a year's vouchers (§4) is acceptable once its books are closed. The app warns and leaves the choice to the user; an accountant has not confirmed it.
 - Whether a VAT payment or refund booked on account 2939 (§6.6) is what an accountant would expect in a single-entry book, and whether 2939 should be another number. The same goes for the owner's transfers on 2000 (§6.7).

@@ -283,6 +283,12 @@ export interface BookActions {
    * undo cannot bring back an entry deleted since.
    */
   updateEntries(updated: readonly Entry[]): void
+  /**
+   * Set voucher numbers by entry id (§4). A number another entry of the year
+   * already holds goes to the entry earlier in the book, and the other one
+   * takes the next free number.
+   */
+  setVouchers(numbers: ReadonlyMap<string, number>): void
   clearEntries(): void
   /** Put deleted entries back. Ids already present are skipped. */
   restoreEntries(entries: readonly Entry[]): void
@@ -671,6 +677,14 @@ export const useBookStore = create<BookStore>()(
           dirty: true,
           gcTick: get().gcTick + 1,
         })
+      },
+
+      setVouchers: (numbers) => {
+        const entries = get().entries.map((e) => {
+          const voucher = numbers.get(e.id)
+          return voucher === undefined ? e : { ...e, voucher }
+        })
+        set({ entries: [...assignVouchers(entries)], dirty: true })
       },
 
       clearEntries: () =>

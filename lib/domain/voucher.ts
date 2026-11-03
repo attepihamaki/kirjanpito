@@ -11,9 +11,10 @@ import type { Entry } from "@/lib/domain/types"
  *
  * The numbers run in one series per financial year, from 1. An entry keeps
  * its number for as long as it stays in that year, since the user may have
- * written it on a paper receipt, and nothing is ever renumbered to close a
- * gap. A new entry takes the year's highest number plus one, so deleting the
- * newest entry frees its number again.
+ * written it on a paper receipt, and nothing renumbers by itself to close a
+ * gap. Only `renumberYear`, which the user runs and confirms, moves a number.
+ * A new entry takes the year's highest number plus one, so deleting the newest
+ * entry frees its number again.
  */
 
 /** Whether `n` can be a voucher number at all. */
@@ -58,6 +59,38 @@ export function assignVouchers(entries: readonly Entry[]): readonly Entry[] {
     next.set(year, n + 1)
   }
   return out
+}
+
+/**
+ * Number one year's entries from 1 in date order, closing every gap. Entries
+ * of one date stay in the order of their current numbers. Other years are
+ * untouched.
+ *
+ * Entries that keep their number are returned as the same objects, and the
+ * array itself when nothing changes.
+ */
+export function renumberYear(
+  entries: readonly Entry[],
+  year: number
+): readonly Entry[] {
+  const order = entries
+    .map((e, i) => ({ e, i }))
+    .filter(({ e }) => yearOf(e.date) === year)
+    .sort(
+      (a, b) =>
+        a.e.date.localeCompare(b.e.date) ||
+        (a.e.voucher ?? Infinity) - (b.e.voucher ?? Infinity) ||
+        a.i - b.i
+    )
+
+  const out = [...entries]
+  let changed = false
+  for (const [position, { e, i }] of order.entries()) {
+    if (e.voucher === position + 1) continue
+    out[i] = { ...e, voucher: position + 1 }
+    changed = true
+  }
+  return changed ? out : entries
 }
 
 /**

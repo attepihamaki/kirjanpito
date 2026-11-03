@@ -7,8 +7,10 @@ import {
   isReceiptStorageSupported,
 } from "@/lib/browser/receipt-store"
 import { heldByAnotherTab } from "@/lib/browser/tab-lock"
+import { yearOf } from "@/lib/domain/dates"
 import { collectLiveIds } from "@/lib/domain/gc"
 import type { Entry } from "@/lib/domain/types"
+import { renumberYear } from "@/lib/domain/voucher"
 import { LANDING, APP_ROUTES } from "@/lib/site"
 import { confirm } from "@/lib/ui/confirm"
 import type { Ctx } from "@/lib/commands/ctx"
@@ -151,6 +153,68 @@ export async function clearAllEntries(ctx: Ctx): Promise<void> {
 
 /** How long a deletion can be undone. Long enough to read and reach the button. */
 export const UNDO_TIMEOUT_MS = 10_000
+
+/**
+ * Number a year's entries again in date order (§4). It asks first, because a
+ * number written on a paper receipt or in a copy of the file stops matching.
+ * False when nothing would change or the user cancels.
+ */
+export async function renumberVouchers(
+  ctx: Ctx,
+  year: number
+): Promise<boolean> {
+  const before = useBookStore.getState()
+  const after = renumberYear(before.entries, year)
+  const previous = new Map(before.entries.map((e) => [e.id, e.voucher]))
+  const numbers = new Map(
+    after.flatMap((e) =>
+      e.voucher !== undefined && e.voucher !== previous.get(e.id)
+        ? [[e.id, e.voucher] as const]
+        : []
+    )
+  )
+  if (numbers.size === 0) return false
+
+  const message = ctx.t("confirm.renumberMessage", { n: numbers.size })
+  const confirmed = await confirm({
+    title: ctx.t("confirm.renumberTitle", { year }),
+    message: before.yearsArchived[String(year)]
+      ? `${message}\n\n${ctx.t("confirm.renumberArchived", { year })}`
+      : message,
+    confirmLabel: ctx.t("confirm.renumberConfirm"),
+    cancelLabel: ctx.t("common.cancel"),
+  })
+  if (!confirmed) return false
+
+  const store = useBookStore.getState()
+  const epoch = store.bookEpoch
+  store.setVouchers(numbers)
+  const id = toast.add({
+    title: ctx.t("settings.renumbered", { n: numbers.size }),
+    timeout: UNDO_TIMEOUT_MS,
+    actionProps: {
+      children: ctx.t("common.undo"),
+      onClick: () => {
+        toast.close(id)
+        const now = useBookStore.getState()
+        if (now.bookEpoch !== epoch) return
+        // An entry moved to another year since belongs to that year's series.
+        now.setVouchers(
+          new Map(
+            now.entries.flatMap((e) => {
+              const old = numbers.has(e.id) ? previous.get(e.id) : undefined
+              return old !== undefined && yearOf(e.date) === year
+                ? [[e.id, old] as const]
+                : []
+            })
+          )
+        )
+        toast.add({ title: ctx.t("settings.renumberUndone") })
+      },
+    },
+  })
+  return true
+}
 
 /**
  * Raise a toast with "Kumoa" for entries just deleted (§8.11). Their receipts
