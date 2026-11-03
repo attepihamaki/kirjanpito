@@ -124,8 +124,8 @@ export const LANDING_DICT = {
     "No account, no database",
   ],
   "landing.privacy1": [
-    "Kirjaukset tallentuvat vain tähän selaimeen ja siihen CSV-tiedostoon, jonka viet. Mitään ei lähetetä palvelimelle.",
-    "Entries are stored only in this browser and in the CSV file you export. Nothing is sent to a server.",
+    "Kirjaukset tallentuvat vain tähän selaimeen ja siihen tiedostoon, jonka tallennat. Mitään ei lähetetä palvelimelle.",
+    "Entries are stored only in this browser and in the file you save. Nothing is sent to a server.",
   ],
   "landing.privacy2": [
     "Kirjaukset ovat tavallisessa CSV-tiedostossa, jonka voit avata Excelissä. Tositteet kulkevat sen mukana samassa ZIP-tiedostossa kansioissa vuoden ja kuukauden mukaan.",
