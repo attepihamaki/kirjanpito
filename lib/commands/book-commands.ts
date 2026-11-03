@@ -16,6 +16,7 @@ import { LANDING, APP_ROUTES } from "@/lib/site"
 import { confirm } from "@/lib/ui/confirm"
 import type { Ctx } from "@/lib/commands/ctx"
 import { useBookStore } from "@/stores/book-store"
+import { useLangStore } from "@/stores/lang-store"
 
 /**
  * Commands that never touch a file format.
@@ -95,7 +96,9 @@ export async function startNewBook(ctx: Ctx): Promise<void> {
   if (!(await guardDirty(ctx, false))) return
   releaseAllObjectUrls()
   await unlinkFile()
-  useBookStore.getState().newBook(new Date().getFullYear())
+  useBookStore
+    .getState()
+    .newBook(new Date().getFullYear(), useLangStore.getState().lang)
   ctx.navigate(APP_ROUTES.overview)
 }
 

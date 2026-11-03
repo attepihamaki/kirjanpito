@@ -343,6 +343,7 @@ function applyImport(
     dirty: false,
     settings: settings
       ? {
+          exportLang: settings.exportLang,
           vatPeriod: settings.vatPeriod,
           bookStart: settings.bookStart,
           vatFiled: settings.vatFiled,
@@ -397,6 +398,7 @@ function bookVersion() {
   return [
     s.entries,
     s.cats,
+    s.exportLang,
     s.vatPeriod,
     s.bookStart,
     s.vatFiled,
@@ -429,6 +431,7 @@ function currentSettingsText(): string {
   return serializeSettings({
     language: useLangStore.getState().lang,
     theme: readStoredTheme(),
+    exportLang: s.exportLang,
     vatPeriod: s.vatPeriod,
     bookStart: s.bookStart,
     vatFiled: s.vatFiled,
@@ -642,7 +645,7 @@ async function handleToWrite(
   zipName: string
 ): Promise<FileSystemFileHandle | null> {
   const { fileHandle, fileName, savedAt } = useBookStore.getState()
-  const pick = () => pickFileToSave(zipName, true)
+  const pick = () => pickFileToSave(zipName)
 
   if (!fileHandle) return pick()
 

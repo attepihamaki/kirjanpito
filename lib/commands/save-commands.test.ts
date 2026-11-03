@@ -673,7 +673,7 @@ describe("another book taking over during a save (§7.5)", () => {
 
     const saving = saveBook(ctx, "kirjanpito")
     await tick()
-    useBookStore.getState().newBook(2026)
+    useBookStore.getState().newBook(2026, "fi")
     grant("granted")
     await saving
 

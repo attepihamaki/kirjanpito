@@ -60,7 +60,7 @@ describe("a new or closed book", () => {
   it.each(["newBook", "closeBook"] as const)(
     "%s starts from the default categories",
     (action) => {
-      if (action === "newBook") useBookStore.getState().newBook(2026)
+      if (action === "newBook") useBookStore.getState().newBook(2026, "fi")
       else useBookStore.getState().closeBook()
 
       expect(useBookStore.getState().cats).toEqual(defaultCategories())

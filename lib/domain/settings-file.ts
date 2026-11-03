@@ -46,6 +46,14 @@ export type ThemeChoice = "light" | "dark" | "system"
 export interface BookSettings {
   language: Lang
   theme: ThemeChoice
+  /**
+   * The language the bookkeeping is written out in (§7.1, §7.2): the ZIP's
+   * suggested name, the CSV's name and column labels, the word in each
+   * `type`, `mode`, `eu_purchase` and `paid` cell, the category names, and the
+   * receipt folder. It belongs to the book rather than to the browser, so a
+   * file opened elsewhere is saved back in the shape it arrived in.
+   */
+  exportLang: Lang
   vatPeriod: VatPeriodKind
   /** `"2026-10"`: the month the bookkeeping began, or null to follow the first entry. */
   bookStart: string | null
@@ -205,6 +213,9 @@ export function parseSettings(text: string): ParsedSettings {
   if (raw.theme === "light" || raw.theme === "dark" || raw.theme === "system") {
     out.theme = raw.theme
   }
+  if (raw.exportLang === "fi" || raw.exportLang === "en") {
+    out.exportLang = raw.exportLang
+  }
   if (
     raw.vatPeriod === "month" ||
     raw.vatPeriod === "quarter" ||
@@ -333,6 +344,7 @@ export function serializeSettings(s: BookSettings): string {
     version: SETTINGS_VERSION,
     language: s.language,
     theme: s.theme,
+    exportLang: s.exportLang,
     vatPeriod: s.vatPeriod,
     bookStart: s.bookStart,
     vatFiled: Object.fromEntries(

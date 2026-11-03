@@ -1579,6 +1579,11 @@ export const APP_DICT = {
 
   "settings.sections": ["Asetusten osiot", "Settings sections"],
   "settings.general": ["Yleiset", "General"],
+  "settings.exportLang": ["Tiedoston kieli", "File language"],
+  "settings.exportLangHint": [
+    "Kieli, jolla kirjanpito tallennetaan: tiedoston nimi, CSV:n sarakkeet ja arvot sekä liitekansio. Summat, päivämäärät ja erotin pysyvät samoina molemmilla kielillä.",
+    "The language the bookkeeping is saved in: the file name, the CSV’s columns and values, and the attachment folder. Amounts, dates and the separator stay the same in both languages.",
+  ],
   "settings.vatPeriod": ["ALV-ilmoitusjakso", "VAT reporting period"],
   "settings.vatPeriodHint": [
     "Kuinka usein annat arvonlisäveroilmoituksen. Yleiskatsauksen eräpäivät lasketaan tämän mukaan.",

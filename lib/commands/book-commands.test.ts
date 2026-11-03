@@ -97,7 +97,7 @@ describe("deleteEntry", () => {
 
   it("does nothing once another bookkeeping has taken over", async () => {
     await deleteEntry(ctx, useBookStore.getState().entries[0])
-    useBookStore.getState().newBook(2026)
+    useBookStore.getState().newBook(2026, "fi")
 
     clickUndo()
     expect(useBookStore.getState().entries).toEqual([])

@@ -13,20 +13,73 @@ import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { useCanSaveToFile } from "@/hooks/use-save-book"
 import { clearAllEntries, renumberVouchers } from "@/lib/commands/book-commands"
+import type { Lang } from "@/lib/domain/types"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 import { renumberYear } from "@/lib/domain/voucher"
 import { useBookStore } from "@/stores/book-store"
+import { LANGS, LANG_NAMES } from "@/stores/lang-store"
 
 /** The first settings page (§8.10): how the book is filed and saved. */
 export function GeneralSettings() {
   return (
     <div className="flex flex-col gap-6">
+      <ExportLanguageSetting />
       <VatPeriodSetting />
       <BookStartSetting />
       <AutosaveSetting />
       <VoucherNumbers />
       <ClearEntries />
     </div>
+  )
+}
+
+/**
+ * The language the bookkeeping is written out in (§7.1, §7.2). It comes first
+ * because it decides the shape of the file, where the VAT period only decides
+ * what goes in it. The options are endonyms, as in the language picker, so
+ * each reads the same whichever language the UI is in.
+ */
+export function ExportLanguageSetting() {
+  const f = useFormatters()
+  const exportLang = useBookStore((s) => s.exportLang)
+  const setExportLang = useBookStore((s) => s.setExportLang)
+
+  return (
+    <Panel
+      title={f.t("settings.exportLang")}
+      description={f.t("settings.exportLangHint")}
+      bodyClassName="p-4"
+    >
+      <ExportLanguageToggle value={exportLang} onChange={setExportLang} />
+    </Panel>
+  )
+}
+
+/** The control alone, so the setup dialog (§8.3) shows the same one. */
+export function ExportLanguageToggle({
+  value,
+  onChange,
+}: {
+  value: Lang
+  onChange: (lang: Lang) => void
+}) {
+  const f = useFormatters()
+
+  return (
+    <ToggleGroup
+      aria-label={f.t("settings.exportLang")}
+      value={[value]}
+      onValueChange={(next) => {
+        const lang = next[0] as Lang | undefined
+        if (lang) onChange(lang)
+      }}
+    >
+      {LANGS.map((code) => (
+        <ToggleGroupItem key={code} value={code} lang={code}>
+          {LANG_NAMES[code]}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
   )
 }
 
