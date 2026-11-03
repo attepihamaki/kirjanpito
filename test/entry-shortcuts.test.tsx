@@ -63,7 +63,7 @@ function mount(
 }
 
 const press = (mods: { ctrlKey?: boolean; metaKey?: boolean }) =>
-  fireEvent.keyDown(screen.getByLabelText("Selite"), { key: "Enter", ...mods })
+  fireEvent.keyDown(screen.getByLabelText("Kuvaus"), { key: "Enter", ...mods })
 
 describe("Ctrl+Enter in the entry dialog", () => {
   beforeEach(() => {
@@ -76,13 +76,13 @@ describe("Ctrl+Enter in the entry dialog", () => {
 
     await waitFor(() => expect(useBookStore.getState().entries).toHaveLength(2))
     expect(useBookStore.getState().dialog.kind).toBe("entry")
-    expect(screen.getByLabelText("Selite")).toHaveValue("")
+    expect(screen.getByLabelText("Kuvaus")).toHaveValue("")
     expect(document.activeElement).toBe(screen.getByLabelText("Päivämäärä"))
   })
 
   it("saves an edit and closes, on ⌘Enter too", async () => {
     mount("edit", "a")
-    fireEvent.change(screen.getByLabelText("Selite"), {
+    fireEvent.change(screen.getByLabelText("Kuvaus"), {
       target: { value: "Vuokra, maaliskuu" },
     })
     press({ metaKey: true })

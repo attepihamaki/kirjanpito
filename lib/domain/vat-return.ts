@@ -176,8 +176,8 @@ export function vatReturnSections(report: VatReport): TaxFormSection[] {
                 report.otherSales.eu,
                 {
                   hint: {
-                    fi: "Nämä kirjaukset ovat vanhassa luokassa Myynti – EU. Vaihda niiden luokaksi Myynti – EU, tavarat tai palvelut, niin summa siirtyy oikeaan kohtaan.",
-                    en: "These entries are on the old category Sales – EU. Change their category to Sales – EU, goods or services, and the amount moves to the right field.",
+                    fi: "Nämä tositteet ovat vanhassa luokassa Myynti – EU. Vaihda niiden luokaksi Myynti – EU, tavarat tai palvelut, niin summa siirtyy oikeaan kohtaan.",
+                    en: "These vouchers are on the old category Sales – EU. Change their category to Sales – EU, goods or services, and the amount moves to the right field.",
                   },
                 }
               ),

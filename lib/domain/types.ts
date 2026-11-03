@@ -38,7 +38,7 @@ export type Bucket =
  */
 export type Cents = number
 
-/** A receipt attached to an entry (tosite). */
+/** A file attached to an entry (liite). */
 export interface Attachment {
   /** IndexedDB key, or null when the file itself is not available. */
   id: string | null
@@ -59,7 +59,7 @@ export interface Attachment {
 }
 
 /**
- * A bookkeeping entry (kirjaus).
+ * A bookkeeping entry (tosite).
  *
  * This shape is what localStorage holds, so its field names are English even
  * though the CSV columns they serialize to are Finnish (§7.1). `lib/domain/csv`

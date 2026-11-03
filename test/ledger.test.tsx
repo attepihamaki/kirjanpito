@@ -119,7 +119,7 @@ describe("LedgerView with the sample data", () => {
       screen.getByRole("heading", { name: "Kirjanpito", level: 1 })
     ).toBeInTheDocument()
     expect(screen.getByText("Koko vuosi 2026")).toBeInTheDocument()
-    expect(screen.getByText("16 kirjausta")).toBeInTheDocument()
+    expect(screen.getByText("16 tositetta")).toBeInTheDocument()
   })
 
   it("paginates at ten rows by default", () => {
@@ -163,7 +163,7 @@ describe("LedgerView with the sample data", () => {
     await user.click(screen.getByRole("button", { name: /^Loka/ }))
 
     expect(screen.getByText("Lokakuu 2026")).toBeInTheDocument()
-    expect(screen.getByText("3 kirjausta")).toBeInTheDocument()
+    expect(screen.getByText("3 tositetta")).toBeInTheDocument()
     // §10: October's VAT payable is 362,18 €.
     expect(screen.getByText(eur(36218))).toBeInTheDocument()
   })
@@ -175,10 +175,10 @@ describe("LedgerView with the sample data", () => {
     await user.click(screen.getByRole("button", { name: /^Marras/ }))
 
     expect(
-      screen.getByText("Ei kirjauksia: Marraskuu 2026.")
+      screen.getByText("Ei tositteita: Marraskuu 2026.")
     ).toBeInTheDocument()
     expect(
-      screen.queryByLabelText("Hae selitteestä, luokasta tai numerolla")
+      screen.queryByLabelText("Hae kuvauksesta, luokasta tai numerolla")
     ).not.toBeInTheDocument()
     expect(
       screen.queryByRole("combobox", { name: "Tyyppi" })
@@ -190,11 +190,11 @@ describe("LedgerView with the sample data", () => {
     mount(<LedgerView />)
 
     await user.type(
-      screen.getByLabelText("Hae selitteestä, luokasta tai numerolla"),
+      screen.getByLabelText("Hae kuvauksesta, luokasta tai numerolla"),
       "vuokra"
     )
 
-    expect(screen.getByText("3 kirjausta")).toBeInTheDocument()
+    expect(screen.getByText("3 tositetta")).toBeInTheDocument()
     expect(screen.getAllByRole("row")).toHaveLength(4)
   })
 
@@ -203,11 +203,11 @@ describe("LedgerView with the sample data", () => {
     mount(<LedgerView />)
 
     await user.type(
-      screen.getByLabelText("Hae selitteestä, luokasta tai numerolla"),
+      screen.getByLabelText("Hae kuvauksesta, luokasta tai numerolla"),
       "14"
     )
 
-    expect(screen.getByText("1 kirjaus")).toBeInTheDocument()
+    expect(screen.getByText("1 tosite")).toBeInTheDocument()
     expect(screen.getByText("Osto – K-Rauta – Tarvikkeet")).toBeInTheDocument()
   })
 
@@ -217,12 +217,12 @@ describe("LedgerView with the sample data", () => {
 
     await user.click(screen.getByRole("combobox", { name: "Tyyppi" }))
     await user.click(await screen.findByRole("option", { name: "Tulot" }))
-    expect(screen.getByText("5 kirjausta")).toBeInTheDocument()
+    expect(screen.getByText("5 tositetta")).toBeInTheDocument()
 
     await user.click(
       screen.getByRole("button", { name: "Tyhjennä suodattimet" })
     )
-    expect(screen.getByText("16 kirjausta")).toBeInTheDocument()
+    expect(screen.getByText("16 tositetta")).toBeInTheDocument()
   })
 
   it("reverses the order on the second click of the date header", async () => {
@@ -242,7 +242,7 @@ describe("LedgerView with the sample data", () => {
   })
 
   it.each([
-    ["Selite", /^Selite/],
+    ["Kuvaus", /^Kuvaus/],
     // The default order follows this column, and it still reaches ⇅.
     ["Päivämäärä", /^Päivämäärä/],
   ])("unsorts %s on a third click", async (_label, pattern) => {
@@ -254,7 +254,7 @@ describe("LedgerView with the sample data", () => {
     await user.click(header())
     await user.click(header())
 
-    for (const name of [/^Päivämäärä/, /^Selite/]) {
+    for (const name of [/^Päivämäärä/, /^Kuvaus/]) {
       expect(screen.getByRole("columnheader", { name })).toHaveAttribute(
         "aria-sort",
         "none"
@@ -285,7 +285,7 @@ describe("LedgerView in English", () => {
       screen.getByRole("heading", { name: "Bookkeeping", level: 1 })
     ).toBeInTheDocument()
     expect(screen.getByText("Whole year 2026")).toBeInTheDocument()
-    expect(screen.getByText("16 entries")).toBeInTheDocument()
+    expect(screen.getByText("16 vouchers")).toBeInTheDocument()
     // Finnish formatting even in English (§9).
     expect(screen.getByText(eur(1250000))).toBeInTheDocument()
   })
@@ -313,9 +313,9 @@ describe("LedgerView with an empty book", () => {
     })
     mount(<LedgerView />)
 
-    expect(screen.getByText("Ei vielä kirjauksia")).toBeInTheDocument()
+    expect(screen.getByText("Ei vielä tositteita")).toBeInTheDocument()
     expect(
-      screen.getByRole("button", { name: "Uusi kirjaus" })
+      screen.getByRole("button", { name: "Uusi tosite" })
     ).toBeInTheDocument()
   })
 })
@@ -340,11 +340,11 @@ describe("the period slice drives the totals, not the filters", () => {
     )
 
     await user.type(
-      screen.getByLabelText("Hae selitteestä, luokasta tai numerolla"),
+      screen.getByLabelText("Hae kuvauksesta, luokasta tai numerolla"),
       "vuokra"
     )
 
-    expect(screen.getByText("3 kirjausta")).toBeInTheDocument()
+    expect(screen.getByText("3 tositetta")).toBeInTheDocument()
     expect(screen.getByText(eur(before.incomeNet))).toBeInTheDocument()
     expect(screen.getByText(eur(before.expenseNet))).toBeInTheDocument()
   })
@@ -382,7 +382,7 @@ describe("a search that also matches elsewhere (§8.4)", () => {
     useBookStore.setState({ ledgerType: "income", ledgerQuery: "vuokra" })
     mount(<LedgerView />)
     expect(
-      screen.getByText("Ei kirjauksia valituilla suodattimilla.")
+      screen.getByText("Ei tositteita valituilla suodattimilla.")
     ).toBeInTheDocument()
 
     await user.click(
@@ -414,7 +414,7 @@ describe("selecting rows for a bulk action (§8.4)", () => {
   beforeEach(loadSampleIntoStore)
 
   const box = (description: string) =>
-    screen.getByRole("checkbox", { name: `Valitse kirjaus ${description}` })
+    screen.getByRole("checkbox", { name: `Valitse tosite ${description}` })
 
   it("shows the bar with the count once rows are picked", async () => {
     const user = userEvent.setup()
@@ -452,7 +452,7 @@ describe("selecting rows for a bulk action (§8.4)", () => {
     mount(<LedgerView />)
 
     await user.click(
-      screen.getByRole("checkbox", { name: "Valitse sivun kirjaukset" })
+      screen.getByRole("checkbox", { name: "Valitse sivun tositteet" })
     )
     expect(screen.getByRole("region", { name: "10 valittu" })).toBeTruthy()
   })

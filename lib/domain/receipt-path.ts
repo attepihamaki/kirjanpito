@@ -54,6 +54,13 @@ const RESERVED_NAMES = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i
 /** Longest stem written, leaving room for the folders and a `-2` suffix. */
 const MAX_STEM = 100
 
+/*
+ * The name a receipt whose own name is entirely unusable is written under.
+ * It is a word the stem rules leave alone, so a file saved under it keeps
+ * that name through every later round trip.
+ */
+const FALLBACK_STEM = "liite"
+
 /**
  * The name a receipt takes inside the archive: its own file name, with only
  * what a file system would refuse taken out (§7.2).
@@ -77,7 +84,7 @@ export function receiptStem(name: string): string {
      */
     .replace(/^[\s.]+|[\s.]+$/g, "")
   if (RESERVED_NAMES.test(out)) return `${out}_`
-  return out || "tosite"
+  return out || FALLBACK_STEM
 }
 
 const MIME_BY_EXT: Readonly<Record<string, string>> = {

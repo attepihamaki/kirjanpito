@@ -84,7 +84,7 @@ describe("VAT settlement", () => {
     fireEvent.click(screen.getByRole("button", { name: "Kirjaa maksu" }))
 
     expect(screen.getByLabelText("Summa (€)")).toHaveValue("362,18")
-    expect(screen.getByLabelText("Selite")).toHaveValue(
+    expect(screen.getByLabelText("Kuvaus")).toHaveValue(
       "Arvonlisävero, Lokakuu 2026"
     )
     fireEvent.click(screen.getByRole("button", { name: "Tallenna" }))
@@ -122,7 +122,7 @@ describe("VAT settlement", () => {
   it("opens a booked payment for editing", () => {
     load([payment(36_218, "2026-10")])
     mount()
-    fireEvent.click(screen.getByRole("button", { name: "Avaa kirjaus" }))
+    fireEvent.click(screen.getByRole("button", { name: "Avaa tosite" }))
 
     expect(useBookStore.getState().dialog).toMatchObject({
       kind: "entry",

@@ -91,32 +91,32 @@ export const APP_DICT = {
   ],
   "confirm.overwriteConfirm": ["Korvaa", "Overwrite"],
   "confirm.receiptsLostTitle": [
-    "Jätetäänkö tositteet pois?",
-    "Leave the receipts out?",
+    "Jätetäänkö liitteet pois?",
+    "Leave the attachments out?",
   ],
   "confirm.receiptsLostMessage": [
     pl(
-      "1 tosite ei löydy selaimesta eikä tiedostosta {f}. Tallennus jättää sen pois, ja jos se on tiedostossa toisella nimellä, se katoaa sieltä.",
-      "{n} tositetta ei löydy selaimesta eikä tiedostosta {f}. Tallennus jättää ne pois, ja jos ne ovat tiedostossa toisella nimellä, ne katoavat sieltä."
+      "1 liite ei löydy selaimesta eikä tiedostosta {f}. Tallennus jättää sen pois, ja jos se on tiedostossa toisella nimellä, se katoaa sieltä.",
+      "{n} liitettä ei löydy selaimesta eikä tiedostosta {f}. Tallennus jättää ne pois, ja jos ne ovat tiedostossa toisella nimellä, ne katoavat sieltä."
     ),
     pl(
-      "1 receipt isn’t in this browser or in the file {f}. Saving leaves it out, and if the file holds it under another name, it is lost from there.",
-      "{n} receipts aren’t in this browser or in the file {f}. Saving leaves them out, and if the file holds them under other names, they are lost from there."
+      "1 attachment isn’t in this browser or in the file {f}. Saving leaves it out, and if the file holds it under another name, it is lost from there.",
+      "{n} attachments aren’t in this browser or in the file {f}. Saving leaves them out, and if the file holds them under other names, they are lost from there."
     ),
   ],
   "confirm.receiptsLostConfirm": ["Tallenna silti", "Save anyway"],
-  "confirm.deleteTitle": ["Poistetaanko kirjaus?", "Delete this entry?"],
+  "confirm.deleteTitle": ["Poistetaanko tosite?", "Delete this voucher?"],
   "confirm.deleteManyTitle": [
-    pl("Poistetaanko 1 kirjaus?", "Poistetaanko {n} kirjausta?"),
-    pl("Delete 1 entry?", "Delete {n} entries?"),
+    pl("Poistetaanko 1 tosite?", "Poistetaanko {n} tositetta?"),
+    pl("Delete 1 voucher?", "Delete {n} vouchers?"),
   ],
   "confirm.deleteManyMessage": [
-    "Valitut kirjaukset poistetaan. Voit perua poiston heti sen jälkeen.",
-    "The selected entries will be deleted. You can undo it right after.",
+    "Valitut tositteet poistetaan. Voit perua poiston heti sen jälkeen.",
+    "The selected vouchers will be deleted. You can undo it right after.",
   ],
   "confirm.deleteMessage": [
-    "Kirjaus ”{x}” poistetaan.",
-    "The entry “{x}” will be deleted.",
+    "Tosite ”{x}” poistetaan.",
+    "The voucher “{x}” will be deleted.",
   ],
   "confirm.replaceTitle": [
     "Korvataanko avoin kirjanpito?",
@@ -127,10 +127,10 @@ export const APP_DICT = {
     "The open bookkeeping has changes that haven’t been saved. The file you open will replace them.",
   ],
   "confirm.replaceConfirm": ["Korvaa", "Replace"],
-  "confirm.clearTitle": ["Tyhjennetäänkö kirjaukset?", "Clear all entries?"],
+  "confirm.clearTitle": ["Tyhjennetäänkö tositteet?", "Clear all vouchers?"],
   "confirm.clearMessage": [
-    "Kaikki kirjaukset poistetaan tästä selaimesta. Tallenna ne ensin tiedostoon, jos haluat säilyttää ne.",
-    "All entries will be removed from this browser. Save them to a file first if you want to keep them.",
+    "Kaikki tositteet poistetaan tästä selaimesta. Tallenna ne ensin tiedostoon, jos haluat säilyttää ne.",
+    "All vouchers will be removed from this browser. Save them to a file first if you want to keep them.",
   ],
   "confirm.clearConfirm": ["Tyhjennä", "Clear"],
   "confirm.renumberTitle": [
@@ -139,12 +139,12 @@ export const APP_DICT = {
   ],
   "confirm.renumberMessage": [
     pl(
-      "1 kirjauksen numero muuttuu. Jos olet kirjoittanut numeroita kuitteihin tai antanut ne kirjanpitäjälle, ne eivät enää täsmää.",
-      "{n} kirjauksen numero muuttuu. Jos olet kirjoittanut numeroita kuitteihin tai antanut ne kirjanpitäjälle, ne eivät enää täsmää."
+      "1 tositteen numero muuttuu. Jos olet kirjoittanut numeroita kuitteihin tai antanut ne kirjanpitäjälle, ne eivät enää täsmää.",
+      "{n} tositteen numero muuttuu. Jos olet kirjoittanut numeroita kuitteihin tai antanut ne kirjanpitäjälle, ne eivät enää täsmää."
     ),
     pl(
-      "The number of 1 entry changes. Numbers you have written on receipts or given to an accountant will no longer match.",
-      "The numbers of {n} entries change. Numbers you have written on receipts or given to an accountant will no longer match."
+      "The number of 1 voucher changes. Numbers you have written on receipts or given to an accountant will no longer match.",
+      "The numbers of {n} vouchers change. Numbers you have written on receipts or given to an accountant will no longer match."
     ),
   ],
   "confirm.renumberConfirm": ["Numeroi uudelleen", "Renumber"],
@@ -152,8 +152,8 @@ export const APP_DICT = {
   "confirm.discardConfirm": ["Hylkää muutokset", "Discard changes"],
   "confirm.keepEditing": ["Jatka muokkausta", "Keep editing"],
   "confirm.discardEntry": [
-    "Kirjauksessa on tallentamattomia muutoksia. Jos suljet ikkunan, ne menetetään.",
-    "This entry has unsaved changes. If you close the dialog, they’ll be lost.",
+    "Tositteessa on tallentamattomia muutoksia. Jos suljet ikkunan, ne menetetään.",
+    "This voucher has unsaved changes. If you close the dialog, they’ll be lost.",
   ],
   "confirm.discardCategory": [
     "Olet täyttänyt uuden luokan tiedot, mutta luokkaa ei ole lisätty. Jos poistut sivulta, tiedot menetetään.",
@@ -267,18 +267,18 @@ export const APP_DICT = {
   "overview.widgetMonths": ["Kuukaudet", "Months"],
   "overview.widgetSales": ["Myynti", "Sales"],
   "overview.widgetExpenses": ["Kulut ryhmittäin", "Expenses by group"],
-  "overview.widgetRecent": ["Viimeisimmät kirjaukset", "Latest entries"],
+  "overview.widgetRecent": ["Viimeisimmät tositteet", "Latest vouchers"],
   "overview.widgetChecks": ["Tarkistettavaa", "To check"],
 
   "overview.bankOn": ["Pankkitilin saldo {d}", "Bank balance on {d}"],
   "overview.bankMovement": [
-    "Kirjaukset sen jälkeen ({n})",
-    "Entries since then ({n})",
+    "Tositteet sen jälkeen ({n})",
+    "Vouchers since then ({n})",
   ],
   "overview.bankEstimate": ["Arvio tänään", "Estimate for today"],
   "overview.bankEstimateNote": [
-    "Arvio laskee kirjaukset päivämäärän mukaan, ei maksupäivän. Siinä eivät näy muut verojen maksut kuin kirjatut arvonlisäverot eivätkä yksityisotot tai -sijoitukset, joita ei ole kirjattu.",
-    "The estimate goes by each entry’s date, not the day it was paid. It leaves out tax payments other than booked VAT, and any owner’s withdrawals or investments not booked.",
+    "Arvio laskee tositteet päivämäärän mukaan, ei maksupäivän. Siinä eivät näy muut verojen maksut kuin kirjatut arvonlisäverot eivätkä yksityisotot tai -sijoitukset, joita ei ole kirjattu.",
+    "The estimate goes by each voucher’s date, not the day it was paid. It leaves out tax payments other than booked VAT, and any owner’s withdrawals or investments not booked.",
   ],
   "overview.bankUpdate": ["Päivitä saldo", "Update balance"],
   "overview.bankEmpty": [
@@ -303,7 +303,7 @@ export const APP_DICT = {
     "Tulot {a} − vähennyskelpoiset kulut {b}",
     "Income {a} − deductible expenses {b}",
   ],
-  "overview.entries": ["Kirjauksia", "Entries"],
+  "overview.entries": ["Tositteita", "Vouchers"],
   "overview.margin": ["Tulosprosentti", "Profit margin"],
   "overview.yearVat": ["ALV, koko vuosi", "VAT, whole year"],
   "overview.sparkLabel": [
@@ -355,14 +355,14 @@ export const APP_DICT = {
   ],
 
   "overview.monthsHint": [
-    "Verottomat summat. Valitse kuukausi avataksesi sen kirjaukset.",
-    "Net amounts. Pick a month to open its entries.",
+    "Verottomat summat. Valitse kuukausi avataksesi sen tositteet.",
+    "Net amounts. Pick a month to open its vouchers.",
   ],
   "overview.bestMonth": ["Paras kuukausi", "Best month"],
   "overview.avgIncome": ["Tulot keskimäärin", "Average income"],
   "overview.avgExpenses": ["Kulut keskimäärin", "Average expenses"],
   "overview.perMonth": ["{a} / kk", "{a} / month"],
-  "overview.activeMonths": ["Kuukausia kirjauksin", "Months with entries"],
+  "overview.activeMonths": ["Kuukausia tosittein", "Months with vouchers"],
 
   "overview.salesDomestic": ["Suomi", "Finland"],
   "overview.otherIncome": ["Muut tulot (301–324)", "Other income (301–324)"],
@@ -371,11 +371,11 @@ export const APP_DICT = {
     pl("1 group with no expenses.", "{n} groups with no expenses."),
   ],
 
-  "overview.allEntries": ["Kaikki kirjaukset", "All entries"],
-  "overview.noReceipt": ["ei tositetta", "no receipt"],
+  "overview.allEntries": ["Kaikki tositteet", "All vouchers"],
+  "overview.noReceipt": ["ei liitettä", "no attachment"],
   "overview.noEntriesYear": [
-    "Ei kirjauksia vuodelta {y}.",
-    "No entries for {y}.",
+    "Ei tositteita vuodelta {y}.",
+    "No vouchers for {y}.",
   ],
 
   "overview.openCount": [
@@ -393,22 +393,22 @@ export const APP_DICT = {
   ],
   "overview.filed": ["Ilmoitettu", "Filed"],
   "overview.withoutReceipt": [
-    pl("1 kirjaus ilman tositetta", "{n} kirjausta ilman tositetta"),
-    pl("1 entry without a receipt", "{n} entries without a receipt"),
+    pl("1 tosite ilman liitettä", "{n} tositetta ilman liitettä"),
+    pl("1 voucher without an attachment", "{n} vouchers without an attachment"),
   ],
   "overview.withoutReceiptSub": [
-    "Liitä kirjaukseen kuva tai PDF.",
-    "Attach a photo or a PDF to the entry.",
+    "Liitä tositteeseen kuva tai PDF.",
+    "Attach a photo or a PDF to the voucher.",
   ],
   "overview.showThem": ["Näytä", "Show"],
   "overview.rateMismatch": [
     pl(
-      "1 kirjaus, jonka verokanta ei vastaa päivämäärää",
-      "{n} kirjausta, joiden verokanta ei vastaa päivämäärää"
+      "1 tosite, jonka verokanta ei vastaa päivämäärää",
+      "{n} tositetta, joiden verokanta ei vastaa päivämäärää"
     ),
     pl(
-      "1 entry whose VAT rate doesn’t fit its date",
-      "{n} entries whose VAT rate doesn’t fit their date"
+      "1 voucher whose VAT rate doesn’t fit its date",
+      "{n} vouchers whose VAT rate doesn’t fit their date"
     ),
   ],
   "overview.rateMismatchSub": [
@@ -417,10 +417,13 @@ export const APP_DICT = {
   ],
   "overview.futureDate": [
     pl(
-      "1 kirjaus on päivätty tulevaisuuteen",
-      "{n} kirjausta on päivätty tulevaisuuteen"
+      "1 tosite on päivätty tulevaisuuteen",
+      "{n} tositetta on päivätty tulevaisuuteen"
     ),
-    pl("1 entry is dated in the future", "{n} entries are dated in the future"),
+    pl(
+      "1 voucher is dated in the future",
+      "{n} vouchers are dated in the future"
+    ),
   ],
   "overview.futureDateSub": [
     "Tarkista vuosi ja kuukausi.",
@@ -442,16 +445,16 @@ export const APP_DICT = {
     pl("1 unusually large amount", "{n} unusually large amounts"),
   ],
   "overview.largeAmountSub": [
-    "Yli kymmenen kertaa tavallinen kirjaus. Tarkista desimaalipilkun paikka.",
-    "Over ten times a typical entry. Check where the decimal separator is.",
+    "Yli kymmenen kertaa tavallinen tosite. Tarkista desimaalipilkun paikka.",
+    "Over ten times a typical voucher. Check where the decimal separator is.",
   ],
   "overview.duplicate": [
-    pl("1 mahdollinen kaksoiskirjaus", "{n} mahdollista kaksoiskirjausta"),
+    pl("1 mahdollinen kaksoistosite", "{n} mahdollista kaksoistositetta"),
     pl("1 possible duplicate", "{n} possible duplicates"),
   ],
   "overview.duplicateSub": [
-    "Sama päivä ja summa tai sama tositetiedosto kuin toisella kirjauksella.",
-    "Same date and amount, or the same receipt file, as another entry.",
+    "Sama päivä ja summa tai sama liitetiedosto kuin toisella tositteella.",
+    "Same date and amount, or the same attachment file, as another voucher.",
   ],
   "overview.vatNotDeductible": [
     pl(
@@ -482,8 +485,8 @@ export const APP_DICT = {
     "Private use is over 850 € this year. The part above that carries VAT if the VAT on the goods was deducted.",
   ],
   "overview.openItems": [
-    pl("1 avoin kirjaus", "{n} avointa kirjausta"),
-    pl("1 open entry", "{n} open entries"),
+    pl("1 avoin tosite", "{n} avointa tositetta"),
+    pl("1 open voucher", "{n} open vouchers"),
   ],
   "overview.openItemsSub": [
     "Myyntisaamiset {r}, ostovelat {p}.",
@@ -567,43 +570,43 @@ export const APP_DICT = {
     "VAT liability starts on this date, and the sale that exceeds the limit is taxable. Register for VAT if you haven’t yet. The limit is {l} per calendar year.",
   ],
   "overview.missingFiles": [
-    pl("1 tosite puuttuu tiedostosta", "{n} tositetta puuttuu tiedostosta"),
+    pl("1 liite puuttuu tiedostosta", "{n} liitettä puuttuu tiedostosta"),
     pl(
-      "1 receipt is missing from the file",
-      "{n} receipts are missing from the file"
+      "1 attachment is missing from the file",
+      "{n} attachments are missing from the file"
     ),
   ],
   "overview.missingFilesSub": [
     "Ne on listattu CSV-tiedostossa, mutta itse tiedostoja ei löytynyt.",
     "The CSV lists them, but the files themselves were not found.",
   ],
-  "overview.emptyMonths": ["Ei kirjauksia: {m}", "No entries: {m}"],
+  "overview.emptyMonths": ["Ei tositteita: {m}", "No vouchers: {m}"],
   "overview.emptyMonthsSub": [
     "Tarkista, puuttuuko tositteita.",
-    "Check whether any receipts are missing.",
+    "Check whether any vouchers are missing.",
   ],
   "overview.allClear": ["Ei tarkistettavaa.", "Nothing to check."],
 
-  "overview.emptyTitle": ["Ei vielä kirjauksia", "No entries yet"],
+  "overview.emptyTitle": ["Ei vielä tositteita", "No vouchers yet"],
   "overview.emptyBody": [
     "Kirjaa ensimmäinen tosite tai avaa aiempi kirjanpito CSV- tai ZIP-tiedostona. Yleiskatsaus täyttyy sitä mukaa kuin kirjaat.",
-    "Record your first receipt, or open an earlier bookkeeping as a CSV or ZIP file. The overview fills in as you go.",
+    "Record your first voucher, or open an earlier bookkeeping as a CSV or ZIP file. The overview fills in as you go.",
   ],
   "overview.step1Title": [
     "Kirjaa tulot ja kulut",
     "Record income and expenses",
   ],
   "overview.step1Body": [
-    "Pudota kuitti tai lasku sivulle, niin kirjaus alkaa siitä.",
-    "Drop a receipt or an invoice on the page to start an entry from it.",
+    "Pudota kuitti tai lasku sivulle, niin tosite alkaa siitä.",
+    "Drop a receipt or an invoice on the page to start a voucher from it.",
   ],
   "overview.step2Title": [
     "Valitse ALV-ilmoitusjakso",
     "Choose your VAT reporting period",
   ],
   "overview.step2Body": [
-    "Asetuksista. Eräpäivät näkyvät täällä ensimmäisestä kirjauksesta alkaen.",
-    "In Settings. The due dates appear here from your first entry on.",
+    "Asetuksista. Eräpäivät näkyvät täällä ensimmäisestä tositteesta alkaen.",
+    "In Settings. The due dates appear here from your first voucher on.",
   ],
   "overview.step3Title": ["Tallenna tiedostoon", "Save to a file"],
   "overview.step3Body": [
@@ -612,27 +615,27 @@ export const APP_DICT = {
   ],
 
   // --- Ledger (§8.4) ---
-  "ledger.emptyTitle": ["Ei vielä kirjauksia", "No entries yet"],
+  "ledger.emptyTitle": ["Ei vielä tositteita", "No vouchers yet"],
   "ledger.emptyBody": [
-    "Lisää ensimmäinen tosite tai tuo aiemmat kirjaukset CSV-tiedostosta.",
-    "Add your first receipt or import earlier entries from a CSV file.",
+    "Lisää ensimmäinen tosite tai tuo aiemmat tositteet CSV-tiedostosta.",
+    "Add your first voucher or import earlier vouchers from a CSV file.",
   ],
   "ledger.startEmpty": ["Aloita tyhjästä", "Start from scratch"],
-  "ledger.newEntry": ["Uusi kirjaus", "New entry"],
+  "ledger.newEntry": ["Uusi tosite", "New voucher"],
   "ledger.wholeYear": ["Koko vuosi", "Whole year"],
   "ledger.incomeNet": ["Tulot, veroton", "Income, excl. VAT"],
   "ledger.expenseNet": ["Kulut, veroton", "Expenses, excl. VAT"],
   "ledger.vatPayable": ["Maksettava ALV", "VAT payable"],
   "ledger.vatRefundable": ["Palautettava ALV", "VAT refundable"],
   "ledger.search": [
-    "Hae selitteestä, luokasta tai numerolla",
+    "Hae kuvauksesta, luokasta tai numerolla",
     "Search description, category or number",
   ],
   "ledger.colDate": ["Päivämäärä", "Date"],
-  "ledger.selectRow": ["Valitse kirjaus {x}", "Select entry {x}"],
+  "ledger.selectRow": ["Valitse tosite {x}", "Select voucher {x}"],
   "ledger.selectPage": [
-    "Valitse sivun kirjaukset",
-    "Select the entries on this page",
+    "Valitse sivun tositteet",
+    "Select the vouchers on this page",
   ],
   "ledger.selected": [
     pl("1 valittu", "{n} valittu"),
@@ -647,7 +650,7 @@ export const APP_DICT = {
   "ledger.bulkClear": ["Poista valinta", "Clear selection"],
   "ledger.colAccount": ["Tili", "Account"],
   "ledger.sections": ["Kirjanpidon osiot", "Bookkeeping sections"],
-  "ledger.entriesTab": ["Kirjaukset", "Entries"],
+  "ledger.entriesTab": ["Tositteet", "Vouchers"],
   "ledger.journalTab": ["Päiväkirja", "Journal"],
   "ledger.accountsTab": ["Pääkirja", "General ledger"],
   "entry.logAdd": ["Lisätty", "Added"],
@@ -655,7 +658,7 @@ export const APP_DICT = {
   "entry.logRestore": ["Palautettu", "Restored"],
   "entry.logEdit": ["{field}: {a} → {b}", "{field}: {a} → {b}"],
   "entry.logFieldDate": ["Päivä", "Date"],
-  "entry.logFieldDescription": ["Selite", "Description"],
+  "entry.logFieldDescription": ["Kuvaus", "Description"],
   "entry.logFieldType": ["Tyyppi", "Type"],
   "entry.logFieldCategory": ["Luokka", "Category"],
   "entry.logFieldAmount": ["Summa", "Amount"],
@@ -666,7 +669,7 @@ export const APP_DICT = {
   "entry.logFieldBuyer": ["Ostajan ALV-numero", "Buyer’s VAT number"],
   "entry.logFieldEuPurchase": ["EU-osto", "EU purchase"],
   "entry.logFieldVoucher": ["Tositenumero", "Voucher number"],
-  "entry.logFieldReceipts": ["Tositteet", "Receipts"],
+  "entry.logFieldReceipts": ["Liitteet", "Attachments"],
   "ledger.chartTab": ["Tililuettelo", "Account list"],
   "ledger.chartTitle": ["Tililuettelo {y}", "Account list {y}"],
   "ledger.chartSub": [
@@ -681,68 +684,68 @@ export const APP_DICT = {
   ],
   "ledger.bookJournal": ["Päiväkirja", "Journal"],
   "ledger.bookJournalKept": [
-    "Kirjaukset aikajärjestyksessä. Muodostetaan kirjanpitotiedoston CSV:stä, ja jokainen rivi viittaa tositenumeroon.",
-    "The entries in date order. Built from the CSV in the bookkeeping file, and each row refers to a voucher number.",
+    "Tositteet aikajärjestyksessä. Muodostetaan kirjanpitotiedoston CSV:stä, ja jokainen rivi viittaa tositenumeroon.",
+    "The vouchers in date order. Built from the CSV in the bookkeeping file, and each row refers to a voucher number.",
   ],
   "ledger.bookGeneral": ["Pääkirja", "General ledger"],
   "ledger.bookGeneralKept": [
-    "Samat kirjaukset tileittäin. Muodostetaan samasta CSV:stä, ja siitä johdetaan tuloslaskelma.",
-    "The same entries by account. Built from the same CSV, and the income statement is derived from it.",
+    "Samat tositteet tileittäin. Muodostetaan samasta CSV:stä, ja siitä johdetaan tuloslaskelma.",
+    "The same vouchers by account. Built from the same CSV, and the income statement is derived from it.",
   ],
-  "ledger.bookVouchers": ["Tositteet", "Vouchers"],
+  "ledger.bookVouchers": ["Tositeliitteet", "Voucher attachments"],
   "ledger.bookVouchersKept": [
-    "Alkuperäiset tiedostot kirjanpitotiedoston kansiossa {d}/vuosi/kuukausi. CSV:n rivi kertoo kirjauksen tositteet.",
-    "The original files in the bookkeeping file, in the folder {d}/year/month. A CSV row names its entry’s receipts.",
+    "Alkuperäiset tiedostot kirjanpitotiedoston kansiossa {d}/vuosi/kuukausi. CSV:n rivi kertoo tositteen liitteet.",
+    "The original files in the bookkeeping file, in the folder {d}/year/month. A CSV row names its voucher’s attachments.",
   ],
   "ledger.bookReports": [
     "Tuloslaskelma ja arvonlisäveroilmoitukset",
     "Income statement and VAT returns",
   ],
   "ledger.bookReportsKept": [
-    "Lasketaan kirjauksista. Tulosta ne talteen, kun ilmoitus on annettu.",
-    "Calculated from the entries. Print them for keeping once the return is filed.",
+    "Lasketaan tositteista. Tulosta ne talteen, kun ilmoitus on annettu.",
+    "Calculated from the vouchers. Print them for keeping once the return is filed.",
   ],
   "ledger.journalTitle": ["Päiväkirja {y}", "Journal {y}"],
   "ledger.accountsTitle": ["Pääkirja {y}", "General ledger {y}"],
   "ledger.journalSub": [
-    "kirjaukset aikajärjestyksessä",
-    "entries in date order",
+    "tositteet aikajärjestyksessä",
+    "vouchers in date order",
   ],
-  "ledger.accountsSub": ["kirjaukset tileittäin", "entries by account"],
+  "ledger.accountsSub": ["tositteet tileittäin", "vouchers by account"],
   "ledger.incomeTotal": ["Tulot yhteensä", "Total income"],
   "ledger.expenseTotal": ["Menot yhteensä", "Total expenses"],
-  "ledger.noEntriesYear": ["Ei kirjauksia vuonna {y}.", "No entries in {y}."],
+  "ledger.noEntriesYear": ["Ei tositteita vuonna {y}.", "No vouchers in {y}."],
   "ledger.print": ["Tulosta", "Print"],
   /* KPL 2:10, checked on Finlex. */
   "ledger.retention": [
     "Säilytä päiväkirja ja pääkirja vähintään {b} asti (10 vuotta tilikauden päättymisestä) ja tositteet vähintään {v} asti (6 vuotta sen vuoden lopusta, jona tilikausi päättyi). Kirjanpitolaki 2:10.",
     "Keep the journal and the general ledger until at least {b} (10 years from the end of the financial year), and the vouchers until at least {v} (6 years from the end of the year in which it ended). Accounting Act 2:10.",
   ],
-  /* The voucher number (tositenumero, §4); "tosite" alone is the receipt file. */
+  /* The voucher number (tositenumero, §4). */
   "ledger.colVoucher": ["Nro", "No."],
-  "ledger.colDescription": ["Selite", "Description"],
+  "ledger.colDescription": ["Kuvaus", "Description"],
   "ledger.colCategory": ["Luokka", "Category"],
   "ledger.colNet": ["Veroton", "Net"],
   "ledger.colGross": ["Verollinen", "Gross"],
-  "ledger.noDescription": ["Ei selitettä", "No description"],
+  "ledger.noDescription": ["Ei kuvausta", "No description"],
   "ledger.hitsElsewhere": ["Osumia myös muualla:", "Also found elsewhere:"],
   "ledger.hitsInYear": [
     pl("Näytä vuosi {y}, 1 osuma", "Näytä vuosi {y}, {n} osumaa"),
     pl("Show {y}, 1 match", "Show {y}, {n} matches"),
   ],
   "ledger.noMatch": [
-    "Ei kirjauksia valituilla suodattimilla.",
-    "No entries match the filters.",
+    "Ei tositteita valituilla suodattimilla.",
+    "No vouchers match the filters.",
   ],
-  "ledger.noEntriesFor": ["Ei kirjauksia: {p}.", "No entries: {p}."],
+  "ledger.noEntriesFor": ["Ei tositteita: {p}.", "No vouchers: {p}."],
   "ledger.clearFilters": ["Tyhjennä suodattimet", "Clear filters"],
   "ledger.allCategories": ["Kaikki luokat", "All categories"],
   "ledger.openItems": ["Avoimet", "Open"],
   "ledger.openPill": ["Avoin", "Open"],
   "ledger.euPill": ["EU-osto", "EU purchase"],
   "ledger.checkFilter": ["Tarkistettavat", "Needs a look"],
-  "ledger.checkAll": ["Kaikki kirjaukset", "All entries"],
-  "ledger.withoutReceipt": ["Ilman tositetta", "Without a receipt"],
+  "ledger.checkAll": ["Kaikki tositteet", "All vouchers"],
+  "ledger.withoutReceipt": ["Ilman liitettä", "Without an attachment"],
   "ledger.rateMismatch": [
     "Verokanta ei vastaa päivää",
     "Rate doesn’t fit the date",
@@ -756,21 +759,21 @@ export const APP_DICT = {
     "Poikkeuksellisen suuri summa",
     "Unusually large amount",
   ],
-  "ledger.duplicate": ["Mahdollinen kaksoiskirjaus", "Possible duplicate"],
+  "ledger.duplicate": ["Mahdollinen kaksoistosite", "Possible duplicate"],
   "ledger.vatNotDeductible": ["ALV ei vähennettävää", "VAT not deductible"],
   "ledger.privateUseNoVat": [
     "Oma käyttö ilman ALV:tä",
     "Private use without VAT",
   ],
   "ledger.copyAsNew": ["Kopioi", "Copy"],
-  "ledger.deleteEntry": ["Poista kirjaus", "Delete entry"],
+  "ledger.deleteEntry": ["Poista tosite", "Delete voucher"],
 
   // --- Entry dialog (§8.5) ---
-  "entry.editTitle": ["Muokkaa kirjausta", "Edit entry"],
+  "entry.editTitle": ["Muokkaa tositetta", "Edit voucher"],
   "entry.voucher": ["Tositenumero {n}", "Voucher number {n}"],
-  "entry.copyTitle": ["Kopio kirjaus", "Copied entry"],
+  "entry.copyTitle": ["Kopioitu tosite", "Copied voucher"],
   "entry.date": ["Päivämäärä", "Date"],
-  "entry.description": ["Selite", "Description"],
+  "entry.description": ["Kuvaus", "Description"],
   "entry.descriptionPlaceholder": [
     "Esim. Lasku 1006 – Asiakas Oy",
     "E.g. Invoice 1006 – Client Ltd",
@@ -779,16 +782,16 @@ export const APP_DICT = {
   "entry.amount": ["Summa (€)", "Amount (€)"],
   "entry.locked": ["Lukittu", "Locked"],
   "entry.lockedFiled": [
-    "Tämä kirjaus on mukana kauden {p} arvonlisäveroilmoituksessa, joka on merkitty ilmoitetuksi {d}. Kirjanpitolaki (2:7) ei salli muuttaa kirjausta ilmoituksen jälkeen. Tee korjauskirjaus. Vain maksupäivän voi vielä merkitä. Jos ilmoitusta ei oikeasti ole annettu, poista merkintä ALV-laskelmasta.",
-    "This entry is on the VAT return for period {p}, marked as filed on {d}. The Accounting Act (2:7) does not allow changing an entry after a return. Make a correction entry. Only the payment date can still be set. If the return has not really been filed, remove the mark in the VAT view.",
+    "Tämä tosite on mukana kauden {p} arvonlisäveroilmoituksessa, joka on merkitty ilmoitetuksi {d}. Kirjanpitolaki (2:7) ei salli muuttaa tositetta ilmoituksen jälkeen. Tee korjaustosite. Vain maksupäivän voi vielä merkitä. Jos ilmoitusta ei oikeasti ole annettu, poista merkintä ALV-laskelmasta.",
+    "This voucher is on the VAT return for period {p}, marked as filed on {d}. The Accounting Act (2:7) does not allow changing a voucher after a return. Make a correction voucher. Only the payment date can still be set. If the return has not really been filed, remove the mark in the VAT view.",
   ],
   "entry.lockedYear": [
-    "Vuosi {p} on merkitty talletetuksi {d}, joten sen kirjaukset ovat lukittuja. Tee korjauskirjaus. Vain maksupäivän voi vielä merkitä.",
-    "Year {p} was marked as stored on {d}, so its entries are locked. Make a correction entry. Only the payment date can still be set.",
+    "Vuosi {p} on merkitty talletetuksi {d}, joten sen tositteet ovat lukittuja. Tee korjaustosite. Vain maksupäivän voi vielä merkitä.",
+    "Year {p} was marked as stored on {d}, so its vouchers are locked. Make a correction voucher. Only the payment date can still be set.",
   ],
   "entry.lockedForm5": [
-    "Vuoden {p} veroilmoitus (lomake 5) on merkitty ilmoitetuksi {d}, joten kaikki sen kirjaukset ovat lukittuja (kirjanpitolaki 2:7). Tee korjauskirjaus. Vain maksupäivän voi vielä merkitä, jos se on myöhemmältä vuodelta. Jos ilmoitusta ei oikeasti ole annettu, poista merkintä kohdasta Tuloslaskelma, Lomake 5.",
-    "The tax return (Form 5) for {p} was marked as filed on {d}, so all its entries are locked (Accounting Act 2:7). Make a correction entry. Only a payment date in a later year can still be set. If the return has not really been filed, remove the mark under Income statement, Form 5.",
+    "Vuoden {p} veroilmoitus (lomake 5) on merkitty ilmoitetuksi {d}, joten kaikki sen tositteet ovat lukittuja (kirjanpitolaki 2:7). Tee korjaustosite. Vain maksupäivän voi vielä merkitä, jos se on myöhemmältä vuodelta. Jos ilmoitusta ei oikeasti ole annettu, poista merkintä kohdasta Tuloslaskelma, Lomake 5.",
+    "The tax return (Form 5) for {p} was marked as filed on {d}, so all its vouchers are locked (Accounting Act 2:7). Make a correction voucher. Only a payment date in a later year can still be set. If the return has not really been filed, remove the mark under Income statement, Form 5.",
   ],
   "entry.yearForm5Filed": [
     "Tämän vuoden veroilmoitus on merkitty ilmoitetuksi. Valitse toinen päivä.",
@@ -800,19 +803,19 @@ export const APP_DICT = {
   ],
   "entry.lockedRefused": [
     pl(
-      "1 kirjaus on lukitulla kaudella, joten muutosta ei tehty.",
-      "{n} kirjausta on lukitulla kaudella, joten muutosta ei tehty."
+      "1 tosite on lukitulla kaudella, joten muutosta ei tehty.",
+      "{n} tositetta on lukitulla kaudella, joten muutosta ei tehty."
     ),
     pl(
-      "1 entry is in a locked period, so nothing was changed.",
-      "{n} entries are in a locked period, so nothing was changed."
+      "1 voucher is in a locked period, so nothing was changed.",
+      "{n} vouchers are in a locked period, so nothing was changed."
     ),
   ],
   "entry.yearStored": [
     "Tämä vuosi on merkitty talletetuksi. Valitse toinen päivä.",
     "This year is marked as stored. Choose another date.",
   ],
-  "entry.correction": ["Tee korjauskirjaus", "Make a correction entry"],
+  "entry.correction": ["Tee korjaustosite", "Make a correction voucher"],
   "entry.correctionOf": [
     "Korjaus: tosite {n}, {x}",
     "Correction: voucher {n}, {x}",
@@ -834,8 +837,8 @@ export const APP_DICT = {
     "Book the invoice amount. The tax of {a} goes on the VAT return both as tax and as a deduction, so the tax payable does not change.",
   ],
   "entry.euPurchaseNoDeduction": [
-    "Tämän kulun veroa ei saa vähentää, joten se kasvattaa maksettavaa veroa. Vero ei tule tuloslaskelmaan tästä kirjauksesta, joten kirjaa se omana 0 %:n kulunaan.",
-    "The tax on this cost can’t be deducted, so it adds to the tax payable. It does not reach the income statement from this entry, so book it as a cost of its own at 0%.",
+    "Tämän kulun veroa ei saa vähentää, joten se kasvattaa maksettavaa veroa. Vero ei tule tuloslaskelmaan tästä tositteesta, joten kirjaa se omana 0 %:n kulunaan.",
+    "The tax on this cost can’t be deducted, so it adds to the tax payable. It does not reach the income statement from this voucher, so book it as a cost of its own at 0%.",
   ],
   "entry.buyerVat": ["Ostajan ALV-numero", "Buyer’s VAT number"],
   "entry.buyerVatHint": [
@@ -852,20 +855,20 @@ export const APP_DICT = {
   "entry.paidOpen": ["Avoin, ei vielä maksettu", "Open, not paid yet"],
   "entry.paidDate": ["Maksupäivä", "Payment date"],
   "entry.paidHint": [
-    "Kirjauksen päivä on toimitus- tai laskupäivä. Arvonlisävero menee sen mukaan.",
-    "The entry’s date is the delivery or invoice date. VAT goes by it.",
+    "Tositteen päivä on toimitus- tai laskupäivä. Arvonlisävero menee sen mukaan.",
+    "The voucher’s date is the delivery or invoice date. VAT goes by it.",
   ],
   "entry.privateUseHint": [
     "Tavaran oma käyttö on arvonlisäverollista, jos ostosta on vähennetty vero, ja 850 € vuodessa on verotonta. Auton kohdalla asia riippuu siitä, paljonko autosta on vähennetty.",
     "Taking goods into private use carries VAT if the VAT on the purchase was deducted, and the first 850 € a year is free. For a car it depends on how much of the car was deducted.",
   ],
   "entry.payrollHint": [
-    "Tämä kirjaus ei korvaa palkkakirjanpitoa eikä tulorekisteri-ilmoitusta. Hoida ne muualla.",
-    "This entry does not replace payroll records or income register reporting. Handle those elsewhere.",
+    "Tämä tosite ei korvaa palkkakirjanpitoa eikä tulorekisteri-ilmoitusta. Hoida ne muualla.",
+    "This voucher does not replace payroll records or income register reporting. Handle those elsewhere.",
   ],
   "entry.ownerHint": [
-    "Oma raha yrityksen ja oman tilisi välillä ei ole tuloa eikä kulua. Se ei vaikuta tulokseen eikä arvonlisäveroon. Liitä tositteeksi tiliote.",
-    "Your own money moving between the business and your personal account is neither income nor an expense. It doesn’t affect the result or VAT. Attach the bank statement as the receipt.",
+    "Oma raha yrityksen ja oman tilisi välillä ei ole tuloa eikä kulua. Se ei vaikuta tulokseen eikä arvonlisäveroon. Liitä tiliote liitteeksi.",
+    "Your own money moving between the business and your personal account is neither income nor an expense. It doesn’t affect the result or VAT. Attach the bank statement.",
   ],
   "entry.settles": ["Verokausi", "Tax period"],
   "entry.settlesHint": [
@@ -882,8 +885,8 @@ export const APP_DICT = {
     "{r} applied until {d}. The rate for this date is {s}.",
   ],
   "entry.duplicateOf": [
-    "Samana päivänä on jo kirjaus samalla summalla: nro {n}, {d}.",
-    "There is already an entry with this date and amount: no. {n}, {d}.",
+    "Samana päivänä on jo tosite samalla summalla: nro {n}, {d}.",
+    "There is already a voucher with this date and amount: no. {n}, {d}.",
   ],
   "entry.vatNotDeductible341": [
     "Edustuskulujen arvonlisäveroa ei saa vähentää (AVL 114 §). Kirjaa verollinen summa 0 %:n verokannalla, niin vero jää osaksi kulua.",
@@ -901,25 +904,28 @@ export const APP_DICT = {
     "Enter an amount, e.g. 124.50.",
   ],
   "entry.errCategory": ["Valitse luokka.", "Choose a category."],
-  "entry.saved": ["Kirjaus tallennettu.", "Entry saved."],
+  "entry.saved": ["Tosite tallennettu.", "Voucher saved."],
   "entry.changesSaved": ["Muutokset tallennettu.", "Changes saved."],
-  "entry.deleted": ["Kirjaus poistettu.", "Entry deleted."],
+  "entry.deleted": ["Tosite poistettu.", "Voucher deleted."],
   "entry.deletedMany": [
-    pl("1 kirjaus poistettu.", "{n} kirjausta poistettu."),
-    pl("1 entry deleted.", "{n} entries deleted."),
+    pl("1 tosite poistettu.", "{n} tositetta poistettu."),
+    pl("1 voucher deleted.", "{n} vouchers deleted."),
   ],
-  "entry.restoredMany": ["Kirjaukset palautettu.", "Entries restored."],
+  "entry.restoredMany": ["Tositteet palautettu.", "Vouchers restored."],
   "entry.addUndone": ["Lisäys kumottu.", "Addition undone."],
   "entry.recategorized": [
-    pl("Luokka vaihdettu 1 kirjaukseen.", "Luokka vaihdettu {n} kirjaukseen."),
-    pl("Category changed on 1 entry.", "Category changed on {n} entries."),
+    pl(
+      "Luokka vaihdettu 1 tositteeseen.",
+      "Luokka vaihdettu {n} tositteeseen."
+    ),
+    pl("Category changed on 1 voucher.", "Category changed on {n} vouchers."),
   ],
   "entry.recategorizeUndone": ["Luokat palautettu.", "Categories restored."],
-  "entry.restored": ["Kirjaus palautettu.", "Entry restored."],
+  "entry.restored": ["Tosite palautettu.", "Voucher restored."],
   "entry.unknownCategory": ["Tuntematon luokka", "Unknown category"],
 
-  // --- Receipts: the paper preview's labels (§8.5) and the files (§7.4) ---
-  "receipt.description": ["Selite", "Description"],
+  // --- The paper preview's labels (§8.5) and the attachment files (§7.4) ---
+  "receipt.description": ["Kuvaus", "Description"],
   "receipt.purchaseBadge": [
     "Vähennetään ostojen verona",
     "Deducted as VAT on purchases",
@@ -929,39 +935,39 @@ export const APP_DICT = {
     "Vero {a} ilmoitetaan itse ALV-ilmoituksella",
     "The tax of {a} is reported on the VAT return",
   ],
-  "receipt.sectionTitle": ["Tositteet", "Receipts"],
-  "receipt.add": ["Lisää tosite", "Add receipt"],
+  "receipt.sectionTitle": ["Liitteet", "Attachments"],
+  "receipt.add": ["Lisää liite", "Add attachment"],
   "receipt.hint": [
     "Kuva tai PDF. Voit myös raahata tiedoston tähän.",
     "Image or PDF. You can also drag a file here.",
   ],
-  "receipt.remove": ["Poista tosite", "Remove receipt"],
-  "receipt.open": ["Avaa tosite", "Open receipt"],
+  "receipt.remove": ["Poista liite", "Remove attachment"],
+  "receipt.open": ["Avaa liite", "Open attachment"],
   "receipt.missing": ["Tiedosto puuttuu", "File missing"],
   "receipt.count": [
-    pl("1 tosite", "{n} tositetta"),
-    pl("1 receipt", "{n} receipts"),
+    pl("1 liite", "{n} liitettä"),
+    pl("1 attachment", "{n} attachments"),
   ],
   "receipt.badType": [
     "Vain kuvia ja PDF-tiedostoja voi liittää.",
     "Only images and PDF files can be attached.",
   ],
   "receipt.noStorage": [
-    "Tositteiden tallennus ei ole käytettävissä tässä selaimessa.",
-    "Saving receipts isn’t available in this browser.",
+    "Liitteiden tallennus ei ole käytettävissä tässä selaimessa.",
+    "Saving attachments isn’t available in this browser.",
   ],
   "receipt.prefilled": [
     "Tiedot luettiin PDF:stä. Tarkista ne ennen tallennusta.",
     "Details were read from the PDF. Check them before saving.",
   ],
   "receipt.attachedElsewhere": [
-    "Sama tiedosto on jo kirjauksessa nro {n}, {d}.",
-    "The same file is already on entry no. {n}, {d}.",
+    "Sama tiedosto on jo tositteessa nro {n}, {d}.",
+    "The same file is already on voucher no. {n}, {d}.",
   ],
   "receipt.invoiceDescription": ["Lasku {number}", "Invoice {number}"],
   "receipt.drop": [
-    "Pudota tosite liittääksesi sen kirjaukseen",
-    "Drop a receipt to attach it to the entry",
+    "Pudota tiedosto lisätäksesi sen liitteeksi",
+    "Drop a file to attach it to the voucher",
   ],
 
   // --- VAT return (§8.7) ---
@@ -1023,8 +1029,8 @@ export const APP_DICT = {
   /* The money that moved for a return, booked as an entry (§6.6). */
   "vat.ecTab": ["Yhteenvetoilmoitus", "EC Sales List"],
   "vat.ecIntro": [
-    "Ilmoitus annetaan kuukausittain, vain kuukaudelta, jolla on tällaista myyntiä, ja se eritellään ostajittain. Tavarat menevät laskun kuukauden mukaan, ja palvelut suorituksen tai maksun kuukauden mukaan. Tässä kuukausi on kirjauksen päivän mukainen.",
-    "The list is filed monthly, only for a month with such sales, and itemised by buyer. Goods go by the invoice’s month, and services by the month of the supply or payment. Here the month follows the entry’s date.",
+    "Ilmoitus annetaan kuukausittain, vain kuukaudelta, jolla on tällaista myyntiä, ja se eritellään ostajittain. Tavarat menevät laskun kuukauden mukaan, ja palvelut suorituksen tai maksun kuukauden mukaan. Tässä kuukausi on tositteen päivän mukainen.",
+    "The list is filed monthly, only for a month with such sales, and itemised by buyer. Goods go by the invoice’s month, and services by the month of the supply or payment. Here the month follows the voucher’s date.",
   ],
   "vat.ecNone": [
     "Vuonna {y} ei ole myyntiä muihin EU-maihin.",
@@ -1041,15 +1047,15 @@ export const APP_DICT = {
   ],
   "vat.settlementTitle": ["Maksu tai palautus", "Payment or refund"],
   "vat.settlementHint": [
-    "Kirjanpito ei näe pankkia. Kirjaa maksu tai palautus, kun raha on liikkunut, ja liitä tiliote tositteeksi. Kirjaus saa tositenumeron, mutta se ei ole tulo eikä kulu eikä muuta ilmoitusta.",
-    "The bookkeeping cannot see your bank. Book the payment or refund once the money has moved, and attach the bank statement as its receipt. The entry gets a voucher number, but it is neither income nor an expense and does not change the return.",
+    "Kirjanpito ei näe pankkia. Kirjaa maksu tai palautus, kun raha on liikkunut, ja liitä tiliote. Tosite saa tositenumeron, mutta se ei ole tulo eikä kulu eikä muuta ilmoitusta.",
+    "The bookkeeping cannot see your bank. Book the payment or refund once the money has moved, and attach the bank statement. It gets a voucher number, but it is neither income nor an expense and does not change the return.",
   ],
   "vat.settlementAddPayment": ["Kirjaa maksu", "Book payment"],
   "vat.settlementAddRefund": ["Kirjaa palautus", "Book refund"],
   "vat.settlementPaidOn": ["Maksettu {d}", "Paid on {d}"],
   "vat.settlementReceivedOn": ["Palautus saatu {d}", "Refund received on {d}"],
   "vat.settlementVoucher": ["tosite {n}", "voucher {n}"],
-  "vat.settlementOpen": ["Avaa kirjaus", "Open entry"],
+  "vat.settlementOpen": ["Avaa tosite", "Open voucher"],
   "vat.settlementDescPayment": ["Arvonlisävero, {p}", "VAT, {p}"],
   "vat.settlementDescRefund": [
     "Arvonlisäveron palautus, {p}",
@@ -1060,12 +1066,12 @@ export const APP_DICT = {
     "Matches the calculation.",
   ],
   "vat.settlementDifference": [
-    "Ero laskelmaan on {x}. Se voi johtua osamaksusta, palautuksen käyttämisestä muihin veroihin tai kirjauksiin tehdyistä muutoksista.",
-    "This differs from the calculation by {x}. A part payment, a refund used for other taxes or a change to the entries can cause that.",
+    "Ero laskelmaan on {x}. Se voi johtua osamaksusta, palautuksen käyttämisestä muihin veroihin tai tositteisiin tehdyistä muutoksista.",
+    "This differs from the calculation by {x}. A part payment, a refund used for other taxes or a change to the vouchers can cause that.",
   ],
   "vat.settlementWider": [
-    "Kirjaus koskee pidempää kautta, joten sitä ei verrata tämän kauden laskelmaan.",
-    "This entry covers a longer period, so it is not compared with this period’s calculation.",
+    "Tosite koskee pidempää kautta, joten sitä ei verrata tämän kauden laskelmaan.",
+    "This voucher covers a longer period, so it is not compared with this period’s calculation.",
   ],
   "vat.returnStepSettle": [
     "Kirjaa maksu tai palautus",
@@ -1116,7 +1122,7 @@ export const APP_DICT = {
     "Construction services and scrap metal sales (reverse charge)",
   ],
   "vat.note": [
-    "Ostojen 0 %:n kirjaukset (esim. palkat, YEL, pankkikulut) eivät vaikuta arvonlisäveroon, joten niitä ei näytetä vähennyksissä. Tarkista luvut ennen ilmoittamista OmaVerossa.",
+    "Ostojen 0 %:n tositteet (esim. palkat, YEL, pankkikulut) eivät vaikuta arvonlisäveroon, joten niitä ei näytetä vähennyksissä. Tarkista luvut ennen ilmoittamista OmaVerossa.",
     "Purchases at 0% (e.g. wages, YEL, bank fees) don’t affect VAT, so they aren’t shown as deductions. Check the figures before filing in OmaVero.",
   ],
   "vat.sections": ["ALV-laskelman osiot", "VAT return sections"],
@@ -1142,8 +1148,8 @@ export const APP_DICT = {
     "The period has not ended yet, so the figures may change. The return is due {d}.",
   ],
   "vat.returnOtherRate": [
-    "Kaudella on myyntiä verokannalla, jolle ilmoituksessa ei ole kohtaa ({v} veroa). Se ei ole kohdissa, mutta sisältyy maksettavaan veroon. Tarkista kirjausten verokannat.",
-    "This period has sales at a rate the return has no field for ({v} of VAT). It is not in the fields, but it is included in the tax payable. Check the rates on the entries.",
+    "Kaudella on myyntiä verokannalla, jolle ilmoituksessa ei ole kohtaa ({v} veroa). Se ei ole kohdissa, mutta sisältyy maksettavaan veroon. Tarkista tositteiden verokannat.",
+    "This period has sales at a rate the return has no field for ({v} of VAT). It is not in the fields, but it is included in the tax payable. Check the rates on the vouchers.",
   ],
   "vat.returnPurchases": [
     "Kirjanpito ei erottele tuontia EU:n ulkopuolelta eikä rakentamispalvelun ja metalliromun ostoja. Jos sinulla on niitä, täytä niiden vero ja summa OmaVerossa, ja lisää vero myös vähennettävään veroon, jos saat vähentää sen. Maksettava vero muuttuu silloin.",
@@ -1155,8 +1161,8 @@ export const APP_DICT = {
   ],
   // An EU, non-EU or reverse-charge sale that carries a VAT rate (§6.1).
   "vat.exemptSaleWarning": [
-    "Kirjauksessa ”{x}” on verokanta, mutta luokka raportoidaan ilman myynnin veroa. Vero jätetään huomiotta.",
-    "The entry “{x}” has a VAT rate, but its category is reported without VAT on sales. The VAT is ignored.",
+    "Tositteessa ”{x}” on verokanta, mutta luokka raportoidaan ilman myynnin veroa. Vero jätetään huomiotta.",
+    "The voucher “{x}” has a VAT rate, but its category is reported without VAT on sales. The VAT is ignored.",
   ],
 
   // --- Income statement (§8.8) ---
@@ -1193,17 +1199,17 @@ export const APP_DICT = {
     "Depreciation (337) and interest expenses (346) are counted as fully deductible, so 338 and 347 are the same amounts. If part of them is not deductible, change those fields in OmaVero, and 355 and the result change with them.",
   ],
   "statement.cashNote": [
-    "Ammatinharjoittajan maksuperuste (EVL 27 a §): tulot ja kulut ovat maksupäivän mukaan, eikä avoimia kirjauksia ole mukana. Myyntisaamiset {d}: {r}. Ostovelat {d}: {p}.",
-    "An ammatinharjoittaja’s cash basis (EVL 27 a §): income and expenses go by payment date, and open entries are left out. Receivables on {d}: {r}. Payables on {d}: {p}.",
+    "Ammatinharjoittajan maksuperuste (EVL 27 a §): tulot ja kulut ovat maksupäivän mukaan, eikä avoimia tositteita ole mukana. Myyntisaamiset {d}: {r}. Ostovelat {d}: {p}.",
+    "An ammatinharjoittaja’s cash basis (EVL 27 a §): income and expenses go by payment date, and open vouchers are left out. Receivables on {d}: {r}. Payables on {d}: {p}.",
   ],
   "statement.form5FileStep": ["Merkitse ilmoitetuksi", "Mark as filed"],
   "statement.form5FileHint": [
-    "Kun olet antanut ilmoituksen OmaVerossa, merkitse se tähän. Se lukitsee kaikki vuoden {y} kirjaukset, koska kirjanpitolaki (2:7) ei salli muuttaa niitä ilmoituksen jälkeen.",
-    "Once you have filed the return in OmaVero, mark it here. That locks every entry of {y}, because the Accounting Act (2:7) does not allow changing them after a return.",
+    "Kun olet antanut ilmoituksen OmaVerossa, merkitse se tähän. Se lukitsee kaikki vuoden {y} tositteet, koska kirjanpitolaki (2:7) ei salli muuttaa niitä ilmoituksen jälkeen.",
+    "Once you have filed the return in OmaVero, mark it here. That locks every voucher of {y}, because the Accounting Act (2:7) does not allow changing them after a return.",
   ],
   "statement.form5FiledOn": [
-    "Merkitty ilmoitetuksi {d}. Vuoden kirjaukset ovat lukittuja.",
-    "Marked as filed on {d}. The year’s entries are locked.",
+    "Merkitty ilmoitetuksi {d}. Vuoden tositteet ovat lukittuja.",
+    "Marked as filed on {d}. The year’s vouchers are locked.",
   ],
   "statement.form5Payroll": [
     "Kirjanpito ei sisällä palkkakirjanpitoa eikä tulorekisteri-ilmoituksia.",
@@ -1297,59 +1303,59 @@ export const APP_DICT = {
   "recurring.repeat": ["Toista joka kuukausi", "Repeat every month"],
   "recurring.dueTitle": [
     pl(
-      "1 toistuva kirjaus lisäämättä tältä kuulta",
-      "{n} toistuvaa kirjausta lisäämättä tältä kuulta"
+      "1 toistuva tosite lisäämättä tältä kuulta",
+      "{n} toistuvaa tositetta lisäämättä tältä kuulta"
     ),
     pl(
-      "1 recurring entry not added for this month",
-      "{n} recurring entries not added for this month"
+      "1 recurring voucher not added for this month",
+      "{n} recurring vouchers not added for this month"
     ),
   ],
   "recurring.noticeTitle": [
     pl(
-      "1 toistuva kirjaus lisäämättä: {m}",
-      "{n} toistuvaa kirjausta lisäämättä: {m}"
+      "1 toistuva tosite lisäämättä: {m}",
+      "{n} toistuvaa tositetta lisäämättä: {m}"
     ),
     pl(
-      "1 recurring entry not added: {m}",
-      "{n} recurring entries not added: {m}"
+      "1 recurring voucher not added: {m}",
+      "{n} recurring vouchers not added: {m}"
     ),
   ],
   "recurring.review": ["Tarkista ja lisää", "Review and add"],
   "recurring.dialogTitle": [
-    "Toistuvat kirjaukset: {m}",
-    "Recurring entries: {m}",
+    "Toistuvat tositteet: {m}",
+    "Recurring vouchers: {m}",
   ],
   "recurring.dialogHint": [
-    "Valitse tämän kuun kirjaukset. Voit muokata summaa ja liittää tositteen lisäämisen jälkeen.",
-    "Choose this month’s entries. You can change an amount and attach a receipt after adding them.",
+    "Valitse tämän kuun tositteet. Voit muokata summaa ja lisätä liitteen jälkeenpäin.",
+    "Choose this month’s vouchers. You can change an amount and add an attachment afterwards.",
   ],
   "recurring.noneDue": [
-    "Kaikki tämän kuun toistuvat kirjaukset on lisätty.",
-    "All of this month’s recurring entries have been added.",
+    "Kaikki tämän kuun toistuvat tositteet on lisätty.",
+    "All of this month’s recurring vouchers have been added.",
   ],
   "recurring.addSelected": [
-    pl("Lisää 1 kirjaus", "Lisää {n} kirjausta"),
-    pl("Add 1 entry", "Add {n} entries"),
+    pl("Lisää 1 tosite", "Lisää {n} tositetta"),
+    pl("Add 1 voucher", "Add {n} vouchers"),
   ],
   "recurring.added": [
-    pl("1 kirjaus lisätty.", "{n} kirjausta lisätty."),
-    pl("1 entry added.", "{n} entries added."),
+    pl("1 tosite lisätty.", "{n} tositetta lisätty."),
+    pl("1 voucher added.", "{n} vouchers added."),
   ],
-  "recurring.settingsTitle": ["Toistuvat kirjaukset", "Recurring entries"],
+  "recurring.settingsTitle": ["Toistuvat tositteet", "Recurring vouchers"],
   "recurring.settingsHint": [
-    "Pohja syntyy, kun valitset kirjauksessa ”Toista joka kuukausi”. Mikään ei kirjaudu itsestään: kirjaukset lisätään kuukausittain Kirjanpito-näkymästä. Pohjan muutos tai poisto ei muuta jo tehtyjä kirjauksia.",
-    "A template is made when you choose “Repeat every month” on an entry. Nothing is booked by itself: you add the entries month by month in the ledger. Changing or deleting a template leaves existing entries as they are.",
+    "Pohja syntyy, kun valitset tositteessa ”Toista joka kuukausi”. Mikään ei kirjaudu itsestään: tositteet lisätään kuukausittain Kirjanpito-näkymästä. Pohjan muutos tai poisto ei muuta jo tehtyjä tositteita.",
+    "A template is made when you choose “Repeat every month” on a voucher. Nothing is booked by itself: you add the vouchers month by month in the ledger. Changing or deleting a template leaves existing vouchers as they are.",
   ],
-  "recurring.empty": ["Ei toistuvia kirjauksia.", "No recurring entries."],
-  "recurring.description": ["Selite", "Description"],
+  "recurring.empty": ["Ei toistuvia tositteita.", "No recurring vouchers."],
+  "recurring.description": ["Kuvaus", "Description"],
   "recurring.category": ["Luokka", "Category"],
   "recurring.amount": ["Summa", "Amount"],
   "recurring.day": ["Päivä", "Day"],
   "recurring.from": ["Alkaen", "From"],
   "recurring.deleted": [
-    "Toistuva kirjaus poistettu.",
-    "Recurring entry deleted.",
+    "Toistuva tosite poistettu.",
+    "Recurring voucher deleted.",
   ],
   "recurring.remove": ["Poista {x}", "Delete {x}"],
 
@@ -1375,8 +1381,8 @@ export const APP_DICT = {
   "balance.editFigures": ["Muokkaa lukuja", "Edit the figures"],
   "balance.openForm5": ["Avaa Lomake 5", "Open Form 5"],
   "balance.figures": [
-    "Kirjauksista: myyntisaamiset {r}, ostovelat {p}, lainat {l}. Poistolaskelmasta: koneet ja kalusto {m}.",
-    "From the entries: receivables {r}, payables {p}, loans {l}. From the depreciation register: machinery and equipment {m}.",
+    "Tositteista: myyntisaamiset {r}, ostovelat {p}, lainat {l}. Poistolaskelmasta: koneet ja kalusto {m}.",
+    "From the vouchers: receivables {r}, payables {p}, loans {l}. From the depreciation register: machinery and equipment {m}.",
   ],
   "balance.yearEndTitle": ["Tilanne {d}", "Position on {d}"],
   "balance.yearEndFiled": [
@@ -1423,8 +1429,8 @@ export const APP_DICT = {
   ],
   "balance.inventoryTitle": ["Varaston muutos", "Change in inventory"],
   "balance.inventoryHint": [
-    "Tavarat ja muu vaihto-omaisuus edellisen vuoden lopusta tämän vuoden loppuun. Kirjaus riville 333: {a}. Varaston kasvu pienentää kuluja.",
-    "Goods and other current assets from the end of last year to the end of this one. The entry on line 333: {a}. A growing stock lowers the cost.",
+    "Tavarat ja muu vaihto-omaisuus edellisen vuoden lopusta tämän vuoden loppuun. Tosite riville 333: {a}. Varaston kasvu pienentää kuluja.",
+    "Goods and other current assets from the end of last year to the end of this one. The voucher on line 333: {a}. A growing stock lowers the cost.",
   ],
   "balance.inventoryBook": ["Kirjaa varaston muutos", "Book the change"],
   "balance.inventoryBooked": [
@@ -1439,8 +1445,8 @@ export const APP_DICT = {
     "A purchase with a life of over three years or a price over €1,200 goes on the “Purchase of machinery and equipment” category. Its VAT counts on the VAT return, but the cost is deducted as depreciation. Depreciation is at most 25% of the undepreciated balance, and a balance of €1,200 or less can be written off at once.",
   ],
   "assets.smallNote": [
-    "Pienhankinnan (enintään 1 200 euroa, yhteensä enintään 3 600 euroa vuodessa) ja enintään kolme vuotta käytettävän hankinnan voi kirjata suoraan kuluksi. Rivin 337 kirjaukset luetaan tämän menojäännöksen poistoiksi. Rakennukset ja muu poistettava omaisuus eivät kuulu tähän laskelmaan.",
-    "A small purchase (up to €1,200, up to €3,600 a year in total) or one with a life of up to three years can be booked straight as an expense. Entries on line 337 are read as depreciation of this balance. Buildings and other depreciable assets are not part of this calculation.",
+    "Pienhankinnan (enintään 1 200 euroa, yhteensä enintään 3 600 euroa vuodessa) ja enintään kolme vuotta käytettävän hankinnan voi kirjata suoraan kuluksi. Rivin 337 tositteet luetaan tämän menojäännöksen poistoiksi. Rakennukset ja muu poistettava omaisuus eivät kuulu tähän laskelmaan.",
+    "A small purchase (up to €1,200, up to €3,600 a year in total) or one with a life of up to three years can be booked straight as an expense. Vouchers on line 337 are read as depreciation of this balance. Buildings and other depreciable assets are not part of this calculation.",
   ],
   "assets.noneTitle": ["Ei käyttöomaisuutta", "No fixed assets"],
   "assets.noneBody": [
@@ -1457,8 +1463,8 @@ export const APP_DICT = {
   "assets.amount": ["Poiston määrä", "Depreciation amount"],
   "assets.book": ["Kirjaa poisto", "Book depreciation"],
   "assets.bookHint": [
-    "Poiston voi tehdä enimmäismäärää pienempänä. Kirjaus tehdään riville 337.",
-    "You can depreciate less than the maximum. The entry goes on line 337.",
+    "Poiston voi tehdä enimmäismäärää pienempänä. Tosite tehdään riville 337.",
+    "You can depreciate less than the maximum. The voucher goes on line 337.",
   ],
   "assets.badAmount": [
     "Anna summa, esim. 500,00.",
@@ -1573,8 +1579,8 @@ export const APP_DICT = {
   ],
   "deductions.bookedTitle": ["Kirjattu vuodelle {y}", "Booked for {y}"],
   "deductions.noneBooked": [
-    "Rivillä 354 ei ole vielä kirjauksia.",
-    "No entries on line 354 yet.",
+    "Rivillä 354 ei ole vielä tositteita.",
+    "No vouchers on line 354 yet.",
   ],
 
   "settings.sections": ["Asetusten osiot", "Settings sections"],
@@ -1600,20 +1606,20 @@ export const APP_DICT = {
   ],
   "settings.bookStart": ["Kirjanpidon aloitus", "Start of the bookkeeping"],
   "settings.bookStartHint": [
-    "Kuukausi, jona yritystoiminta alkoi. Sitä aiemmista jaksoista ei odoteta ALV-ilmoitusta. Ilman valintaa ilmoitukset lasketaan ensimmäisestä kirjauksesta alkaen.",
-    "The month the business began. No VAT return is expected for the periods before it. Without a choice, returns are counted from the first entry.",
+    "Kuukausi, jona yritystoiminta alkoi. Sitä aiemmista jaksoista ei odoteta ALV-ilmoitusta. Ilman valintaa ilmoitukset lasketaan ensimmäisestä tositteesta alkaen.",
+    "The month the business began. No VAT return is expected for the periods before it. Without a choice, returns are counted from the first voucher.",
   ],
   "settings.bookStartMonth": ["Aloituskuukausi", "Start month"],
   "settings.bookStartYear": ["Aloitusvuosi", "Start year"],
   "settings.bookStartNone": [
-    "Ensimmäisestä kirjauksesta",
-    "From the first entry",
+    "Ensimmäisestä tositteesta",
+    "From the first voucher",
   ],
   "settings.saving": ["Tallennus", "Saving"],
   "settings.autosave": ["Tallenna automaattisesti", "Save automatically"],
   "settings.autosaveHint": [
-    "Kirjanpito tallentuu avattuun tiedostoon muutama sekunti jokaisen muutoksen jälkeen. Poiston voi kumota ilmoituksesta 10 sekunnin ajan, ja palautus tallentuu samalla tavalla. Kirjauksen muokkausta ei voi kumota, eikä tiedostoon jää aiempia versioita. Jos selain kysyisi jotain, tallennus odottaa, kunnes tallennat kerran itse.",
-    "The bookkeeping is saved to the opened file a few seconds after each change. You can undo a delete from its notification for 10 seconds, and the restored entry is saved the same way. Edits to an entry can’t be undone, and the file keeps no earlier versions. If the browser would have to ask anything, autosave waits until you save once yourself.",
+    "Kirjanpito tallentuu avattuun tiedostoon muutama sekunti jokaisen muutoksen jälkeen. Poiston voi kumota ilmoituksesta 10 sekunnin ajan, ja palautus tallentuu samalla tavalla. Tositteen muokkausta ei voi kumota, eikä tiedostoon jää aiempia versioita. Jos selain kysyisi jotain, tallennus odottaa, kunnes tallennat kerran itse.",
+    "The bookkeeping is saved to the opened file a few seconds after each change. You can undo a delete from its notification for 10 seconds, and the restored voucher is saved the same way. Edits to a voucher can’t be undone, and the file keeps no earlier versions. If the browser would have to ask anything, autosave waits until you save once yourself.",
   ],
   "settings.addCategory": ["Lisää oma luokka", "Add a category"],
   "settings.line": ["Tuloslaskelman rivi", "Income statement line"],
@@ -1644,8 +1650,8 @@ export const APP_DICT = {
     "Restore default categories",
   ],
   "settings.resetHint": [
-    "Palauttaa oletusluokat ja niiden verokannat. Omat luokat, joita kirjaukset käyttävät, säilyvät.",
-    "Restores the default categories and their VAT rates. Custom categories your entries use are kept.",
+    "Palauttaa oletusluokat ja niiden verokannat. Omat luokat, joita tositteet käyttävät, säilyvät.",
+    "Restores the default categories and their VAT rates. Custom categories your vouchers use are kept.",
   ],
   "settings.categoriesReset": [
     "Oletusluokat palautettu.",
@@ -1653,8 +1659,8 @@ export const APP_DICT = {
   ],
   "settings.vouchers": ["Tositenumerot", "Voucher numbers"],
   "settings.vouchersHint": [
-    "Kirjaus pitää numeronsa, vaikka sen päivä muuttuisi tai väliin lisättäisiin kirjaus. Uudelleennumerointi antaa vuoden kirjauksille numerot 1:stä alkaen päivämääräjärjestyksessä ja poistaa aukot.",
-    "An entry keeps its number when its date changes or an earlier entry is added. Renumbering gives the year’s entries numbers from 1 in date order and closes the gaps.",
+    "Tosite pitää numeronsa, vaikka sen päivä muuttuisi tai väliin lisättäisiin tosite. Uudelleennumerointi antaa vuoden tositteille numerot 1:stä alkaen päivämääräjärjestyksessä ja poistaa aukot.",
+    "A voucher keeps its number when its date changes or an earlier voucher is added. Renumbering gives the year’s vouchers numbers from 1 in date order and closes the gaps.",
   ],
   "settings.vouchersInOrder": [
     "Vuoden {year} tositenumerot ovat jo päivämääräjärjestyksessä.",
@@ -1662,12 +1668,12 @@ export const APP_DICT = {
   ],
   "settings.vouchersOutOfOrder": [
     pl(
-      "Uudelleennumerointi muuttaisi vuodelta {year} 1 kirjauksen numeron.",
-      "Uudelleennumerointi muuttaisi vuodelta {year} {n} kirjauksen numeron."
+      "Uudelleennumerointi muuttaisi vuodelta {year} 1 tositteen numeron.",
+      "Uudelleennumerointi muuttaisi vuodelta {year} {n} tositteen numeron."
     ),
     pl(
-      "Renumbering would change the number of 1 entry in {year}.",
-      "Renumbering would change the numbers of {n} entries in {year}."
+      "Renumbering would change the number of 1 voucher in {year}.",
+      "Renumbering would change the numbers of {n} vouchers in {year}."
     ),
   ],
   "settings.renumber": ["Numeroi vuosi {year} uudelleen", "Renumber {year}"],
@@ -1679,13 +1685,13 @@ export const APP_DICT = {
     "Tositenumerot palautettu.",
     "Voucher numbers restored.",
   ],
-  "settings.clearEntries": ["Tyhjennä kirjaukset", "Clear all entries"],
+  "settings.clearEntries": ["Tyhjennä tositteet", "Clear all vouchers"],
   "settings.clearHint": [
-    "Poistaa kaikki kirjaukset tästä selaimesta. Vie ne ensin CSV-tiedostoksi, jos haluat säilyttää ne.",
-    "Removes every entry from this browser. Export them to CSV first if you want to keep them.",
+    "Poistaa kaikki tositteet tästä selaimesta. Vie ne ensin CSV-tiedostoksi, jos haluat säilyttää ne.",
+    "Removes every voucher from this browser. Export them to CSV first if you want to keep them.",
   ],
-  "settings.cleared": ["Kirjaukset tyhjennetty.", "Entries cleared."],
-  "settings.restored": ["Kirjaukset palautettu.", "Entries restored."],
+  "settings.cleared": ["Tositteet tyhjennetty.", "Vouchers cleared."],
+  "settings.restored": ["Tositteet palautettu.", "Vouchers restored."],
 
   // --- Import and export (§7) ---
   "io.opening": ["Avataan tiedostoa…", "Opening the file…"],
@@ -1720,8 +1726,8 @@ export const APP_DICT = {
     "No rows could be read. {e}",
   ],
   "io.imported": [
-    pl("Tuotiin 1 kirjaus.", "Tuotiin {n} kirjausta."),
-    pl("Imported 1 entry.", "Imported {n} entries."),
+    pl("Tuotiin 1 tosite.", "Tuotiin {n} tositetta."),
+    pl("Imported 1 voucher.", "Imported {n} vouchers."),
   ],
   "io.newCategories": [" Uusia luokkia: {n}.", " New categories: {n}."],
   "io.settingsNewer": [
@@ -1748,10 +1754,10 @@ export const APP_DICT = {
     "Tiedoston lukeminen epäonnistui.",
     "Couldn’t read the file.",
   ],
-  "io.receiptsImported": [" Tositteita: {n}.", " Receipts: {n}."],
+  "io.receiptsImported": [" Liitteitä: {n}.", " Attachments: {n}."],
   "io.receiptsMissing": [
-    " Puuttuvia tositteita: {n}.",
-    " Missing receipts: {n}.",
+    " Puuttuvia liitteitä: {n}.",
+    " Missing attachments: {n}.",
   ],
   "io.receiptsRejected": [
     " Ohitettu {n}: vain kuvia ja PDF-tiedostoja voi liittää.",
@@ -1765,18 +1771,18 @@ export const APP_DICT = {
   "io.exportTitle": ["Lataa kirjanpito", "Download bookkeeping"],
   "io.fileNameLabel": ["Tiedoston nimi", "File name"],
   "io.exportHint": [
-    "Tiedosto sisältää kaikkien tilikausien kirjaukset.",
-    "The file includes the entries of all financial years.",
+    "Tiedosto sisältää kaikkien tilikausien tositteet.",
+    "The file includes the vouchers of all financial years.",
   ],
   "io.exportAction": ["Lataa", "Download"],
   "io.zipHint": [
     pl(
-      "ZIP-tiedosto sisältää kirjanpidon CSV-tiedoston, asetukset ja 1 tositteen kansiossa vuoden ja kuukauden mukaan.",
-      "ZIP-tiedosto sisältää kirjanpidon CSV-tiedoston, asetukset ja {n} tositetta kansioissa vuoden ja kuukauden mukaan."
+      "ZIP-tiedosto sisältää kirjanpidon CSV-tiedoston, asetukset ja 1 liitteen kansiossa vuoden ja kuukauden mukaan.",
+      "ZIP-tiedosto sisältää kirjanpidon CSV-tiedoston, asetukset ja {n} liitettä kansioissa vuoden ja kuukauden mukaan."
     ),
     pl(
-      "The ZIP file contains the bookkeeping CSV, the settings and 1 receipt in a folder by year and month.",
-      "The ZIP file contains the bookkeeping CSV, the settings and {n} receipts in folders by year and month."
+      "The ZIP file contains the bookkeeping CSV, the settings and 1 attachment in a folder by year and month.",
+      "The ZIP file contains the bookkeeping CSV, the settings and {n} attachments in folders by year and month."
     ),
   ],
   "io.zipHintNoReceipts": [
@@ -1784,18 +1790,18 @@ export const APP_DICT = {
     "The ZIP file contains the bookkeeping CSV and the settings.",
   ],
   "io.nothingToExport": [
-    "Ei vietävää. Lisää ensin kirjauksia.",
-    "Nothing to export. Add some entries first.",
+    "Ei vietävää. Lisää ensin tositteita.",
+    "Nothing to export. Add some vouchers first.",
   ],
-  "io.exporting": ["Pakataan tositteita…", "Packing receipts…"],
+  "io.exporting": ["Pakataan liitteitä…", "Packing attachments…"],
   "io.receiptsLost": [
     pl(
-      "1 tosite puuttuu selaimesta, joten se jää tästä tiedostosta pois.",
-      "{n} tositetta puuttuu selaimesta, joten ne jäävät tästä tiedostosta pois."
+      "1 liite puuttuu selaimesta, joten se jää tästä tiedostosta pois.",
+      "{n} liitettä puuttuu selaimesta, joten ne jäävät tästä tiedostosta pois."
     ),
     pl(
-      "1 receipt is missing from this browser, so this file leaves it out.",
-      "{n} receipts are missing from this browser, so this file leaves them out."
+      "1 attachment is missing from this browser, so this file leaves it out.",
+      "{n} attachments are missing from this browser, so this file leaves them out."
     ),
   ],
   "io.exported": ["Ladattu tiedostoon {f}.", "Downloaded as {f}."],
@@ -1813,8 +1819,8 @@ export const APP_DICT = {
     "That file can’t be found any more. Choose where to save the bookkeeping.",
   ],
   "io.shapeChanged": [
-    "Kirjanpito tallennetaan nyt nimellä {f}, koska asetukset ja tositteet eivät mahdu CSV-tiedostoon. Valitse, mihin.",
-    "The bookkeeping is now saved as {f}, because its settings and receipts don’t fit in a CSV file. Choose where.",
+    "Kirjanpito tallennetaan nyt nimellä {f}, koska asetukset ja liitteet eivät mahdu CSV-tiedostoon. Valitse, mihin.",
+    "The bookkeeping is now saved as {f}, because its settings and attachments don’t fit in a CSV file. Choose where.",
   ],
   "io.exportFailed": [
     "Kopion lataaminen epäonnistui.",
@@ -1829,9 +1835,9 @@ export const APP_DICT = {
     "No CSV file was found in the ZIP file.",
   ],
 
-  // --- Receipt viewer (§8.6) ---
-  "viewer.prevReceipt": ["Edellinen tosite", "Previous receipt"],
-  "viewer.nextReceipt": ["Seuraava tosite", "Next receipt"],
+  // --- Attachment viewer (§8.6) ---
+  "viewer.prevReceipt": ["Edellinen liite", "Previous attachment"],
+  "viewer.nextReceipt": ["Seuraava liite", "Next attachment"],
   "viewer.prevPage": ["Edellinen sivu", "Previous page"],
   "viewer.nextPage": ["Seuraava sivu", "Next page"],
   "viewer.pageOf": ["Sivu {p} / {n}", "Page {p} of {n}"],
@@ -1849,6 +1855,6 @@ export const APP_DICT = {
     "PDF-tiedoston avaaminen epäonnistui.",
     "Couldn’t open the PDF file.",
   ],
-  "viewer.receiptOf": ["Tosite {i} / {n}", "Receipt {i} of {n}"],
+  "viewer.receiptOf": ["Liite {i} / {n}", "Attachment {i} of {n}"],
   "viewer.saved": ["Tallennettu: {f}", "Saved: {f}"],
 } as const satisfies Dict

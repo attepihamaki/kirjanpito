@@ -36,8 +36,8 @@ export const LANDING_DICT = {
   "file.untitled": ["Uusi kirjanpito", "New bookkeeping"],
   "file.dirty": ["Tallentamattomia muutoksia", "Unsaved changes"],
   "ledger.entryCount": [
-    pl("1 kirjaus", "{n} kirjausta"),
-    pl("1 entry", "{n} entries"),
+    pl("1 tosite", "{n} tositetta"),
+    pl("1 voucher", "{n} vouchers"),
   ],
 
   "landing.title": [
@@ -76,14 +76,14 @@ export const LANDING_DICT = {
 
   "landing.howTitle": [
     "Tositteesta veroilmoitukseen neljässä vaiheessa",
-    "From receipt to tax return in four steps",
+    "From voucher to tax return in four steps",
   ],
   "landing.step1Title": ["Avaa tai aloita", "Open or start"],
   "landing.step1": [
     "Tuo edellinen CSV-tiedosto tai aloita tyhjästä. Tiliä tai rekisteröitymistä ei tarvita.",
     "Import your previous CSV file or start from scratch. No account or sign-up needed.",
   ],
-  "landing.step2Title": ["Kirjaa tositteet", "Record receipts"],
+  "landing.step2Title": ["Kirjaa tositteet", "Record vouchers"],
   "landing.step2": [
     "Syötä päivämäärä, summa ja luokka, ja liitä kuitti kuvana tai PDF:nä. ALV-osuus lasketaan heti.",
     "Enter the date, amount and category, and attach the receipt as an image or PDF. The VAT is worked out immediately.",
@@ -95,8 +95,8 @@ export const LANDING_DICT = {
   ],
   "landing.step4Title": ["Tallenna tiedostoon", "Save to a file"],
   "landing.step4": [
-    "Tallenna kirjanpito koneellesi. Tositteet pakataan samaan ZIP-tiedostoon vuoden ja kuukauden mukaan.",
-    "Save your bookkeeping to your computer. Receipts are packed into the same ZIP file by year and month.",
+    "Tallenna kirjanpito koneellesi. Liitteet pakataan samaan ZIP-tiedostoon vuoden ja kuukauden mukaan.",
+    "Save your bookkeeping to your computer. Attachments are packed into the same ZIP file by year and month.",
   ],
 
   "landing.featTitle": [
@@ -124,12 +124,12 @@ export const LANDING_DICT = {
     "No account, no database",
   ],
   "landing.privacy1": [
-    "Kirjaukset tallentuvat vain tähän selaimeen ja siihen tiedostoon, jonka tallennat. Mitään ei lähetetä palvelimelle.",
-    "Entries are stored only in this browser and in the file you save. Nothing is sent to a server.",
+    "Tositteet tallentuvat vain tähän selaimeen ja siihen tiedostoon, jonka tallennat. Mitään ei lähetetä palvelimelle.",
+    "Vouchers are stored only in this browser and in the file you save. Nothing is sent to a server.",
   ],
   "landing.privacy2": [
-    "Kirjaukset ovat tavallisessa CSV-tiedostossa, jonka voit avata Excelissä. Tositteet kulkevat sen mukana samassa ZIP-tiedostossa kansioissa vuoden ja kuukauden mukaan.",
-    "Entries are in a plain CSV file you can open in Excel. Receipts travel with it in the same ZIP file, in folders by year and month.",
+    "Tositteet ovat tavallisessa CSV-tiedostossa, jonka voit avata Excelissä. Liitteet kulkevat niiden mukana samassa ZIP-tiedostossa kansioissa vuoden ja kuukauden mukaan.",
+    "Vouchers are in a plain CSV file you can open in Excel. Attachments travel with it in the same ZIP file, in folders by year and month.",
   ],
 
   /*
@@ -165,21 +165,21 @@ export const LANDING_DICT = {
     "Can I move my old Excel bookkeeping over?",
   ],
   "landing.a3": [
-    "Kyllä. Tallenna kirjaukset CSV-tiedostoksi sarakkeilla date, description, type, account, category, amount, vat ja mode, ja tuo tiedosto. Sarakkeet voucher, receipts, settles, paid, buyer_vat ja eu_purchase ovat valinnaisia. Ilman tositenumeroita kirjaukset numeroidaan päivämäärän mukaan. Myös suomenkieliset sarakenimet (pvm, selite ja niin edelleen) käyvät.",
-    "Yes. Save your entries as a CSV file with the columns date, description, type, account, category, amount, vat and mode, then import it. The voucher, receipts, settles, paid, buyer_vat and eu_purchase columns are optional. Without voucher numbers, the entries are numbered by date. The Finnish column names (pvm, selite and so on) work too.",
+    "Kyllä. Tallenna tositteet CSV-tiedostoksi sarakkeilla date, description, type, account, category, amount, vat ja mode, ja tuo tiedosto. Sarakkeet voucher, receipts, settles, paid, buyer_vat ja eu_purchase ovat valinnaisia. Ilman tositenumeroita tositteet numeroidaan päivämäärän mukaan. Myös suomenkieliset sarakenimet (pvm, selite ja niin edelleen) käyvät.",
+    "Yes. Save your vouchers as a CSV file with the columns date, description, type, account, category, amount, vat and mode, then import it. The voucher, receipts, settles, paid, buyer_vat and eu_purchase columns are optional. Without voucher numbers, the vouchers are numbered by date. The Finnish column names (pvm, selite and so on) work too.",
   ],
   "landing.q4": [
     "Mitä tapahtuu, jos suljen selaimen?",
     "What happens if I close the browser?",
   ],
   "landing.a4": [
-    "Kirjaukset säilyvät tässä selaimessa, kunnes suljet tiedoston tai tyhjennät selaimen tiedot. Tallenna työsi tiedostoon säännöllisesti, niin kirjanpitosi on aina tallessa. Chromessa ja Edgessä sovellus kirjoittaa suoraan avaamaasi tiedostoon; muissa selaimissa lataat kopion. Tiedostoon kulkee myös muutosloki, joka kertoo sovelluksen käytöstä, mutta ei todista, ettei tiedostoa ole muokattu muuten.",
-    "Entries stay in this browser until you close the file or clear your browser data. Save your work to a file regularly so your bookkeeping is always safe. In Chrome and Edge the app writes straight back to the file you opened; in other browsers you download a copy. The file also carries a change log, which records use of the app but does not prove the file was not edited in other ways.",
+    "Tositteet säilyvät tässä selaimessa, kunnes suljet tiedoston tai tyhjennät selaimen tiedot. Tallenna työsi tiedostoon säännöllisesti, niin kirjanpitosi on aina tallessa. Chromessa ja Edgessä sovellus kirjoittaa suoraan avaamaasi tiedostoon; muissa selaimissa lataat kopion. Tiedostoon kulkee myös muutosloki, joka kertoo sovelluksen käytöstä, mutta ei todista, ettei tiedostoa ole muokattu muuten.",
+    "Vouchers stay in this browser until you close the file or clear your browser data. Save your work to a file regularly so your bookkeeping is always safe. In Chrome and Edge the app writes straight back to the file you opened; in other browsers you download a copy. The file also carries a change log, which records use of the app but does not prove the file was not edited in other ways.",
   ],
 
   "landing.endTitle": [
     "Aloita tämän kuun tositteista.",
-    "Start with this month’s receipts.",
+    "Start with this month’s vouchers.",
   ],
   "landing.footer": [
     "Laskelmat eivät ole vero- tai kirjanpitoneuvontaa.",
@@ -196,8 +196,8 @@ export const LANDING_DICT = {
     "This page could not be found.",
   ],
   "notFound.lead": [
-    "Osoite ei vastaa mitään kirjanpidon sivua. Linkki voi olla vanha tai osoitteessa voi olla kirjoitusvirhe. Kirjauksesi ovat tallessa tässä selaimessa – pääset niihin etusivun kautta.",
-    "That address doesn’t match any page in the app. The link may be old, or the address mistyped. Your entries are safe in this browser — you can get back to them from the home page.",
+    "Osoite ei vastaa mitään kirjanpidon sivua. Linkki voi olla vanha tai osoitteessa voi olla kirjoitusvirhe. Tositteesi ovat tallessa tässä selaimessa – pääset niihin etusivun kautta.",
+    "That address doesn’t match any page in the app. The link may be old, or the address mistyped. Your vouchers are safe in this browser — you can get back to them from the home page.",
   ],
   "notFound.home": ["Takaisin etusivulle", "Back to the home page"],
 

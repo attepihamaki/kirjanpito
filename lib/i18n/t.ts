@@ -9,7 +9,7 @@ export type Message = readonly [fi: string | PluralFn, en: string | PluralFn]
 
 export type Dict = Readonly<Record<string, Message>>
 
-/** Build a plural message: `pl("1 kirjaus", "{n} kirjausta")`. */
+/** Build a plural message: `pl("1 tosite", "{n} tositetta")`. */
 export function pl(one: string, many: string): PluralFn {
   return (p) => (Number(p.n) === 1 ? one : many)
 }

@@ -212,7 +212,7 @@ describe("bulk actions (§8.4)", () => {
     const chosen = pick("2026-02-20", "2026-03-20")
     expect(await deleteEntries(ctx, chosen)).toBe(true)
     expect(vi.mocked(confirm).mock.calls[0][0].title).toBe(
-      "Poistetaanko 2 kirjausta?"
+      "Poistetaanko 2 tositetta?"
     )
     expect(useBookStore.getState().entries).toHaveLength(14)
 

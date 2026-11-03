@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { useFormatters } from "@/components/lang-provider"
 import { useBookStore } from "@/stores/book-store"
 
-/** "Uusi kirjaus", which the `N` key also does (§8.2). */
+/** "Uusi tosite", which the `N` key also does (§8.2). */
 export function NewEntryButton({ className }: { className?: string }) {
   const f = useFormatters()
   const openDialog = useBookStore((s) => s.openDialog)

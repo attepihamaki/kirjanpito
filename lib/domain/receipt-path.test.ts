@@ -66,9 +66,9 @@ describe("receiptStem", () => {
   })
 
   it("falls back when nothing usable is left", () => {
-    expect(receiptStem("<<>>.jpg")).toBe("tosite")
-    expect(receiptStem("   .jpg")).toBe("tosite")
-    expect(receiptStem("")).toBe("tosite")
+    expect(receiptStem("<<>>.jpg")).toBe("liite")
+    expect(receiptStem("   .jpg")).toBe("liite")
+    expect(receiptStem("")).toBe("liite")
   })
 
   /* Windows trims these when it creates the file, so we must not write them. */
@@ -225,7 +225,7 @@ describe("buildReceiptPaths", () => {
   it("falls back for a name a file system could not take at all", () => {
     const e = entry({ atts: [att({ name: '<>|".jpg' })] })
     expect(buildReceiptPaths([e]).get(attachmentKey("e1", 0))).toBe(
-      "liitteet/2026/10/tosite.jpg"
+      "liitteet/2026/10/liite.jpg"
     )
   })
 

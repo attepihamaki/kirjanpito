@@ -389,6 +389,6 @@ describe("journal and general ledger (§8.4)", () => {
   it("says so when the year has no entries", () => {
     useBookStore.setState({ year: 2025 })
     mount(<JournalView />)
-    expect(screen.getByText("Ei kirjauksia vuonna 2025.")).toBeInTheDocument()
+    expect(screen.getByText("Ei tositteita vuonna 2025.")).toBeInTheDocument()
   })
 })

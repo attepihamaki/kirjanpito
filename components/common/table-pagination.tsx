@@ -34,7 +34,7 @@ export function TablePagination({
   page: number
   pages: number
   size: PageSize
-  /** How many rows the filters left, e.g. "16 kirjausta". */
+  /** How many rows the filters left, e.g. "16 tositetta". */
   count?: string
   onPageChange: (page: number) => void
   onSizeChange: (size: PageSize) => void
