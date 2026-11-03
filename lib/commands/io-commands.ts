@@ -382,6 +382,8 @@ function applyImport(
     settings: settings
       ? {
           exportLang: settings.exportLang,
+          businessId: settings.businessId,
+          businessName: settings.businessName,
           vatPeriod: settings.vatPeriod,
           bookStart: settings.bookStart,
           vatFiled: settings.vatFiled,
@@ -437,6 +439,8 @@ function bookVersion() {
     s.entries,
     s.cats,
     s.exportLang,
+    s.businessId,
+    s.businessName,
     s.vatPeriod,
     s.bookStart,
     s.vatFiled,
@@ -470,6 +474,8 @@ function currentSettingsText(): string {
     language: useLangStore.getState().lang,
     theme: readStoredTheme(),
     exportLang: s.exportLang,
+    businessId: s.businessId,
+    businessName: s.businessName,
     vatPeriod: s.vatPeriod,
     bookStart: s.bookStart,
     vatFiled: s.vatFiled,

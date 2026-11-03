@@ -3,6 +3,7 @@
 import * as React from "react"
 import { PrinterIcon } from "lucide-react"
 
+import { BusinessLine } from "@/components/common/business-line"
 import { Money } from "@/components/common/money"
 import { PageHeader } from "@/components/common/page-header"
 import { LedgerTabs } from "@/components/ledger/ledger-tabs"
@@ -69,6 +70,7 @@ function ReportPage({
       <div className="print-sheet mx-auto max-w-4xl rounded-lg border border-sheet-edge bg-sheet p-4 shadow-sm md:p-8">
         <header className="mb-6">
           <h2 className="font-heading text-xl font-semibold">{title}</h2>
+          <BusinessLine />
           <p className="tabular text-sm text-muted-foreground">
             {f.t("overview.range", {
               a: f.date(`${year}-01-01`),

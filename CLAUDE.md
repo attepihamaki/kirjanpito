@@ -587,6 +587,8 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
   "language": "fi",
   "theme": "system",
   "exportLang": "fi",
+  "businessId": "0112038-9",
+  "businessName": "Oma Yritys Oy",
   "vatPeriod": "month",
   "bookStart": "2026-10",
   "vatFiled": { "2026-08": "2026-10-12" },
@@ -612,7 +614,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
 - **The overview layout** goes through `normalizeLayout` in `lib/domain/overview-layout.ts`: an unknown widget id is dropped and a missing one goes right after the widget it follows in the default layout, at its default size, so a file from an older or newer version still opens and a new widget does not land at the bottom of the page.
 - **Language and theme** are written from the browser's own keys (§12) at save. Opening a file switches the app to them. They are preferences of the browser as much as of the book, so changing them does not mark the book dirty, and the landing page goes on using the browser's keys. The theme is applied through `Ctx.setTheme`, because only React can reach next-themes.
 - **Page sizes and autosave** are saved the same way: written at save, applied on open, never dirty.
-- **The export language, the VAT period, the start month, the filed marks, the archived years, the layout, the categories, the recurring templates, the opening balances, the year-end figures and the bank balance do mark the book dirty**, since the file no longer matches.
+- **The export language, the business's name and ID, the VAT period, the start month, the filed marks, the archived years, the layout, the categories, the recurring templates, the opening balances, the year-end figures and the bank balance do mark the book dirty**, since the file no longer matches.
 - A plain CSV has no settings. Opening one starts with no filed marks and no start month, and keeps the rest as it was.
 - `lib/domain/settings-file.test.ts` covers the round trip and the lenient reading; `lib/commands/io-commands.test.ts` covers opening a ZIP with settings.
 
@@ -844,6 +846,8 @@ Every section is a `Panel` (§11). The page is split into two sub-pages, so the 
 On **Yleiset**:
 
 - **"Tiedoston kieli"** comes first: a segmented Suomi / English setting `exportLang` (§7.1). It decides the shape of the file — its name, the CSV's columns and words, and the receipt folder — where the VAT period only decides what goes in it, so it leads. The options are endonyms from `LANG_NAMES`, shared with the language picker.
+- **"Yrityksen tiedot"**: the business's own `businessId` and `businessName` in `settings.json`. `parseBusinessId` in `lib/domain/business-id.ts` checks the check digit and takes a value with spaces, no hyphen or an `FI` prefix. Both fields store on blur, the ID only if valid, and an invalid value in a file is dropped. Both show under the title of the income statement, the journal, the general ledger and the account list (`BusinessLine`), and nothing else uses them.
+  - **There is no YTJ lookup.** PRH's open data API leaves out private traders, which is who this app is for, and VIES allows no browser requests, so the name is typed.
 - **"ALV-ilmoitusjakso"**: a segmented Kuukausi / Neljännesvuosi / Vuosi. It sets `vatPeriod` (§6.5), which the overview's due dates and the VAT view follow. Changing it keeps the VAT view on the same part of the year: October becomes Q4.
 - **"Kirjanpidon aloitus"**: the month the business began, as a month select ("Ensimmäisestä tositteesta" or a month) and, once a month is chosen, a year select. It sets `bookStart` (§6.5). Unset, returns are counted from the first entry.
 - **"Tallennus"**, only where the browser can write to a file: the "Tallenna automaattisesti" checkbox (§7.5), with a description that says what can be undone: a delete for 10 seconds (§8.11), an edit not at all.
@@ -1308,7 +1312,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
 
 - localStorage `bookkeeping` — exported as `BOOK_STORAGE_KEY` from
   `stores/book-store.ts`, so nothing hard-codes the string twice:
-  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, exportLang, vatPeriod, bookStart, vatFiled, yearsArchived, overviewLayout, autosave, recurring, assetOpening, bankBalance }`.
+  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, exportLang, businessId, businessName, vatPeriod, bookStart, vatFiled, yearsArchived, overviewLayout, autosave, recurring, assetOpening, bankBalance }`.
   The book's settings are kept twice: here, as the working buffer, and in the
   file's `settings.json` (§7.6), as the record. A reload restores them from
   here; opening a file replaces them from there.

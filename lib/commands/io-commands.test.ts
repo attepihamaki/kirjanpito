@@ -153,6 +153,8 @@ describe("settings.json", () => {
         version: 1,
         language: "en",
         theme: "dark",
+        businessId: "0112038-9",
+        businessName: "Oma Oy",
         vatPeriod: "quarter",
         bookStart: "2025-10",
         vatFiled: { "2026-Q1": "2026-05-11" },
@@ -173,6 +175,8 @@ describe("settings.json", () => {
 
     const state = useBookStore.getState()
     expect(state.entries).toHaveLength(2)
+    expect(state.businessId).toBe("0112038-9")
+    expect(state.businessName).toBe("Oma Oy")
     expect(state.vatPeriod).toBe("quarter")
     expect(state.bookStart).toBe("2025-10")
     expect(state.vatFiled).toEqual({ "2026-Q1": "2026-05-11" })

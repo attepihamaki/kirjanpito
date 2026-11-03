@@ -162,6 +162,7 @@ export const APP_DICT = {
 
   // --- Shared by several views ---
   // The fill-in forms for OmaVero (§8.7, §8.8).
+  "common.businessId": ["Y-tunnus", "Business ID"],
   "common.formShow": ["Näytettävät kohdat", "Fields to show"],
   "common.formFill": ["Täytettävät", "To fill in"],
   "common.formAll": ["Kaikki kohdat", "All fields"],
@@ -1599,6 +1600,16 @@ export const APP_DICT = {
   "settings.vatPeriodHint": [
     "Kuinka usein annat arvonlisäveroilmoituksen. Yleiskatsauksen eräpäivät lasketaan tämän mukaan.",
     "How often you file a VAT return. The due dates on the overview follow it.",
+  ],
+  "settings.business": ["Yrityksen tiedot", "Business details"],
+  "settings.businessHint": [
+    "Nimi ja y-tunnus näkyvät tuloslaskelman, päiväkirjan, pääkirjan ja tililuettelon otsikossa ja tallentuvat tiedostoon.",
+    "The name and business ID show in the heading of the income statement, journal, general ledger and account list, and are saved in the file.",
+  ],
+  "settings.businessName": ["Yrityksen nimi", "Business name"],
+  "settings.businessIdInvalid": [
+    "Tarkista y-tunnus, esim. 1234567-1.",
+    "Check the business ID, e.g. 1234567-1.",
   ],
   "settings.bookStart": ["Kirjanpidon aloitus", "Start of the bookkeeping"],
   "settings.bookStartHint": [

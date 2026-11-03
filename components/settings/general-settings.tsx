@@ -3,6 +3,7 @@
 import { ListOrderedIcon, Trash2Icon } from "lucide-react"
 import * as React from "react"
 
+import { BusinessSetting } from "@/components/settings/business-setting"
 import { OptionSelect } from "@/components/common/option-select"
 import { Panel } from "@/components/common/panel"
 import { Button } from "@/components/ui/button"
@@ -24,6 +25,7 @@ export function GeneralSettings() {
   return (
     <div className="flex flex-col gap-6">
       <ExportLanguageSetting />
+      <BusinessSetting />
       <VatPeriodSetting />
       <BookStartSetting />
       <AutosaveSetting />

@@ -178,6 +178,10 @@ export interface BookState {
    * opened in another browser is saved back in the shape it arrived in.
    */
   exportLang: Lang
+  /** The business's own y-tunnus, or null (§8.10). Saved in settings.json. */
+  businessId: string | null
+  /** The business's own name, or null (§8.10). Saved in settings.json. */
+  businessName: string | null
   /** How often the user files a VAT return (§6.5). Saved in settings.json. */
   vatPeriod: VatPeriodKind
   /**
@@ -310,6 +314,8 @@ export interface BookActions {
      */
     settings?: {
       exportLang?: Lang
+      businessId?: string | null
+      businessName?: string | null
       vatPeriod?: VatPeriodKind
       bookStart?: string | null
       vatFiled?: Record<string, string>
@@ -373,6 +379,8 @@ export interface BookActions {
   setExportLang(lang: Lang): void
   setVatPeriod(kind: VatPeriodKind): void
   /** `"2026-10"`, or null to follow the first entry. */
+  setBusinessId(id: string | null): void
+  setBusinessName(name: string | null): void
   setBookStart(month: string | null): void
   /** Mark a period as filed on `date`, or clear the mark with null. */
   setVatFiled(key: string, date: string | null): void
@@ -437,6 +445,8 @@ function initialState(): BookState {
     ctSize: 25,
     sidebarOpen: true,
     exportLang: "fi",
+    businessId: null,
+    businessName: null,
     vatPeriod: "month",
     bookStart: null,
     vatFiled: {},
@@ -494,6 +504,8 @@ type PersistedBook = Pick<
   | "ctSize"
   | "sidebarOpen"
   | "exportLang"
+  | "businessId"
+  | "businessName"
   | "vatPeriod"
   | "bookStart"
   | "vatFiled"
@@ -668,8 +680,11 @@ export const useBookStore = create<BookStore>()(
           exportLang,
           /*
            * The filing period and the layout carry over as the user's habits;
-           * the start month and filed marks belong to the bookkeeping.
+           * the business's name and ID, the start month and the filed marks
+           * belong to the bookkeeping.
            */
+          businessId: null,
+          businessName: null,
           bookStart: null,
           vatFiled: {},
           yearsArchived: {},
@@ -706,6 +721,8 @@ export const useBookStore = create<BookStore>()(
           entries: [],
           cats: defaultCategories(),
           dirty: false,
+          businessId: null,
+          businessName: null,
           bookStart: null,
           vatFiled: {},
           yearsArchived: {},
@@ -749,6 +766,8 @@ export const useBookStore = create<BookStore>()(
            * rather than carrying over from the bookkeeping being replaced.
            */
           exportLang: s.exportLang ?? "fi",
+          businessId: s.businessId ?? null,
+          businessName: s.businessName ?? null,
           vatPeriod,
           vatIndex: clampVatIndex(get().vatIndex, get().vatPeriod, vatPeriod),
           bookStart: s.bookStart ?? null,
@@ -905,6 +924,8 @@ export const useBookStore = create<BookStore>()(
           vatIndex: clampVatIndex(get().vatIndex, get().vatPeriod, vatPeriod),
           dirty: true,
         }),
+      setBusinessId: (businessId) => set({ businessId, dirty: true }),
+      setBusinessName: (businessName) => set({ businessName, dirty: true }),
       setBookStart: (bookStart) => set({ bookStart, dirty: true }),
       setVatFiled: (key, date) => {
         const vatFiled = { ...get().vatFiled }
@@ -1055,6 +1076,8 @@ export const useBookStore = create<BookStore>()(
         ctSize: s.ctSize,
         sidebarOpen: s.sidebarOpen,
         exportLang: s.exportLang,
+        businessId: s.businessId,
+        businessName: s.businessName,
         vatPeriod: s.vatPeriod,
         bookStart: s.bookStart,
         vatFiled: s.vatFiled,

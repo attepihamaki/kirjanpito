@@ -4,6 +4,7 @@ import {
   canBeEuPurchase,
   defaultCategories,
 } from "@/lib/domain/accounts"
+import { parseBusinessId } from "@/lib/domain/business-id"
 import { isVatRate } from "@/lib/domain/money"
 import type { AssetOpening } from "@/lib/domain/assets"
 import type { BankBalance } from "@/lib/domain/bank-balance"
@@ -55,6 +56,10 @@ export interface BookSettings {
    * file opened elsewhere is saved back in the shape it arrived in.
    */
   exportLang: Lang
+  /** `"0112038-9"`: the business's own y-tunnus, or null if not given (§8.10). */
+  businessId: string | null
+  /** The business's own name, or null (§8.10). */
+  businessName: string | null
   vatPeriod: VatPeriodKind
   /** `"2026-10"`: the month the bookkeeping began, or null to follow the first entry. */
   bookStart: string | null
@@ -233,6 +238,15 @@ export function parseSettings(text: string): ParsedSettings {
   if (raw.exportLang === "fi" || raw.exportLang === "en") {
     out.exportLang = raw.exportLang
   }
+  if (raw.businessId === null) out.businessId = null
+  else if (typeof raw.businessId === "string") {
+    const businessId = parseBusinessId(raw.businessId)
+    if (businessId) out.businessId = businessId
+  }
+  if (raw.businessName === null) out.businessName = null
+  else if (typeof raw.businessName === "string" && raw.businessName.trim()) {
+    out.businessName = raw.businessName.trim()
+  }
   if (
     raw.vatPeriod === "month" ||
     raw.vatPeriod === "quarter" ||
@@ -362,6 +376,8 @@ export function serializeSettings(s: BookSettings): string {
     language: s.language,
     theme: s.theme,
     exportLang: s.exportLang,
+    businessId: s.businessId,
+    businessName: s.businessName,
     vatPeriod: s.vatPeriod,
     bookStart: s.bookStart,
     vatFiled: Object.fromEntries(

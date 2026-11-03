@@ -2,6 +2,7 @@
 
 import * as React from "react"
 
+import { BusinessLine } from "@/components/common/business-line"
 import { Money, ZeroDash } from "@/components/common/money"
 import { useFormatters } from "@/components/lang-provider"
 import { incomeStatement } from "@/lib/domain/income-statement"
@@ -93,6 +94,7 @@ export function StatementView() {
           <h2 className="font-heading text-xl font-semibold">
             {f.t("nav.statement")}
           </h2>
+          <BusinessLine />
           <p className="tabular text-sm text-muted-foreground">
             {f.t("overview.range", {
               a: f.date(`${year}-01-01`),
