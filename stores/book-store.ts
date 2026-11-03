@@ -1034,7 +1034,7 @@ export const useBookStore = create<BookStore>()(
     }),
     {
       name: BOOK_STORAGE_KEY,
-      version: 10,
+      version: 11,
       storage: bookStorage,
       /*
        * Prerender must not touch localStorage; StoreHydrator rehydrates after

@@ -184,6 +184,26 @@ describe("persisted preferences and bookkeeping (§12)", () => {
     expect(byId.get("344-travel")?.vatRate).toBe(25.5)
   })
 
+  it("renames the EU goods category in a list stored at version 10", async () => {
+    const cats = defaultCategories().map((c) =>
+      c.id === "333-eu-goods"
+        ? { ...c, name: "Ostot – EU, tavarat", enabled: false }
+        : c
+    )
+    localStorage.setItem(
+      BOOK_STORAGE_KEY,
+      JSON.stringify({ version: 10, state: { open: true, cats } })
+    )
+
+    await useBookStore.persist.rehydrate()
+
+    const cat = useBookStore
+      .getState()
+      .cats.find((c) => c.id === "333-eu-goods")
+    expect(cat?.name).toBe("Ostot ja varastojen muutokset – EU")
+    expect(cat?.enabled).toBe(false)
+  })
+
   /*
    * The guard against outside edits compares against it (§7.5), so a reload
    * must not turn it off.

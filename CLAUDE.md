@@ -1333,7 +1333,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
   Its pre-paint inline script reads that key before any of our JS runs, so a
   second source of truth would drift.
 - Both preferences used to live in the `bookkeeping` blob. `persist.migrate`
-  (`version: 3`; the store is now at 10, §4, §5, §6.6, §6.7, §6.9) moves each into its own key and drops the field,
+  (`version: 3`; the store is now at 11, §4, §5, §6.6, §6.7, §6.9) moves each into its own key and drops the field,
   seeding only a key that is still empty — the separate key is the newer truth.
 - IndexedDB `bookkeeping-receipts`, store `files`: receipt Blobs keyed by
   attachment id.

@@ -216,6 +216,22 @@ describe("the CSV", () => {
     expect(result.newCategoryCount).toBe(0)
   })
 
+  it.each([
+    ["fi", "Ostot ja varastojen muutokset – EU", "Ostot – EU, tavarat"],
+    ["en", "Purchases and changes in inventory – EU", "Purchases – EU, goods"],
+  ] as const)(
+    "finds the EU goods category by its former name in a %s file",
+    (lang, name, former) => {
+      const goods = entry({ catId: "333-eu-goods", euPurchase: "goods" })
+      const text = serializeCsv([goods], indexCategories(cats), { lang })
+      expect(text).toContain(name)
+      const result = parseCsv(text.replace(name, former), cats, noId)
+      if (!result.ok) throw new Error(result.code)
+      expect(result.entries[0]?.catId).toBe("333-eu-goods")
+      expect(result.newCategoryCount).toBe(0)
+    }
+  )
+
   it("round-trips an EU category in an English file", () => {
     const text = serializeCsv([entry()], indexCategories(cats), { lang: "en" })
     expect(text).toContain("Other deductible expenses – EU, services")

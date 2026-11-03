@@ -718,6 +718,7 @@ export const FORMER_NAMES: Readonly<Record<string, readonly string[]>> = {
   "323": ["Interest and other financial income"],
   "324": ["Muut veronalaiset tuotot", "Other taxable income"],
   "333": ["Purchases and change in inventory"],
+  "333-eu-goods": ["Ostot – EU, tavarat", "Purchases – EU, goods"],
   "335": ["Wages and fees"],
   "336": ["Pension and other personnel costs"],
   "343": ["Rent"],
