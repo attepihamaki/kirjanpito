@@ -21,15 +21,18 @@ export interface Form5Reminder {
 }
 
 /**
- * Last year's return, while it can still be due: up to its date, or the end of
- * April for a year whose date is not known. A year with no entries has nothing
- * to prompt from, though Form 5 is due with no activity too.
+ * Last year's return, while it can still be due and is not marked as filed: up
+ * to its date, or the end of April for a year whose date is not known. A year
+ * with no entries has nothing to prompt from, though Form 5 is due with no
+ * activity too.
  */
 export function form5Reminder(
   entries: readonly Entry[],
-  today: string
+  today: string,
+  filed: Readonly<Record<string, string>> = {}
 ): Form5Reminder | null {
   const taxYear = yearOf(today) - 1
+  if (filed[String(taxYear)]) return null
   if (!entries.some((e) => yearOf(e.date) === taxYear)) return null
   const due = form5Due(taxYear)
   const until = due ?? `${taxYear + 1}-04-30`

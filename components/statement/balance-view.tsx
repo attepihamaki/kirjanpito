@@ -92,11 +92,13 @@ function AmountField({
   id,
   label,
   cents,
+  disabled,
   onCommit,
 }: {
   id: string
   label: string
   cents: number
+  disabled: boolean
   onCommit: (cents: number) => void
 }) {
   const f = useFormatters()
@@ -119,6 +121,7 @@ function AmountField({
       <Input
         id={id}
         inputMode="decimal"
+        disabled={disabled}
         className="tabular text-right"
         aria-invalid={bad}
         value={text}
@@ -138,11 +141,12 @@ function YearEndPanel({ year }: { year: number }) {
   const loanOpening = useBookStore((s) => s.loanOpening)
   const setLoanOpening = useBookStore((s) => s.setLoanOpening)
   const values = yearEnds[year] ?? EMPTY_YEAR_END
+  const filed = !!useBookStore((s) => s.form5Filed[String(year)])
 
   return (
     <Panel
       title={f.t("balance.yearEndTitle", { d: f.date(`${year}-12-31`) })}
-      description={f.t("balance.yearEndHint")}
+      description={f.t(filed ? "balance.yearEndFiled" : "balance.yearEndHint")}
       bodyClassName="grid gap-4 p-4 min-[560px]:grid-cols-2"
     >
       {FIELDS.map(([key, label]) => (
@@ -151,6 +155,7 @@ function YearEndPanel({ year }: { year: number }) {
           id={`year-end-${key}`}
           label={f.t(label)}
           cents={values[key]}
+          disabled={filed}
           onCommit={(cents) => setYearEnd(year, { ...values, [key]: cents })}
         />
       ))}
@@ -160,6 +165,7 @@ function YearEndPanel({ year }: { year: number }) {
           y: loanOpening?.year ?? year,
         })}
         cents={loanOpening?.amount ?? 0}
+        disabled={filed}
         onCommit={(amount) =>
           setLoanOpening(
             amount ? { year: loanOpening?.year ?? year, amount } : null
@@ -184,6 +190,7 @@ function InventoryPanel({ year }: { year: number }) {
   const booked = entries.some(
     (e) => e.catId === "333" && e.description === description
   )
+  const filed = !!useBookStore((s) => s.form5Filed[String(year)])
 
   return (
     <Panel
@@ -200,7 +207,7 @@ function InventoryPanel({ year }: { year: number }) {
       ) : (
         <Button
           variant="outline"
-          disabled={change === 0}
+          disabled={change === 0 || filed}
           onClick={() =>
             openDialog({
               kind: "entry",

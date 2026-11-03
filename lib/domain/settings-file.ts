@@ -60,6 +60,8 @@ export interface BookSettings {
   vatFiled: Record<string, string>
   /** Year (`"2025"`) → ISO date its material was marked as stored away. */
   yearsArchived: Record<string, string>
+  /** Year (`"2025"`) → ISO date its Form 5 was marked as filed (§8.8). */
+  form5Filed: Record<string, string>
   overviewLayout: OverviewWidget[]
   autosave: boolean
   /** The full category list: the defaults as the user left them, plus custom ones. */
@@ -243,6 +245,15 @@ export function parseSettings(text: string): ParsedSettings {
     }
     out.yearsArchived = archived
   }
+  if (isRecord(raw.form5Filed)) {
+    const filed: Record<string, string> = {}
+    for (const [key, date] of Object.entries(raw.form5Filed)) {
+      if (YEAR.test(key) && typeof date === "string" && ISO_DATE.test(date)) {
+        filed[key] = date
+      }
+    }
+    out.form5Filed = filed
+  }
   if (isRecord(raw.overview) && Array.isArray(raw.overview.layout)) {
     out.overviewLayout = normalizeLayout(raw.overview.layout)
   }
@@ -337,6 +348,9 @@ export function serializeSettings(s: BookSettings): string {
     ),
     yearsArchived: Object.fromEntries(
       Object.entries(s.yearsArchived).sort(([a], [b]) => a.localeCompare(b))
+    ),
+    form5Filed: Object.fromEntries(
+      Object.entries(s.form5Filed).sort(([a], [b]) => a.localeCompare(b))
     ),
     overview: { layout: s.overviewLayout },
     autosave: s.autosave,

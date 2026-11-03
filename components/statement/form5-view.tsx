@@ -4,6 +4,7 @@ import * as React from "react"
 
 import { TaxForm } from "@/components/common/tax-form"
 import { useFormatters } from "@/components/lang-provider"
+import { Form5FiledControl } from "@/components/statement/form5-filed-control"
 import { form5Sections } from "@/lib/domain/form5"
 import { incomeStatement } from "@/lib/domain/income-statement"
 import { indexCategories } from "@/lib/domain/types"
@@ -38,6 +39,8 @@ export function Form5View() {
         f.t("statement.form5Missing"),
         f.t("statement.form5Payroll"),
       ]}
-    />
+    >
+      <Form5FiledControl step={3} />
+    </TaxForm>
   )
 }

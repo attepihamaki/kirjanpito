@@ -791,6 +791,18 @@ export const APP_DICT = {
     "Vuosi {p} on merkitty talletetuksi {d}, joten sen kirjaukset ovat lukittuja. Tee korjauskirjaus. Vain maksupäivän voi vielä merkitä.",
     "Year {p} was marked as stored on {d}, so its entries are locked. Make a correction entry. Only the payment date can still be set.",
   ],
+  "entry.lockedForm5": [
+    "Vuoden {p} veroilmoitus (lomake 5) on merkitty ilmoitetuksi {d}, joten kaikki sen kirjaukset ovat lukittuja (kirjanpitolaki 2:7). Tee korjauskirjaus. Vain maksupäivän voi vielä merkitä, jos se on myöhemmältä vuodelta. Jos ilmoitusta ei oikeasti ole annettu, poista merkintä kohdasta Tuloslaskelma, Lomake 5.",
+    "The tax return (Form 5) for {p} was marked as filed on {d}, so all its entries are locked (Accounting Act 2:7). Make a correction entry. Only a payment date in a later year can still be set. If the return has not really been filed, remove the mark under Income statement, Form 5.",
+  ],
+  "entry.yearForm5Filed": [
+    "Tämän vuoden veroilmoitus on merkitty ilmoitetuksi. Valitse toinen päivä.",
+    "This year’s tax return is marked as filed. Choose another date.",
+  ],
+  "entry.paidInForm5Year": [
+    "Tämä muuttaisi vuotta, jonka veroilmoitus on merkitty ilmoitetuksi. Maksupäivä voi olla vain myöhemmältä vuodelta.",
+    "This would change a year whose tax return is marked as filed. The payment date can only be in a later year.",
+  ],
   "entry.lockedRefused": [
     pl(
       "1 kirjaus on lukitulla kaudella, joten muutosta ei tehty.",
@@ -1157,6 +1169,15 @@ export const APP_DICT = {
     "Suoriteperuste: tulot ja kulut ovat kirjauksen päivän mukaan, avoimet mukaan lukien. Myyntisaamiset {d}: {r}. Ostovelat {d}: {p}.",
     "Accrual basis: income and expenses go by the entry’s date, open ones included. Receivables on {d}: {r}. Payables on {d}: {p}.",
   ],
+  "statement.form5FileStep": ["Merkitse ilmoitetuksi", "Mark as filed"],
+  "statement.form5FileHint": [
+    "Kun olet antanut ilmoituksen OmaVerossa, merkitse se tähän. Se lukitsee kaikki vuoden {y} kirjaukset, koska kirjanpitolaki (2:7) ei salli muuttaa niitä ilmoituksen jälkeen.",
+    "Once you have filed the return in OmaVero, mark it here. That locks every entry of {y}, because the Accounting Act (2:7) does not allow changing them after a return.",
+  ],
+  "statement.form5FiledOn": [
+    "Merkitty ilmoitetuksi {d}. Vuoden kirjaukset ovat lukittuja.",
+    "Marked as filed on {d}. The year’s entries are locked.",
+  ],
   "statement.form5Payroll": [
     "Kirjanpito ei sisällä palkkakirjanpitoa eikä tulorekisteri-ilmoituksia.",
     "The bookkeeping includes no payroll records or income register reporting.",
@@ -1335,6 +1356,10 @@ export const APP_DICT = {
     "From the entries: receivables {r}, payables {p}, loans {l}. From the depreciation register: machinery and equipment {m}.",
   ],
   "balance.yearEndTitle": ["Tilanne {d}", "Position on {d}"],
+  "balance.yearEndFiled": [
+    "Vuoden veroilmoitus on merkitty ilmoitetuksi, joten nämä luvut ovat lukittuja. Poista merkintä välilehdeltä Lomake 5, jos sinun on muutettava niitä.",
+    "The year’s tax return is marked as filed, so these figures are locked. Remove the mark on the Form 5 tab if you need to change them.",
+  ],
   "balance.yearEndHint": [
     "Kirjanpito ei tiedä näitä, joten kirjoita ne tähän. Tyhjä kohta on nolla. Luvut tallentuvat kirjanpitotiedostoon.",
     "The bookkeeping cannot know these, so enter them here. An empty field is zero. They are saved in the bookkeeping file.",

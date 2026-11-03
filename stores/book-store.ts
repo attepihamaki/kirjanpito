@@ -165,6 +165,8 @@ export interface BookState {
    * (§8.12). Saved in settings.json.
    */
   yearsArchived: Record<string, string>
+  /** Year → ISO date its Form 5 was marked as filed (§8.8). Saved in settings.json. */
+  form5Filed: Record<string, string>
   /** The overview's widgets, in order (§8.12). Normalised where it is read. */
   overviewLayout: OverviewWidget[]
   /** Save to the linked file a moment after each change (§7.5). Opt-in. */
@@ -274,6 +276,7 @@ export interface BookActions {
       bookStart?: string | null
       vatFiled?: Record<string, string>
       yearsArchived?: Record<string, string>
+      form5Filed?: Record<string, string>
       recurring?: RecurringEntry[]
       traderType?: TraderType | null
       assetOpening?: AssetOpening | null
@@ -333,6 +336,7 @@ export interface BookActions {
   setVatFiled(key: string, date: string | null): void
   /** Mark a closed year as stored away on `date`, or clear it with null. */
   setYearArchived(year: number, date: string | null): void
+  setForm5Filed(year: number, date: string | null): void
   setOverviewLayout(layout: OverviewWidget[]): void
   setAutosave(on: boolean): void
   setAutosavePaused(paused: boolean): void
@@ -395,6 +399,7 @@ function initialState(): BookState {
     bookStart: null,
     vatFiled: {},
     yearsArchived: {},
+    form5Filed: {},
     overviewLayout: DEFAULT_LAYOUT.map((w) => ({ ...w })),
     autosave: false,
     recurring: [],
@@ -451,6 +456,7 @@ type PersistedBook = Pick<
   | "bookStart"
   | "vatFiled"
   | "yearsArchived"
+  | "form5Filed"
   | "overviewLayout"
   | "autosave"
   | "recurring"
@@ -621,6 +627,7 @@ export const useBookStore = create<BookStore>()(
           bookStart: null,
           vatFiled: {},
           yearsArchived: {},
+          form5Filed: {},
           recurring: [],
           traderType: null,
           assetOpening: null,
@@ -644,6 +651,7 @@ export const useBookStore = create<BookStore>()(
           bookStart: null,
           vatFiled: {},
           yearsArchived: {},
+          form5Filed: {},
           recurring: [],
           traderType: null,
           assetOpening: null,
@@ -676,6 +684,7 @@ export const useBookStore = create<BookStore>()(
           bookStart: s.bookStart ?? null,
           vatFiled: s.vatFiled ?? {},
           yearsArchived: s.yearsArchived ?? {},
+          form5Filed: s.form5Filed ?? {},
           recurring: s.recurring ?? [],
           traderType: s.traderType ?? null,
           assetOpening: s.assetOpening ?? null,
@@ -837,6 +846,16 @@ export const useBookStore = create<BookStore>()(
           dirty: true,
         })
       },
+      setForm5Filed: (year, date) => {
+        const form5Filed = { ...get().form5Filed }
+        if (date) form5Filed[String(year)] = date
+        else delete form5Filed[String(year)]
+        set({
+          form5Filed,
+          changeLog: [...get().changeLog, lockRecord(`form5-${year}`, date)],
+          dirty: true,
+        })
+      },
       setYearArchived: (year, date) => {
         const yearsArchived = { ...get().yearsArchived }
         if (date) yearsArchived[String(year)] = date
@@ -970,6 +989,7 @@ export const useBookStore = create<BookStore>()(
         bookStart: s.bookStart,
         vatFiled: s.vatFiled,
         yearsArchived: s.yearsArchived,
+        form5Filed: s.form5Filed,
         overviewLayout: s.overviewLayout,
         autosave: s.autosave,
         recurring: s.recurring,

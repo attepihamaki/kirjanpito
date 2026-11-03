@@ -306,6 +306,13 @@ describe("renumberVouchers", () => {
     expect(confirm).not.toHaveBeenCalled()
   })
 
+  it("refuses a year whose Form 5 is filed", async () => {
+    useBookStore.setState({ form5Filed: { "2026": "2027-03-20" } })
+    expect(await renumberVouchers(ctx, 2026)).toBe(false)
+    expect(confirm).not.toHaveBeenCalled()
+    useBookStore.setState({ form5Filed: {} })
+  })
+
   it("refuses a year with an entry in a stored year or filed period", async () => {
     useBookStore.setState({ yearsArchived: { "2026": "2027-01-20" } })
     expect(await renumberVouchers(ctx, 2026)).toBe(false)
@@ -352,6 +359,18 @@ describe("the change log (§8.11)", () => {
     expect(useBookStore.getState().changeLog[1].changes).toEqual([
       { field: "amount", from: 1000, to: 2000 },
     ])
+  })
+
+  it("records Form 5 marked and unmarked", () => {
+    const store = useBookStore.getState()
+    store.setForm5Filed(2026, "2027-03-20")
+    expect(useBookStore.getState().form5Filed).toEqual({
+      "2026": "2027-03-20",
+    })
+    store.setForm5Filed(2026, null)
+    expect(useBookStore.getState().form5Filed).toEqual({})
+    expect(actions()).toEqual(["lock", "unlock"])
+    expect(useBookStore.getState().changeLog[0].period).toBe("form5-2026")
   })
 
   it("records a mark set and removed", () => {

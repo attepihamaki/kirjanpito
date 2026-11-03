@@ -33,6 +33,7 @@ function settings(): BookSettings {
     bookStart: "2025-10",
     vatFiled: { "2026-Q2": "2026-08-10", "2026-Q1": "2026-05-11" },
     yearsArchived: { "2025": "2026-01-20" },
+    form5Filed: { "2025": "2026-03-20" },
     recurring: [
       {
         id: "r1",

@@ -35,8 +35,12 @@ import { useCommandCtx } from "@/hooks/use-commands"
 import { useShortcut } from "@/hooks/use-save-book"
 import { isMediaFile } from "@/hooks/use-file-drop"
 import { looksLikeVatId, normalizeVatId } from "@/lib/domain/ec-sales"
-import { entryLock, lockOn } from "@/lib/domain/period-lock"
-import { canBeUnpaid } from "@/lib/domain/open-items"
+import {
+  entryLock,
+  lockOn,
+  paidChangeHitsForm5,
+} from "@/lib/domain/period-lock"
+import { canBeUnpaid, paidDate } from "@/lib/domain/open-items"
 import {
   isReceiptStorageSupported,
   putReceipt,
@@ -495,7 +499,8 @@ function EntryDialogForm({
   )
   const vatFiledMarks = useBookStore((s) => s.vatFiled)
   const yearsArchived = useBookStore((s) => s.yearsArchived)
-  const marks = { vatFiled: vatFiledMarks, yearsArchived }
+  const form5Filed = useBookStore((s) => s.form5Filed)
+  const marks = { vatFiled: vatFiledMarks, yearsArchived, form5Filed }
   // Read-only apart from the payment date (KPL 2:7, §8.11).
   const lock =
     mode === "edit" && editing ? entryLock(editing, marks, catMap) : null
@@ -629,8 +634,24 @@ function EntryDialogForm({
     if (busy) return
     const entry = validate()
     if (!entry) return
-    if (!lock && lockOn(entry.date, marks)?.kind === "year") {
-      setError({ field: "date", message: f.t("entry.yearStored") })
+    const closed = lock ? null : lockOn(entry.date, marks)
+    if (closed?.kind === "year" || closed?.kind === "form5") {
+      setError({
+        field: "date",
+        message: f.t(
+          closed.kind === "year" ? "entry.yearStored" : "entry.yearForm5Filed"
+        ),
+      })
+      return
+    }
+    if (
+      paidChangeHitsForm5(
+        mode === "edit" && editing ? paidDate(editing) : paidDate(entry),
+        paidDate(entry),
+        marks
+      )
+    ) {
+      setError({ field: "date", message: f.t("entry.paidInForm5Year") })
       return
     }
 
@@ -750,7 +771,11 @@ function EntryDialogForm({
         {lock ? (
           <p className="rounded-md bg-muted p-3 text-sm">
             {f.t(
-              lock.kind === "year" ? "entry.lockedYear" : "entry.lockedFiled",
+              lock.kind === "year"
+                ? "entry.lockedYear"
+                : lock.kind === "form5"
+                  ? "entry.lockedForm5"
+                  : "entry.lockedFiled",
               { p: lock.key, d: f.date(lock.since) }
             )}
           </p>

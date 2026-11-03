@@ -37,6 +37,11 @@ describe("form5Reminder", () => {
     expect(form5Reminder(entries, "2031-05-01")).toBeNull()
   })
 
+  it("stops once the return is marked as filed", () => {
+    const filed = { "2025": "2026-03-20" }
+    expect(form5Reminder([entry("2025-06-01")], "2026-02-01", filed)).toBeNull()
+  })
+
   it("stays quiet without last year's entries", () => {
     expect(form5Reminder([entry("2026-06-01")], "2026-02-01")).toBeNull()
   })

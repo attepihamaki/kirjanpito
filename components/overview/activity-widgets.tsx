@@ -346,6 +346,7 @@ export function ChecksWidget() {
   }
 
   const vatPeriod = useBookStore((s) => s.vatPeriod)
+  const form5Filed = useBookStore((s) => s.form5Filed)
   const yearEnds = useBookStore((s) => s.yearEnd)
   const assetOpening = useBookStore((s) => s.assetOpening)
   const loanOpening = useBookStore((s) => s.loanOpening)
@@ -456,7 +457,7 @@ export function ChecksWidget() {
     })
   }
 
-  const form5 = form5Reminder(data.entries, data.today)
+  const form5 = form5Reminder(data.entries, data.today, form5Filed)
   if (form5) {
     items.push({
       key: "form5Due",

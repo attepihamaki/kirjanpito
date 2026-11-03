@@ -52,9 +52,12 @@ export async function addEntriesWithUndo(
   title: string
 ): Promise<boolean> {
   if (added.length === 0) return false
-  const { yearsArchived } = useBookStore.getState()
-  const intoStoredYear = added.filter((e) => yearsArchived[e.date.slice(0, 4)])
-  if (refuseLocked(ctx, intoStoredYear)) return false
+  const { yearsArchived, form5Filed } = useBookStore.getState()
+  const intoClosedYear = added.filter((e) => {
+    const year = e.date.slice(0, 4)
+    return yearsArchived[year] || form5Filed[year]
+  })
+  if (refuseLocked(ctx, intoClosedYear)) return false
   const after = [...useBookStore.getState().entries, ...added]
   if (!(await confirmFiledChange(after))) return false
 

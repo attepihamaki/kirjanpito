@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest"
 
 import { LINE_BY_KEY, defaultCategories } from "@/lib/domain/accounts"
-import { entryLock, lockOn } from "@/lib/domain/period-lock"
+import {
+  entryLock,
+  lockOn,
+  paidChangeHitsForm5,
+} from "@/lib/domain/period-lock"
 import { indexCategories, type Entry } from "@/lib/domain/types"
 import { countsOnVatReturn, vatReport } from "@/lib/domain/vat"
 
 const cats = indexCategories(defaultCategories())
 
-const none = { vatFiled: {}, yearsArchived: {} }
+const none = { vatFiled: {}, yearsArchived: {}, form5Filed: {} }
 
 describe("lockOn", () => {
   it("leaves an unmarked date open", () => {
@@ -36,6 +40,7 @@ describe("lockOn", () => {
 
   it("names a stored year first", () => {
     const marks = {
+      ...none,
       vatFiled: { "2026-03": "2026-05-12" },
       yearsArchived: { "2026": "2027-01-20" },
     }
@@ -80,6 +85,14 @@ describe("entryLock", () => {
     expect(entryLock(yel, stored, cats)?.kind).toBe("year")
   })
 
+  it("locks every entry of a year whose Form 5 is filed, VAT or not", () => {
+    const filed = { ...none, form5Filed: { "2026": "2027-03-20" } }
+    const yel = entry({ catId: "336", vatRate: 0 })
+    expect(entryLock(yel, filed, cats)?.kind).toBe("form5")
+    expect(entryLock(entry({}), filed, cats)?.kind).toBe("form5")
+    expect(entryLock(entry({ date: "2027-01-05" }), filed, cats)).toBeNull()
+  })
+
   it("agrees with the VAT report on every line and rate", () => {
     for (const cat of defaultCategories()) {
       for (const vatRate of [0, 25.5]) {
@@ -100,5 +113,26 @@ describe("entryLock", () => {
         ])
       }
     }
+  })
+})
+
+describe("paidChangeHitsForm5", () => {
+  const marks = { form5Filed: { "2026": "2027-03-20" } }
+
+  it("lets an open invoice be paid in a later year", () => {
+    expect(paidChangeHitsForm5(null, "2027-04-01", marks)).toBe(false)
+  })
+
+  it("refuses a payment dated in the filed year", () => {
+    expect(paidChangeHitsForm5(null, "2026-12-20", marks)).toBe(true)
+  })
+
+  it("refuses moving a payment out of the filed year", () => {
+    expect(paidChangeHitsForm5("2026-12-20", "2027-01-10", marks)).toBe(true)
+    expect(paidChangeHitsForm5("2026-12-20", null, marks)).toBe(true)
+  })
+
+  it("ignores a date that did not change", () => {
+    expect(paidChangeHitsForm5("2026-12-20", "2026-12-20", marks)).toBe(false)
   })
 })
