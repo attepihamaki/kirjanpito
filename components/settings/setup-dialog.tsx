@@ -59,7 +59,13 @@ function SetupDialogForm({ onClose }: { onClose: () => void }) {
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
+      {/*
+       * Wider than the default dialog: four labelled settings, each with a
+       * sentence explaining it, and a segmented control whose longest option
+       * is "Neljännesvuosi". At the default width every description runs to
+       * three lines and the form reads as a column of text.
+       */}
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{f.t("settings.setupTitle")}</DialogTitle>
           <DialogDescription>{f.t("settings.setupIntro")}</DialogDescription>
