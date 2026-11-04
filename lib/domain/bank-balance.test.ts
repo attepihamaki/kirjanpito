@@ -95,3 +95,14 @@ describe("bankEstimate", () => {
     expect(result.movement).toBe(-40_000)
   })
 })
+
+describe("bankEstimate and cash", () => {
+  it("leaves out a payment made in cash", () => {
+    const cash = {
+      ...entry("2026-10-20", "expense", "333", 5_000),
+      cash: true as const,
+    }
+    const result = bankEstimate(balance, [cash], catMap, today)
+    expect(result).toEqual({ count: 0, movement: 0, estimate: 100_000 })
+  })
+})

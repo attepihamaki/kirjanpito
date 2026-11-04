@@ -42,6 +42,7 @@ export const LOGGED_FIELDS = [
   "amountMode",
   "settles",
   "paidOn",
+  "cash",
   "buyerVatId",
   "euPurchase",
   "voucher",
@@ -55,6 +56,7 @@ function logged(e: Entry, field: LoggedField): string | number | null {
     const names = (e.atts ?? []).map((a) => `${a.name} (${a.size})`)
     return names.length ? names.join(", ") : null
   }
+  if (field === "cash") return e.cash ? "cash" : null
   return e[field] ?? null
 }
 

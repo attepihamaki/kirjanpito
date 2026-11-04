@@ -55,6 +55,7 @@ const CHECK_LABEL = {
   duplicate: "ledger.duplicate",
   vatNotDeductible: "ledger.vatNotDeductible",
   privateUseNoVat: "ledger.privateUseNoVat",
+  lateCash: "ledger.lateCash",
 } as const satisfies Record<EntryCheck, string>
 
 const NO_IDS: ReadonlySet<string> = new Set()
@@ -62,6 +63,7 @@ const NO_IDS: ReadonlySet<string> = new Set()
 export function LedgerView() {
   const f = useFormatters()
   const entries = useBookStore((s) => s.entries)
+  const changeLog = useBookStore((s) => s.changeLog)
   const cats = useBookStore((s) => s.cats)
   const year = useBookStore((s) => s.year)
   const month = useBookStore((s) => s.month)
@@ -112,9 +114,10 @@ export function LedgerView() {
               checkFilter,
               entriesInPeriod(entries, year, 0),
               catMap,
-              todayIso()
+              todayIso(),
+              changeLog
             ),
-    [checkFilter, entries, year, catMap]
+    [checkFilter, entries, year, catMap, changeLog]
   )
 
   const filtered = React.useMemo(

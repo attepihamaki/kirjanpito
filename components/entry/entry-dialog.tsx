@@ -61,6 +61,7 @@ import {
   suggestCategory,
 } from "@/lib/domain/invoice-text"
 import {
+  CASH_BOOKING_DAYS,
   duplicateOf,
   entryWithReceipt,
   vatNotDeductible,
@@ -105,6 +106,8 @@ interface FormState {
   settles: string
   /** "" when paid on the date, "open" while unpaid, else the payment date (§6.3). */
   paid: string
+  /** Paid in cash (§8.5). Ignored while the entry is open. */
+  cash: boolean
   /** The buyer's VAT number on an EU sale (§8.7). */
   buyerVatId: string
   /** What an EU purchase bought, "" for any other entry (§6.9). */
@@ -173,6 +176,7 @@ function initialForm({
       repeat: false,
       settles: prefill?.settles ?? "",
       paid: "",
+      cash: false,
       buyerVatId: "",
     }
   }
@@ -198,6 +202,7 @@ function initialForm({
           ? "open"
           : (editing.paidOn ?? "")
         : "",
+    cash: !!editing.cash,
     buyerVatId: editing.buyerVatId ?? "",
   }
 }
@@ -635,6 +640,9 @@ function EntryDialogForm({
       ...(unpayable && form.paid && form.paid !== form.date
         ? { paidOn: form.paid === "open" ? null : form.paid }
         : {}),
+      ...(unpayable && form.cash && form.paid !== "open"
+        ? { cash: true as const }
+        : {}),
       ...(euSale && form.buyerVatId.trim()
         ? { buyerVatId: normalizeVatId(form.buyerVatId) }
         : {}),
@@ -1008,6 +1016,28 @@ function EntryDialogForm({
                 </div>
                 <FieldDescription>{f.t("entry.paidHint")}</FieldDescription>
               </Field>
+            ) : null}
+
+            {unpayable && form.paid !== "open" ? (
+              <fieldset disabled={!!lock} className="contents">
+                <Field orientation="horizontal">
+                  <Checkbox
+                    id="entry-cash"
+                    checked={form.cash}
+                    onCheckedChange={(checked) =>
+                      update({ cash: checked === true })
+                    }
+                  />
+                  <div className="flex items-center gap-1">
+                    <FieldLabel htmlFor="entry-cash" className="font-normal">
+                      {f.t("entry.cashLabel")}
+                    </FieldLabel>
+                    <InfoPopover label={f.t("entry.cashInfo")}>
+                      {f.t("entry.cashInfoText", { d: CASH_BOOKING_DAYS })}
+                    </InfoPopover>
+                  </div>
+                </Field>
+              </fieldset>
             ) : null}
 
             <fieldset disabled={!!lock} className="contents">

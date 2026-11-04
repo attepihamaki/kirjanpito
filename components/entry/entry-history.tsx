@@ -19,6 +19,7 @@ const FIELD_LABEL = {
   amountMode: "entry.logFieldMode",
   settles: "entry.logFieldSettles",
   paidOn: "entry.logFieldPaid",
+  cash: "entry.logFieldCash",
   buyerVatId: "entry.logFieldBuyer",
   euPurchase: "entry.logFieldEuPurchase",
   voucher: "entry.logFieldVoucher",
@@ -47,6 +48,8 @@ function formatValue(
     }
     case "type":
       return value === "income" ? f.t("common.income") : f.t("common.expense")
+    case "cash":
+      return f.t("entry.cash")
     case "euPurchase":
       return value === "goods"
         ? f.t("entry.euPurchaseGoods")

@@ -202,6 +202,7 @@ const CHECK_TEXT = {
     title: "overview.privateUseNoVat",
     sub: "overview.privateUseNoVatSub",
   },
+  lateCash: { title: "overview.lateCash", sub: "overview.lateCashSub" },
 } as const satisfies Record<EntryCheck, { title: string; sub: string }>
 
 interface CheckItem {
@@ -230,6 +231,7 @@ export function ChecksWidget() {
   const router = useRouter()
   const dirty = useBookStore((s) => s.dirty)
   const fileName = useBookStore((s) => s.fileName)
+  const changeLog = useBookStore((s) => s.changeLog)
   const openDialog = useBookStore((s) => s.openDialog)
   const setVatFiled = useBookStore((s) => s.setVatFiled)
   const yearsArchived = useBookStore((s) => s.yearsArchived)
@@ -264,10 +266,15 @@ export function ChecksWidget() {
     () =>
       ENTRY_CHECKS.map((check) => ({
         check,
-        n: flaggedEntryIds(check, data.yearEntries, data.catMap, data.today)
-          .size,
+        n: flaggedEntryIds(
+          check,
+          data.yearEntries,
+          data.catMap,
+          data.today,
+          changeLog
+        ).size,
       })),
-    [data.yearEntries, data.catMap, data.today]
+    [data.yearEntries, data.catMap, data.today, changeLog]
   )
 
   const items: CheckItem[] = []

@@ -210,3 +210,38 @@ describe("privateUseNoVat", () => {
     expect(flagged("privateUseNoVat", rows).sort()).toEqual(["a", "b"])
   })
 })
+
+describe("lateCash", () => {
+  const added = (entryId: string, at: string) => ({
+    at,
+    action: "add" as const,
+    entryId,
+  })
+  const late = (entries: Entry[], log: ReturnType<typeof added>[]) => [
+    ...flaggedEntryIds("lateCash", entries, cats, TODAY, log),
+  ]
+
+  it("flags a cash voucher booked more than two days after the payment", () => {
+    const e = entry({ id: "k", date: "2026-10-01", cash: true })
+    expect(late([e], [added("k", "2026-10-04T09:00:00")])).toEqual(["k"])
+    expect(late([e], [added("k", "2026-10-03T09:00:00")])).toEqual([])
+  })
+
+  it("counts from the payment date when it differs", () => {
+    const e = entry({
+      id: "k",
+      date: "2026-10-01",
+      paidOn: "2026-10-05",
+      cash: true,
+    })
+    expect(late([e], [added("k", "2026-10-06T09:00:00")])).toEqual([])
+  })
+
+  it("leaves out other payments, and vouchers that came in a file", () => {
+    const bank = entry({ id: "b", date: "2026-10-01" })
+    const imported = entry({ id: "i", date: "2026-10-01", cash: true })
+    expect(late([bank, imported], [added("b", "2026-10-20T09:00:00")])).toEqual(
+      []
+    )
+  })
+})

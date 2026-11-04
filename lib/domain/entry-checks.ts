@@ -1,5 +1,8 @@
 import { LINE_BY_KEY } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
+import type { ChangeRecord } from "@/lib/domain/change-log"
+import { todayIso } from "@/lib/domain/dates"
+import { paidDate } from "@/lib/domain/open-items"
 import type { Attachment, Cents, CategoryMap, Entry } from "@/lib/domain/types"
 import { rateMismatch } from "@/lib/domain/vat-rates"
 
@@ -17,6 +20,7 @@ export type EntryCheck =
   | "duplicate"
   | "vatNotDeductible"
   | "privateUseNoVat"
+  | "lateCash"
 
 export const ENTRY_CHECKS: readonly EntryCheck[] = [
   "noReceipt",
@@ -27,7 +31,35 @@ export const ENTRY_CHECKS: readonly EntryCheck[] = [
   "duplicate",
   "vatNotDeductible",
   "privateUseNoVat",
+  "lateCash",
 ]
+
+/**
+ * How many days after a cash payment its voucher may be booked before the
+ * check says so. KPL 2:4 has cash payments booked "viipymättä" and day by day,
+ * and gives no number, so this allows a weekend and no more.
+ */
+export const CASH_BOOKING_DAYS = 2
+
+const DAY_MS = 86_400_000
+
+/** Whole days from one ISO date to another. */
+function daysFrom(from: string, to: string): number {
+  return Math.round((Date.parse(to) - Date.parse(from)) / DAY_MS)
+}
+
+/**
+ * The local date each entry was first added, from the change log. An entry
+ * that came in a file has no record of being added, so it has no date here.
+ */
+function addedOn(log: readonly ChangeRecord[]): Map<string, string> {
+  const out = new Map<string, string>()
+  for (const r of log) {
+    if (r.action !== "add" || !r.entryId || out.has(r.entryId)) continue
+    out.set(r.entryId, todayIso(new Date(r.at)))
+  }
+  return out
+}
 
 /**
  * Whether an entry has a receipt file the app can show. A receipt listed in
@@ -131,7 +163,9 @@ export function flaggedEntryIds(
   check: EntryCheck,
   entries: readonly Entry[],
   cats: CategoryMap,
-  today: string
+  today: string,
+  /** The change log, which says when a cash voucher was booked. */
+  log: readonly ChangeRecord[] = []
 ): Set<string> {
   const ids = (keep: (e: Entry) => boolean) =>
     new Set(entries.filter(keep).map((e) => e.id))
@@ -188,6 +222,15 @@ export function flaggedEntryIds(
     }
     case "vatNotDeductible":
       return ids((e) => vatNotDeductible(e, cats))
+    case "lateCash": {
+      // A cash payment is booked without delay and day by day (KPL 2:4).
+      const added = addedOn(log)
+      return ids((e) => {
+        const paid = e.cash ? paidDate(e) : null
+        const on = added.get(e.id)
+        return !!paid && !!on && daysFrom(paid, on) > CASH_BOOKING_DAYS
+      })
+    }
     case "privateUseNoVat": {
       // Line 314 only: a car's private use depends on how much of it was deducted.
       const goods = entries.filter((e) => cats.get(e.catId)?.line === "314")

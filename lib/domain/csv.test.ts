@@ -68,10 +68,10 @@ describe("serializeCsv", () => {
   it("starts with a BOM and the exact header of its language", () => {
     expect(out.startsWith(`﻿${csvHeaderLine("fi")}\r\n`)).toBe(true)
     expect(csvHeaderLine("fi")).toBe(
-      "tositenro;päivämäärä;selite;tyyppi;tili;luokka;summa;alv;verollisuus;liitteet;verokausi;maksettu;ostajan_alv;eu_osto"
+      "tositenro;päivämäärä;selite;tyyppi;tili;luokka;summa;alv;verollisuus;liitteet;verokausi;maksettu;ostajan_alv;eu_osto;käteinen"
     )
     expect(HEADER).toBe(
-      "voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase"
+      "voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase;cash"
     )
   })
 
@@ -902,7 +902,7 @@ describe("VAT settlements", () => {
   it("writes and reads back the period a payment settles", () => {
     const text = serializeCsv([payment], cats)
     expect(text).toContain(
-      ";2939;Arvonlisäveron maksu;362,18;0;brutto;;2026-10;;;\r\n"
+      ";2939;Arvonlisäveron maksu;362,18;0;brutto;;2026-10;;;;\r\n"
     )
 
     const back = ok(parseCsv(text, baseCats)).entries[0]
@@ -1187,5 +1187,35 @@ describe("buyer_vat column", () => {
 
   it("drops it on any other category", () => {
     expect(back("300-domestic").buyerVatId).toBeUndefined()
+  })
+})
+
+describe("cash column", () => {
+  const entry = (over: Partial<Entry>): Entry => ({
+    id: "c",
+    date: "2026-03-10",
+    description: "Kuitti",
+    type: "expense",
+    catId: "333",
+    amount: 1_990,
+    vatRate: 25.5,
+    amountMode: "gross",
+    ...over,
+  })
+  const back = (e: Entry, lang?: "fi" | "en") =>
+    ok(parseCsv(serializeCsv([e], cats, { lang }), baseCats)).entries[0]
+
+  it("round-trips in both languages", () => {
+    expect(serializeCsv([entry({ cash: true })], cats)).toContain(";kyllä\r\n")
+    expect(back(entry({ cash: true })).cash).toBe(true)
+    expect(back(entry({ cash: true }), "en").cash).toBe(true)
+    expect(back(entry({})).cash).toBeUndefined()
+  })
+
+  it("keeps it only where a payment is", () => {
+    expect(back(entry({ cash: true, paidOn: null })).cash).toBeUndefined()
+    expect(
+      back(entry({ cash: true, catId: "337", vatRate: 0 })).cash
+    ).toBeUndefined()
   })
 })

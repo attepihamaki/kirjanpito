@@ -5,7 +5,8 @@ import type { Lang } from "@/lib/domain/types"
  * voucher number does on a printed journal (§4). `settles` is filled only on a
  * VAT payment or refund (§6.6), and `paid` only on an entry not paid on its
  * date (§6.3). `buyer_vat` is the buyer's VAT number on an EU sale (§8.7), and
- * `eu_purchase` says what an EU purchase bought (§6.9).
+ * `eu_purchase` says what an EU purchase bought (§6.9). `cash` marks a payment
+ * made in cash (§8.5).
  *
  * These names are the canonical ones the parser works in. What a file is
  * written with is `csvHeaderLine`, which follows the book's export language;
@@ -31,6 +32,7 @@ export const CSV_HEADER = [
   "paid",
   "buyer_vat",
   "eu_purchase",
+  "cash",
 ] as const
 
 export type CsvColumn = (typeof CSV_HEADER)[number]
@@ -56,6 +58,7 @@ const FINNISH_LABELS: Readonly<Record<CsvColumn, string>> = {
   paid: "maksettu",
   buyer_vat: "ostajan_alv",
   eu_purchase: "eu_osto",
+  cash: "käteinen",
 }
 
 /** The label a column is written under, for a header or an error message. */

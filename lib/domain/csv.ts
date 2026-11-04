@@ -86,6 +86,10 @@ const EU_PURCHASE_FROM_CSV: Readonly<Record<string, EuPurchase>> = {
   services: "services",
 }
 
+/** The `cash` column's value on an entry paid in cash. Read case-insensitively. */
+const CASH_TO_CSV: Readonly<Record<Lang, string>> = { fi: "kyllä", en: "yes" }
+const CASH_VALUES: readonly string[] = ["kyllä", "yes", "käteinen", "cash", "x"]
+
 /** The `paid` column's value for an entry still open. */
 const PAID_OPEN: Readonly<Record<Lang, string>> = { fi: "avoin", en: "open" }
 const PAID_OPEN_VALUES: readonly string[] = ["avoin", "open"]
@@ -188,6 +192,7 @@ export function serializeCsv(
         e.paidOn === null ? PAID_OPEN[lang] : (e.paidOn ?? ""),
         defuseFormula(e.buyerVatId ?? ""),
         e.euPurchase ? EU_PURCHASE_TO_CSV[lang][e.euPurchase] : "",
+        e.cash ? CASH_TO_CSV[lang] : "",
       ]
         .map(quote)
         .join(";")
@@ -480,6 +485,7 @@ export function parseCsv(
     const voucherRaw = get("voucher")
     const voucher = /^\d+$/.test(voucherRaw) ? Number(voucherRaw) : null
 
+    const paid = paidColumn(get("paid"), date, cat)
     entries.push({
       id: makeId(),
       ...(isVoucherNumber(voucher) ? { voucher } : {}),
@@ -492,7 +498,8 @@ export function parseCsv(
       amountMode,
       paths,
       ...settledPeriod(get("settles"), cat),
-      ...paidColumn(get("paid"), date, cat),
+      ...paid,
+      ...cashColumn(get("cash"), paid, cat),
       ...buyerColumn(restoreFormula(get("buyer_vat")), cat),
       ...euPurchaseColumn(get("eu_purchase"), cat),
     })
@@ -561,6 +568,20 @@ function paidColumn(
   }
   const paid = parseCsvDate(value)
   return paid && paid !== date ? { paidOn: paid } : {}
+}
+
+/**
+ * Whether the entry was paid in cash (§8.5). Kept only where a payment is: on
+ * a line that can be paid, and not on an entry still open.
+ */
+function cashColumn(
+  value: string,
+  paid: { paidOn?: string | null },
+  cat: Category
+): { cash?: true } {
+  if (!CASH_VALUES.includes(value.trim().toLowerCase())) return {}
+  if (paid.paidOn === null || !canBeUnpaid(LINE_BY_KEY.get(cat.line))) return {}
+  return { cash: true }
 }
 
 /**

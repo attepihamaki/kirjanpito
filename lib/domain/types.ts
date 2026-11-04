@@ -98,6 +98,12 @@ export interface Entry {
    * `date` itself is the delivery or invoice date (§6.3).
    */
   paidOn?: string | null
+  /**
+   * Paid in cash. KPL 2:4 has a cash payment booked without delay and day by
+   * day, so the app checks when it was booked, and the bank estimate leaves it
+   * out (§8.5). Only on a paid entry on a line that can be paid.
+   */
+  cash?: true
   /** The buyer's VAT number on a sale to another EU country (§8.7). */
   buyerVatId?: string
   /**

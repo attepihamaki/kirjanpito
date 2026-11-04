@@ -39,6 +39,8 @@ export function bankEstimate(
   for (const e of entries) {
     const paid = paidDate(e)
     if (paid === null || paid <= balance.date || paid > today) continue
+    // Paid in cash: the money never passed through the bank account.
+    if (e.cash) continue
     const line = catMap.get(e.catId)?.line
     if (line && NON_CASH_LINES.has(line)) continue
     count += 1

@@ -481,6 +481,14 @@ export const APP_DICT = {
       "{n} private uses of goods without VAT"
     ),
   ],
+  "overview.lateCash": [
+    pl("1 käteismaksu kirjattu myöhässä", "{n} käteismaksua kirjattu myöhässä"),
+    pl("1 cash payment booked late", "{n} cash payments booked late"),
+  ],
+  "overview.lateCashSub": [
+    "Käteismaksu kirjataan viipymättä ja päivä kerrallaan (kirjanpitolaki 2:4). Kirjaa seuraavat heti.",
+    "A cash payment is booked without delay, day by day (Accounting Act 2:4). Book the next ones straight away.",
+  ],
   "overview.privateUseNoVatSub": [
     "Oma käyttö ylittää vuodessa 850 €. Ylittävä osa on arvonlisäverollista, jos tavaran ostosta on vähennetty vero.",
     "Private use is over 850 € this year. The part above that carries VAT if the VAT on the goods was deducted.",
@@ -671,6 +679,17 @@ export const APP_DICT = {
   "entry.logFieldMode": ["Summan tyyppi", "Amount type"],
   "entry.logFieldSettles": ["Verokausi", "Tax period"],
   "entry.logFieldPaid": ["Maksettu", "Paid"],
+  "entry.logFieldCash": ["Maksutapa", "Payment method"],
+  "entry.cash": ["Käteinen", "Cash"],
+  "entry.cashLabel": ["Maksettu käteisellä", "Paid in cash"],
+  "entry.cashInfo": [
+    "Mitä käteismaksu tarkoittaa?",
+    "What does paid in cash mean?",
+  ],
+  "entry.cashInfoText": [
+    "Käteismaksu kirjataan viipymättä ja päivä kerrallaan (kirjanpitolaki 2:4). Kirjanpito huomauttaa, jos käteinen tosite kirjataan yli {d} päivää maksun jälkeen. Käteismaksu ei liikuta pankkitilin arviota.",
+    "A cash payment is booked without delay, day by day (Accounting Act 2:4). The book points it out when a cash voucher is booked more than {d} days after the payment. A cash payment does not move the bank estimate.",
+  ],
   "entry.logFieldBuyer": ["Ostajan ALV-numero", "Buyer’s VAT number"],
   "entry.logFieldEuPurchase": ["EU-osto", "EU purchase"],
   "entry.logFieldVoucher": ["Tositenumero", "Voucher number"],
@@ -791,6 +810,10 @@ export const APP_DICT = {
   ],
   "ledger.duplicate": ["Mahdollinen kaksoistosite", "Possible duplicate"],
   "ledger.vatNotDeductible": ["ALV ei vähennettävää", "VAT not deductible"],
+  "ledger.lateCash": [
+    "Käteismaksu kirjattu myöhässä",
+    "Cash payment booked late",
+  ],
   "ledger.privateUseNoVat": [
     "Oma käyttö ilman ALV:tä",
     "Private use without VAT",
