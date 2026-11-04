@@ -1,7 +1,7 @@
 import { LINE_BY_KEY, categoryName } from "@/lib/domain/accounts"
 import { calcEntry, signedGross } from "@/lib/domain/calc"
 import { monthOf, yearOf } from "@/lib/domain/dates"
-import type { Category, Entry, Lang } from "@/lib/domain/types"
+import type { Category, Entry, EntryType, Lang } from "@/lib/domain/types"
 import {
   LEDGER_SORT_DEFAULT,
   type LedgerSortKey,
@@ -199,6 +199,26 @@ export function compareCategories(
     categoryAccount(a) - categoryAccount(b) ||
     Number(!!a.euPurchase) - Number(!!b.euPurchase) ||
     compareNames(a, b)
+  )
+}
+
+/**
+ * The categories an entry can move to in bulk (§8.4, §8.10): enabled, on its
+ * side, and an EU purchase only to an EU purchase, since moving one across
+ * would change what was paid (§6.9).
+ */
+export function categoriesToMoveTo(
+  cats: readonly Category[],
+  side: EntryType | undefined,
+  euPurchase: boolean,
+  exceptId?: string
+): Category[] {
+  return cats.filter(
+    (c) =>
+      c.id !== exceptId &&
+      c.enabled &&
+      categorySide(c) === side &&
+      !!c.euPurchase === euPurchase
   )
 }
 

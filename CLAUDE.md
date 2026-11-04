@@ -859,7 +859,7 @@ On **Luokat**:
   - Type — the same `EntryTypeToggle` the entry dialog uses, so the two controls read alike: Tulo before Kulu, coloured when selected.
   - Income statement line, filtered by type.
   - Name (required).
-  - Default VAT % (validated as 0 ≤ x < 100). Left empty, 0, or 25,5 on an EU purchase.
+  - Default VAT %, a select of the rates in force today (`validRates`, §5). It starts at 0, or 25,5 on an EU purchase.
   - "Osto muusta EU-maasta" (Ei / Kyllä, tavara / Kyllä, palvelu), on the expense side only (§6.9). It is fixed once the category exists.
   - **"Lisää" sits on the panel's footer strip**, not in the grid. It used to share the fourth cell with the VAT input, which cramped both.
   - New income categories get `kind: "domestic"`.
@@ -867,8 +867,11 @@ On **Luokat**:
   - The typed values survive re-renders. Leaving the page with a typed but unadded name asks first.
 - **Categories table:**
   - Search and a type filter in the panel's heading row; the category count sits at the left of the pagination strip, as the entry count does on the ledger (§8.4).
-  - Sortable columns: Käytössä (checkbox), Tyyppi (badge), Tili, Nimi, and Oletus ALV % (an inline input that commits on change and shows a toast). They cycle in three states as on the ledger (§8.4); with none chosen the rows are in Tili order.
-  - Delete is only offered for custom categories that no entry or recurring template uses.
+  - Sortable columns: Käytössä (checkbox), Tyyppi (badge), Tili, Nimi, and Oletus ALV % (the same select as the add form, which commits on change and shows a toast). They cycle in three states as on the ledger (§8.4); with none chosen the rows are in Tili order.
+  - Edit and delete are offered on custom categories only. A default keeps its name and line from the chart of accounts (§7.6), and unticking "Käytössä" takes it out of the dropdowns.
+  - **Edit** opens a dialog with the name, the line and the default VAT, the same select as the add form plus the rate the category already holds. The side and the EU status stay fixed. The line is fixed too once an entry uses the category, since entries report through it and the locks of §8.11 would not see the change. A recurring template does not fix it. Renaming changes no figures.
+  - **A name is unique on its account and side**, in the add form and the edit dialog alike (`categoryNameTaken`), a default's English and former names included. The CSV finds a category by these, so two with one name would merge when the file is next opened.
+  - **Delete** (`lib/commands/category-commands.ts`) removes an unused category at once. One with entries or templates opens a dialog that asks where they move, among the enabled categories the bulk bar would offer (`categoriesToMoveTo`, §8.4). Each entry keeps its VAT rate and voucher number. A locked entry on the category refuses the delete (§8.11), and a change to a filed return asks first. Both kinds can be undone from the toast for 10 seconds, and only what still sits on the target goes back.
   - Pagination with a default of 25 rows, laid out as on the ledger (§8.4).
 - **"Oletusluokat"**, under the table: a description of what restoring does, and "Palauta oletusluokat" (`outline`) on the footer. It restores the defaults and keeps custom categories that an entry or a recurring template uses. It is reversible and routine, so it sits beside the table it changes; clearing the entries is not, so it is on the other page in its own destructive panel.
 

@@ -1676,14 +1676,50 @@ export const APP_DICT = {
     pl("1 luokka", "{n} luokkaa"),
     pl("1 category", "{n} categories"),
   ],
-  "settings.deleteCategory": ["Poista luokka", "Delete category"],
+  "settings.editCategory": ["Muokkaa luokkaa {c}", "Edit category {c}"],
+  "settings.deleteCategory": ["Poista luokka {c}", "Delete category {c}"],
+  "settings.editCategoryTitle": ["Muokkaa luokkaa", "Edit category"],
+  "settings.categoryUpdated": [
+    "Luokka päivitetty: {c}.",
+    "Category updated: {c}.",
+  ],
+  "settings.lineLocked": [
+    "Tositteet käyttävät tätä luokkaa, joten sen riviä ei voi vaihtaa. Lisää uusi luokka ja poista tämä, jolloin tositteet siirtyvät sinne.",
+    "Vouchers use this category, so its line can’t change. Add a new category and delete this one, which moves the vouchers there.",
+  ],
+  "settings.nameTaken": [
+    "Tilillä {a} on jo tämän niminen luokka.",
+    "Account {a} already has a category with this name.",
+  ],
+  "settings.deleteCategoryTitle": [
+    "Poistetaanko luokka {c}?",
+    "Delete category {c}?",
+  ],
+  "settings.deleteCategoryUses": [
+    "Tositteita: {v}. Toistuvia tositteita: {r}. Ne siirtyvät valitsemaasi luokkaan.",
+    "Vouchers: {v}. Recurring vouchers: {r}. They move to the category you choose.",
+  ],
+  "settings.moveTo": ["Siirrä luokkaan", "Move to category"],
+  "settings.noMoveTarget": [
+    "Käytössä ei ole toista samanlaista luokkaa. Ota sellainen käyttöön tai lisää uusi.",
+    "No other category of this kind is active. Turn one on or add a new one.",
+  ],
+  "settings.deleteCategoryConfirm": ["Siirrä ja poista", "Move and delete"],
+  "settings.categoryDeleted": [
+    "Luokka poistettu: {c}.",
+    "Category deleted: {c}.",
+  ],
+  "settings.categoryDeletedMoved": [
+    "Luokka {c} poistettu. Tositteet siirrettiin luokkaan {t}.",
+    "Category {c} deleted. Its vouchers moved to {t}.",
+  ],
+  "settings.categoryRestored": [
+    "Luokka palautettu: {c}.",
+    "Category restored: {c}.",
+  ],
   "settings.isActive": ["{c} käytössä", "{c} active"],
   "settings.categoryAdded": ["Luokka lisätty: {c}.", "Category added: {c}."],
   "settings.nameRequired": ["Anna luokalle nimi.", "Give the category a name."],
-  "settings.vatInvalid": [
-    "Anna verokanta numerona, esim. 25,5.",
-    "Enter the rate as a number, e.g. 25.5.",
-  ],
   "settings.vatUpdated": [
     "Oletus-ALV päivitetty: {c} {r}.",
     "Default VAT updated: {c} {r}.",

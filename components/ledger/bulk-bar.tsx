@@ -13,7 +13,7 @@ import {
 } from "@/lib/commands/bulk-commands"
 import type { Entry } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
-import { categorySide, compareCategories } from "@/stores/selectors"
+import { categoriesToMoveTo, compareCategories } from "@/stores/selectors"
 
 /**
  * What can be done to the selected ledger rows (§8.4): move them to another
@@ -36,19 +36,12 @@ export function BulkBar({
     ? selected[0]?.type
     : undefined
 
-  /*
-   * An EU purchase's amount is without VAT and any other's follows its own
-   * mode, so moving one across would change what was paid (§6.9).
-   */
   const eu = !!selected[0]?.euPurchase
   const euMixed = selected.some((e) => !!e.euPurchase !== eu)
 
   const options = React.useMemo(
     () =>
-      cats
-        .filter(
-          (c) => c.enabled && categorySide(c) === type && !!c.euPurchase === eu
-        )
+      categoriesToMoveTo(cats, type, eu)
         .sort((a, b) =>
           compareCategories(a, b, (x, y) =>
             f.collator.compare(f.catName(x), f.catName(y))

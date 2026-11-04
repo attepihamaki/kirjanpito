@@ -152,6 +152,10 @@ export type DialogState =
   | { kind: "setup" }
   /** Add a month's recurring entries (§8.5). `month` is `"2026-10"`. */
   | { kind: "recurring"; month: string }
+  /** Change a custom category's name, line or default VAT (§8.10). */
+  | { kind: "category-edit"; id: string }
+  /** Choose where a custom category's vouchers move before it goes (§8.10). */
+  | { kind: "category-delete"; id: string }
 
 export interface BookState {
   // ---- persisted (CLAUDE.md §12) ----
@@ -998,7 +1002,12 @@ export const useBookStore = create<BookStore>()(
         set({ cats, dirty: true })
       },
       removeCategory: (id) =>
-        set({ cats: get().cats.filter((c) => c.id !== id), dirty: true }),
+        set((s) => ({
+          cats: s.cats.filter((c) => c.id !== id),
+          // The ledger's filter must not keep pointing at a category that is gone.
+          ledgerCat: s.ledgerCat === id ? "all" : s.ledgerCat,
+          dirty: true,
+        })),
       setCategories: (cats) => set({ cats, dirty: true }),
       resetCategories: () => {
         // Keep custom categories still in use (§8.10).

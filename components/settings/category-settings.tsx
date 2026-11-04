@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { PlusIcon, Trash2Icon } from "lucide-react"
+import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
 
 import {
   EntryTypeToggle,
@@ -9,6 +9,7 @@ import {
   TypeFilterSelect,
 } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
+import { DefaultVatSelect } from "@/components/settings/category-dialogs"
 import { Panel } from "@/components/common/panel"
 import { Pill } from "@/components/common/pill"
 import { SortableHeader } from "@/components/common/sortable-header"
@@ -34,16 +35,21 @@ import { toast } from "@/components/ui/toast"
 import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { resetCategories } from "@/lib/commands/book-commands"
-import { GENERAL_RATE, LINES, categoryName } from "@/lib/domain/accounts"
+import { startDeleteCategory } from "@/lib/commands/category-commands"
+import {
+  GENERAL_RATE,
+  LINE_BY_KEY,
+  LINES,
+  categoryName,
+} from "@/lib/domain/accounts"
+import { categoryNameTaken } from "@/lib/domain/category-names"
 import { uid } from "@/lib/domain/id"
-import { isVatRate, parseRate } from "@/lib/domain/money"
 import type { Category, EntryType, EuPurchase } from "@/lib/domain/types"
 import {
   categoryAccount,
   compareCategories,
   categorySide,
   paginate,
-  usedCategoryIds,
 } from "@/stores/selectors"
 import {
   CAT_SORT_DEFAULT,
@@ -51,7 +57,7 @@ import {
   type CatSortKey,
 } from "@/stores/book-store"
 
-/** The categories settings page (§8.10): add, edit and restore categories. */
+/** The categories settings page (§8.10): add, edit, delete and restore categories. */
 export function CategorySettings() {
   return (
     <div className="flex flex-col gap-6">
@@ -70,19 +76,10 @@ function AddCategoryForm() {
 
   const [side, setSide] = React.useState<EntryType>("expense")
   const [lineChoice, setLine] = React.useState<string | null>(null)
-  const [rate, setRate] = React.useState("")
+  // Null until picked, so the starting rate can follow the EU choice below.
+  const [rateChoice, setRate] = React.useState<number | null>(null)
   const [eu, setEu] = React.useState<EuPurchase | "">("")
-  /*
-   * The message and the field it is about, so the error line and the
-   * `aria-invalid` on the offending input always agree (§8.10).
-   */
-  const [error, setError] = React.useState<{
-    field: "name" | "rate"
-    message: string
-  } | null>(null)
-
-  const invalid = (field: "name" | "rate") =>
-    error?.field === field ? true : undefined
+  const [error, setError] = React.useState<string | null>(null)
 
   const lineOptions = React.useMemo(
     () => LINES.filter((l) => l.side === side),
@@ -98,23 +95,27 @@ function AddCategoryForm() {
       ? lineChoice
       : (lineOptions[0]?.key ?? "")
 
+  const euPurchase = side === "expense" && eu ? eu : undefined
+  const rate = rateChoice ?? (euPurchase ? GENERAL_RATE : 0)
+
   const submit = () => {
     if (!name.trim()) {
-      setError({ field: "name", message: f.t("settings.nameRequired") })
+      setError(f.t("settings.nameRequired"))
       return
     }
-    const euPurchase = side === "expense" && eu ? eu : undefined
-    const parsed =
-      rate.trim() === "" ? (euPurchase ? GENERAL_RATE : 0) : parseRate(rate)
-    if (parsed == null || !isVatRate(parsed)) {
-      setError({ field: "rate", message: f.t("settings.vatInvalid") })
+    if (categoryNameTaken(useBookStore.getState().cats, name, line)) {
+      setError(
+        f.t("settings.nameTaken", {
+          a: LINE_BY_KEY.get(line)?.account ?? "",
+        })
+      )
       return
     }
     const category: Category = {
       id: `c-${uid()}`,
       line,
       name: name.trim(),
-      vatRate: parsed,
+      vatRate: rate,
       ...(side === "income" ? { kind: "domestic" as const } : {}),
       ...(euPurchase ? { euPurchase } : {}),
       enabled: true,
@@ -123,7 +124,7 @@ function AddCategoryForm() {
     upsertCategory(category)
     toast.add({ title: f.t("settings.categoryAdded", { c: category.name }) })
     setName("")
-    setRate("")
+    setRate(null)
     setEu("")
     setError(null)
   }
@@ -159,13 +160,13 @@ function AddCategoryForm() {
           />
         </Field>
 
-        <Field data-invalid={invalid("name")}>
+        <Field data-invalid={error ? true : undefined}>
           <FieldLabel htmlFor="cat-name">{f.t("common.name")}</FieldLabel>
           <Input
             id="cat-name"
             value={name}
             placeholder={f.t("settings.namePlaceholder")}
-            aria-invalid={invalid("name")}
+            aria-invalid={error ? true : undefined}
             onChange={(e) => {
               setName(e.target.value)
               setError(null)
@@ -174,23 +175,9 @@ function AddCategoryForm() {
           />
         </Field>
 
-        <Field data-invalid={invalid("rate")}>
-          <FieldLabel htmlFor="cat-rate">
-            {f.t("settings.defaultVat")}
-          </FieldLabel>
-          <Input
-            id="cat-rate"
-            inputMode="decimal"
-            value={rate}
-            placeholder="0"
-            className="tabular"
-            aria-invalid={invalid("rate")}
-            onChange={(e) => {
-              setRate(e.target.value)
-              setError(null)
-            }}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-          />
+        <Field>
+          <FieldLabel>{f.t("settings.defaultVat")}</FieldLabel>
+          <DefaultVatSelect value={rate} onChange={setRate} />
         </Field>
 
         {side === "expense" ? (
@@ -212,15 +199,15 @@ function AddCategoryForm() {
         ) : null}
       </FieldGroup>
 
-      <FieldError className="mt-3">{error?.message}</FieldError>
+      <FieldError className="mt-3">{error}</FieldError>
     </Panel>
   )
 }
 
 function CategoryTable() {
   const f = useFormatters()
+  const ctx = useCommandCtx()
   const cats = useBookStore((s) => s.cats)
-  const entries = useBookStore((s) => s.entries)
   const query = useBookStore((s) => s.catQuery)
   const typeFilter = useBookStore((s) => s.catType)
   const sort = useBookStore((s) => s.catSort)
@@ -232,15 +219,7 @@ function CategoryTable() {
   const setPage = useBookStore((s) => s.setCatPage)
   const setSize = useBookStore((s) => s.setCatSize)
   const upsertCategory = useBookStore((s) => s.upsertCategory)
-  const removeCategory = useBookStore((s) => s.removeCategory)
-
-  const recurring = useBookStore((s) => s.recurring)
-  // A monthly template books to its category later, so it counts as using it.
-  const usedIds = React.useMemo(
-    () =>
-      new Set([...usedCategoryIds(entries), ...recurring.map((r) => r.catId)]),
-    [entries, recurring]
-  )
+  const openDialog = useBookStore((s) => s.openDialog)
 
   const rows = React.useMemo(() => {
     const needle = query.trim().toLowerCase()
@@ -326,7 +305,6 @@ function CategoryTable() {
         <TableBody>
           {view.rows.map((cat) => {
             const income = categorySide(cat) === "income"
-            const deletable = cat.custom && !usedIds.has(cat.id)
             return (
               <TableRow key={cat.id}>
                 <TableCell>
@@ -353,18 +331,38 @@ function CategoryTable() {
                 </TableCell>
                 <TableCell>{f.catName(cat)}</TableCell>
                 <TableCell className="text-right">
-                  <RateInput key={cat.vatRate} cat={cat} />
+                  <RateSelect cat={cat} />
                 </TableCell>
                 <TableCell>
-                  {deletable ? (
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={f.t("settings.deleteCategory")}
-                      onClick={() => removeCategory(cat.id)}
-                    >
-                      <Trash2Icon />
-                    </Button>
+                  {/*
+                   * A default keeps its name and line from the chart of accounts
+                   * (§7.6), so unticking it is how it leaves the dropdowns.
+                   */}
+                  {cat.custom ? (
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={f.t("settings.editCategory", {
+                          c: f.catName(cat),
+                        })}
+                        onClick={() =>
+                          openDialog({ kind: "category-edit", id: cat.id })
+                        }
+                      >
+                        <PencilIcon />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={f.t("settings.deleteCategory", {
+                          c: f.catName(cat),
+                        })}
+                        onClick={() => startDeleteCategory(ctx, cat)}
+                      >
+                        <Trash2Icon />
+                      </Button>
+                    </div>
                   ) : null}
                 </TableCell>
               </TableRow>
@@ -385,46 +383,26 @@ function CategoryTable() {
   )
 }
 
-/** Inline default-VAT editor: commits on change, reverts on bad input. */
-function RateInput({ cat }: { cat: Category }) {
-  /*
-   * Keyed on the committed rate by the caller, so a change from elsewhere
-   * remounts this with the right draft rather than syncing it in an effect.
-   */
+/** A row's default VAT. A rate only applies to vouchers added from now on (§4). */
+function RateSelect({ cat }: { cat: Category }) {
   const f = useFormatters()
   const upsertCategory = useBookStore((s) => s.upsertCategory)
-  // §9: a Finnish UI writes the rate with a comma. parseRate takes either.
-  const asText = (rate: number) =>
-    f.lang === "fi" ? String(rate).replace(".", ",") : String(rate)
-  const [draft, setDraft] = React.useState(() => asText(cat.vatRate))
-
-  const commit = () => {
-    const parsed = parseRate(draft)
-    if (parsed == null || !isVatRate(parsed)) {
-      setDraft(asText(cat.vatRate))
-      toast.add({ title: f.t("settings.vatInvalid") })
-      return
-    }
-    if (parsed === cat.vatRate) return
-    upsertCategory({ ...cat, vatRate: parsed })
-    toast.add({
-      title: f.t("settings.vatUpdated", {
-        c: f.catName(cat),
-        r: f.rate(parsed),
-      }),
-    })
-  }
 
   return (
-    <Input
-      value={draft}
-      aria-label={`${f.t("settings.defaultVat")} – ${f.catName(cat)}`}
-      className="tabular ml-auto h-8 w-20 text-right"
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") e.currentTarget.blur()
-        if (e.key === "Escape") setDraft(asText(cat.vatRate))
+    <DefaultVatSelect
+      value={cat.vatRate}
+      label={`${f.t("settings.defaultVat")} – ${f.catName(cat)}`}
+      size="sm"
+      className="tabular ml-auto w-24"
+      onChange={(rate) => {
+        if (rate === cat.vatRate) return
+        upsertCategory({ ...cat, vatRate: rate })
+        toast.add({
+          title: f.t("settings.vatUpdated", {
+            c: f.catName(cat),
+            r: f.rate(rate),
+          }),
+        })
       }}
     />
   )

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { LangProvider } from "@/components/lang-provider"
@@ -42,33 +42,40 @@ describe("a custom category only a template uses", () => {
       entries: [],
       cats: [...defaultCategories(), custom],
       recurring: [template],
+      dialog: { kind: "none" },
       catQuery: "Pilvi",
       catType: "all",
       catPage: 1,
     })
   })
 
-  const deleteButton = () =>
-    screen.queryByRole("button", { name: "Poista luokka" })
-
-  it("cannot be deleted", () => {
+  const clickDelete = () => {
     render(
       <LangProvider lang="fi">
         <CategorySettings />
       </LangProvider>
     )
-    expect(screen.getByText("Pilvipalvelut")).toBeVisible()
-    expect(deleteButton()).toBeNull()
+    fireEvent.click(
+      screen.getByRole("button", { name: "Poista luokka Pilvipalvelut" })
+    )
+  }
+
+  const stored = () =>
+    useBookStore.getState().cats.some((c) => c.id === custom.id)
+
+  it("asks where the template moves before it is deleted", () => {
+    clickDelete()
+    expect(useBookStore.getState().dialog).toEqual({
+      kind: "category-delete",
+      id: custom.id,
+    })
+    expect(stored()).toBe(true)
   })
 
-  it("can be deleted once the template is gone", () => {
+  it("is deleted at once when the template is gone", async () => {
     useBookStore.setState({ recurring: [] })
-    render(
-      <LangProvider lang="fi">
-        <CategorySettings />
-      </LangProvider>
-    )
-    expect(deleteButton()).not.toBeNull()
+    clickDelete()
+    await waitFor(() => expect(stored()).toBe(false))
   })
 
   it("survives restoring the defaults", () => {

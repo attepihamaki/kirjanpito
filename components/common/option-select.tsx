@@ -29,6 +29,7 @@ export function OptionSelect({
   placeholder,
   label,
   invalid,
+  disabled,
   className,
   size,
 }: {
@@ -41,6 +42,7 @@ export function OptionSelect({
   label?: string
   /** Marks the trigger as the field an error line is about. */
   invalid?: boolean
+  disabled?: boolean
   className?: string
   size?: "sm" | "default"
 }) {
@@ -48,6 +50,7 @@ export function OptionSelect({
     <Select
       items={Object.fromEntries(options.map((o) => [o.value, o.label]))}
       value={value}
+      disabled={disabled}
       onValueChange={(next) => next && onChange(next)}
     >
       <SelectTrigger

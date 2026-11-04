@@ -1,0 +1,281 @@
+"use client"
+
+import * as React from "react"
+
+import { OptionSelect } from "@/components/common/option-select"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { toast } from "@/components/ui/toast"
+import { useFormatters } from "@/components/lang-provider"
+import { useCommandCtx } from "@/hooks/use-commands"
+import { deleteCategory } from "@/lib/commands/category-commands"
+import { LINE_BY_KEY, LINES } from "@/lib/domain/accounts"
+import { categoryNameTaken } from "@/lib/domain/category-names"
+import { todayIso } from "@/lib/domain/dates"
+import type { Category } from "@/lib/domain/types"
+import { validRates } from "@/lib/domain/vat-rates"
+import { useBookStore } from "@/stores/book-store"
+import {
+  categoriesToMoveTo,
+  categorySide,
+  compareCategories,
+} from "@/stores/selectors"
+
+/**
+ * A category's default VAT: the rates in force today. A rate the category
+ * already holds stays on the list, so opening an older one does not change it.
+ */
+export function DefaultVatSelect({
+  value,
+  onChange,
+  label,
+  size,
+  className,
+}: {
+  value: number
+  onChange: (rate: number) => void
+  /** Accessible name, where one label is not enough for the page. */
+  label?: string
+  size?: "sm" | "default"
+  className?: string
+}) {
+  const f = useFormatters()
+  const valid = validRates(todayIso())
+  const rates = valid.includes(value) ? valid : [...valid, value]
+  return (
+    <OptionSelect
+      options={rates.map((rate) => ({
+        value: String(rate),
+        label: f.rate(rate),
+      }))}
+      value={String(value)}
+      onChange={(next) => onChange(Number(next))}
+      label={label ?? f.t("settings.defaultVat")}
+      size={size}
+      className={className}
+    />
+  )
+}
+
+/** The dialogs of a custom category's row on Asetukset, Luokat (§8.10). */
+export function CategoryDialogs() {
+  const dialog = useBookStore((s) => s.dialog)
+  const closeDialog = useBookStore((s) => s.closeDialog)
+  const cat = useBookStore((s) =>
+    dialog.kind === "category-edit" || dialog.kind === "category-delete"
+      ? s.cats.find((c) => c.id === dialog.id)
+      : undefined
+  )
+  if (!cat) return null
+  return dialog.kind === "category-edit" ? (
+    <EditCategoryDialog key={cat.id} cat={cat} onClose={closeDialog} />
+  ) : (
+    <DeleteCategoryDialog key={cat.id} cat={cat} onClose={closeDialog} />
+  )
+}
+
+function EditCategoryDialog({
+  cat,
+  onClose,
+}: {
+  cat: Category
+  onClose: () => void
+}) {
+  const f = useFormatters()
+  const upsertCategory = useBookStore((s) => s.upsertCategory)
+  /*
+   * A voucher on this category reports through its line, so changing the line
+   * would move figures past the period locks of §8.11. Deleting the category
+   * moves its vouchers through those checks instead.
+   */
+  const lineFixed = useBookStore((s) =>
+    s.entries.some((e) => e.catId === cat.id)
+  )
+
+  const [name, setName] = React.useState(cat.name)
+  const [line, setLine] = React.useState(cat.line)
+  const [rate, setRate] = React.useState(cat.vatRate)
+  const [error, setError] = React.useState<string | null>(null)
+
+  const side = categorySide(cat)
+  const lineOptions = LINES.filter((l) => l.side === side).map((l) => ({
+    value: l.key,
+    label: `${l.account} ${f.lineName(l)}`,
+  }))
+
+  const submit = () => {
+    const trimmed = name.trim()
+    if (!trimmed) {
+      setError(f.t("settings.nameRequired"))
+      return
+    }
+    const cats = useBookStore.getState().cats
+    if (categoryNameTaken(cats, trimmed, line, cat.id)) {
+      setError(
+        f.t("settings.nameTaken", {
+          a: LINE_BY_KEY.get(line)?.account ?? "",
+        })
+      )
+      return
+    }
+    upsertCategory({ ...cat, name: trimmed, line, vatRate: rate })
+    toast.add({ title: f.t("settings.categoryUpdated", { c: trimmed }) })
+    onClose()
+  }
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{f.t("settings.editCategoryTitle")}</DialogTitle>
+        </DialogHeader>
+
+        <div className="flex flex-col gap-5">
+          <Field data-invalid={error ? true : undefined}>
+            <FieldLabel htmlFor="cat-edit-name">
+              {f.t("common.name")}
+            </FieldLabel>
+            <Input
+              id="cat-edit-name"
+              value={name}
+              aria-invalid={error ? true : undefined}
+              onChange={(e) => {
+                setName(e.target.value)
+                setError(null)
+              }}
+              onKeyDown={(e) => e.key === "Enter" && submit()}
+            />
+          </Field>
+
+          <Field>
+            <FieldLabel>{f.t("settings.line")}</FieldLabel>
+            <OptionSelect
+              options={lineOptions}
+              value={line}
+              onChange={setLine}
+              label={f.t("settings.line")}
+              disabled={lineFixed}
+            />
+            {lineFixed ? (
+              <FieldDescription>{f.t("settings.lineLocked")}</FieldDescription>
+            ) : null}
+          </Field>
+
+          <Field>
+            <FieldLabel>{f.t("settings.defaultVat")}</FieldLabel>
+            <DefaultVatSelect value={rate} onChange={setRate} />
+          </Field>
+
+          <FieldError>{error}</FieldError>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            {f.t("common.cancel")}
+          </Button>
+          <Button onClick={submit}>{f.t("common.save")}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function DeleteCategoryDialog({
+  cat,
+  onClose,
+}: {
+  cat: Category
+  onClose: () => void
+}) {
+  const f = useFormatters()
+  const ctx = useCommandCtx()
+  const cats = useBookStore((s) => s.cats)
+  const entries = useBookStore((s) => s.entries)
+  const recurring = useBookStore((s) => s.recurring)
+
+  const targets = React.useMemo(
+    () =>
+      categoriesToMoveTo(
+        cats,
+        categorySide(cat),
+        !!cat.euPurchase,
+        cat.id
+      ).sort((a, b) =>
+        compareCategories(a, b, (x, y) =>
+          f.collator.compare(f.catName(x), f.catName(y))
+        )
+      ),
+    [cats, cat, f]
+  )
+  const [targetId, setTargetId] = React.useState("")
+  const target = targets.find((c) => c.id === targetId)
+
+  const submit = async () => {
+    if (!target) return
+    const label = f.catLabel(target)
+    if (await deleteCategory(ctx, cat, { cat: target, label })) onClose()
+  }
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {f.t("settings.deleteCategoryTitle", { c: cat.name })}
+          </DialogTitle>
+          <DialogDescription>
+            {f.t("settings.deleteCategoryUses", {
+              v: entries.filter((e) => e.catId === cat.id).length,
+              r: recurring.filter((r) => r.catId === cat.id).length,
+            })}
+          </DialogDescription>
+        </DialogHeader>
+
+        {targets.length > 0 ? (
+          <Field>
+            <FieldLabel>{f.t("settings.moveTo")}</FieldLabel>
+            <OptionSelect
+              options={targets.map((c) => ({
+                value: c.id,
+                label: f.catLabel(c),
+              }))}
+              value={targetId}
+              onChange={setTargetId}
+              placeholder={f.t("settings.moveTo")}
+              label={f.t("settings.moveTo")}
+            />
+          </Field>
+        ) : (
+          <FieldDescription>{f.t("settings.noMoveTarget")}</FieldDescription>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            {f.t("common.cancel")}
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={!target}
+            onClick={() => void submit()}
+          >
+            {f.t("settings.deleteCategoryConfirm")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}

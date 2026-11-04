@@ -1,3 +1,5 @@
+import { RATES } from "@/lib/domain/accounts"
+
 /**
  * When Finland's VAT rates changed (§5), so an entry's rate can be checked
  * against its date.
@@ -60,6 +62,11 @@ export function rateMismatch(rate: number, date: string): RateMismatch | null {
     }
   }
   return null
+}
+
+/** The rates in force on `date`: RATES without those not yet or no longer valid. */
+export function validRates(date: string): number[] {
+  return RATES.filter((rate) => rateMismatch(rate, date) === null)
 }
 
 function dayBefore(iso: string): string {
