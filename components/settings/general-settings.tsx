@@ -1,6 +1,6 @@
 "use client"
 
-import { ListOrderedIcon, Trash2Icon } from "lucide-react"
+import { CalendarPlusIcon, ListOrderedIcon, Trash2Icon } from "lucide-react"
 import * as React from "react"
 
 import { BusinessSetting } from "@/components/settings/business-setting"
@@ -13,6 +13,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { useCanSaveToFile } from "@/hooks/use-save-book"
+import { useToday } from "@/hooks/use-today"
+import { newYearTarget } from "@/lib/domain/new-year"
 import { clearAllEntries, renumberVouchers } from "@/lib/commands/book-commands"
 import type { Lang } from "@/lib/domain/types"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
@@ -30,6 +32,7 @@ export function GeneralSettings() {
       <BookStartSetting />
       <AutosaveSetting />
       <VoucherNumbers />
+      <NewYear />
       <ClearEntries />
     </div>
   )
@@ -296,6 +299,33 @@ function VoucherNumbers() {
         ? f.t("settings.vouchersInOrder", { year })
         : f.t("settings.vouchersOutOfOrder", { year, n: changes })}
     </Panel>
+  )
+}
+
+/**
+ * The way into opening a year (§8.14), for the year `newYearTarget` names:
+ * the current one, or the next from November.
+ */
+function NewYear() {
+  const f = useFormatters()
+  const today = useToday()
+  const openDialog = useBookStore((s) => s.openDialog)
+  const year = newYearTarget(today)
+
+  return (
+    <Panel
+      title={f.t("newYear.panelTitle")}
+      description={f.t("newYear.panelHint", { y: year })}
+      footer={
+        <Button
+          variant="outline"
+          onClick={() => openDialog({ kind: "new-year", year })}
+        >
+          <CalendarPlusIcon data-icon="inline-start" />
+          {f.t("newYear.open", { y: year })}
+        </Button>
+      }
+    />
   )
 }
 

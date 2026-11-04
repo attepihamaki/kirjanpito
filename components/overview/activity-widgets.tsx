@@ -38,6 +38,7 @@ import { ENTRY_CHECKS, flaggedEntryIds } from "@/lib/domain/entry-checks"
 import { APP_ROUTES } from "@/lib/site"
 import { cn } from "@/lib/utils"
 import { toast } from "@/components/ui/toast"
+import { newYearDue, newYearTarget } from "@/lib/domain/new-year"
 import { retentionDates, yearsToArchive } from "@/lib/domain/retention"
 import { bookLimits } from "@/lib/domain/book-limits"
 import { EMPTY_YEAR_END, form5Balance } from "@/lib/domain/form5-balance"
@@ -471,6 +472,29 @@ export function ChecksWidget() {
       tone: "info",
       title: f.t("overview.emptyMonths", { m: emptyMonths.join(", ") }),
       sub: f.t("overview.emptyMonthsSub"),
+    })
+  }
+
+  // The year being prepared, whichever year is selected: it is a job for today.
+  const nextYear = newYearTarget(data.today)
+  const previousHasEntries = data.entries.some((e) =>
+    e.date.startsWith(`${nextYear - 1}-`)
+  )
+  if (newYearDue(yearEnds, data.today, previousHasEntries)) {
+    items.push({
+      key: "newYear",
+      tone: "info",
+      title: f.t("newYear.dueTitle", { y: nextYear }),
+      sub: f.t("newYear.dueSub"),
+      action: (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => openDialog({ kind: "new-year", year: nextYear })}
+        >
+          {f.t("newYear.start")}
+        </Button>
+      ),
     })
   }
 

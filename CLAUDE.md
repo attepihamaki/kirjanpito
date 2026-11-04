@@ -948,6 +948,17 @@ The app's front page, at `/app/overview`. `/app`, "Jatka kirjanpitoa", opening a
 - **Empty book**: no widgets and no edit button, but the two ways in and three short steps.
 - `test/overview.test.tsx` covers the §10 result, the countdown, filing and undoing, the checklist, hiding and moving widgets, and the empty state.
 
+### 8.14 Opening a year (Vuoden aloitus)
+
+`components/new-year/new-year-dialog.tsx` (`DialogState` kind `new-year`, with the year to open) and `lib/domain/new-year.ts`, pure and tested. **The year to open is not the selected one**: it is the current year until 31 October and the next from 1 November (`newYearTarget`), so on 4.11.2026 it is 2027. Asetukset, Yleiset has a panel "Uusi vuosi" with the button at any time. The overview's checklist has an information row from November to February while the year before has entries and the year has no year-end figures (`newYearDue`).
+
+Most of a new year's starting point carries over without any action, and the first step only shows it: the asset pool's opening balance (§8.8), the loans outstanding (§6.8), the open receivables and payables on 31.12. (they count in the year they are paid, §6.3), the year before's result, and whether its Form 5 is marked as filed. Templates have no end date (§8.5) and voucher numbers restart at 1 (§4).
+
+- **Figures.** What does not carry is the year-end figures typed in on Varat ja velat (§8.8). The second step lists last year's and this year's side by side, and "Kopioi" copies last year's as this year's starting values through `setYearEnd`, so the book becomes dirty. It asks first when the year already has figures, and it is disabled for a year whose Form 5 is marked as filed (§8.11) or when last year has none.
+- **Recurring.** The third step lists the templates with an editable amount (`RecurringAmountInput`, shared with Asetukset, Toistuvat) and opens the recurring dialog for the current month of the year, or January, to book what is due (§8.5).
+- Nothing new is stored in `settings.json`, and the stock change is not booked here.
+- `test/new-year.test.tsx` covers the dialog and `lib/domain/new-year.test.ts` the figures.
+
 ---
 
 ## 9. Internationalisation and formatting

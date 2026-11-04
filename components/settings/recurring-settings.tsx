@@ -22,6 +22,37 @@ import { indexCategories } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
 
 /**
+ * A template's amount, committed on leaving the field. A value that makes no
+ * sense puts the old one back.
+ */
+export function RecurringAmountInput({
+  template: r,
+}: {
+  template: RecurringEntry
+}) {
+  const f = useFormatters()
+  const upsertRecurring = useBookStore((s) => s.upsertRecurring)
+  return (
+    <Input
+      key={r.amount}
+      aria-label={`${f.t("recurring.amount")}: ${r.description}`}
+      inputMode="decimal"
+      className="tabular ml-auto w-28 text-right"
+      defaultValue={formatMoneyPlain(r.amount)}
+      onBlur={(event) => {
+        const amount = parseAmount(event.target.value)
+        if (amount != null && amount !== 0 && amount !== r.amount) {
+          upsertRecurring({ ...r, amount })
+        }
+        event.target.value = formatMoneyPlain(
+          amount != null && amount !== 0 ? amount : r.amount
+        )
+      }}
+    />
+  )
+}
+
+/**
  * The monthly templates (§8.5). One is made from the entry dialog; here its
  * amount and day can change, for when the rent goes up. Each input commits on
  * leaving it, and a value that makes no sense puts the old one back.
@@ -81,24 +112,7 @@ export function RecurringSettings() {
                   {categoryLabel(catMap.get(r.catId), f.lang)}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Input
-                    key={r.amount}
-                    aria-label={`${f.t("recurring.amount")}: ${r.description}`}
-                    inputMode="decimal"
-                    className="tabular ml-auto w-28 text-right"
-                    defaultValue={formatMoneyPlain(r.amount)}
-                    onBlur={(event) => {
-                      const amount = parseAmount(event.target.value)
-                      if (amount != null && amount !== 0) {
-                        if (amount !== r.amount) {
-                          upsertRecurring({ ...r, amount })
-                        }
-                      }
-                      event.target.value = formatMoneyPlain(
-                        amount != null && amount !== 0 ? amount : r.amount
-                      )
-                    }}
-                  />
+                  <RecurringAmountInput template={r} />
                 </TableCell>
                 <TableCell className="text-right">
                   <Input

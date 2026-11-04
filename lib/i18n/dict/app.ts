@@ -1215,10 +1215,7 @@ export const APP_DICT = {
   ],
   "vat.returnButton": ["Ilmoita OmaVerossa", "Report in OmaVero"],
   "vat.returnOpenFiled": ["Ilmoitettu", "Filed"],
-  "vat.returnDialogTitle": [
-    "Arvonlisäveroilmoitus: {p}",
-    "VAT return: {p}",
-  ],
+  "vat.returnDialogTitle": ["Arvonlisäveroilmoitus: {p}", "VAT return: {p}"],
   "vat.returnDialogIntro": [
     "Käy läpi tarkistukset, kopioi summat OmaVeroon ja merkitse kausi ilmoitetuksi.",
     "Go through the checks, copy the amounts into OmaVero and mark the period as filed.",
@@ -1236,10 +1233,7 @@ export const APP_DICT = {
     "Ei huomautettavaa. Kausi on valmis ilmoitettavaksi.",
     "Nothing to flag. The period is ready to report.",
   ],
-  "vat.returnOngoing": [
-    "{p} on vielä kesken",
-    "{p} is still ongoing",
-  ],
+  "vat.returnOngoing": ["{p} on vielä kesken", "{p} is still ongoing"],
   "vat.returnOngoingSub": [
     "Kauden voi merkitä ilmoitetuksi vasta, kun se on päättynyt. Eräpäivä on {d}. Summat näkyvät jo nyt, mutta ne voivat muuttua.",
     "A period can be marked as filed only once it has ended. It is due {d}. The amounts are visible already, but they may change.",
@@ -1375,10 +1369,7 @@ export const APP_DICT = {
     "Merkitse ilmoitetuksi ja lukitse",
     "Mark as filed and lock",
   ],
-  "statement.yearEndLocked": [
-    "Vuosi {y} on lukittu.",
-    "{y} is locked.",
-  ],
+  "statement.yearEndLocked": ["Vuosi {y} on lukittu.", "{y} is locked."],
   "statement.form5Title": [
     "Lomake 5, elinkeinotoiminnan veroilmoitus",
     "Form 5, business tax return",
@@ -2182,4 +2173,90 @@ export const APP_DICT = {
   ],
   "viewer.receiptOf": ["Liite {i} / {n}", "Attachment {i} of {n}"],
   "viewer.saved": ["Tallennettu: {f}", "Saved: {f}"],
+
+  "newYear.title": ["Vuoden {y} aloitus", "Opening {y}"],
+  "newYear.intro": [
+    "Katso, mitä edellisestä vuodesta siirtyy uuteen, kopioi tilinpäätöslukujen lähtöarvot ja tarkista toistuvat tositteet.",
+    "See what carries over from the year before, copy the year-end figures as starting values and review the recurring vouchers.",
+  ],
+  "newYear.open": ["Aloita vuosi {y}", "Open year {y}"],
+  "newYear.panelTitle": ["Uusi vuosi", "New year"],
+  "newYear.panelHint": [
+    "Katso, mitä vuodelle {y} siirtyy, kopioi tilinpäätöslukujen lähtöarvot ja tarkista toistuvat tositteet. Ehdotettu vuosi vaihtuu seuraavaan marraskuussa.",
+    "See what carries into {y}, copy the year-end figures and review the recurring vouchers. The suggested year moves on in November.",
+  ],
+  "newYear.steps": ["Vaiheet", "Steps"],
+  "newYear.stepCarried": ["Siirtyy", "Carried over"],
+  "newYear.stepFigures": ["Luvut", "Figures"],
+  "newYear.stepRecurring": ["Toistuvat", "Recurring"],
+  "newYear.noPrevious": [
+    "Vuodelta {p} ei ole tositteita, joten mitään ei siirry. Voit silti syöttää luvut ja toistuvat tositteet.",
+    "There are no vouchers for {p}, so nothing carries over. You can still enter the figures and recurring vouchers.",
+  ],
+  "newYear.carriedNote": [
+    "Nämä siirtyvät itsestään, eikä niille tarvitse tehdä mitään. Tositenumerointi alkaa myös alusta.",
+    "These carry over by themselves and need nothing from you. Voucher numbering starts again at 1 as well.",
+  ],
+  "newYear.previousResult": ["Vuoden {p} tulos", "Result for {p}"],
+  "newYear.previousResultSub": [
+    "Maksupäivän mukaan, kuten tuloslaskelmassa.",
+    "By payment date, as on the income statement.",
+  ],
+  "newYear.assetPool": ["Poistamaton jäännös", "Undepreciated balance"],
+  "newYear.assetPoolSub": [
+    "Koneet ja kalusto, alkusaldo vuodelle {y}.",
+    "Machinery and equipment, the opening balance for {y}.",
+  ],
+  "newYear.loans": ["Lainat", "Loans"],
+  "newYear.loansSub": ["Jäljellä {d}.", "Outstanding on {d}."],
+  "newYear.openItems": ["Avoimet tositteet", "Open vouchers"],
+  "newYear.openItemsSub": [
+    "Saamisia {r}, velkoja {p}. Ne kirjautuvat sille vuodelle, jona ne maksetaan.",
+    "Receivables {r}, payables {p}. They count in the year they are paid.",
+  ],
+  "newYear.filed": ["Vuoden {p} lomake 5", "Form 5 for {p}"],
+  "newYear.filedYes": ["Merkitty ilmoitetuksi {d}.", "Marked as filed on {d}."],
+  "newYear.filedNo": [
+    "Ei ole vielä merkitty ilmoitetuksi. Edellisen vuoden tositteet ovat vielä muokattavissa.",
+    "Not marked as filed yet. The year’s vouchers can still be edited.",
+  ],
+  "newYear.figuresHint": [
+    "Varat ja velat -luvut kirjataan vuosittain. Kopioi edellisen vuoden luvut lähtöarvoiksi ja muuta ne, kun tilanne vuoden lopussa on selvä.",
+    "The year-end figures are entered year by year. Copy last year’s as starting values and change them once the position at year end is clear.",
+  ],
+  "newYear.copy": ["Kopioi vuoden {p} luvut", "Copy the figures for {p}"],
+  "newYear.copyNone": [
+    "Vuodelle {p} ei ole syötetty lukuja, joten kopioitavaa ei ole.",
+    "No figures were entered for {p}, so there is nothing to copy.",
+  ],
+  "newYear.copyLocked": [
+    "Vuoden {y} lomake 5 on merkitty ilmoitetuksi, joten luvut ovat lukittuja.",
+    "The Form 5 for {y} is marked as filed, so the figures are locked.",
+  ],
+  "newYear.copyTitle": ["Korvataanko luvut?", "Replace the figures?"],
+  "newYear.copyMessage": [
+    "Vuodelle {y} on jo syötetty lukuja. Kopiointi korvaa ne vuoden {p} luvuilla.",
+    "Figures are already entered for {y}. Copying replaces them with those of {p}.",
+  ],
+  "newYear.copyConfirm": ["Korvaa", "Replace"],
+  "newYear.copied": [
+    "Luvut kopioitu vuodelta {p}.",
+    "Figures copied from {p}.",
+  ],
+  "newYear.recurringHint": [
+    "Muuta summat, jotka muuttuvat vuodenvaihteessa, esimerkiksi vuokra tai YEL. Mitään ei kirjata ennen kuin lisäät tositteet.",
+    "Change the amounts that move at the new year, such as rent or YEL. Nothing is booked until you add the vouchers.",
+  ],
+  "newYear.recurringEmpty": [
+    "Toistuvia tositteita ei ole. Voit tehdä sellaisen tositteen muokkauksessa.",
+    "There are no recurring vouchers. You can make one from the entry dialog.",
+  ],
+  "newYear.recurringBook": ["Lisää {m}", "Add {m}"],
+  "newYear.done": ["Valmis", "Done"],
+  "newYear.start": ["Aloita", "Start"],
+  "newYear.dueTitle": ["Aloita vuosi {y}", "Open year {y}"],
+  "newYear.dueSub": [
+    "Kopioi edellisen vuoden luvut ja tarkista toistuvat tositteet.",
+    "Copy last year’s figures and review the recurring vouchers.",
+  ],
 } as const satisfies Dict

@@ -159,6 +159,8 @@ export type DialogState =
   /** The selected year's checks, Form 5 values and lock (§8.8). */
   | { kind: "year-end" }
   | { kind: "vat-return" }
+  /** What carries into `year`, its starting figures and templates (§8.14). */
+  | { kind: "new-year"; year: number }
   /** Add a month's recurring entries (§8.5). `month` is `"2026-10"`. */
   | { kind: "recurring"; month: string }
   /** Change a custom category's name, line or default VAT (§8.10). */
