@@ -766,6 +766,10 @@ export const APP_DICT = {
     "Tuloslaskelman rivit ovat täysimääräisiä. Lomake 5 laskee niistä osan riveillä 319, 321 ja 341.",
     "The income statement’s lines are in full. Form 5 counts part of lines 319, 321 and 341.",
   ],
+  "ledger.closingNote": [
+    "Jos toiminta loppuu, aineisto säilytetään samoin ajoin. Lopettamisilmoituksessa (Y6-lomake YTJ:ssä) ilmoitetaan, kuka sitä säilyttää ja missä (kirjanpitolaki 2:10).",
+    "If the business closes, the material is kept for the same periods. The closure notice (form Y6 in YTJ) names who keeps it and where (Accounting Act 2:10).",
+  ],
   "ledger.retention": [
     "Säilytä päiväkirja ja pääkirja vähintään {b} asti (10 vuotta tilikauden päättymisestä) ja tositteet vähintään {v} asti (6 vuotta sen vuoden lopusta, jona tilikausi päättyi). Kirjanpitolaki 2:10.",
     "Keep the journal and the general ledger until at least {b} (10 years from the end of the financial year), and the vouchers until at least {v} (6 years from the end of the year in which it ended). Accounting Act 2:10.",

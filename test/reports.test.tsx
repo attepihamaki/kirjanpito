@@ -4,7 +4,11 @@ import { fireEvent, render, screen, within } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { LangProvider } from "@/components/lang-provider"
-import { GeneralLedgerView, JournalView } from "@/components/ledger/books-view"
+import {
+  AccountListView,
+  GeneralLedgerView,
+  JournalView,
+} from "@/components/ledger/books-view"
 import { Form5View } from "@/components/statement/form5-view"
 import { StatementView } from "@/components/statement/statement-view"
 import { VatReturnView } from "@/components/vat/vat-return-view"
@@ -428,6 +432,11 @@ describe("journal and general ledger (§8.4)", () => {
     expect(
       screen.getByRole("columnheader", { name: /343s*Vuokrat/ })
     ).toBeInTheDocument()
+  })
+
+  it("ends the account list with what to do when the business closes", () => {
+    mount(<AccountListView />)
+    expect(screen.getByText(/Y6-lomake YTJ:ssä/)).toBeInTheDocument()
   })
 
   it("says so when the year has no entries", () => {

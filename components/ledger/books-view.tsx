@@ -571,6 +571,9 @@ export function AccountListView() {
           </div>
         ))}
       </dl>
+      <p className="mt-6 text-sm text-muted-foreground">
+        {f.t("ledger.closingNote")}
+      </p>
     </ReportPage>
   )
 }

@@ -176,6 +176,14 @@ export const LANDING_DICT = {
     "Tositteet säilyvät tässä selaimessa, kunnes suljet tiedoston tai tyhjennät selaimen tiedot. Tallenna työsi tiedostoon säännöllisesti, niin kirjanpitosi on aina tallessa. Chromessa ja Edgessä sovellus kirjoittaa suoraan avaamaasi tiedostoon; muissa selaimissa lataat kopion. Tiedostoon kulkee myös muutosloki, joka kertoo sovelluksen käytöstä, mutta ei todista, ettei tiedostoa ole muokattu muuten.",
     "Vouchers stay in this browser until you close the file or clear your browser data. Save your work to a file regularly so your bookkeeping is always safe. In Chrome and Edge the app writes straight back to the file you opened; in other browsers you download a copy. The file also carries a change log, which records use of the app but does not prove the file was not edited in other ways.",
   ],
+  "landing.q5": [
+    "Mitä kirjanpidolle tapahtuu, jos lopetan toiminnan?",
+    "What happens to the books if I close the business?",
+  ],
+  "landing.a5": [
+    "Kirjanpito on säilytettävä samat ajat kuin toiminnan aikana: kirjanpidot 10 vuotta ja tositteet 6 vuotta. Lopettamisilmoituksessa (Y6-lomake YTJ:ssä) ilmoitetaan, kuka kirjanpitoaineistoa säilyttää ja missä (kirjanpitolaki 2:10). Tallenna viimeinen tiedosto ja pidä siitä kopio, jota et enää muokkaa.",
+    "The books must be kept as long as while trading: the books 10 years and the vouchers 6 years. The closure notice (form Y6 in YTJ) names who keeps the bookkeeping material and where (Accounting Act 2:10). Save the last file and keep a copy of it that you no longer edit.",
+  ],
 
   "landing.endTitle": [
     "Aloita tämän kuun tositteista.",

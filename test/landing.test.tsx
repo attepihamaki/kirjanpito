@@ -56,6 +56,22 @@ describe("landing page", () => {
   })
 })
 
+describe("the FAQ", () => {
+  it("says who keeps the books when the business closes (KPL 2:10)", async () => {
+    const user = userEvent.setup()
+    useBookStore.setState({ hydrated: true, open: false })
+    useLangStore.setState({ hydrated: true, lang: "fi" })
+    render(<LandingPage />)
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Mitä kirjanpidolle tapahtuu, jos lopetan toiminnan?",
+      })
+    )
+    expect(await screen.findByText(/Y6-lomake YTJ:ssä/)).toBeInTheDocument()
+  })
+})
+
 describe("the document title (§9)", () => {
   it("follows the language, and comes back", () => {
     document.title = "Kirjanpito"
