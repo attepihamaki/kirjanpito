@@ -278,9 +278,16 @@ async function importZip(
   let missing = 0
 
   const entries: Entry[] = []
+  /* A path two entries list is stored once and both point at the same blob. */
+  const stored = new Map<string, Attachment>()
   for (const { paths, ...entry } of result.entries) {
     const atts: Attachment[] = []
     for (const path of paths) {
+      const seen = stored.get(path)
+      if (seen) {
+        atts.push({ ...seen })
+        continue
+      }
       const bytes = canStore ? await unpacked.readReceipt(path) : null
       if (!bytes) {
         missing += 1
@@ -297,7 +304,9 @@ async function importZip(
       const blob = new Blob([bytes as BlobPart], { type })
       try {
         await putReceipt(id, blob)
-        atts.push({ id, name, type, size: blob.size })
+        const att: Attachment = { id, name, type, size: blob.size }
+        stored.set(path, att)
+        atts.push(att)
         imported += 1
       } catch {
         missing += 1

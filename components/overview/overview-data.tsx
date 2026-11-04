@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-import { monthOf, todayIso, yearOf } from "@/lib/domain/dates"
+import { monthOf, yearOf } from "@/lib/domain/dates"
 import {
   incomeStatement,
   type IncomeStatement,
@@ -32,6 +32,7 @@ import {
   type VatPeriod,
 } from "@/lib/domain/vat-deadline"
 import { useTaxBasisEntries } from "@/hooks/use-tax-basis"
+import { useToday } from "@/hooks/use-today"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -75,7 +76,7 @@ export function OverviewDataProvider({
   const bookStart = useBookStore((s) => s.bookStart)
   const vatFiled = useBookStore((s) => s.vatFiled)
   const basis = useTaxBasisEntries()
-  const today = todayIso()
+  const today = useToday()
 
   const value = React.useMemo<OverviewData>(() => {
     const catMap = indexCategories(cats)

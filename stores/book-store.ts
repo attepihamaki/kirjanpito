@@ -20,6 +20,7 @@ import {
   type OverviewWidget,
 } from "@/lib/domain/overview-layout"
 import {
+  capChangeLog,
   entryChanges,
   relinkChangeLog,
   type ChangeRecord,
@@ -438,14 +439,12 @@ export interface BookActions {
 
 export type BookStore = BookState & BookActions
 
-const CURRENT_YEAR = new Date().getFullYear()
-
 function initialState(): BookState {
   return {
     open: false,
     entries: [],
     cats: defaultCategories(),
-    year: CURRENT_YEAR,
+    year: new Date().getFullYear(),
     dirty: false,
     fileName: null,
     lastMode: "gross",
@@ -649,10 +648,10 @@ function withLog(
   const at = new Date().toISOString()
   return {
     entries,
-    changeLog: [
+    changeLog: capChangeLog([
       ...state.changeLog,
       ...entryChanges(state.entries, entries, at, kind),
-    ],
+    ]),
   }
 }
 

@@ -13,7 +13,7 @@ import {
   vatPeriods,
   type VatPeriodStatus,
 } from "@/lib/domain/vat-deadline"
-import { todayIso } from "@/lib/domain/dates"
+import { useToday } from "@/hooks/use-today"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -30,7 +30,7 @@ export function useVatPeriod() {
   const picked = useBookStore((s) => s.vatIndex)
   const bookStart = useBookStore((s) => s.bookStart)
   const vatFiled = useBookStore((s) => s.vatFiled)
-  const today = todayIso()
+  const today = useToday()
   /*
    * One index for the title, the figures and the filed mark, so they can never
    * be about different periods.

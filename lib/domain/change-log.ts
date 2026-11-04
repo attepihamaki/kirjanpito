@@ -99,6 +99,33 @@ export function relinkChangeLog(
   })
 }
 
+/** The most records the log keeps (the book's blob in localStorage holds it). */
+export const MAX_LOG_RECORDS = 5000
+
+/**
+ * The log cut to `max` records. Lock, unlock and import records are never
+ * dropped, since they say why a period is closed. The oldest add, edit, delete
+ * and restore records go first.
+ */
+export function capChangeLog(
+  log: readonly ChangeRecord[],
+  max: number = MAX_LOG_RECORDS
+): ChangeRecord[] {
+  let excess = log.length - max
+  if (excess <= 0) return log as ChangeRecord[]
+  const out: ChangeRecord[] = []
+  for (const r of log) {
+    const keep =
+      excess <= 0 ||
+      r.action === "lock" ||
+      r.action === "unlock" ||
+      r.action === "import"
+    if (keep) out.push(r)
+    else excess -= 1
+  }
+  return out
+}
+
 function subject(
   e: Entry
 ): Pick<ChangeRecord, "entryId" | "voucher" | "date" | "description"> {

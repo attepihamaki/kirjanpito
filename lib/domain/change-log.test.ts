@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  capChangeLog,
   entryChanges,
   relinkChangeLog,
   type ChangeRecord,
@@ -137,5 +138,24 @@ describe("relinkChangeLog", () => {
     ]
     const relinked = relinkChangeLog(log, [entry({ id: "new" })])
     expect(relinked.map((r) => r.entryId)).toEqual(["gone", "gone"])
+  })
+})
+
+describe("capChangeLog", () => {
+  const rec = (action: ChangeRecord["action"], n: number): ChangeRecord => ({
+    at: AT,
+    action,
+    voucher: n,
+  })
+
+  it("drops the oldest edits first and keeps lock records", () => {
+    const log = [rec("lock", 0), rec("add", 1), rec("edit", 2), rec("add", 3)]
+    const out = capChangeLog(log, 3)
+    expect(out.map((r) => r.voucher)).toEqual([0, 2, 3])
+  })
+
+  it("leaves a short log alone", () => {
+    const log = [rec("add", 1)]
+    expect(capChangeLog(log, 5)).toBe(log)
   })
 })

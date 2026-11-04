@@ -102,7 +102,7 @@ function matchesQuery(
   const cat = cats.get(e.catId)
   const name = cat ? categoryName(cat, lang) : ""
   return (
-    String(e.voucher) === needle ||
+    (e.voucher !== undefined && String(e.voucher) === needle) ||
     e.description.toLowerCase().includes(needle) ||
     name.toLowerCase().includes(needle)
   )
@@ -125,9 +125,12 @@ export function filterAndSortEntries(
   })
 
   const { key, dir } = filters.sort ?? LEDGER_SORT_DEFAULT
+  // One value per entry, not two per comparison.
+  const values = new Map<Entry, string | number>()
+  for (const e of filtered) values.set(e, ledgerValue(e, key, cats, lang))
   return filtered.sort((a, b) => {
-    const av = ledgerValue(a, key, cats, lang)
-    const bv = ledgerValue(b, key, cats, lang)
+    const av = values.get(a)!
+    const bv = values.get(b)!
     const cmp =
       typeof av === "number" && typeof bv === "number"
         ? av - bv
