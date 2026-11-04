@@ -37,6 +37,30 @@ export const SITE_URL = (
 export const INDEXABLE = false
 
 /**
+ * What a page may load and where it may send data. The bookkeeping stays in the
+ * browser (§1), so `connect-src` and `form-action` hold the app to that even if
+ * a script gets in.
+ *
+ * It goes out as a meta tag, because GitHub Pages cannot set headers. That rules
+ * out `frame-ancestors`, which browsers ignore in a meta tag. `'unsafe-inline'`
+ * stays on scripts because a static export has no per-request nonce for Next's
+ * inline bootstrap, and on styles because components set inline styles.
+ * Thumbnails are `data:` and `blob:` images, and pdf.js loads fonts as `data:`.
+ */
+export const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  "connect-src 'self'",
+  "worker-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'none'",
+].join("; ")
+
+/**
  * The landing page — the one indexed document.
  *
  * There is no per-language URL. Only Finnish is indexed, so the landing is

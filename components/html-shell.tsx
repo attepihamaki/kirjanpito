@@ -3,6 +3,7 @@ import { Geist } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toast"
 import { ConfirmDialogHost } from "@/components/confirm-dialog-host"
+import { CONTENT_SECURITY_POLICY } from "@/lib/site"
 import { cn } from "@/lib/utils"
 
 /* Geist is the app's only face (§11), so only `--font-sans` is defined. */
@@ -25,6 +26,16 @@ export function HtmlShell({ children }: { children: React.ReactNode }) {
       className={cn("antialiased", geist.variable)}
     >
       <body className="font-sans">
+        {/*
+         * Production only: the dev server needs eval and a websocket. React
+         * hoists the tag into <head>.
+         */}
+        {process.env.NODE_ENV === "production" && (
+          <meta
+            httpEquiv="Content-Security-Policy"
+            content={CONTENT_SECURITY_POLICY}
+          />
+        )}
         <ThemeProvider>
           {/* Toaster is a provider: it must wrap the tree, not sit beside it. */}
           <Toaster>

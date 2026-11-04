@@ -181,6 +181,22 @@ for (const file of htmlFiles) {
   }
 }
 
+/*
+ * 5. Every document carries the Content Security Policy in its <head>. It is a
+ *    meta tag rendered only in production, so nothing but the export shows it.
+ */
+const noPolicy = htmlFiles.filter((file) => {
+  const html = readFileSync(file, "utf8")
+  const at = html.indexOf('http-equiv="Content-Security-Policy"')
+  return at < 0 || at > html.indexOf("</head>")
+})
+if (noPolicy.length > 0) {
+  fail(
+    `No Content-Security-Policy meta tag in the <head> of:\n` +
+      noPolicy.map((f) => `    ${relative(OUT, f)}`).join("\n")
+  )
+}
+
 // ---------------------------------------------------------------------------
 
 if (failures.length > 0) {
@@ -191,5 +207,7 @@ if (failures.length > 0) {
 
 console.log("✓ Export check passed:")
 for (const n of notes) console.log(`  • ${n}`)
-console.log(`  • ${htmlFiles.length} documents, one <html> each`)
+console.log(
+  `  • ${htmlFiles.length} documents, one <html> and a CSP meta tag each`
+)
 console.log("  • 404, pdf.js worker and OG card present")
