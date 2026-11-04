@@ -4,7 +4,6 @@ import * as React from "react"
 
 import { BusinessLine } from "@/components/common/business-line"
 import { Money, ZeroDash } from "@/components/common/money"
-import { Panel } from "@/components/common/panel"
 import { useFormatters } from "@/components/lang-provider"
 import { Form5FiledToggle } from "@/components/statement/form5-filed-control"
 import { incomeStatement } from "@/lib/domain/income-statement"
@@ -91,24 +90,21 @@ export function StatementView() {
 
   return (
     <>
-      <Panel
-        className="print-hidden mx-auto mb-5 max-w-2xl"
-        bodyClassName="p-5"
-      >
-        <Form5FiledToggle />
-      </Panel>
       <div className="print-sheet mx-auto max-w-2xl rounded-lg border border-sheet-edge bg-sheet p-6 shadow-sm md:p-8">
-        <header className="mb-6">
-          <h2 className="font-heading text-xl font-semibold">
-            {f.t("nav.statement")}
-          </h2>
-          <BusinessLine />
-          <p className="tabular text-sm text-muted-foreground">
-            {f.t("overview.range", {
-              a: f.date(`${year}-01-01`),
-              b: f.date(`${year}-12-31`),
-            })}
-          </p>
+        <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-heading text-xl font-semibold">
+              {f.t("nav.statement")}
+            </h2>
+            <BusinessLine />
+            <p className="tabular text-sm text-muted-foreground">
+              {f.t("overview.range", {
+                a: f.date(`${year}-01-01`),
+                b: f.date(`${year}-12-31`),
+              })}
+            </p>
+          </div>
+          <Form5FiledToggle compact className="print-hidden" />
         </header>
 
         <table className="w-full text-sm">

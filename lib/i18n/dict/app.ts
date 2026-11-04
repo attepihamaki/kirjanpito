@@ -1284,6 +1284,7 @@ export const APP_DICT = {
     "Kun olet antanut ilmoituksen OmaVerossa, merkitse se tähän. Se lukitsee kaikki vuoden {y} tositteet, koska kirjanpitolaki (2:7) ei salli muuttaa niitä ilmoituksen jälkeen.",
     "Once you have filed the return in OmaVero, mark it here. That locks every voucher of {y}, because the Accounting Act (2:7) does not allow changing them after a return.",
   ],
+  "statement.form5FileInfo": ["Mitä merkintä tekee?", "What does the mark do?"],
   "statement.form5FiledOn": [
     "Merkitty ilmoitetuksi {d}. Vuoden tositteet ovat lukittuja.",
     "Marked as filed on {d}. The year’s vouchers are locked.",

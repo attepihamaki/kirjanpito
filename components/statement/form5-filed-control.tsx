@@ -1,5 +1,6 @@
 "use client"
 
+import { InfoPopover } from "@/components/common/info-popover"
 import { MarkFiledButton } from "@/components/common/mark-filed-button"
 import { TaxFormStep } from "@/components/common/tax-form"
 import { useFormatters } from "@/components/lang-provider"
@@ -11,27 +12,41 @@ import { useBookStore } from "@/stores/book-store"
 /**
  * The filed toggle for the selected year's Form 5 (§8.8), with what it does.
  * Marking it locks every voucher of the year (§8.11). A year still running
- * cannot have been filed, so its button only says so.
+ * cannot have been filed, so its button only says so. `compact` keeps an
+ * unfiled year's explanation behind an info icon, for a place where the sentence
+ * is not the point of the page. A filed year's status stays in view either way.
  */
-export function Form5FiledToggle({ className }: { className?: string }) {
+export function Form5FiledToggle({
+  className,
+  compact = false,
+}: {
+  className?: string
+  compact?: boolean
+}) {
   const f = useFormatters()
   const year = useBookStore((s) => s.year)
   const filedOn = useBookStore((s) => s.form5Filed[String(year)])
   const setForm5Filed = useBookStore((s) => s.setForm5Filed)
   const today = todayIso()
+  const hint = f.t("statement.form5FileHint", { y: year })
 
   return (
     <div
       className={cn(
-        "flex flex-wrap items-start justify-between gap-3",
+        "flex flex-wrap gap-3",
+        compact ? "items-center" : "items-start justify-between",
         className
       )}
     >
-      <p className="max-w-sm text-sm text-muted-foreground">
-        {filedOn
-          ? f.t("statement.form5FiledOn", { d: f.date(filedOn) })
-          : f.t("statement.form5FileHint", { y: year })}
-      </p>
+      {compact && !filedOn ? (
+        <InfoPopover label={f.t("statement.form5FileInfo")}>{hint}</InfoPopover>
+      ) : (
+        <p className="max-w-sm text-sm text-muted-foreground">
+          {filedOn
+            ? f.t("statement.form5FiledOn", { d: f.date(filedOn) })
+            : hint}
+        </p>
+      )}
       {filedOn ? (
         <Button
           variant="ghost"
