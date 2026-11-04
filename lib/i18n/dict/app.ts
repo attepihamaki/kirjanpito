@@ -847,6 +847,14 @@ export const APP_DICT = {
     "A number usually starts with a country code, such as SE. Check it in VIES.",
   ],
   "entry.paid": ["Maksettu", "Paid"],
+  "entry.paidInfo": [
+    "Miksi maksupäivä kysytään?",
+    "Why is the payment date asked?",
+  ],
+  "entry.paidInfoText": [
+    "Tulos lasketaan maksupäivän mukaan, joten vuodenvaihteen yli maksettu tosite kuuluu maksuvuoteen. Avoin tosite jää tuloksesta pois ja näkyy saatavana tai velkana.",
+    "The result goes by the payment date, so a voucher paid across a year-end belongs to the year it was paid. An open voucher stays out of the result and shows as a receivable or a payable.",
+  ],
   "entry.paidSame": ["Samana päivänä", "On the same day"],
   "entry.paidLater": ["Toisena päivänä", "On another day"],
   "entry.paidOpen": ["Avoin, ei vielä maksettu", "Open, not paid yet"],
@@ -894,6 +902,14 @@ export const APP_DICT = {
     "VAT on a non-deductible expense can’t be deducted. Book the amount including VAT at 0 %, so the tax stays part of the cost.",
   ],
   "entry.amountMode": ["Verollisuus", "VAT treatment"],
+  "entry.amountModeInfo": [
+    "Mitä verollisuus tarkoittaa?",
+    "What does VAT treatment mean?",
+  ],
+  "entry.amountModeInfoText": [
+    "Kertoo, sisältääkö summa arvonlisäveron. Valitse Verollinen, jos kirjoitit loppusumman, jolloin vero lasketaan sen sisältä. Valitse Veroton, jos kirjoitit summan ilman veroa, jolloin vero lasketaan sen päälle.",
+    "Says whether the amount includes VAT. Choose Incl. VAT if you entered the total, and the tax is worked out from within it. Choose Excl. VAT if you entered the amount without tax, and the tax is added on top.",
+  ],
   "entry.saveAndNew": ["Tallenna ja uusi", "Save and add another"],
   "entry.errDate": ["Anna päivämäärä.", "Enter a date."],
   "entry.errAmount": [

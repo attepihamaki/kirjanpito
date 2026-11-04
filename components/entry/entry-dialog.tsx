@@ -960,7 +960,12 @@ function EntryDialogForm({
 
             {unpayable ? (
               <Field>
-                <FieldLabel>{f.t("entry.paid")}</FieldLabel>
+                <div className="flex items-center gap-1">
+                  <FieldLabel>{f.t("entry.paid")}</FieldLabel>
+                  <InfoPopover label={f.t("entry.paidInfo")}>
+                    {f.t("entry.paidInfoText")}
+                  </InfoPopover>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   <OptionSelect
                     options={[
@@ -1088,7 +1093,12 @@ function EntryDialogForm({
 
               {euPurchase ? null : (
                 <Field>
-                  <FieldLabel>{f.t("entry.amountMode")}</FieldLabel>
+                  <div className="flex items-center gap-1">
+                    <FieldLabel>{f.t("entry.amountMode")}</FieldLabel>
+                    <InfoPopover label={f.t("entry.amountModeInfo")}>
+                      {f.t("entry.amountModeInfoText")}
+                    </InfoPopover>
+                  </div>
                   <ToggleGroup
                     aria-label={f.t("entry.amountMode")}
                     value={[form.amountMode]}
