@@ -3,7 +3,6 @@
 import * as React from "react"
 
 import { Money } from "@/components/common/money"
-import { Panel } from "@/components/common/panel"
 import { useFormatters } from "@/components/lang-provider"
 import { Button } from "@/components/ui/button"
 import { useVatPeriod } from "@/hooks/use-vat-period"
@@ -45,18 +44,6 @@ function useSettlement() {
 /** Whether the selected period has a payment or refund to show or to book. */
 export function useSettlementVisible(): boolean {
   return useSettlement().visible
-}
-
-/** The control on the VAT calculation, in a panel of its own. */
-export function VatSettlementPanel() {
-  const f = useFormatters()
-  const { visible } = useSettlement()
-  if (!visible) return null
-  return (
-    <Panel title={f.t("vat.settlementTitle")} bodyClassName="p-5">
-      <VatSettlementControl />
-    </Panel>
-  )
 }
 
 /**

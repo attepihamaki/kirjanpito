@@ -11,7 +11,7 @@ import {
 } from "@/components/ledger/books-view"
 import { StatementView } from "@/components/statement/statement-view"
 import { YearEndDialog } from "@/components/statement/year-end-dialog"
-import { VatReturnView } from "@/components/vat/vat-return-view"
+import { VatReturnDialog } from "@/components/vat/vat-return-dialog"
 import { VatShell } from "@/components/vat/vat-shell"
 import { VatView as VatPage } from "@/components/vat/vat-view"
 import { defaultCategories } from "@/lib/domain/accounts"
@@ -147,21 +147,6 @@ describe("VatView", () => {
     expect(
       screen.queryByRole("button", { name: /Merkitse ilmoitetuksi/ })
     ).toBeNull()
-  })
-
-  it("keeps the filed button on a period still to come, and says why", async () => {
-    useBookStore.setState({ year: 2999, vatIndex: 1 })
-    mount(<VatView />)
-
-    const button = screen.getByRole("button", {
-      name: "Merkitse ilmoitetuksi",
-    })
-    expect(button).toHaveAttribute("aria-disabled", "true")
-
-    fireEvent.click(button)
-
-    expect(await screen.findByText(/Kausi on vielä kesken/)).toBeVisible()
-    expect(useBookStore.getState().vatFiled).toEqual({})
   })
 
   it("carries the VAT note", () => {
@@ -371,18 +356,41 @@ describe("YearEndDialog", () => {
   })
 })
 
-describe("VatReturnView", () => {
-  it("lists October's fields, copies an amount and marks the period filed", async () => {
+describe("VatReturnDialog", () => {
+  const openDialog = () => {
+    useBookStore.setState({ dialog: { kind: "vat-return" } })
+    return mount(<VatReturnDialog />)
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true })
+    vi.setSystemTime(new Date(2026, 10, 20, 9, 0))
+  })
+  afterEach(() => vi.useRealTimers())
+
+  it("opens on the checks and lists what stands in the way", () => {
+    openDialog()
+    expect(
+      screen.getByText("Arvonlisäveroilmoitus: Lokakuu 2026")
+    ).toBeInTheDocument()
+    expect(screen.getByText(/ilman liitettä/i)).toBeInTheDocument()
+    expect(screen.getByText(/Aiempia kausia ei ole merkitty/)).toBeInTheDocument()
+  })
+
+  it("will not mark a period that has not closed", () => {
+    vi.setSystemTime(new Date(2026, 9, 31, 9, 0))
+    openDialog()
+    expect(screen.getByText("Lokakuu 2026 on vielä kesken")).toBeInTheDocument()
+  })
+
+  it("lists October's fields and copies an amount", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, "clipboard", {
       value: { writeText },
       configurable: true,
     })
-    mount(
-      <VatShell>
-        <VatReturnView />
-      </VatShell>
-    )
+    openDialog()
+    fireEvent.click(screen.getByRole("button", { name: /Summat/ }))
 
     // Only the fields with an amount, then the payable tax to check against.
     expect(screen.getByText("25,5 %:n vero (myös 24 %)")).toBeInTheDocument()
@@ -399,15 +407,12 @@ describe("VatReturnView", () => {
     )
     expect(writeText).toHaveBeenCalledWith("382,50")
     expect(await screen.findByText("1/2 kopioitu")).toBeInTheDocument()
-
-    // A return is for one period, so the checklist starts over on another.
-    fireEvent.click(screen.getByRole("button", { name: /^Tammi/ }))
-    expect(await screen.findByText("0/2 kopioitu")).toBeInTheDocument()
   })
 
   it("offers no activity for a period with nothing to fill in", () => {
     useBookStore.setState({ vatIndex: 8 })
-    mount(<VatReturnView />)
+    openDialog()
+    fireEvent.click(screen.getByRole("button", { name: /Summat/ }))
     expect(screen.getByText(/Ei toimintaa verokaudella/)).toBeInTheDocument()
   })
 
@@ -426,8 +431,74 @@ describe("VatReturnView", () => {
         },
       ],
     })
-    mount(<VatReturnView />)
+    openDialog()
+    fireEvent.click(screen.getByRole("button", { name: /Summat/ }))
     expect(screen.getByText(/ei ole kohtaa/)).toBeInTheDocument()
+  })
+
+  it("marks the period as filed and the mark can be removed", () => {
+    openDialog()
+    fireEvent.click(screen.getByRole("button", { name: /Merkintä/ }))
+    fireEvent.click(
+      screen.getByRole("button", { name: "Merkitse ilmoitetuksi" })
+    )
+    expect(useBookStore.getState().vatFiled["2026-10"]).toBe("2026-11-20")
+
+    fireEvent.click(screen.getByRole("button", { name: "Poista merkintä" }))
+    expect(useBookStore.getState().vatFiled["2026-10"]).toBeUndefined()
+  })
+
+  it("keeps the filed button on a period still to come, and says why", async () => {
+    useBookStore.setState({ year: 2999, vatIndex: 1 })
+    openDialog()
+    fireEvent.click(screen.getByRole("button", { name: /Merkintä/ }))
+
+    const button = screen.getByRole("button", {
+      name: "Merkitse ilmoitetuksi",
+    })
+    expect(button).toHaveAttribute("aria-disabled", "true")
+
+    fireEvent.click(button)
+
+    expect(await screen.findByText(/Kausi on vielä kesken/)).toBeVisible()
+    expect(useBookStore.getState().vatFiled).toEqual({})
+  })
+
+  it("books the payment from the last step", () => {
+    openDialog()
+    fireEvent.click(screen.getByRole("button", { name: /Maksu/ }))
+    fireEvent.click(screen.getByRole("button", { name: "Kirjaa maksu" }))
+    expect(useBookStore.getState().dialog).toMatchObject({
+      kind: "entry",
+      prefill: { catId: "vat-payment", settles: "2026-10" },
+    })
+  })
+
+  it("has no payment step for a nil return", () => {
+    useBookStore.setState({ vatIndex: 8 })
+    openDialog()
+    expect(screen.queryByRole("button", { name: /Maksu/ })).toBeNull()
+  })
+})
+
+describe("the way into the VAT return dialog", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true })
+    vi.setSystemTime(new Date(2026, 10, 20, 9, 0))
+  })
+  afterEach(() => vi.useRealTimers())
+
+  it("opens from the calculation's banner", () => {
+    mount(<VatView />)
+    fireEvent.click(screen.getByRole("button", { name: "Ilmoita OmaVerossa" }))
+    expect(useBookStore.getState().dialog.kind).toBe("vat-return")
+  })
+
+  it("shows a filed period with its date", () => {
+    useBookStore.setState({ vatFiled: { "2026-10": "2026-11-12" } })
+    mount(<VatView />)
+    expect(screen.getByRole("button", { name: "Ilmoitettu" })).toBeInTheDocument()
+    expect(screen.getByText(/Merkitty ilmoitetuksi/)).toBeInTheDocument()
   })
 })
 

@@ -129,11 +129,9 @@ export const STATEMENT_ROUTES = {
 } as const
 
 /**
- * The VAT view's sub-pages (§8.7): the calculation, and the same figures as
- * the return's fields for copying into OmaVero.
+ * The VAT view's sub-pages (§8.7): the calculation, and the EC Sales List.
  */
 export const VAT_ROUTES = {
   sheet: APP_ROUTES.vat,
-  return: `${APP_ROUTES.vat}/return`,
   ec: `${APP_ROUTES.vat}/ec`,
 } as const

@@ -12,6 +12,7 @@ import { RecurringDialog } from "@/components/ledger/recurring-dialog"
 import { CategoryDialogs } from "@/components/settings/category-dialogs"
 import { SetupDialog } from "@/components/settings/setup-dialog"
 import { YearEndDialog } from "@/components/statement/year-end-dialog"
+import { VatReturnDialog } from "@/components/vat/vat-return-dialog"
 import { EntryDialog } from "@/components/entry/entry-dialog"
 import { Overlay } from "@/components/common/overlay"
 import { ReceiptViewer } from "@/components/receipt/receipt-viewer"
@@ -232,6 +233,7 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
         <RecurringDialog />
         <SetupDialog />
         <YearEndDialog />
+        <VatReturnDialog />
         <CategoryDialogs />
       </SidebarProvider>
     </TooltipProvider>

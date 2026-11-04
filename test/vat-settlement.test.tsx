@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { EntryDialog } from "@/components/entry/entry-dialog"
 import { LangProvider } from "@/components/lang-provider"
 import { JournalView } from "@/components/ledger/books-view"
+import { VatReturnDialog } from "@/components/vat/vat-return-dialog"
 import { VatView } from "@/components/vat/vat-view"
 import { defaultCategories } from "@/lib/domain/accounts"
 import { createIdFactory } from "@/lib/domain/id"
@@ -62,9 +63,16 @@ function mount(view: React.ReactNode = <VatView />) {
   return render(
     <LangProvider lang="fi">
       {view}
+      <VatReturnDialog />
       <EntryDialog registerDropTarget={() => {}} />
     </LangProvider>
   )
+}
+
+/** Opens the return dialog on its payment step, where the money is booked. */
+function openPayStep() {
+  act(() => useBookStore.setState({ dialog: { kind: "vat-return" } }))
+  fireEvent.click(screen.getByRole("button", { name: /Maksu$/ }))
 }
 
 beforeEach(() => {
@@ -81,6 +89,7 @@ describe("VAT settlement", () => {
   it("books the amount due as a numbered entry and says it matches", async () => {
     load()
     mount()
+    openPayStep()
     fireEvent.click(screen.getByRole("button", { name: "Kirjaa maksu" }))
 
     expect(screen.getByLabelText("Summa (€)")).toHaveValue("362,18")
@@ -103,6 +112,7 @@ describe("VAT settlement", () => {
       settles: "2026-10",
       voucher: 17,
     })
+    openPayStep()
     expect(screen.getByText("Täsmää laskelman kanssa.")).toBeTruthy()
     expect(flat(document.body.textContent)).toContain("tosite 17")
     // The return itself is unchanged.
@@ -112,6 +122,7 @@ describe("VAT settlement", () => {
   it("reports what a part payment leaves and offers to book the rest", () => {
     load([payment(30_000, "2026-10")])
     mount()
+    openPayStep()
 
     expect(flat(document.body.textContent)).toContain(
       "Ero laskelmaan on 62,18 €"
@@ -122,6 +133,7 @@ describe("VAT settlement", () => {
   it("opens a booked payment for editing", () => {
     load([payment(36_218, "2026-10")])
     mount()
+    openPayStep()
     fireEvent.click(screen.getByRole("button", { name: "Avaa tosite" }))
 
     expect(useBookStore.getState().dialog).toMatchObject({
@@ -135,13 +147,15 @@ describe("VAT settlement", () => {
   it("offers nothing for a period still open", () => {
     load([], { vatIndex: 11 })
     mount()
+    act(() => useBookStore.setState({ dialog: { kind: "vat-return" } }))
 
-    expect(screen.queryByText("Maksu tai palautus")).toBeNull()
+    expect(screen.queryByRole("button", { name: /Maksu$/ })).toBeNull()
   })
 
   it("counts a month's payment towards its quarter", () => {
     load([payment(36_218, "2026-10")], { vatPeriod: "quarter", vatIndex: 4 })
     mount()
+    openPayStep()
 
     expect(screen.getByText(/Lokakuu 2026/)).toBeTruthy()
     expect(screen.getByText("Täsmää laskelman kanssa.")).toBeTruthy()

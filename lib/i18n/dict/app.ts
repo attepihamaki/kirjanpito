@@ -1118,7 +1118,6 @@ export const APP_DICT = {
     "{a} vanhalla luokalla Myynti – EU. Vaihda luokka.",
     "{a} on the old category Sales – EU. Change the category.",
   ],
-  "vat.settlementTitle": ["Maksu tai palautus", "Payment or refund"],
   "vat.settlementHint": [
     "Kirjanpito ei näe pankkia. Kirjaa maksu tai palautus, kun raha on liikkunut, ja liitä tiliote. Tosite saa tositenumeron, mutta se ei ole tulo eikä kulu eikä muuta ilmoitusta.",
     "The bookkeeping cannot see your bank. Book the payment or refund once the money has moved, and attach the bank statement. It gets a voucher number, but it is neither income nor an expense and does not change the return.",
@@ -1200,7 +1199,6 @@ export const APP_DICT = {
   ],
   "vat.sections": ["ALV-laskelman osiot", "VAT return sections"],
   "vat.sheetTab": ["Laskelma", "Calculation"],
-  "vat.returnTab": ["Ilmoitus", "Return"],
   "vat.returnTitle": ["Arvonlisäveroilmoitus", "VAT return"],
   "vat.returnKicker": ["{p}, eräpäivä {d}", "{p}, due {d}"],
   "vat.returnIntro": [
@@ -1211,14 +1209,60 @@ export const APP_DICT = {
     "Tällä kaudella ei ole täytettäviä summia. Jos arvonlisäverollista toimintaa ei ollut, valitse OmaVerossa ”Ei toimintaa verokaudella”.",
     "There are no amounts to enter for this period. If there was no VAT activity, select “No activities during the tax period” in MyTax.",
   ],
-  "vat.returnStepFile": ["Merkitse ilmoitetuksi", "Mark as filed"],
   "vat.returnFileHint": [
-    "Kirjanpito ei näe OmaVeroa. Merkitse kausi ilmoitetuksi, kun olet lähettänyt ilmoituksen.",
-    "The bookkeeping cannot see MyTax. Mark the period as filed once you have sent the return.",
+    "Kirjanpito ei näe OmaVeroa. Merkitse kausi ilmoitetuksi, kun olet lähettänyt ilmoituksen. Merkintä lukitsee kauden tositteet, koska kirjanpitolaki (2:7) ei salli muuttaa niitä ilmoituksen jälkeen.",
+    "The bookkeeping cannot see MyTax. Mark the period as filed once you have sent the return. The mark locks the period’s vouchers, because the Accounting Act (2:7) does not allow changing them after a return.",
   ],
-  "vat.returnNotClosed": [
-    "Kausi ei ole vielä päättynyt, joten luvut voivat muuttua. Eräpäivä on {d}.",
-    "The period has not ended yet, so the figures may change. The return is due {d}.",
+  "vat.returnButton": ["Ilmoita OmaVerossa", "Report in OmaVero"],
+  "vat.returnOpenFiled": ["Ilmoitettu", "Filed"],
+  "vat.returnDialogTitle": [
+    "Arvonlisäveroilmoitus: {p}",
+    "VAT return: {p}",
+  ],
+  "vat.returnDialogIntro": [
+    "Käy läpi tarkistukset, kopioi summat OmaVeroon ja merkitse kausi ilmoitetuksi.",
+    "Go through the checks, copy the amounts into OmaVero and mark the period as filed.",
+  ],
+  "vat.returnSteps": ["Vaiheet", "Steps"],
+  "vat.returnStepChecks": ["Tarkistukset", "Checks"],
+  "vat.returnStepValues": ["Summat", "Amounts"],
+  "vat.returnStepFile": ["Merkintä", "Mark"],
+  "vat.returnStepPay": ["Maksu", "Payment"],
+  "vat.returnFileTitle": ["Merkitse {p} ilmoitetuksi", "Mark {p} as filed"],
+  "vat.returnBack": ["Takaisin", "Back"],
+  "vat.returnNext": ["Seuraava", "Next"],
+  "vat.returnDone": ["Valmis", "Done"],
+  "vat.returnAllClear": [
+    "Ei huomautettavaa. Kausi on valmis ilmoitettavaksi.",
+    "Nothing to flag. The period is ready to report.",
+  ],
+  "vat.returnOngoing": [
+    "{p} on vielä kesken",
+    "{p} is still ongoing",
+  ],
+  "vat.returnOngoingSub": [
+    "Kauden voi merkitä ilmoitetuksi vasta, kun se on päättynyt. Eräpäivä on {d}. Summat näkyvät jo nyt, mutta ne voivat muuttua.",
+    "A period can be marked as filed only once it has ended. It is due {d}. The amounts are visible already, but they may change.",
+  ],
+  "vat.returnNoEntries": [
+    "Kaudella {p} ei ole tositteita",
+    "{p} has no vouchers",
+  ],
+  "vat.returnNoEntriesSub": [
+    "Ilmoitus on nollailmoitus. Tarkista, ettei tositteita puutu.",
+    "This is a nil return. Check that no vouchers are missing.",
+  ],
+  "vat.returnUnsavedSub": [
+    "Tallenna tiedosto ennen merkintää, jotta merkintä ja tositteet päätyvät samaan tiedostoon.",
+    "Save the file before marking, so the mark and the vouchers end up in the same file.",
+  ],
+  "vat.returnEarlierUnfiled": [
+    "Aiempia kausia ei ole merkitty ilmoitetuiksi: {p}",
+    "Earlier periods not marked as filed: {p}",
+  ],
+  "vat.returnEarlierUnfiledSub": [
+    "Merkitse ne ilmoitetuiksi, jos ne on jo annettu. Muuten ne näkyvät myöhässä olevina.",
+    "Mark them as filed if they are already filed. Otherwise they show as overdue.",
   ],
   "vat.returnOtherRate": [
     "Kaudella on myyntiä verokannalla, jolle ilmoituksessa ei ole kohtaa ({v} veroa). Se ei ole kohdissa, mutta sisältyy maksettavaan veroon. Tarkista tositteiden verokannat.",

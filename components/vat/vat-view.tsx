@@ -13,8 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useFormatters } from "@/components/lang-provider"
-import { VatFiledControl } from "@/components/vat/vat-filed-control"
-import { VatSettlementPanel } from "@/components/vat/vat-settlement-control"
+import { VatReturnButton } from "@/components/vat/vat-return-button"
 import { useVatPeriod } from "@/hooks/use-vat-period"
 import type { VatReport, VatSide } from "@/lib/domain/vat"
 import { useBookStore } from "@/stores/book-store"
@@ -47,10 +46,8 @@ export function VatView() {
             })}
           </p>
         </div>
-        <VatFiledControl />
+        <VatReturnButton className="print-hidden" />
       </Panel>
-
-      <VatSettlementPanel />
 
       <VatAnomalyAlert report={report} />
 
