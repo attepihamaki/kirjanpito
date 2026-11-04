@@ -1,3 +1,4 @@
+import { paidDate } from "@/lib/domain/open-items"
 import type { CategoryMap, Entry } from "@/lib/domain/types"
 import { countsOnVatReturn } from "@/lib/domain/vat"
 
@@ -17,6 +18,8 @@ import { countsOnVatReturn } from "@/lib/domain/vat"
 export type PeriodLock =
   | { kind: "year"; key: string; since: string }
   | { kind: "form5"; key: string; since: string }
+  /** Dated in an open year, but paid in a year whose Form 5 is filed. */
+  | { kind: "form5Paid"; key: string; since: string }
   | { kind: "filed"; key: string; since: string }
 
 export interface LockMarks {
@@ -58,15 +61,26 @@ export function paidChangeHitsForm5(
   return filed(before) || filed(after)
 }
 
-/** The lock on one entry, if any: a filed period holds only what its return counts. */
+/**
+ * The lock on one entry, if any: a filed period holds only what its return
+ * counts. Form 5 reads an entry in the year it was paid (§6.3), so an entry paid
+ * in a year whose Form 5 is filed is locked too, whatever year it is dated in.
+ * That is a prepayment: paid before the date it carries.
+ */
 export function entryLock(
   entry: Entry,
   marks: LockMarks,
   cats: CategoryMap
 ): PeriodLock | null {
   const lock = lockOn(entry.date, marks)
-  if (lock?.kind === "filed" && !countsOnVatReturn(entry, cats)) return null
-  return lock
+  if (lock && !(lock.kind === "filed" && !countsOnVatReturn(entry, cats))) {
+    return lock
+  }
+  const paidYear = paidDate(entry)?.slice(0, 4)
+  const form5 = paidYear && marks.form5Filed[paidYear]
+  if (paidYear && form5)
+    return { kind: "form5Paid", key: paidYear, since: form5 }
+  return null
 }
 
 export function lockedEntries(

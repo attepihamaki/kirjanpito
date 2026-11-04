@@ -794,6 +794,10 @@ export const APP_DICT = {
     "Vuosi {p} on merkitty talletetuksi {d}, joten sen tositteet ovat lukittuja. Tee korjaustosite. Vain maksupäivän voi vielä merkitä.",
     "Year {p} was marked as stored on {d}, so its vouchers are locked. Make a correction voucher. Only the payment date can still be set.",
   ],
+  "entry.lockedForm5Paid": [
+    "Tosite on maksettu vuonna {p}, ja sen vuoden veroilmoitus (lomake 5) on merkitty ilmoitetuksi {d}. Ilmoitus luki tositteen maksuvuoden mukaan, joten se on lukittu (kirjanpitolaki 2:7). Tee korjaustosite. Jos ilmoitusta ei oikeasti ole annettu, poista merkintä kohdasta Tuloslaskelma, Lomake 5.",
+    "This voucher was paid in {p}, and the tax return (Form 5) for that year was marked as filed on {d}. The return counted it by the year it was paid, so it is locked (Accounting Act 2:7). Make a correction voucher. If the return has not really been filed, remove the mark under Income statement, Form 5.",
+  ],
   "entry.lockedForm5": [
     "Vuoden {p} veroilmoitus (lomake 5) on merkitty ilmoitetuksi {d}, joten kaikki sen tositteet ovat lukittuja (kirjanpitolaki 2:7). Tee korjaustosite. Vain maksupäivän voi vielä merkitä, jos se on myöhemmältä vuodelta. Jos ilmoitusta ei oikeasti ole annettu, poista merkintä kohdasta Tuloslaskelma, Lomake 5.",
     "The tax return (Form 5) for {p} was marked as filed on {d}, so all its vouchers are locked (Accounting Act 2:7). Make a correction voucher. Only a payment date in a later year can still be set. If the return has not really been filed, remove the mark under Income statement, Form 5.",

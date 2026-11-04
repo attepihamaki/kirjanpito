@@ -116,6 +116,48 @@ describe("entryLock", () => {
   })
 })
 
+describe("entryLock by payment year", () => {
+  const filed = { ...none, form5Filed: { "2026": "2027-03-20" } }
+  const entry = (over: Partial<Entry>): Entry => ({
+    id: "x",
+    date: "2027-01-10",
+    description: "",
+    type: "income",
+    catId: "300-domestic",
+    amount: 10_000,
+    vatRate: 25.5,
+    amountMode: "gross",
+    ...over,
+  })
+
+  it("locks a prepayment the filed Form 5 counted", () => {
+    expect(entryLock(entry({ paidOn: "2026-12-15" }), filed, cats)).toEqual({
+      kind: "form5Paid",
+      key: "2026",
+      since: "2027-03-20",
+    })
+  })
+
+  it("leaves an entry paid in an open year open", () => {
+    expect(entryLock(entry({}), filed, cats)).toBeNull()
+    expect(entryLock(entry({ paidOn: "2027-02-01" }), filed, cats)).toBeNull()
+    expect(entryLock(entry({ paidOn: null }), filed, cats)).toBeNull()
+  })
+
+  it("names the lock on the entry's own date first", () => {
+    const marks = { ...filed, vatFiled: { "2027-01": "2027-03-12" } }
+    expect(entryLock(entry({ paidOn: "2026-12-15" }), marks, cats)?.kind).toBe(
+      "filed"
+    )
+  })
+
+  it("still locks a prepayment its VAT return does not count", () => {
+    const marks = { ...filed, vatFiled: { "2027-01": "2027-03-12" } }
+    const grant = entry({ catId: "318", vatRate: 0, paidOn: "2026-12-15" })
+    expect(entryLock(grant, marks, cats)?.kind).toBe("form5Paid")
+  })
+})
+
 describe("paidChangeHitsForm5", () => {
   const marks = { form5Filed: { "2026": "2027-03-20" } }
 

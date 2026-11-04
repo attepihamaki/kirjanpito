@@ -661,7 +661,7 @@ function EntryDialogForm({
     }
     if (
       paidChangeHitsForm5(
-        mode === "edit" && editing ? paidDate(editing) : paidDate(entry),
+        mode === "edit" && editing ? paidDate(editing) : null,
         paidDate(entry),
         marks
       )
@@ -781,7 +781,9 @@ function EntryDialogForm({
                     ? "entry.lockedYear"
                     : lock.kind === "form5"
                       ? "entry.lockedForm5"
-                      : "entry.lockedFiled",
+                      : lock.kind === "form5Paid"
+                        ? "entry.lockedForm5Paid"
+                        : "entry.lockedFiled",
                   { p: lock.key, d: f.date(lock.since) }
                 )}
               </InfoPopover>
