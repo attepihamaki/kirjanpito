@@ -1,7 +1,6 @@
 "use client"
 
-import { CheckIcon } from "lucide-react"
-
+import { MarkFiledButton } from "@/components/common/mark-filed-button"
 import { Button } from "@/components/ui/button"
 import { useFormatters } from "@/components/lang-provider"
 import { useVatPeriod } from "@/hooks/use-vat-period"
@@ -11,8 +10,8 @@ import { useBookStore } from "@/stores/book-store"
 
 /**
  * Where the selected period's return stands, with the filed toggle. Only a
- * closed period can be filed, and a period before the book's start owes
- * nothing (§6.5). An open or future period renders nothing.
+ * closed period can be filed, so an open or future one's button only says why,
+ * and a period before the book's start owes nothing (§6.5).
  */
 export function VatFiledControl() {
   const f = useFormatters()
@@ -27,8 +26,13 @@ export function VatFiledControl() {
       </p>
     )
   }
-  if (status !== "filed" && status !== "due" && status !== "overdue") {
-    return null
+  if (status === "open" || status === "future") {
+    return (
+      <MarkFiledButton
+        ongoing={f.t("vat.periodOngoing")}
+        onMark={() => setVatFiled(current.key, todayIso())}
+      />
+    )
   }
 
   return (
@@ -52,14 +56,7 @@ export function VatFiledControl() {
           {f.t("vat.unmarkFiled")}
         </Button>
       ) : (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setVatFiled(current.key, todayIso())}
-        >
-          <CheckIcon data-icon="inline-start" />
-          {f.t("vat.markFiled")}
-        </Button>
+        <MarkFiledButton onMark={() => setVatFiled(current.key, todayIso())} />
       )}
     </div>
   )

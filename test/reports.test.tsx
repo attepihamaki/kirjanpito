@@ -146,6 +146,21 @@ describe("VatView", () => {
     ).toBeNull()
   })
 
+  it("keeps the filed button on a period still to come, and says why", async () => {
+    useBookStore.setState({ year: 2999, vatIndex: 1 })
+    mount(<VatView />)
+
+    const button = screen.getByRole("button", {
+      name: "Merkitse ilmoitetuksi",
+    })
+    expect(button).toHaveAttribute("aria-disabled", "true")
+
+    fireEvent.click(button)
+
+    expect(await screen.findByText(/Kausi on vielä kesken/)).toBeVisible()
+    expect(useBookStore.getState().vatFiled).toEqual({})
+  })
+
   it("carries the VAT note", () => {
     mount(<VatView />)
     expect(
@@ -155,6 +170,35 @@ describe("VatView", () => {
 })
 
 describe("StatementView", () => {
+  it("marks a closed year as filed, as Lomake 5 does", () => {
+    useBookStore.setState({ year: 2025, form5Filed: {} })
+    mount(<StatementView />)
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Merkitse ilmoitetuksi" })
+    )
+
+    expect(useBookStore.getState().form5Filed["2025"]).toBeTruthy()
+    expect(
+      screen.getByRole("button", { name: "Poista merkintä" })
+    ).toBeVisible()
+  })
+
+  it("keeps the filed button on a year still running, and says why", async () => {
+    useBookStore.setState({ year: 2999, form5Filed: {} })
+    mount(<StatementView />)
+
+    const button = screen.getByRole("button", {
+      name: "Merkitse ilmoitetuksi",
+    })
+    expect(button).toHaveAttribute("aria-disabled", "true")
+
+    fireEvent.click(button)
+
+    expect(await screen.findByText(/Vuosi 2999 on vielä kesken/)).toBeVisible()
+    expect(useBookStore.getState().form5Filed).toEqual({})
+  })
+
   it("shows the §10 result on line 358", () => {
     mount(<StatementView />)
     const result = screen.getByRole("row", {

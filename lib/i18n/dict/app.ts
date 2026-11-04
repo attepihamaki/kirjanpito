@@ -1039,6 +1039,10 @@ export const APP_DICT = {
     "The period ended before the month the bookkeeping began, so no return is filed for it.",
   ],
   "vat.markFiled": ["Merkitse ilmoitetuksi", "Mark as filed"],
+  "vat.periodOngoing": [
+    "Kausi on vielä kesken, joten sitä ei voi vielä merkitä ilmoitetuksi.",
+    "The period is still ongoing, so it cannot be marked as filed yet.",
+  ],
   /* The money that moved for a return, booked as an entry (§6.6). */
   "vat.ecTab": ["Yhteenvetoilmoitus", "EC Sales List"],
   "vat.ecIntro": [
@@ -1216,6 +1220,10 @@ export const APP_DICT = {
     "An ammatinharjoittaja’s cash basis (EVL 27 a §): income and expenses go by payment date, and open vouchers are left out. Receivables on {d}: {r}. Payables on {d}: {p}.",
   ],
   "statement.form5FileStep": ["Merkitse ilmoitetuksi", "Mark as filed"],
+  "statement.yearOngoing": [
+    "Vuosi {y} on vielä kesken, joten sitä ei voi vielä merkitä ilmoitetuksi.",
+    "{y} is still ongoing, so it cannot be marked as filed yet.",
+  ],
   "statement.form5FileHint": [
     "Kun olet antanut ilmoituksen OmaVerossa, merkitse se tähän. Se lukitsee kaikki vuoden {y} tositteet, koska kirjanpitolaki (2:7) ei salli muuttaa niitä ilmoituksen jälkeen.",
     "Once you have filed the return in OmaVero, mark it here. That locks every voucher of {y}, because the Accounting Act (2:7) does not allow changing them after a return.",
