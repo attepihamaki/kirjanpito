@@ -722,6 +722,31 @@ export const APP_DICT = {
   "ledger.noEntriesYear": ["Ei tositteita vuonna {y}.", "No vouchers in {y}."],
   "ledger.print": ["Tulosta", "Print"],
   /* KPL 2:10, checked on Finlex. */
+  "ledger.reconTitle": [
+    "Täsmäytys tuloslaskelmaan",
+    "Reconciliation to the income statement",
+  ],
+  "ledger.reconIntro": [
+    "Pääkirja lukee tositteet niiden päivämäärän mukaan. Tuloslaskelma ja lomake 5 lukevat ne maksuvuoden mukaan, koska ammatinharjoittaja verotetaan maksuperusteisesti. Ne eroavat siis näiden tositteiden verran.",
+    "The general ledger reads vouchers by their date. The income statement and Form 5 read them by the year they were paid, since a professional practitioner is taxed on a payment basis. They differ by these vouchers.",
+  ],
+  "ledger.reconLedger": ["Pääkirja", "General ledger"],
+  "ledger.reconOut": [
+    "− maksettu muuna vuonna tai avoin",
+    "− paid in another year or open",
+  ],
+  "ledger.reconIn": [
+    "+ päivätty muuna vuonna, maksettu {y}",
+    "+ dated in another year, paid in {y}",
+  ],
+  "ledger.reconStatement": ["= Tuloslaskelma", "= Income statement"],
+  "ledger.reconEntries": ["Tositteet, jotka siirtyvät", "Vouchers that move"],
+  "ledger.colPaid": ["Maksettu", "Paid"],
+  "ledger.colEffect": ["Vaikutus", "Effect"],
+  "ledger.reconNote": [
+    "Tuloslaskelman rivit ovat täysimääräisiä. Lomake 5 laskee niistä osan riveillä 319, 321 ja 341.",
+    "The income statement’s lines are in full. Form 5 counts part of lines 319, 321 and 341.",
+  ],
   "ledger.retention": [
     "Säilytä päiväkirja ja pääkirja vähintään {b} asti (10 vuotta tilikauden päättymisestä) ja tositteet vähintään {v} asti (6 vuotta sen vuoden lopusta, jona tilikausi päättyi). Kirjanpitolaki 2:10.",
     "Keep the journal and the general ledger until at least {b} (10 years from the end of the financial year), and the vouchers until at least {v} (6 years from the end of the year in which it ended). Accounting Act 2:10.",

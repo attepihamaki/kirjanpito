@@ -6,6 +6,7 @@ import {
 } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
 import { monthOf, yearOf } from "@/lib/domain/dates"
+import { paidDate } from "@/lib/domain/open-items"
 import type { Category, Cents, CategoryMap, Entry } from "@/lib/domain/types"
 
 /**
@@ -117,6 +118,91 @@ export function generalLedger(
     add(account.totals, row)
   }
   return ALL_LINES.flatMap((line) => byLine.get(line.key) ?? [])
+}
+
+export interface CrossingEntry {
+  row: BookRow
+  /** The payment date, or null while open. */
+  paid: string | null
+  /**
+   * "out": dated this year but paid in another, or open, so it is in this
+   * year's books and not on its statement. "in": dated in another year and
+   * paid in this one, so the other way round.
+   */
+  direction: "out" | "in"
+}
+
+export interface ReconciliationLine {
+  line: AccountLine
+  /** The account's total in this year's general ledger, by date. */
+  ledger: Cents
+  /** The "out" entries' net. */
+  out: Cents
+  /** The "in" entries' net. */
+  in: Cents
+  /** ledger − out + in: the line on the income statement, in full (§6.3). */
+  statement: Cents
+}
+
+export interface Reconciliation {
+  /** Only the statement lines an entry crosses into or out of. */
+  lines: ReconciliationLine[]
+  /** Date order, then voucher order. */
+  crossings: CrossingEntry[]
+}
+
+/**
+ * How this year's general ledger becomes its income statement and Form 5
+ * (KPL 2:6). The books go by the entry's date, as KPL 2:4 has them, and the
+ * statement by the payment date (§6.3), so the two part on exactly the entries
+ * paid in a year other than their own. Off-statement lines never reach the
+ * statement and are left out.
+ */
+export function ledgerReconciliation(
+  entries: readonly Entry[],
+  cats: CategoryMap,
+  year: number
+): Reconciliation {
+  const crossings: CrossingEntry[] = []
+  for (const entry of entries) {
+    const cat = cats.get(entry.catId)
+    const line = (cat && LINE_BY_KEY.get(cat.line)) ?? null
+    if (!line || offStatement(line)) continue
+    const paid = paidDate(entry)
+    const dated = yearOf(entry.date) === year
+    const paidHere = paid !== null && yearOf(paid) === year
+    if (dated === paidHere) continue
+    crossings.push({
+      row: { entry, line, ...calcEntry(entry) },
+      paid,
+      direction: dated ? "out" : "in",
+    })
+  }
+  crossings.sort(
+    (a, b) =>
+      a.row.entry.date.localeCompare(b.row.entry.date) ||
+      (a.row.entry.voucher ?? 0) - (b.row.entry.voucher ?? 0)
+  )
+
+  const ledger = new Map(
+    generalLedger(entries, cats, year).map((a) => [a.line.key, a.totals.net])
+  )
+  const byLine = new Map<string, ReconciliationLine>()
+  for (const { row, direction } of crossings) {
+    const line = row.line as AccountLine
+    let r = byLine.get(line.key)
+    if (!r) {
+      const total = ledger.get(line.key) ?? 0
+      r = { line, ledger: total, out: 0, in: 0, statement: total }
+      byLine.set(line.key, r)
+    }
+    r[direction] += row.net
+    r.statement += direction === "in" ? row.net : -row.net
+  }
+  return {
+    lines: ALL_LINES.flatMap((line) => byLine.get(line.key) ?? []),
+    crossings,
+  }
 }
 
 export interface AccountListRow {

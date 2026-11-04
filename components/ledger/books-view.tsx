@@ -14,6 +14,7 @@ import {
   accountList,
   generalLedger,
   journal,
+  ledgerReconciliation,
   type BookRow,
   type Totals,
 } from "@/lib/domain/books"
@@ -350,7 +351,143 @@ export function GeneralLedgerView() {
           </table>
         </div>
       )}
+      <ReconciliationSection />
     </ReportPage>
+  )
+}
+
+/**
+ * How the general ledger, by date, becomes the income statement, by payment
+ * year (KPL 2:6, §8.4). Shown only when some voucher crosses a year-end.
+ */
+function ReconciliationSection() {
+  const f = useFormatters()
+  const { entries, catMap, year } = useBookData()
+  const recon = React.useMemo(
+    () => ledgerReconciliation(entries, catMap, year),
+    [entries, catMap, year]
+  )
+  if (recon.crossings.length === 0) return null
+  const head = "pb-2 pr-3 text-xs font-medium text-muted-foreground last:pr-0"
+
+  return (
+    <section className="mt-10" aria-labelledby="recon-title">
+      <h3 id="recon-title" className="font-heading text-lg font-semibold">
+        {f.t("ledger.reconTitle")}
+      </h3>
+      <p className="mt-1 max-w-prose text-sm text-muted-foreground">
+        {f.t("ledger.reconIntro")}
+      </p>
+
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full min-w-[36rem] text-sm">
+          <thead>
+            <tr className="border-b border-sheet-edge">
+              <th scope="col" className={cn(head, "text-left")}>
+                {f.t("ledger.colAccount")}
+              </th>
+              <th scope="col" className={cn(head, "text-right")}>
+                {f.t("ledger.reconLedger")}
+              </th>
+              <th scope="col" className={cn(head, "text-right")}>
+                {f.t("ledger.reconOut")}
+              </th>
+              <th scope="col" className={cn(head, "text-right")}>
+                {f.t("ledger.reconIn", { y: year })}
+              </th>
+              <th scope="col" className={cn(head, "text-right")}>
+                {f.t("ledger.reconStatement")}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {recon.lines.map((r) => (
+              <tr
+                key={r.line.key}
+                className="border-b border-dashed border-sheet-edge/60"
+              >
+                <th scope="row" className={cn(cell, "text-left font-normal")}>
+                  <span className="tabular mr-2 text-muted-foreground">
+                    {r.line.account}
+                  </span>
+                  {f.lineName(r.line)}
+                </th>
+                <td className={num}>
+                  <Money cents={r.ledger} />
+                </td>
+                <td className={num}>
+                  <Money cents={r.out} />
+                </td>
+                <td className={num}>
+                  <Money cents={r.in} />
+                </td>
+                <td className={cn(num, "font-semibold")}>
+                  <Money cents={r.statement} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h4 className="mt-6 font-heading font-semibold">
+        {f.t("ledger.reconEntries")}
+      </h4>
+      <div className="mt-2 overflow-x-auto">
+        <table className="w-full min-w-[36rem] text-sm">
+          <thead>
+            <tr className="border-b border-sheet-edge">
+              <th scope="col" className={cn(head, "w-px text-right")}>
+                {f.t("ledger.colVoucher")}
+              </th>
+              <th scope="col" className={cn(head, "w-px text-left")}>
+                {f.t("ledger.colDate")}
+              </th>
+              <th scope="col" className={cn(head, "w-px text-left")}>
+                {f.t("ledger.colPaid")}
+              </th>
+              <th scope="col" className={cn(head, "text-left")}>
+                {f.t("ledger.colDescription")}
+              </th>
+              <th scope="col" className={cn(head, "w-px text-left")}>
+                {f.t("ledger.colAccount")}
+              </th>
+              <th scope="col" className={cn(head, "text-right")}>
+                {f.t("ledger.colEffect")}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {recon.crossings.map(({ row, paid, direction }) => (
+              <tr
+                key={row.entry.id}
+                className="border-b border-dashed border-sheet-edge/60"
+              >
+                <td className={cn(num, "tabular text-muted-foreground")}>
+                  {row.entry.voucher}
+                </td>
+                <td className={cn(cell, "tabular whitespace-nowrap")}>
+                  {f.date(row.entry.date)}
+                </td>
+                <td className={cn(cell, "tabular whitespace-nowrap")}>
+                  {paid ? f.date(paid) : f.t("ledger.openPill")}
+                </td>
+                <td className={cell}>
+                  {row.entry.description || f.t("ledger.noDescription")}
+                </td>
+                <td className={cn(cell, "tabular")}>{row.line?.account}</td>
+                <td className={num}>
+                  <Money cents={row.net} signed={direction === "out"} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-3 text-xs text-muted-foreground">
+        {f.t("ledger.reconNote")}
+      </p>
+    </section>
   )
 }
 

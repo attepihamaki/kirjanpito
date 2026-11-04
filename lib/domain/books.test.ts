@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest"
 
 import { defaultCategories } from "@/lib/domain/accounts"
-import { accountList, generalLedger, journal } from "@/lib/domain/books"
+import {
+  accountList,
+  generalLedger,
+  journal,
+  ledgerReconciliation,
+} from "@/lib/domain/books"
 import { createIdFactory } from "@/lib/domain/id"
+import { incomeStatement } from "@/lib/domain/income-statement"
+import { taxBasisEntries } from "@/lib/domain/open-items"
 import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { indexCategories, type Entry } from "@/lib/domain/types"
 import { assignVouchers } from "@/lib/domain/voucher"
@@ -92,5 +99,76 @@ describe("accountList", () => {
     expect(has(2026)).toBe(true)
     expect(has(2025)).toBe(false)
     expect(accountList([], list, 2026)[0].line.key).toBe("300")
+  })
+})
+
+describe("ledgerReconciliation", () => {
+  const entry = (over: Partial<Entry>): Entry => ({
+    id: over.id ?? "x",
+    date: "2026-12-20",
+    description: "",
+    type: "income",
+    catId: "300-domestic",
+    amount: 125_500,
+    vatRate: 25.5,
+    amountMode: "gross",
+    ...over,
+  })
+  const book = [
+    ...sample,
+    // Invoiced in December, paid in January: in 2026's books, on 2027's statement.
+    entry({ id: "late", paidOn: "2027-01-10" }),
+    // Still open at the year-end.
+    entry({ id: "open", catId: "333", type: "expense", paidOn: null }),
+    // Dated 2025, paid in 2026: on 2026's statement only.
+    entry({ id: "early", date: "2025-12-15", paidOn: "2026-01-05" }),
+    // A prepayment for 2027, paid in 2026.
+    entry({ id: "pre", date: "2027-01-15", paidOn: "2026-12-30" }),
+    // Off the statement: never reconciled, whenever paid.
+    entry({ id: "loan", catId: "loan-repayment", type: "expense", vatRate: 0 }),
+  ]
+
+  it("lists the entries paid in a year other than their own", () => {
+    const r = ledgerReconciliation(book, cats, 2026)
+    expect(r.crossings.map((c) => [c.row.entry.id, c.direction])).toEqual([
+      ["early", "in"],
+      ["late", "out"],
+      ["open", "out"],
+      ["pre", "in"],
+    ])
+    expect(r.crossings.find((c) => c.row.entry.id === "open")?.paid).toBeNull()
+  })
+
+  it("lists only the lines an entry crosses", () => {
+    const r = ledgerReconciliation(book, cats, 2026)
+    expect(r.lines.map((l) => l.line.key)).toEqual(["300", "333"])
+    const sales = r.lines[0]
+    expect(sales.out).toBe(100_000)
+    expect(sales.in).toBe(200_000)
+    expect(sales.statement).toBe(sales.ledger - 100_000 + 200_000)
+  })
+
+  it("reaches the income statement's figure on every line", () => {
+    for (const year of [2025, 2026, 2027]) {
+      const r = ledgerReconciliation(book, cats, year)
+      const statement = incomeStatement(taxBasisEntries(book), cats, year)
+      const ledger = new Map(
+        generalLedger(book, cats, year).map((a) => [a.line.key, a.totals.net])
+      )
+      for (const { line, net } of statement.lines) {
+        const reconciled =
+          r.lines.find((l) => l.line.key === line.key)?.statement ??
+          ledger.get(line.key) ??
+          0
+        expect([year, line.key, reconciled]).toEqual([year, line.key, net])
+      }
+    }
+  })
+
+  it("is empty when every entry is paid in its own year", () => {
+    expect(ledgerReconciliation(sample, cats, 2026)).toEqual({
+      lines: [],
+      crossings: [],
+    })
   })
 })
