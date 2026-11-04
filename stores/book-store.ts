@@ -156,6 +156,8 @@ export type DialogState =
   | { kind: "export" }
   /** The settings a new bookkeeping is started with (§8.3). */
   | { kind: "setup" }
+  /** The selected year's checks, Form 5 values and lock (§8.8). */
+  | { kind: "year-end" }
   /** Add a month's recurring entries (§8.5). `month` is `"2026-10"`. */
   | { kind: "recurring"; month: string }
   /** Change a custom category's name, line or default VAT (§8.10). */

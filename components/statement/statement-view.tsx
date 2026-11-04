@@ -5,7 +5,7 @@ import * as React from "react"
 import { BusinessLine } from "@/components/common/business-line"
 import { Money, ZeroDash } from "@/components/common/money"
 import { useFormatters } from "@/components/lang-provider"
-import { Form5FiledToggle } from "@/components/statement/form5-filed-control"
+import { YearEndButton } from "@/components/statement/year-end-button"
 import { incomeStatement } from "@/lib/domain/income-statement"
 import { indexCategories } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
@@ -90,7 +90,7 @@ export function StatementView() {
 
   return (
     <>
-      <div className="print-sheet mx-auto max-w-2xl rounded-lg border border-sheet-edge bg-sheet p-6 shadow-sm md:p-8">
+      <div className="print-sheet max-w-2xl rounded-lg border border-sheet-edge bg-sheet p-6 shadow-sm md:p-8">
         <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="font-heading text-xl font-semibold">
@@ -104,7 +104,7 @@ export function StatementView() {
               })}
             </p>
           </div>
-          <Form5FiledToggle compact className="print-hidden" />
+          <YearEndButton className="print-hidden" />
         </header>
 
         <table className="w-full text-sm">

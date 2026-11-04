@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 
 import { ButtonLink } from "@/components/common/button-link"
+import { CHECK_TEXT } from "@/components/common/check-text"
 import { Money } from "@/components/common/money"
 import { Panel } from "@/components/common/panel"
 import { Pill } from "@/components/common/pill"
@@ -33,11 +34,7 @@ import { calcEntry } from "@/lib/domain/calc"
 import { dueRecurring } from "@/lib/domain/recurring"
 import { lastCompleteMonth, monthOf } from "@/lib/domain/dates"
 import { daysBetween } from "@/lib/domain/vat-deadline"
-import {
-  ENTRY_CHECKS,
-  flaggedEntryIds,
-  type EntryCheck,
-} from "@/lib/domain/entry-checks"
+import { ENTRY_CHECKS, flaggedEntryIds } from "@/lib/domain/entry-checks"
 import { APP_ROUTES } from "@/lib/site"
 import { cn } from "@/lib/utils"
 import { toast } from "@/components/ui/toast"
@@ -171,39 +168,6 @@ export function RecentWidget() {
 }
 
 type CheckTone = "warn" | "crit" | "ok" | "info"
-
-const CHECK_TEXT = {
-  noReceipt: {
-    title: "overview.withoutReceipt",
-    sub: "overview.withoutReceiptSub",
-  },
-  rateMismatch: {
-    title: "overview.rateMismatch",
-    sub: "overview.rateMismatchSub",
-  },
-  futureDate: { title: "overview.futureDate", sub: "overview.futureDateSub" },
-  zeroVatSale: {
-    title: "overview.zeroVatSale",
-    sub: "overview.zeroVatSaleSub",
-  },
-  largeAmount: {
-    title: "overview.largeAmount",
-    sub: "overview.largeAmountSub",
-  },
-  duplicate: {
-    title: "overview.duplicate",
-    sub: "overview.duplicateSub",
-  },
-  vatNotDeductible: {
-    title: "overview.vatNotDeductible",
-    sub: "overview.vatNotDeductibleSub",
-  },
-  privateUseNoVat: {
-    title: "overview.privateUseNoVat",
-    sub: "overview.privateUseNoVatSub",
-  },
-  lateCash: { title: "overview.lateCash", sub: "overview.lateCashSub" },
-} as const satisfies Record<EntryCheck, { title: string; sub: string }>
 
 interface CheckItem {
   key: string

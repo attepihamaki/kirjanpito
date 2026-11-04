@@ -2,7 +2,6 @@
 
 import * as React from "react"
 
-import { ButtonLink } from "@/components/common/button-link"
 import { Panel } from "@/components/common/panel"
 import { useFormatters } from "@/components/lang-provider"
 import { useMemoVoucher } from "@/components/statement/use-memo-voucher"
@@ -17,12 +16,11 @@ import {
   type YearEnd,
 } from "@/lib/domain/form5-balance"
 import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
-import { STATEMENT_ROUTES } from "@/lib/site"
 import { useBookStore } from "@/stores/book-store"
 
 /**
  * What Form 5's assets and liabilities need beyond the book (§8.8), year by
- * year. The Lomake 5 tab lists the resulting fields for copying.
+ * year. The year-end dialog lists the resulting fields for copying.
  */
 export function BalanceView() {
   const year = useBookStore((s) => s.year)
@@ -100,6 +98,7 @@ function YearEndPanel({ year }: { year: number }) {
   const setLoanOpening = useBookStore((s) => s.setLoanOpening)
   const values = yearEnds[year] ?? EMPTY_YEAR_END
   const filed = !!useBookStore((s) => s.form5Filed[String(year)])
+  const openDialog = useBookStore((s) => s.openDialog)
 
   return (
     <Panel
@@ -107,13 +106,13 @@ function YearEndPanel({ year }: { year: number }) {
       description={f.t(filed ? "balance.yearEndFiled" : "balance.yearEndHint")}
       bodyClassName="grid gap-4 p-4 min-[560px]:grid-cols-2"
       footer={
-        <ButtonLink
-          href={STATEMENT_ROUTES.form5}
+        <Button
           variant="outline"
           className="print-hidden"
+          onClick={() => openDialog({ kind: "year-end" })}
         >
           {f.t("balance.openForm5")}
-        </ButtonLink>
+        </Button>
       }
     >
       {FIELDS.map(([key, label]) => (

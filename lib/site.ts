@@ -123,7 +123,6 @@ export const SETTINGS_ROUTES = {
  */
 export const STATEMENT_ROUTES = {
   sheet: APP_ROUTES.statement,
-  form5: `${APP_ROUTES.statement}/form5`,
   balance: `${APP_ROUTES.statement}/balance`,
   assets: `${APP_ROUTES.statement}/assets`,
   deductions: `${APP_ROUTES.statement}/deductions`,

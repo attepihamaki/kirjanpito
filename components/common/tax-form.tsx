@@ -42,11 +42,17 @@ export function TaxForm({
   nothing,
   sections,
   notes,
+  embedded = false,
   children,
 }: {
   kicker: string
   title: string
   intro: string
+  /**
+   * Drops the sheet surface, the title and the footer, for a form that sits
+   * inside a dialog which already has its own heading.
+   */
+  embedded?: boolean
   /** Shown in place of the checklist when no field has an amount. */
   nothing: string
   sections: readonly TaxFormSection[]
@@ -78,7 +84,13 @@ export function TaxForm({
      * The statement's --sheet surface (§11), so a form reads as one more view
      * of the document: warm paper in light, the card tone in dark.
      */
-    <div className="print-sheet mx-auto flex w-full max-w-2xl flex-col gap-6 rounded-xl border border-sheet-edge bg-sheet p-4 shadow-sm sm:p-7">
+    <div
+      className={cn(
+        "flex w-full flex-col gap-6",
+        !embedded &&
+          "print-sheet mx-auto max-w-2xl rounded-xl border border-sheet-edge bg-sheet p-4 shadow-sm sm:p-7"
+      )}
+    >
       <header className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-3">
           <span className="text-sm text-muted-foreground">{kicker}</span>
@@ -92,12 +104,16 @@ export function TaxForm({
             <ExternalLinkIcon aria-hidden className="size-3.5" />
           </a>
         </div>
-        <div className="flex flex-col gap-2">
-          <h2 className="font-heading text-[1.625rem] leading-tight font-semibold tracking-[-0.01em]">
-            {title}
-          </h2>
-          <p className="print-hidden text-muted-foreground">{intro}</p>
-        </div>
+        {embedded ? (
+          <p className="text-muted-foreground">{intro}</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <h2 className="font-heading text-[1.625rem] leading-tight font-semibold tracking-[-0.01em]">
+              {title}
+            </h2>
+            <p className="print-hidden text-muted-foreground">{intro}</p>
+          </div>
+        )}
         <ToggleGroup
           aria-label={f.t("common.formShow")}
           className="print-hidden grid w-full grid-cols-2 rounded-lg bg-muted p-1"
@@ -248,7 +264,9 @@ export function TaxForm({
         </div>
       </details>
 
-      <p className="text-xs text-muted-foreground">{f.t("landing.footer")}</p>
+      {embedded ? null : (
+        <p className="text-xs text-muted-foreground">{f.t("landing.footer")}</p>
+      )}
     </div>
   )
 }

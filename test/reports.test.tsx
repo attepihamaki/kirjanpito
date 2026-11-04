@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import * as React from "react"
 import { fireEvent, render, screen, within } from "@testing-library/react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { LangProvider } from "@/components/lang-provider"
 import {
@@ -9,8 +9,8 @@ import {
   GeneralLedgerView,
   JournalView,
 } from "@/components/ledger/books-view"
-import { Form5View } from "@/components/statement/form5-view"
 import { StatementView } from "@/components/statement/statement-view"
+import { YearEndDialog } from "@/components/statement/year-end-dialog"
 import { VatReturnView } from "@/components/vat/vat-return-view"
 import { VatShell } from "@/components/vat/vat-shell"
 import { VatView as VatPage } from "@/components/vat/vat-view"
@@ -18,7 +18,6 @@ import { defaultCategories } from "@/lib/domain/accounts"
 import { EMPTY_YEAR_END } from "@/lib/domain/form5-balance"
 import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { createIdFactory } from "@/lib/domain/id"
-import { STATEMENT_ROUTES } from "@/lib/site"
 import { useBookStore } from "@/stores/book-store"
 import type { Lang } from "@/lib/domain/types"
 
@@ -174,33 +173,21 @@ describe("VatView", () => {
 })
 
 describe("StatementView", () => {
-  it("marks a closed year as filed, as Lomake 5 does", () => {
-    useBookStore.setState({ year: 2025, form5Filed: {} })
+  it("opens the year-end dialog from the sheet", () => {
+    useBookStore.setState({ form5Filed: {}, dialog: { kind: "none" } })
     mount(<StatementView />)
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Merkitse ilmoitetuksi" })
-    )
+    fireEvent.click(screen.getByRole("button", { name: "Ilmoita OmaVerossa" }))
 
-    expect(useBookStore.getState().form5Filed["2025"]).toBeTruthy()
-    expect(
-      screen.getByRole("button", { name: "Poista merkintä" })
-    ).toBeVisible()
+    expect(useBookStore.getState().dialog).toEqual({ kind: "year-end" })
   })
 
-  it("keeps the filed button on a year still running, and says why", async () => {
-    useBookStore.setState({ year: 2999, form5Filed: {} })
+  it("shows a locked year with the date it was marked", () => {
+    useBookStore.setState({ year: 2025, form5Filed: { "2025": "2026-03-20" } })
     mount(<StatementView />)
 
-    const button = screen.getByRole("button", {
-      name: "Merkitse ilmoitetuksi",
-    })
-    expect(button).toHaveAttribute("aria-disabled", "true")
-
-    fireEvent.click(button)
-
-    expect(await screen.findByText(/Vuosi 2999 on vielä kesken/)).toBeVisible()
-    expect(useBookStore.getState().form5Filed).toEqual({})
+    expect(screen.getByRole("button", { name: "Vuosi lukittu" })).toBeVisible()
+    expect(screen.getByText(/Merkitty ilmoitetuksi 20\.3\.2026/)).toBeVisible()
   })
 
   it("shows the §10 result on line 358", () => {
@@ -287,23 +274,43 @@ describe("StatementView", () => {
   })
 })
 
-describe("Form5View", () => {
+describe("YearEndDialog", () => {
+  const openDialog = () => {
+    useBookStore.setState({ dialog: { kind: "year-end" } })
+    return mount(<YearEndDialog />)
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true })
+    vi.setSystemTime(new Date(2027, 1, 10, 9, 0))
+  })
+  afterEach(() => vi.useRealTimers())
+
+  it("opens on the checks and lists what stands in the way", () => {
+    openDialog()
+    expect(screen.getByText("Vuoden 2026 ilmoitus OmaVeroon")).toBeInTheDocument()
+    // The sample year has entries without a receipt, and no year-end figures.
+    expect(screen.getByText(/ilman liitettä/i)).toBeInTheDocument()
+    expect(
+      screen.getByText("Vuoden lopun varat ja velat puuttuvat")
+    ).toBeInTheDocument()
+  })
+
   it("lists the fields in the form's order and copies an amount by its code", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, "clipboard", {
       value: { writeText },
       configurable: true,
     })
-    mount(<Form5View />)
+    openDialog()
+    fireEvent.click(screen.getByRole("button", { name: /Summat/ }))
 
     // It opens on the fields to fill in, then the totals to check.
     expect(screen.getByText("Liikevaihto")).toBeInTheDocument()
     expect(screen.queryByText("Saadut avustukset ja tuet")).toBeNull()
-    expect(screen.queryByText("Elinkeinotoiminnan tappio")).toBeNull()
     expect(
       screen.getByText("Elinkeinotoiminnan veronalaiset tuotot yhteensä")
     ).toBeInTheDocument()
-    // Totals are there to check against, not to copy.
     expect(
       screen.queryByRole("button", { name: /^Kopioi kohta 358:/ })
     ).toBeNull()
@@ -317,14 +324,10 @@ describe("Form5View", () => {
         name: "Kopioitu: kohta 300, 12500,00. Kopioi uudelleen",
       })
     ).toBeInTheDocument()
-    expect(screen.getByText(/^1\/\d+ kopioitu$/)).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole("button", { name: /^Kaikki kohdat/ }))
     expect(screen.getByText("Saadut avustukset ja tuet")).toBeInTheDocument()
-    expect(screen.getAllByText("Veronalainen osuus")).toHaveLength(2)
-    expect(screen.getByText("Elinkeinotoiminnan varat")).toBeInTheDocument()
     expect(screen.getByText("Maksetut palkat")).toBeInTheDocument()
-    // An empty field has nothing to copy.
     expect(
       screen.queryByRole("button", { name: /^Kopioi kohta 318:/ })
     ).toBeNull()
@@ -332,10 +335,10 @@ describe("Form5View", () => {
 
   it("adds the year-end figures to the fields and totals to fill in", () => {
     useBookStore.setState({
-      year: 2026,
       yearEnd: { 2026: { ...EMPTY_YEAR_END, goods: 120_000 } },
     })
-    mount(<Form5View />)
+    openDialog()
+    fireEvent.click(screen.getByRole("button", { name: /Summat/ }))
 
     expect(
       screen.getByRole("button", { name: "Kopioi kohta 708: 1200,00" })
@@ -344,9 +347,27 @@ describe("Form5View", () => {
     expect(
       screen.getByText("Positiivinen nettovarallisuus")
     ).toBeInTheDocument()
+  })
+
+  it("locks the year in one step and the mark can be undone", () => {
+    openDialog()
+    fireEvent.click(screen.getByRole("button", { name: /Lukitus/ }))
+    fireEvent.click(
+      screen.getByRole("button", { name: "Merkitse ilmoitetuksi ja lukitse" })
+    )
+
+    expect(useBookStore.getState().form5Filed["2026"]).toBe("2027-02-10")
+    expect(useBookStore.getState().dialog.kind).toBe("none")
+  })
+
+  it("will not lock a year that has not ended", () => {
+    vi.setSystemTime(new Date(2026, 9, 31, 9, 0))
+    openDialog()
+    fireEvent.click(screen.getByRole("button", { name: /Lukitus/ }))
+
     expect(
-      screen.getByRole("link", { name: "Muokkaa lukuja" })
-    ).toHaveAttribute("href", expect.stringContaining(STATEMENT_ROUTES.balance))
+      screen.getByRole("button", { name: "Merkitse ilmoitetuksi ja lukitse" })
+    ).toBeDisabled()
   })
 })
 

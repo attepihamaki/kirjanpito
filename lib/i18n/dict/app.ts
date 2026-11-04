@@ -1257,7 +1257,84 @@ export const APP_DICT = {
   ],
   "overview.lastYearMonth": ["{m} {y}", "{m} {y}"],
   "overview.thisYearMonth": ["(nyt {x})", "(now {x})"],
-  "statement.form5Tab": ["Lomake 5", "Form 5"],
+  "statement.yearEndButton": ["Ilmoita OmaVerossa", "Report in OmaVero"],
+  "statement.yearEndOpenFiled": ["Vuosi lukittu", "Year locked"],
+  "statement.yearEndTitle": [
+    "Vuoden {y} ilmoitus OmaVeroon",
+    "Reporting {y} in OmaVero",
+  ],
+  "statement.yearEndIntro": [
+    "Käy läpi tarkistukset, kopioi summat OmaVeroon ja lukitse vuosi.",
+    "Go through the checks, copy the amounts into OmaVero and lock the year.",
+  ],
+  "statement.yearEndSteps": ["Vaiheet", "Steps"],
+  "statement.yearEndStepChecks": ["Tarkistukset", "Checks"],
+  "statement.yearEndStepValues": ["Summat", "Amounts"],
+  "statement.yearEndStepLock": ["Lukitus", "Lock"],
+  "statement.yearEndBack": ["Takaisin", "Back"],
+  "statement.yearEndNext": ["Seuraava", "Next"],
+  "statement.yearEndOpen": ["Avaa", "Open"],
+  "statement.yearEndAllClear": [
+    "Ei huomautettavaa. Vuosi on valmis ilmoitettavaksi.",
+    "Nothing to flag. The year is ready to report.",
+  ],
+  "statement.yearEndOngoing": [
+    "Vuosi {y} on vielä kesken",
+    "{y} is still ongoing",
+  ],
+  "statement.yearEndOngoingSub": [
+    "Vuoden voi lukita vasta, kun se on päättynyt. Summat näkyvät jo nyt.",
+    "A year can be locked only once it has ended. The amounts are visible already.",
+  ],
+  "statement.yearEndNoEntries": [
+    "Vuodella {y} ei ole tositteita",
+    "{y} has no vouchers",
+  ],
+  "statement.yearEndNoEntriesSub": [
+    "Ilmoitus on tyhjä. Tarkista, ettei tositteita puutu.",
+    "The return is empty. Check that no vouchers are missing.",
+  ],
+  "statement.yearEndUnsavedSub": [
+    "Tallenna tiedosto ennen lukitusta, jotta lukitus ja tositteet päätyvät samaan tiedostoon.",
+    "Save the file before locking, so the lock and the vouchers end up in the same file.",
+  ],
+  "statement.yearEndVatUnfiled": [
+    "ALV-ilmoituksia ei ole merkitty ilmoitetuiksi: {p}",
+    "VAT returns not marked as filed: {p}",
+  ],
+  "statement.yearEndVatUnfiledSub": [
+    "Lomake 5 lukitsee koko vuoden. Merkitse ALV-ilmoitukset ensin, jos ne on jo annettu.",
+    "Form 5 locks the whole year. Mark the VAT returns first if they are already filed.",
+  ],
+  "statement.yearEndDepreciation": [
+    "Poistoa ei ole kirjattu",
+    "No depreciation is booked",
+  ],
+  "statement.yearEndDepreciationSub": [
+    "Koneiden ja kaluston enimmäispoisto on {a}. Poiston voi kirjata vain ennen lukitusta.",
+    "The maximum depreciation on machinery and equipment is {a}. It can be booked only before the lock.",
+  ],
+  "statement.yearEndFigures": [
+    "Vuoden lopun varat ja velat puuttuvat",
+    "Year-end assets and liabilities are missing",
+  ],
+  "statement.yearEndFiguresSub": [
+    "Varasto, käteinen ja muut luvut lasketaan nollaksi, jos et täytä niitä.",
+    "Goods, cash in hand and the other figures count as zero unless you enter them.",
+  ],
+  "statement.yearEndLockTitle": ["Lukitse vuosi {y}", "Lock {y}"],
+  "statement.yearEndLockWarn": [
+    "{n} huomautusta on vielä auki. Voit lukita vuoden silti.",
+    "{n} flags are still open. You can lock the year anyway.",
+  ],
+  "statement.yearEndLockAction": [
+    "Merkitse ilmoitetuksi ja lukitse",
+    "Mark as filed and lock",
+  ],
+  "statement.yearEndLocked": [
+    "Vuosi {y} on lukittu.",
+    "{y} is locked.",
+  ],
   "statement.form5Title": [
     "Lomake 5, elinkeinotoiminnan veroilmoitus",
     "Form 5, business tax return",
@@ -1275,16 +1352,10 @@ export const APP_DICT = {
     "Ammatinharjoittajan maksuperuste (EVL 27 a §): tulot ja kulut ovat maksupäivän mukaan, eikä avoimia tositteita ole mukana. Myyntisaamiset {d}: {r}. Ostovelat {d}: {p}.",
     "An ammatinharjoittaja’s cash basis (EVL 27 a §): income and expenses go by payment date, and open vouchers are left out. Receivables on {d}: {r}. Payables on {d}: {p}.",
   ],
-  "statement.form5FileStep": ["Merkitse ilmoitetuksi", "Mark as filed"],
-  "statement.yearOngoing": [
-    "Vuosi {y} on vielä kesken, joten sitä ei voi vielä merkitä ilmoitetuksi.",
-    "{y} is still ongoing, so it cannot be marked as filed yet.",
-  ],
   "statement.form5FileHint": [
     "Kun olet antanut ilmoituksen OmaVerossa, merkitse se tähän. Se lukitsee kaikki vuoden {y} tositteet, koska kirjanpitolaki (2:7) ei salli muuttaa niitä ilmoituksen jälkeen.",
     "Once you have filed the return in OmaVero, mark it here. That locks every voucher of {y}, because the Accounting Act (2:7) does not allow changing them after a return.",
   ],
-  "statement.form5FileInfo": ["Mitä merkintä tekee?", "What does the mark do?"],
   "statement.form5FiledOn": [
     "Merkitty ilmoitetuksi {d}. Vuoden tositteet ovat lukittuja.",
     "Marked as filed on {d}. The year’s vouchers are locked.",
@@ -1465,7 +1536,7 @@ export const APP_DICT = {
     "Where the assets and liabilities come from",
   ],
   "balance.editFigures": ["Muokkaa lukuja", "Edit the figures"],
-  "balance.openForm5": ["Avaa Lomake 5", "Open Form 5"],
+  "balance.openForm5": ["Avaa vuoden ilmoitus", "Open the year’s report"],
   "balance.figures": [
     "Tositteista: myyntisaamiset {r}, ostovelat {p}, lainat {l}. Poistolaskelmasta: koneet ja kalusto {m}.",
     "From the vouchers: receivables {r}, payables {p}, loans {l}. From the depreciation register: machinery and equipment {m}.",
