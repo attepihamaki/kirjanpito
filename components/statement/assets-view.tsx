@@ -1,14 +1,17 @@
 "use client"
 
 import * as React from "react"
+import { InfoIcon } from "lucide-react"
 
+import { EuroInput } from "@/components/common/euro-input"
 import { Money } from "@/components/common/money"
 import { Panel } from "@/components/common/panel"
+import { Pill } from "@/components/common/pill"
+import { StatStrip } from "@/components/common/stat-strip"
 import { useFormatters } from "@/components/lang-provider"
 import { useMemoVoucher } from "@/components/statement/use-memo-voucher"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -30,6 +33,7 @@ import { calculatedEntryDate } from "@/lib/domain/deductions"
 import { uid } from "@/lib/domain/id"
 import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
 import { indexCategories, type Entry } from "@/lib/domain/types"
+import { cn } from "@/lib/utils"
 import { useBookStore } from "@/stores/book-store"
 
 /** The fixed asset register and the year's depreciation (§8.8). */
@@ -52,17 +56,43 @@ export function AssetsView() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Panel title={f.t("assets.title", { y: year })} bodyClassName="p-4">
-        <p className="text-sm text-muted-foreground">{f.t("assets.intro")}</p>
-        {current ? (
-          <YearFigures row={current} key={`${year}-${current.taken}`} />
-        ) : (
-          <p className="mt-4 text-sm">
+      <p className="max-w-prose text-sm text-muted-foreground">
+        {f.t("assets.intro")}
+      </p>
+
+      {current ? (
+        <>
+          <StatStrip
+            stats={[
+              { label: f.t("assets.base"), value: <Money cents={current.base} /> },
+              {
+                label: f.t("assets.maximum"),
+                value: <Money cents={current.maximum} />,
+              },
+              {
+                label: f.t("assets.taken"),
+                value: <Money cents={current.taken} />,
+              },
+              {
+                label: f.t("assets.closing"),
+                value: <Money cents={current.closing} />,
+              },
+            ]}
+          />
+          <YearFigures
+            row={current}
+            key={`${year}-${current.taken}`}
+            title={f.t("assets.title", { y: year })}
+          />
+        </>
+      ) : (
+        <Panel title={f.t("assets.title", { y: year })} bodyClassName="p-4">
+          <p className="text-sm">
             <span className="font-medium">{f.t("assets.noneTitle")}. </span>
             {f.t("assets.noneBody")}
           </p>
-        )}
-      </Panel>
+        </Panel>
+      )}
 
       <Panel title={f.t("assets.yearEntries", { y: year })}>
         {rows.length === 0 ? (
@@ -76,6 +106,7 @@ export function AssetsView() {
                 <TableHead>{f.t("assets.voucher")}</TableHead>
                 <TableHead>{f.t("assets.date")}</TableHead>
                 <TableHead>{f.t("recurring.description")}</TableHead>
+                <TableHead>{f.t("common.type")}</TableHead>
                 <TableHead className="text-right">
                   {f.t("common.net")}
                 </TableHead>
@@ -95,6 +126,11 @@ export function AssetsView() {
                     {f.date(e.date)}
                   </TableCell>
                   <TableCell>{e.description}</TableCell>
+                  <TableCell>
+                    <Pill tone={e.type === "income" ? "income" : "expense"}>
+                      {f.t(e.type === "income" ? "assets.sale" : "assets.purchase")}
+                    </Pill>
+                  </TableCell>
                   <TableCell className="text-right">
                     <Money
                       cents={
@@ -136,7 +172,11 @@ export function AssetsView() {
             </TableHeader>
             <TableBody>
               {schedule.map((y) => (
-                <TableRow key={y.year}>
+                <TableRow
+                  key={y.year}
+                  className={cn(y.year === year && "bg-muted/50")}
+                  aria-current={y.year === year ? "true" : undefined}
+                >
                   <TableCell className="tabular font-medium">
                     {y.year}
                   </TableCell>
@@ -153,7 +193,7 @@ export function AssetsView() {
                     <Money cents={y.taken} />
                   </TableCell>
                   <TableCell className="text-right">
-                    <Money cents={y.closing} />
+                    <Money cents={y.closing} className="font-medium" />
                   </TableCell>
                 </TableRow>
               ))}
@@ -164,7 +204,8 @@ export function AssetsView() {
 
       <OpeningBalance />
 
-      <p className="print-hidden text-sm text-muted-foreground">
+      <p className="print-hidden flex max-w-prose items-start gap-2 text-sm text-muted-foreground">
+        <InfoIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
         {f.t("assets.smallNote")}
       </p>
     </div>
@@ -172,7 +213,7 @@ export function AssetsView() {
 }
 
 /** The year's calculation and the form that books its depreciation. */
-function YearFigures({ row }: { row: AssetYear }) {
+function YearFigures({ row, title }: { row: AssetYear; title: string }) {
   const f = useFormatters()
   const ctx = useCommandCtx()
   const memoVoucher = useMemoVoucher()
@@ -191,6 +232,8 @@ function YearFigures({ row }: { row: AssetYear }) {
     [f.t("assets.taken"), row.taken],
     [f.t("assets.closing"), row.closing],
   ]
+  const used =
+    row.maximum > 0 ? Math.min(100, (row.taken / row.maximum) * 100) : 0
 
   const book = async () => {
     const cents = parseAmount(amount)
@@ -232,25 +275,60 @@ function YearFigures({ row }: { row: AssetYear }) {
   }
 
   return (
-    <div className="mt-4 grid gap-6 md:grid-cols-2">
-      <dl className="flex flex-col gap-1.5 text-sm">
-        {figures.map(([label, cents]) => (
-          <div key={label} className="flex justify-between gap-4">
-            <dt className="text-muted-foreground">{label}</dt>
-            <dd>
-              <Money cents={cents} />
-            </dd>
-          </div>
-        ))}
-      </dl>
+    <Panel title={title} bodyClassName="grid gap-6 p-4 md:grid-cols-2">
+      <div className="flex flex-col gap-5">
+        <dl className="flex flex-col text-sm">
+          {figures.slice(0, 4).map(([label, cents], index) => {
+            const last = index === 3
+            return (
+              <div
+                key={label}
+                className={cn(
+                  "flex justify-between gap-4 py-2",
+                  last
+                    ? "border-t font-medium"
+                    : "border-b border-dashed border-border/60"
+                )}
+              >
+                <dt className={last ? undefined : "text-muted-foreground"}>
+                  {label}
+                </dt>
+                <dd>
+                  <Money cents={cents} />
+                </dd>
+              </div>
+            )
+          })}
+        </dl>
 
-      <div className="print-hidden flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
+          <div className="flex justify-between gap-4 text-sm">
+            <span className="text-muted-foreground">{f.t("assets.used")}</span>
+            <span className="tabular">
+              {f.money(row.taken)} / {f.money(row.maximum)}
+            </span>
+          </div>
+          <div
+            role="progressbar"
+            aria-label={f.t("assets.used")}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(used)}
+            className="h-2 overflow-hidden rounded-full bg-muted"
+          >
+            <div
+              className="h-full rounded-full bg-primary"
+              style={{ width: `${used}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="print-hidden flex flex-col gap-3 rounded-lg bg-muted/40 p-4">
         <Field>
           <FieldLabel htmlFor="asset-amount">{f.t("assets.amount")}</FieldLabel>
-          <Input
+          <EuroInput
             id="asset-amount"
-            inputMode="decimal"
-            className="tabular max-w-40 text-right"
             value={amount}
             aria-invalid={error ? true : undefined}
             onChange={(event) => {
@@ -274,16 +352,12 @@ function YearFigures({ row }: { row: AssetYear }) {
           </p>
         ) : null}
         <div>
-          <Button
-            variant="outline"
-            disabled={row.base === 0}
-            onClick={() => void book()}
-          >
+          <Button disabled={row.base === 0} onClick={() => void book()}>
             {f.t("assets.book")}
           </Button>
         </div>
       </div>
-    </div>
+    </Panel>
   )
 }
 
@@ -302,15 +376,13 @@ function OpeningBalance() {
       description={f.t("assets.openingHint", { y: openingYear })}
       bodyClassName="p-4"
     >
-      <Field>
+      <Field className="max-w-60">
         <FieldLabel htmlFor="asset-opening">
           {f.t("assets.openingLabel", { y: openingYear })}
         </FieldLabel>
-        <Input
+        <EuroInput
           key={opening?.amount ?? 0}
           id="asset-opening"
-          inputMode="decimal"
-          className="tabular max-w-40 text-right"
           defaultValue={opening ? formatMoneyPlain(opening.amount) : ""}
           onBlur={(event) => {
             const text = event.target.value.trim()

@@ -2,9 +2,10 @@
 
 import * as React from "react"
 
+import { EuroInput } from "@/components/common/euro-input"
 import { Money } from "@/components/common/money"
-import { OptionSelect } from "@/components/common/option-select"
 import { Panel } from "@/components/common/panel"
+import { StatStrip } from "@/components/common/stat-strip"
 import { useFormatters } from "@/components/lang-provider"
 import { useMemoVoucher } from "@/components/statement/use-memo-voucher"
 import { Button } from "@/components/ui/button"
@@ -51,17 +52,41 @@ export function DeductionsView() {
     [entries, year]
   )
 
+  const bookedTotal = booked.reduce((sum, e) => sum + calcEntry(e).net, 0)
+
   return (
     <div className="flex flex-col gap-6" key={year}>
-      <p className="text-sm text-muted-foreground">
+      <p className="max-w-prose text-sm text-muted-foreground">
         {f.t("deductions.intro", { y: year })}
       </p>
 
+      <StatStrip
+        stats={[
+          {
+            label: f.t("deductions.statBooked"),
+            value: <Money cents={bookedTotal} />,
+          },
+          { label: f.t("deductions.statVouchers"), value: booked.length },
+          ...(rates
+            ? [
+                {
+                  label: f.t("deductions.statKm"),
+                  value: `${f.money(rates.km)} / km`,
+                },
+                {
+                  label: f.t("deductions.statDay"),
+                  value: f.money(rates.fullPerDiem),
+                },
+              ]
+            : []),
+        ]}
+      />
+
       {rates ? (
-        <>
+        <div className="grid items-start gap-6 xl:grid-cols-2">
           <MileageForm rates={rates} />
           <PerDiemForm rates={rates} />
-        </>
+        </div>
       ) : (
         <Panel bodyClassName="p-4 text-sm text-muted-foreground">
           {f.t("deductions.noTravelRates", { y: year })}
@@ -80,12 +105,17 @@ export function DeductionsView() {
               <li key={e.id}>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between gap-4 px-4 py-2.5 text-left text-sm hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
+                  className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left text-sm hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
                   onClick={() =>
                     openDialog({ kind: "entry", mode: "edit", entryId: e.id })
                   }
                 >
-                  <span className="min-w-0">{e.description}</span>
+                  <span className="flex min-w-0 flex-col">
+                    <span>{e.description}</span>
+                    <span className="tabular text-xs text-muted-foreground">
+                      {f.date(e.date)}
+                    </span>
+                  </span>
                   <Money cents={calcEntry(e).net} />
                 </button>
               </li>
@@ -143,21 +173,19 @@ function ResultFooter({
   const f = useFormatters()
   return (
     <div className="flex w-full flex-wrap items-center justify-between gap-3">
-      <p className="text-sm">
-        {ready && amount === 0 ? (
-          <span className="text-muted-foreground">
-            {f.t("deductions.nothing")}
+      {ready && amount === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          {f.t("deductions.nothing")}
+        </p>
+      ) : (
+        <p className="flex flex-col">
+          <span className="text-sm text-muted-foreground">
+            {f.t("deductions.result")}
           </span>
-        ) : (
-          <>
-            <span className="text-muted-foreground">
-              {f.t("deductions.result")}:{" "}
-            </span>
-            <Money cents={amount} className="font-medium" />
-          </>
-        )}
-      </p>
-      <Button variant="outline" disabled={amount === 0} onClick={onBook}>
+          <Money cents={amount} className="text-lg font-semibold" />
+        </p>
+      )}
+      <Button disabled={amount === 0} onClick={onBook}>
         {f.t("deductions.book")}
       </Button>
     </div>
@@ -192,7 +220,7 @@ function MileageForm({ rates }: { rates: TravelRates }) {
       description={f.t("deductions.mileageHint", {
         r: f.money(rates.km),
       })}
-      bodyClassName="grid gap-4 p-4 sm:grid-cols-2"
+      bodyClassName="grid gap-4 p-4 min-[560px]:grid-cols-2"
       footer={
         <ResultFooter
           amount={amount}
@@ -249,10 +277,8 @@ function MileageForm({ rates }: { rates: TravelRates }) {
       </Field>
       <Field>
         <FieldLabel htmlFor="ded-car">{f.t("deductions.bookedCar")}</FieldLabel>
-        <Input
+        <EuroInput
           id="ded-car"
-          inputMode="decimal"
-          className="tabular text-right"
           value={costs}
           onChange={(event) => setCosts(event.target.value)}
         />
@@ -285,7 +311,7 @@ function PerDiemForm({ rates }: { rates: TravelRates }) {
         a: f.money(rates.partialPerDiem),
         b: f.money(rates.fullPerDiem),
       })}
-      bodyClassName="grid gap-4 p-4 sm:grid-cols-3"
+      bodyClassName="grid gap-4 p-4 min-[560px]:grid-cols-2"
       footer={
         <ResultFooter
           amount={amount}
@@ -366,14 +392,12 @@ function PerDiemForm({ rates }: { rates: TravelRates }) {
           onChange={(event) => setPartial(event.target.value)}
         />
       </Field>
-      <Field>
+      <Field className="min-[560px]:col-span-2">
         <FieldLabel htmlFor="ded-living">
           {f.t("deductions.bookedLiving")}
         </FieldLabel>
-        <Input
+        <EuroInput
           id="ded-living"
-          inputMode="decimal"
-          className="tabular text-right"
           value={costs}
           onChange={(event) => setCosts(event.target.value)}
         />
@@ -438,23 +462,32 @@ function HomeOfficeForm() {
         />
       }
     >
-      <Field>
-        <FieldLabel>{f.t("deductions.tier")}</FieldLabel>
-        <OptionSelect
-          label={f.t("deductions.tier")}
-          options={HOME_OFFICE_TIERS.map((value) => ({
-            value,
-            label: `${tierLabel[value]} (${f.money(amounts[value])})`,
-          }))}
-          value={tier}
-          onChange={(value) => setTier(value as HomeOfficeTier)}
-        />
+      <fieldset className="grid gap-2">
+        <legend className="mb-1 text-sm font-medium">
+          {f.t("deductions.tier")}
+        </legend>
+        {HOME_OFFICE_TIERS.map((value) => (
+          <label
+            key={value}
+            className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm transition-colors hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+          >
+            <input
+              type="radio"
+              name="home-office-tier"
+              className="mt-0.5 accent-primary"
+              checked={tier === value}
+              onChange={() => setTier(value)}
+            />
+            <span className="min-w-0 flex-1">{tierLabel[value]}</span>
+            <Money cents={amounts[value]} className="font-medium" />
+          </label>
+        ))}
         {exists ? (
           <FieldDescription className="text-warning">
             {f.t("deductions.homeExists", { y: year })}
           </FieldDescription>
         ) : null}
-      </Field>
+      </fieldset>
     </Panel>
   )
 }
