@@ -25,7 +25,7 @@ const note = (msg) => notes.push(msg)
 /**
  * Libraries that must not reach the landing page's bundle (CLAUDE.md §11b).
  *
- * The landing is the public document; these four are only ever reached through
+ * The landing is the public document; these are only ever reached through
  * `await import()`. Each entry lists several markers because minifiers keep
  * string literals and mangle identifiers — the package name itself is usually
  * gone.
@@ -41,6 +41,7 @@ const FORBIDDEN_ON_LANDING = [
     markers: ["MissingQuotes", "__parsed_extra", "TooFewFields"],
   },
   { name: "recharts", markers: ["recharts-wrapper", "CartesianGrid"] },
+  { name: "pdf-lib", markers: ["Hopding/pdf-lib"] },
 ]
 
 function walk(dir, match) {
@@ -104,7 +105,7 @@ if (basePath !== null) {
   }
 }
 
-// 2. The landing bundle contains none of the four heavy libraries.
+// 2. The landing bundle contains none of the heavy libraries.
 const landingHtml = readFileSync(join(OUT, "index.html"), "utf8")
 const landingChunks = [
   ...new Set(
@@ -145,7 +146,9 @@ for (const { name, markers } of FORBIDDEN_ON_LANDING) {
 }
 
 if (!failures.length) {
-  note(`${landingChunks.length} landing chunks free of the four libraries`)
+  note(
+    `${landingChunks.length} landing chunks free of ${FORBIDDEN_ON_LANDING.map((l) => l.name).join(", ")}`
+  )
 }
 
 // 3. Things the export has to contain.

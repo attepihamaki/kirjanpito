@@ -5,9 +5,12 @@ import * as React from "react"
 import { ButtonLink } from "@/components/common/button-link"
 import { Panel } from "@/components/common/panel"
 import { useFormatters } from "@/components/lang-provider"
+import { useMemoVoucher } from "@/components/statement/use-memo-voucher"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { useCommandCtx } from "@/hooks/use-commands"
+import { storeMemo } from "@/lib/commands/memo-commands"
 import {
   EMPTY_YEAR_END,
   inventoryChange,
@@ -146,10 +149,12 @@ function InventoryPanel({ year }: { year: number }) {
   const yearEnds = useBookStore((s) => s.yearEnd)
   const entries = useBookStore((s) => s.entries)
   const openDialog = useBookStore((s) => s.openDialog)
-  const change = inventoryChange(
-    yearEnds[year - 1] ?? EMPTY_YEAR_END,
-    yearEnds[year] ?? EMPTY_YEAR_END
-  )
+  const ctx = useCommandCtx()
+  const memoVoucher = useMemoVoucher()
+  const [busy, setBusy] = React.useState(false)
+  const opening = yearEnds[year - 1] ?? EMPTY_YEAR_END
+  const closing = yearEnds[year] ?? EMPTY_YEAR_END
+  const change = inventoryChange(opening, closing)
   const description = f.t("balance.inventoryEntry", { y: year })
   const booked = entries.some(
     (e) => e.catId === "333" && e.description === description
@@ -171,22 +176,51 @@ function InventoryPanel({ year }: { year: number }) {
       ) : (
         <Button
           variant="outline"
-          disabled={change === 0 || filed}
-          onClick={() =>
+          disabled={change === 0 || filed || busy}
+          onClick={async () => {
+            const prefill = {
+              date: `${year}-12-31`,
+              description,
+              type: "expense" as const,
+              catId: "333",
+              amount: change,
+              vatRate: 0,
+              amountMode: "gross" as const,
+            }
+            setBusy(true)
+            /*
+             * The memo is made before the dialog opens, which then holds it
+             * like any attached receipt. A user who changes the amount there
+             * leaves the calculation on the memo as it was worked out.
+             */
+            const memo = memoVoucher(
+              f.t("memo.inventoryHeading", { y: year }),
+              { id: "", ...prefill },
+              [
+                {
+                  label: f.t("memo.stockOn", { y: year - 1 }),
+                  value: f.money(opening.goods + opening.otherCurrent),
+                },
+                {
+                  label: f.t("memo.stockOn", { y: year }),
+                  value: f.money(closing.goods + closing.otherCurrent),
+                },
+                {
+                  label: f.t("memo.stockChange"),
+                  value: f.money(change),
+                  strong: true,
+                },
+              ],
+              [f.t("memo.inventoryRule"), f.t("memo.keepCount")]
+            )
+            const att = await storeMemo(ctx, memo)
+            setBusy(false)
             openDialog({
               kind: "entry",
               mode: "new",
-              prefill: {
-                date: `${year}-12-31`,
-                description,
-                type: "expense",
-                catId: "333",
-                amount: change,
-                vatRate: 0,
-                amountMode: "gross",
-              },
+              prefill: { ...prefill, ...(att ? { atts: [att] } : {}) },
             })
-          }
+          }}
         >
           {f.t("balance.inventoryBook")}
         </Button>

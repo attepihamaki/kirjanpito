@@ -5,6 +5,7 @@ import * as React from "react"
 import { Money } from "@/components/common/money"
 import { Panel } from "@/components/common/panel"
 import { useFormatters } from "@/components/lang-provider"
+import { useMemoVoucher } from "@/components/statement/use-memo-voucher"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
@@ -17,7 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useCommandCtx } from "@/hooks/use-commands"
-import { addEntriesWithUndo } from "@/lib/commands/bulk-commands"
+import { bookWithMemo } from "@/lib/commands/memo-commands"
 import {
   assetEntries,
   assetSchedule,
@@ -28,7 +29,7 @@ import { todayIso } from "@/lib/domain/dates"
 import { calculatedEntryDate } from "@/lib/domain/deductions"
 import { uid } from "@/lib/domain/id"
 import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
-import { indexCategories } from "@/lib/domain/types"
+import { indexCategories, type Entry } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
 
 /** The fixed asset register and the year's depreciation (§8.8). */
@@ -174,36 +175,12 @@ export function AssetsView() {
 function YearFigures({ row }: { row: AssetYear }) {
   const f = useFormatters()
   const ctx = useCommandCtx()
+  const memoVoucher = useMemoVoucher()
   const remaining = Math.max(0, row.maximum - row.taken)
   const [amount, setAmount] = React.useState(
     remaining ? formatMoneyPlain(remaining) : ""
   )
   const [error, setError] = React.useState<string | null>(null)
-
-  const book = async () => {
-    const cents = parseAmount(amount)
-    if (cents == null || cents <= 0) {
-      setError(f.t("assets.badAmount"))
-      return
-    }
-    setError(null)
-    await addEntriesWithUndo(
-      ctx,
-      [
-        {
-          id: `e-${uid()}`,
-          date: calculatedEntryDate(row.year, todayIso()),
-          description: f.t("assets.entryDescription", { y: row.year }),
-          type: "expense",
-          catId: "337",
-          amount: cents,
-          vatRate: 0,
-          amountMode: "net",
-        },
-      ],
-      f.t("assets.booked")
-    )
-  }
 
   const figures: [string, number][] = [
     [f.t("assets.opening"), row.opening],
@@ -214,6 +191,45 @@ function YearFigures({ row }: { row: AssetYear }) {
     [f.t("assets.taken"), row.taken],
     [f.t("assets.closing"), row.closing],
   ]
+
+  const book = async () => {
+    const cents = parseAmount(amount)
+    if (cents == null || cents <= 0) {
+      setError(f.t("assets.badAmount"))
+      return
+    }
+    setError(null)
+    const entry: Entry = {
+      id: `e-${uid()}`,
+      date: calculatedEntryDate(row.year, todayIso()),
+      description: f.t("assets.entryDescription", { y: row.year }),
+      type: "expense",
+      catId: "337",
+      amount: cents,
+      vatRate: 0,
+      amountMode: "net",
+    }
+    const memo = memoVoucher(
+      f.t("memo.depreciationHeading", { y: row.year }),
+      entry,
+      [
+        ...figures
+          .slice(0, -1)
+          .map(([label, value]) => ({ label, value: f.money(value) })),
+        {
+          label: f.t("memo.thisDepreciation"),
+          value: f.money(cents),
+          strong: true,
+        },
+        {
+          label: f.t("memo.closingAfter"),
+          value: f.money(row.closing - cents),
+        },
+      ],
+      [f.t("memo.depreciationRule")]
+    )
+    await bookWithMemo(ctx, entry, memo, f.t("assets.booked"))
+  }
 
   return (
     <div className="mt-4 grid gap-6 md:grid-cols-2">

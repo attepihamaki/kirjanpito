@@ -1616,6 +1616,75 @@ export const APP_DICT = {
     "No vouchers on line 354 yet.",
   ],
 
+  "memo.title": ["Muistiotosite", "Memo voucher"],
+  "memo.made": ["Laadittu {d}", "Made on {d}"],
+  "memo.entryTitle": ["Kirjaus", "Entry"],
+  "memo.date": ["Päivämäärä", "Date"],
+  "memo.description": ["Kuvaus", "Description"],
+  "memo.account": ["Tili", "Account"],
+  "memo.amount": ["Summa", "Amount"],
+  "memo.calcTitle": ["Laskelma", "Calculation"],
+  "memo.selfMade": [
+    "Kirjanpitovelvollisen itse laatima tosite (kirjanpitolaki 2:5). Laskelma on tehty Kirjanpito-sovelluksen laskurilla laatimispäivänä.",
+    "A voucher prepared by the trader (Accounting Act 2:5). The calculation was made with the Kirjanpito app’s calculator on the date shown.",
+  ],
+  "memo.failed": [
+    "Muistiotositetta ei voitu tallentaa, joten tosite kirjataan ilman liitettä. Liitä laskelma itse.",
+    "The memo voucher could not be stored, so the voucher is booked without an attachment. Attach the calculation yourself.",
+  ],
+  "memo.depreciationHeading": ["Poisto {y}", "Depreciation {y}"],
+  "memo.thisDepreciation": [
+    "Tällä tositteella kirjattava poisto",
+    "Depreciation booked by this voucher",
+  ],
+  "memo.closingAfter": [
+    "Menojäännös tämän poiston jälkeen",
+    "Balance after this depreciation",
+  ],
+  "memo.depreciationRule": [
+    "Koneiden ja kaluston poisto on enintään 25 % poistopohjasta, ja enintään 1 200 euron poistopohjan voi poistaa kokonaan (elinkeinoverolaki 30 §). Hankinnat ja myynnit ovat omina tositteinaan tilillä 1100.",
+    "Depreciation of machinery and equipment is at most 25% of the base, and a base of €1,200 or less can be written off in full (Business Income Tax Act 30 §). Purchases and sales are vouchers of their own on account 1100.",
+  ],
+  "memo.mileageHeading": ["Kilometrivähennys {y}", "Mileage deduction {y}"],
+  "memo.perDiemHeading": ["Päivärahavähennys {y}", "Per diem deduction {y}"],
+  "memo.rate": ["Korvaus kilometriltä", "Rate per kilometre"],
+  "memo.allowance": [
+    "Verovapaat korvaukset yhteensä",
+    "Tax-free allowances in total",
+  ],
+  "memo.deduction": ["Vähennys", "Deduction"],
+  "memo.travelRule": [
+    "Verovapaiden matkakustannusten korvausten määrät vuodelle {y} Verohallinnon päätöksen mukaan. Vähennys on korvausten määrä vähennettynä jo kirjatuilla todellisilla kuluilla.",
+    "The tax-free travel allowances for {y} as set by the Tax Administration. The deduction is the allowances less the actual costs already booked.",
+  ],
+  "memo.keepLog": [
+    "Säilytä ajopäiväkirja tämän tositteen rinnalla: päivä, matkan alku- ja päätepiste, kilometrit ja tarkoitus. Sen voi liittää tähän tositteeseen.",
+    "Keep the logbook alongside this voucher: date, start and end point, kilometres and purpose of each trip. It can be attached to this voucher.",
+  ],
+  "memo.keepTrips": [
+    "Säilytä matkojen tiedot tämän tositteen rinnalla: päivä, lähtö- ja paluuaika, kohde ja tarkoitus. Ne voi liittää tähän tositteeseen.",
+    "Keep the trip records alongside this voucher: date, departure and return time, destination and purpose. They can be attached to this voucher.",
+  ],
+  "memo.homeHeading": ["Työhuonevähennys {y}", "Home office deduction {y}"],
+  "memo.homeRule": [
+    "Kaavamainen työhuonevähennys vuodelle {y} Verohallinnon päätöksen mukaan. Todellisia työtilan kuluja ei vähennetä sen lisäksi.",
+    "The standard home office deduction for {y} as set by the Tax Administration. Actual workspace costs are not deducted on top of it.",
+  ],
+  "memo.inventoryHeading": ["Varaston muutos {y}", "Change in inventory {y}"],
+  "memo.stockOn": ["Varasto 31.12.{y}", "Stock on 31 Dec {y}"],
+  "memo.stockChange": [
+    "Varaston muutos (alkuvarasto − loppuvarasto)",
+    "Change (opening stock − closing stock)",
+  ],
+  "memo.inventoryRule": [
+    "Varasto on tavarat ja muu vaihto-omaisuus (lomakkeen 5 kohdat 708 ja 709) sellaisina kuin ne on syötetty kohtaan Varat ja velat. Kasvanut varasto pienentää ostojen kulua.",
+    "The stock is goods and other inventory (Form 5 fields 708 and 709) as entered under Assets and liabilities. A larger stock lowers the cost of purchases.",
+  ],
+  "memo.keepCount": [
+    "Säilytä varaston inventaariolista tämän tositteen rinnalla. Sen voi liittää tähän tositteeseen.",
+    "Keep the stocktake list alongside this voucher. It can be attached to this voucher.",
+  ],
+
   "settings.sections": ["Asetusten osiot", "Settings sections"],
   "settings.general": ["Yleiset", "General"],
   /* The dialog a new bookkeeping opens with (§8.3). */

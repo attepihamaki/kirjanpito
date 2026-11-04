@@ -168,7 +168,8 @@ function initialForm({
       amount: prefill?.amount ? formatMoneyPlain(prefill.amount) : "",
       vatRate: prefill?.vatRate ?? 0,
       amountMode: prefill?.amountMode ?? lastMode,
-      atts: [],
+      // A memo voucher a calculator made for this entry (§8.8).
+      atts: [...(prefill?.atts ?? [])],
       repeat: false,
       settles: prefill?.settles ?? "",
       paid: "",

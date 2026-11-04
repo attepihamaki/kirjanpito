@@ -138,11 +138,11 @@ export function flaggedEntryIds(
 
   switch (check) {
     case "noReceipt":
-      // Depreciation and line 354 are calculated: they have no receipt to file.
-      return ids((e) => {
-        const line = cats.get(e.catId)?.line
-        return line !== "337" && line !== "354" && !hasReceipt(e)
-      })
+      /*
+       * Every entry, calculated ones included: depreciation, line 354 and the
+       * stock change rest on a memo voucher the calculator attaches (KPL 2:5).
+       */
+      return ids((e) => !hasReceipt(e))
     case "rateMismatch":
       return ids((e) => rateMismatch(e.vatRate, e.date) !== null)
     case "futureDate":

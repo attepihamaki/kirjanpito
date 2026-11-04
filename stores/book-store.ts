@@ -124,6 +124,7 @@ export type EntryPrefill = Partial<
     | "vatRate"
     | "amountMode"
     | "settles"
+    | "atts"
   >
 >
 

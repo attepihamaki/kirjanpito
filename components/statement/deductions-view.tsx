@@ -6,11 +6,12 @@ import { Money } from "@/components/common/money"
 import { OptionSelect } from "@/components/common/option-select"
 import { Panel } from "@/components/common/panel"
 import { useFormatters } from "@/components/lang-provider"
+import { useMemoVoucher } from "@/components/statement/use-memo-voucher"
 import { Button } from "@/components/ui/button"
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { useCommandCtx } from "@/hooks/use-commands"
-import { addEntriesWithUndo } from "@/lib/commands/bulk-commands"
+import { bookWithMemo } from "@/lib/commands/memo-commands"
 import { calcEntry } from "@/lib/domain/calc"
 import { todayIso, yearOf } from "@/lib/domain/dates"
 import {
@@ -26,7 +27,8 @@ import {
 } from "@/lib/domain/deductions"
 import { uid } from "@/lib/domain/id"
 import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
-import type { Cents } from "@/lib/domain/types"
+import type { MemoRow } from "@/lib/domain/memo-voucher"
+import type { Cents, Entry } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
 
 const CAT_354 = "354"
@@ -95,28 +97,37 @@ export function DeductionsView() {
   )
 }
 
-/** Book an amount on line 354 as an entry of the selected year. */
+/** What a calculator worked out, for the memo voucher of its entry (§8.8). */
+interface DeductionMemo {
+  heading: string
+  calculation: MemoRow[]
+  notes: string[]
+}
+
+/** Book an amount on line 354 as an entry of the selected year, with its memo voucher. */
 function useBookDeduction() {
   const f = useFormatters()
   const ctx = useCommandCtx()
   const year = useBookStore((s) => s.year)
-  return (description: string, amount: Cents) =>
-    addEntriesWithUndo(
+  const memoVoucher = useMemoVoucher()
+  return (description: string, amount: Cents, memo: DeductionMemo) => {
+    const entry: Entry = {
+      id: `e-${uid()}`,
+      date: calculatedEntryDate(year, todayIso()),
+      description,
+      type: "expense",
+      catId: CAT_354,
+      amount,
+      vatRate: 0,
+      amountMode: "net",
+    }
+    return bookWithMemo(
       ctx,
-      [
-        {
-          id: `e-${uid()}`,
-          date: calculatedEntryDate(year, todayIso()),
-          description,
-          type: "expense",
-          catId: CAT_354,
-          amount,
-          vatRate: 0,
-          amountMode: "net",
-        },
-      ],
+      entry,
+      memoVoucher(memo.heading, entry, memo.calculation, memo.notes),
       f.t("deductions.booked")
     )
+  }
 }
 
 function ResultFooter({
@@ -194,7 +205,31 @@ function MileageForm({ rates }: { rates: TravelRates }) {
                 r: f.money(rates.km),
                 b: f.money(bookedCosts),
               }),
-              amount
+              amount,
+              {
+                heading: f.t("memo.mileageHeading", { y: year }),
+                calculation: [
+                  { label: f.t("deductions.km"), value: String(kilometres) },
+                  { label: f.t("memo.rate"), value: f.money(rates.km) },
+                  {
+                    label: f.t("memo.allowance"),
+                    value: f.money(mileageAllowance(kilometres, rates)),
+                  },
+                  {
+                    label: f.t("deductions.bookedCar"),
+                    value: f.money(bookedCosts),
+                  },
+                  {
+                    label: f.t("memo.deduction"),
+                    value: f.money(amount),
+                    strong: true,
+                  },
+                ],
+                notes: [
+                  f.t("memo.travelRule", { y: year }),
+                  f.t("memo.keepLog"),
+                ],
+              }
             ).then((done) => {
               if (done) setKm("")
             })
@@ -265,7 +300,39 @@ function PerDiemForm({ rates }: { rates: TravelRates }) {
                 z: f.money(rates.partialPerDiem),
                 c: f.money(bookedCosts),
               }),
-              amount
+              amount,
+              {
+                heading: f.t("memo.perDiemHeading", { y: year }),
+                calculation: [
+                  {
+                    label: f.t("deductions.fullDays"),
+                    value: `${fullDays} × ${f.money(rates.fullPerDiem)}`,
+                  },
+                  {
+                    label: f.t("deductions.partialDays"),
+                    value: `${partialDays} × ${f.money(rates.partialPerDiem)}`,
+                  },
+                  {
+                    label: f.t("memo.allowance"),
+                    value: f.money(
+                      perDiemAllowance(fullDays, partialDays, rates)
+                    ),
+                  },
+                  {
+                    label: f.t("deductions.bookedLiving"),
+                    value: f.money(bookedCosts),
+                  },
+                  {
+                    label: f.t("memo.deduction"),
+                    value: f.money(amount),
+                    strong: true,
+                  },
+                ],
+                notes: [
+                  f.t("memo.travelRule", { y: year }),
+                  f.t("memo.keepTrips"),
+                ],
+              }
             ).then((done) => {
               if (done) {
                 setFull("")
@@ -354,7 +421,20 @@ function HomeOfficeForm() {
         <ResultFooter
           amount={exists ? 0 : amounts[tier]}
           ready={false}
-          onBook={() => void book(description, amounts[tier])}
+          onBook={() =>
+            void book(description, amounts[tier], {
+              heading: f.t("memo.homeHeading", { y: year }),
+              calculation: [
+                { label: f.t("deductions.tier"), value: tierLabel[tier] },
+                {
+                  label: f.t("memo.deduction"),
+                  value: f.money(amounts[tier]),
+                  strong: true,
+                },
+              ],
+              notes: [f.t("memo.homeRule", { y: year })],
+            })
+          }
         />
       }
     >
