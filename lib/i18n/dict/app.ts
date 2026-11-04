@@ -1095,10 +1095,6 @@ export const APP_DICT = {
     "The period ended before the month the bookkeeping began, so no return is filed for it.",
   ],
   "vat.markFiled": ["Merkitse ilmoitetuksi", "Mark as filed"],
-  "vat.periodOngoing": [
-    "Kausi on vielä kesken, joten sitä ei voi vielä merkitä ilmoitetuksi.",
-    "The period is still ongoing, so it cannot be marked as filed yet.",
-  ],
   /* The money that moved for a return, booked as an entry (§6.6). */
   "vat.ecTab": ["Yhteenvetoilmoitus", "EC Sales List"],
   "vat.ecIntro": [

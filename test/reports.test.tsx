@@ -448,7 +448,7 @@ describe("VatReturnDialog", () => {
     expect(useBookStore.getState().vatFiled["2026-10"]).toBeUndefined()
   })
 
-  it("keeps the filed button on a period still to come, and says why", async () => {
+  it("disables the filed button on a period still to come, and says why", () => {
     useBookStore.setState({ year: 2999, vatIndex: 1 })
     openDialog()
     fireEvent.click(screen.getByRole("button", { name: /Merkintä/ }))
@@ -456,11 +456,8 @@ describe("VatReturnDialog", () => {
     const button = screen.getByRole("button", {
       name: "Merkitse ilmoitetuksi",
     })
-    expect(button).toHaveAttribute("aria-disabled", "true")
-
-    fireEvent.click(button)
-
-    expect(await screen.findByText(/Kausi on vielä kesken/)).toBeVisible()
+    expect(button).toBeDisabled()
+    expect(screen.getByText(/on vielä kesken/)).toBeVisible()
     expect(useBookStore.getState().vatFiled).toEqual({})
   })
 

@@ -23,7 +23,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { VatFiledControl } from "@/components/vat/vat-filed-control"
 import {
   useSettlementVisible,
   VatSettlementControl,
@@ -38,7 +37,7 @@ import {
   type VatCheckItem,
   type VatCheckSeverity,
 } from "@/lib/domain/vat-checks"
-import { periodFromKey } from "@/lib/domain/vat-deadline"
+import { filedKeys, filedOn, periodFromKey } from "@/lib/domain/vat-deadline"
 import { vatReturnSections } from "@/lib/domain/vat-return"
 import { periodLabel } from "@/lib/i18n/period-label"
 import { APP_ROUTES } from "@/lib/site"
@@ -112,11 +111,20 @@ function VatReturnForm() {
   )
   const sections = React.useMemo(() => vatReturnSections(report), [report])
   const canMark = canMarkFiled(items)
+  const setVatFiled = useBookStore((s) => s.setVatFiled)
+  const filed = filedOn(current, vatFiled)
+
+  function unmarkFiled() {
+    // The mark may have been made in another filing period (§6.5).
+    for (const key of filedKeys(current, vatFiled)) setVatFiled(key, null)
+  }
 
   const steps: readonly Step[] = settlementVisible
     ? ["checks", "values", "file", "pay"]
     : ["checks", "values", "file"]
   const stepIndex = steps.indexOf(step)
+  const lastStep = stepIndex === steps.length - 1
+  const showMark = step === "file" && currentStatus !== "before"
 
   function showInLedger(check: CheckFilter) {
     const s = useBookStore.getState()
@@ -277,14 +285,23 @@ function VatReturnForm() {
                   {f.t("vat.returnFileHint")}
                 </p>
               ) : null}
-              {!canMark && currentStatus !== "before" ? (
+              {currentStatus === "before" ? (
+                <p className="text-sm text-muted-foreground">
+                  {f.t("vat.beforeStartHint")}
+                </p>
+              ) : filed ? (
+                <p className="text-sm font-medium text-income">
+                  {f.t("vat.filedOn", { d: f.date(filed) })}
+                </p>
+              ) : !canMark ? (
                 <p className="text-sm text-expense">
                   {f.t("vat.returnOngoing", { p: label })}
                 </p>
-              ) : null}
-              <div>
-                <VatFiledControl />
-              </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {f.t("vat.dueDate", { d: f.date(current.due) })}
+                </p>
+              )}
             </div>
           ) : null}
 
@@ -307,13 +324,29 @@ function VatReturnForm() {
               {f.t("vat.returnBack")}
             </Button>
           ) : null}
-          {stepIndex < steps.length - 1 ? (
+          {showMark ? (
+            filed ? (
+              <Button variant="outline" onClick={unmarkFiled}>
+                {f.t("vat.unmarkFiled")}
+              </Button>
+            ) : (
+              <Button
+                variant={lastStep ? "default" : "outline"}
+                disabled={!canMark}
+                onClick={() => setVatFiled(current.key, today)}
+              >
+                <CheckIcon data-icon="inline-start" />
+                {f.t("vat.markFiled")}
+              </Button>
+            )
+          ) : null}
+          {!lastStep ? (
             <Button onClick={() => setStep(steps[stepIndex + 1])}>
               {f.t("vat.returnNext")}
             </Button>
-          ) : (
+          ) : !showMark || filed ? (
             <Button onClick={closeDialog}>{f.t("vat.returnDone")}</Button>
-          )}
+          ) : null}
         </DialogFooter>
       </DialogContent>
     </Dialog>
