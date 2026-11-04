@@ -1298,6 +1298,14 @@ export const APP_DICT = {
 
   "recurring.tab": ["Toistuvat", "Recurring"],
   "recurring.repeat": ["Toista joka kuukausi", "Repeat every month"],
+  "recurring.repeatInfo": [
+    "Mitä toistaminen tekee?",
+    "What does repeating do?",
+  ],
+  "recurring.repeatHint": [
+    "Tosite jää pohjaksi. Mikään ei kirjaudu itsestään: kun kuukaudelta puuttuu tämä tosite, Kirjanpito ja Yleiskatsaus muistuttavat siitä, ja voit lisätä sen sieltä. Pohjia voi muokata kohdassa Asetukset, Toistuvat.",
+    "The voucher is kept as a template. Nothing is booked by itself: when a month lacks this voucher, the ledger and the overview remind you, and you can add it from there. You can edit templates in Settings, Recurring.",
+  ],
   "recurring.dueTitle": [
     pl(
       "1 toistuva tosite lisäämättä tältä kuulta",

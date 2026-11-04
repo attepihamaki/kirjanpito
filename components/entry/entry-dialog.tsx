@@ -1,16 +1,17 @@
 "use client"
 
 import * as React from "react"
-import { CopyIcon, InfoIcon, LockIcon, Trash2Icon } from "lucide-react"
+import { CopyIcon, LockIcon, Trash2Icon } from "lucide-react"
 
 import { EntryTypeToggle } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
+import { InfoPopover } from "@/components/common/info-popover"
 import { Keys } from "@/components/common/keys"
 import { AttachmentGrid } from "@/components/entry/attachment-grid"
 import { EntryHistory } from "@/components/entry/entry-history"
 import { ReceiptPreview } from "@/components/entry/receipt-preview"
 import { AttachmentViewer } from "@/components/receipt/receipt-viewer"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
@@ -28,11 +29,6 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { toast } from "@/components/ui/toast"
 import { useFormatters } from "@/components/lang-provider"
@@ -767,37 +763,28 @@ function EntryDialogForm({
           <div className="flex items-center gap-2">
             <DialogTitle>{title}</DialogTitle>
             {lock ? (
-              /*
-               * A popover that opens on hover rather than a tooltip: touch
-               * has no hover, and a tooltip would also open by itself when
-               * the dialog focuses its first control.
-               */
-              <Popover>
-                <PopoverTrigger
-                  openOnHover
-                  delay={0}
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="-my-1 text-muted-foreground"
-                    />
-                  }
-                >
-                  <LockIcon />
-                  {f.t("entry.locked")}
-                </PopoverTrigger>
-                <PopoverContent align="start" aria-label={f.t("entry.locked")}>
-                  {f.t(
-                    lock.kind === "year"
-                      ? "entry.lockedYear"
-                      : lock.kind === "form5"
-                        ? "entry.lockedForm5"
-                        : "entry.lockedFiled",
-                    { p: lock.key, d: f.date(lock.since) }
-                  )}
-                </PopoverContent>
-              </Popover>
+              <InfoPopover
+                label={f.t("entry.locked")}
+                trigger={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="-my-1 text-muted-foreground"
+                  >
+                    <LockIcon />
+                    {f.t("entry.locked")}
+                  </Button>
+                }
+              >
+                {f.t(
+                  lock.kind === "year"
+                    ? "entry.lockedYear"
+                    : lock.kind === "form5"
+                      ? "entry.lockedForm5"
+                      : "entry.lockedFiled",
+                  { p: lock.key, d: f.date(lock.since) }
+                )}
+              </InfoPopover>
             ) : null}
           </div>
           {mode === "edit" && editing?.voucher ? (
@@ -884,43 +871,17 @@ function EntryDialogForm({
                 <div className="flex items-center gap-1">
                   <FieldLabel>{f.t("entry.category")}</FieldLabel>
                   {euPurchase ? (
-                    <Popover>
-                      {/*
-                       * Not a native button: a locked entry's fieldset would
-                       * disable one, and this text is still worth reading.
-                       */}
-                      <PopoverTrigger
-                        openOnHover
-                        delay={0}
-                        nativeButton={false}
-                        aria-label={f.t("entry.euPurchaseInfo")}
-                        render={
-                          <span
-                            className={buttonVariants({
-                              variant: "ghost",
-                              size: "icon-sm",
-                              className: "-my-1 text-muted-foreground",
-                            })}
-                          />
-                        }
-                      >
-                        <InfoIcon />
-                      </PopoverTrigger>
-                      <PopoverContent
-                        align="start"
-                        aria-label={f.t("entry.euPurchaseInfo")}
-                      >
-                        {f.t("entry.euPurchaseVat", {
-                          a: f.money(
-                            euPurchaseVat({
-                              amount: formAmount ?? 0,
-                              vatRate: form.vatRate,
-                            })
-                          ),
-                          r: f.rate(form.vatRate),
-                        })}
-                      </PopoverContent>
-                    </Popover>
+                    <InfoPopover label={f.t("entry.euPurchaseInfo")}>
+                      {f.t("entry.euPurchaseVat", {
+                        a: f.money(
+                          euPurchaseVat({
+                            amount: formAmount ?? 0,
+                            vatRate: form.vatRate,
+                          })
+                        ),
+                        r: f.rate(form.vatRate),
+                      })}
+                    </InfoPopover>
                   ) : null}
                 </div>
                 <OptionSelect
@@ -1154,9 +1115,14 @@ function EntryDialogForm({
                     update({ repeat: checked === true })
                   }
                 />
-                <FieldLabel htmlFor="entry-repeat" className="font-normal">
-                  {f.t("recurring.repeat")}
-                </FieldLabel>
+                <div className="flex items-center gap-1">
+                  <FieldLabel htmlFor="entry-repeat" className="font-normal">
+                    {f.t("recurring.repeat")}
+                  </FieldLabel>
+                  <InfoPopover label={f.t("recurring.repeatInfo")}>
+                    {f.t("recurring.repeatHint")}
+                  </InfoPopover>
+                </div>
               </Field>
             </fieldset>
 

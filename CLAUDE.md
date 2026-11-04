@@ -1129,6 +1129,7 @@ Anything that appears in two views is a component in `components/common/`, takin
 | tabs between sub-pages       | `sub-page-tabs.tsx`, used by Kirjanpito, Asetukset, Tuloslaskelma and ALV-laskelma |
 | the income and expense chart | `income-expense-chart.tsx`: `IncomeExpenseChart` and `IncomeExpenseLegend`, on the overview and Yhteenveto |
 | single-choice selects        | `option-select.tsx` |
+| a sentence explaining a control | `info-popover.tsx`: an info icon, or `trigger` for a button of its own. It opens on hover, tap or Enter. Not `Tooltip`, which touch cannot open and which opens by itself when a dialog focuses its first control |
 | a key cap on a button or row | `keys.tsx` |
 | the "Uusi tosite" button     | `new-entry-button.tsx` |
 | page titles inside the app   | `page-header.tsx` |

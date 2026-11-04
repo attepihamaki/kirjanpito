@@ -89,6 +89,25 @@ describe("recurring entries", () => {
     expect(screen.queryByText(/lisäämättä/)).not.toBeInTheDocument()
   })
 
+  it("explains the box on request and leaves it unticked", async () => {
+    useBookStore.setState({
+      entries: [entry],
+      dialog: { kind: "entry", mode: "edit", entryId: "a" },
+    })
+    mount(<EntryDialog registerDropTarget={() => {}} />)
+    expect(screen.queryByText(/Mikään ei kirjaudu/)).toBeNull()
+
+    fireEvent.click(screen.getByLabelText("Mitä toistaminen tekee?"))
+
+    expect(await screen.findByText(/Mikään ei kirjaudu/)).toBeInTheDocument()
+    expect(
+      screen.getByRole("checkbox", {
+        name: "Toista joka kuukausi",
+        hidden: true,
+      })
+    ).not.toBeChecked()
+  })
+
   it("makes a template from an entry", async () => {
     useBookStore.setState({
       entries: [entry],
