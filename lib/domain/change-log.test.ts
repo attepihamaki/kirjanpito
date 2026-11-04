@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest"
 
-import { entryChanges } from "@/lib/domain/change-log"
+import {
+  entryChanges,
+  relinkChangeLog,
+  type ChangeRecord,
+} from "@/lib/domain/change-log"
 import type { Entry } from "@/lib/domain/types"
 
 const AT = "2026-11-03T10:00:00.000Z"
@@ -91,5 +95,47 @@ describe("entryChanges", () => {
     const [record] = entryChanges([entry()], [entry({ voucher: 2 })], AT)
     expect(record.entryId).toBe("a")
     expect(record.changes).toEqual([{ field: "voucher", from: 1, to: 2 }])
+  })
+})
+
+describe("relinkChangeLog", () => {
+  const record = (
+    action: ChangeRecord["action"],
+    entryId: string,
+    voucher: number,
+    date: string
+  ): ChangeRecord => ({ at: AT, action, entryId, voucher, date })
+
+  it("points a file's records at the entries read from it", () => {
+    const log = [
+      record("add", "old", 1, "2026-03-10"),
+      record("edit", "old", 1, "2026-03-10"),
+    ]
+    const relinked = relinkChangeLog(log, [entry({ id: "new" })])
+    expect(relinked.map((r) => r.entryId)).toEqual(["new", "new"])
+  })
+
+  it("follows the voucher number and year the entry was left with", () => {
+    const log = [
+      record("add", "old", 4, "2025-12-30"),
+      record("edit", "old", 1, "2026-03-10"),
+    ]
+    const entries = [
+      entry({ id: "other", voucher: 4, date: "2025-12-30" }),
+      entry({ id: "new" }),
+    ]
+    expect(relinkChangeLog(log, entries).map((r) => r.entryId)).toEqual([
+      "new",
+      "new",
+    ])
+  })
+
+  it("leaves a deleted entry's records on their old id", () => {
+    const log = [
+      record("add", "gone", 1, "2026-03-10"),
+      record("delete", "gone", 1, "2026-03-10"),
+    ]
+    const relinked = relinkChangeLog(log, [entry({ id: "new" })])
+    expect(relinked.map((r) => r.entryId)).toEqual(["gone", "gone"])
   })
 })

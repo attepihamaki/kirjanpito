@@ -1219,3 +1219,88 @@ describe("cash column", () => {
     ).toBeUndefined()
   })
 })
+
+describe("formula guard after a separator", () => {
+  const cells = (text: string) =>
+    Papa.parse<string[]>(text.slice(1), { delimiter: ";" }).data
+
+  /*
+   * An Excel whose list separator is a comma splits the row at the comma, so
+   * the part after it must not start a formula either.
+   */
+  it.each([
+    ["Lasku,=cmd|'/c calc'!A1,x", "Lasku,'=cmd|'/c calc'!A1,x"],
+    ["Alennus, -10 %", "Alennus, '-10 %"],
+    ["a\t@SUM(A1)", "a\t'@SUM(A1)"],
+    ["=a,+b", "'=a,'+b"],
+  ])("writes %j as %j", (description, written) => {
+    const rows = cells(serializeCsv([entry({ description })], cats))
+    expect(rows[1][2]).toBe(written)
+  })
+
+  it.each(["Lasku,=cmd|'/c calc'!A1,x", "a,'=b", "a, ''-b", "1,5 kg, 2,0 kg"])(
+    "reads %j back unchanged",
+    (description) => {
+      const text = serializeCsv([entry({ description })], cats)
+      expect(ok(parseCsv(text, baseCats)).entries[0].description).toBe(
+        description
+      )
+    }
+  )
+})
+
+describe("words from the file", () => {
+  it.each(["constructor", "__proto__", "toString", "hasOwnProperty"])(
+    "skips a row whose type is %j",
+    (type) => {
+      const r = parseCsv(
+        csvText([HEADER, `1;2026-01-08;x;${type};344;;10,00;0;;;;;;;`]),
+        baseCats
+      )
+      expect(r.ok).toBe(false)
+    }
+  )
+
+  it("ignores an EU purchase value that is a prototype property", () => {
+    const r = ok(
+      parseCsv(
+        csvText([HEADER, "1;2026-01-08;x;kulu;333;;10,00;0;;;;;;constructor;"]),
+        baseCats
+      )
+    )
+    expect(r.entries[0].euPurchase).toBeUndefined()
+  })
+})
+
+describe("receipt paths from the file", () => {
+  it.each([
+    "../../evil.pdf",
+    "liitteet/../../evil.pdf",
+    "/etc/evil.pdf",
+    "C:/Users/evil.pdf",
+    "liitteet\\2026\\evil.pdf",
+    "liitteet//evil.pdf",
+    "./evil.pdf",
+  ])("drops %j as outside the archive", (path) => {
+    const r = ok(
+      parseCsv(
+        csvText([HEADER, `1;2026-01-08;x;kulu;333;;10,00;0;;${path};;;;;`]),
+        baseCats
+      )
+    )
+    expect(r.entries[0].paths).toEqual([])
+    expect(r.rejectedReceiptCount).toBe(1)
+  })
+
+  it("does not write a stored path that leads outside the archive", () => {
+    const text = serializeCsv(
+      [
+        entry({
+          atts: [att({ id: null, missing: true, path: "../../evil.pdf" })],
+        }),
+      ],
+      cats
+    )
+    expect(text).not.toContain("evil")
+  })
+})

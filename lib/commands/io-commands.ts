@@ -47,7 +47,12 @@ import {
   type ParsedSettings,
 } from "@/lib/domain/settings-file"
 import { normalizeLayout } from "@/lib/domain/overview-layout"
-import { packZip, receiptReader, unpackZip } from "@/lib/domain/zip"
+import {
+  ZipEntryTooLargeError,
+  packZip,
+  receiptReader,
+  unpackZip,
+} from "@/lib/domain/zip"
 import { SKIP_CODE_KEYS } from "@/lib/i18n/messages"
 import { APP_ROUTES } from "@/lib/site"
 import { alertDialog, confirm } from "@/lib/ui/confirm"
@@ -237,7 +242,14 @@ async function importZip(
   file: File,
   handle: FileSystemFileHandle | null
 ): Promise<boolean> {
-  const unpacked = await unpackZip(await fileToUint8Array(file))
+  let unpacked: Awaited<ReturnType<typeof unpackZip>>
+  try {
+    unpacked = await unpackZip(await fileToUint8Array(file))
+  } catch (error) {
+    if (!(error instanceof ZipEntryTooLargeError)) throw error
+    await refuseFile(ctx, ctx.t("io.zipTooLarge"))
+    return false
+  }
   if (!unpacked) {
     await refuseFile(ctx, ctx.t("io.zipNoCsv"))
     return false
@@ -541,13 +553,23 @@ async function buildBookFile(
   })
 
   const attachmentIds = new Map<string, string>()
-  for (const e of entries) {
-    for (const [i, a] of (e.atts ?? []).entries()) {
-      if (a.id) attachmentIds.set(attachmentKey(e.id, i), a.id)
-    }
-  }
   let absentReceipts = 0
   let lostReceipts = 0
+  for (const e of entries) {
+    for (const [i, a] of (e.atts ?? []).entries()) {
+      if (!a.id) continue
+      const key = attachmentKey(e.id, i)
+      attachmentIds.set(key, a.id)
+      /*
+       * A stored file outside the receipt rule (§7.4) has no path, so it stays
+       * out of the ZIP. It counts as lost, or it would vanish without a word.
+       */
+      if (!paths.has(key)) {
+        absentReceipts += 1
+        lostReceipts += 1
+      }
+    }
+  }
   const bytes = await packZip({
     csvName: CSV_FILE_NAME[exportLang],
     csvText,

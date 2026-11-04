@@ -19,7 +19,11 @@ import {
   DEFAULT_LAYOUT,
   type OverviewWidget,
 } from "@/lib/domain/overview-layout"
-import { entryChanges, type ChangeRecord } from "@/lib/domain/change-log"
+import {
+  entryChanges,
+  relinkChangeLog,
+  type ChangeRecord,
+} from "@/lib/domain/change-log"
 import type { LoanOpening, YearEnd } from "@/lib/domain/form5-balance"
 import type { PageSize } from "@/lib/domain/settings-file"
 import type {
@@ -756,10 +760,13 @@ export const useBookStore = create<BookStore>()(
           },
           uid
         )
+        const entries = [
+          ...assignVouchers(syncEuPurchase(book.entries, book.cats)),
+        ]
         set({
           ...clearedFilters,
           open: true,
-          entries: [...assignVouchers(syncEuPurchase(book.entries, book.cats))],
+          entries,
           cats: book.cats,
           fileName: next.fileName,
           fileHandle: next.fileHandle,
@@ -784,9 +791,9 @@ export const useBookStore = create<BookStore>()(
           bankBalance: s.bankBalance ?? null,
           loanOpening: s.loanOpening ?? null,
           yearEnd: s.yearEnd ?? {},
-          changeLog: s.changeLog ?? [
-            { at: new Date().toISOString(), action: "import" },
-          ],
+          changeLog: s.changeLog
+            ? relinkChangeLog(s.changeLog, entries)
+            : [{ at: new Date().toISOString(), action: "import" }],
           overviewLayout: s.overviewLayout ?? get().overviewLayout,
           autosave: s.autosave ?? get().autosave,
           autosavePaused: false,

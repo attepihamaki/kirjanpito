@@ -31,7 +31,7 @@ import { isVoucherNumber } from "@/lib/domain/voucher"
 import {
   attachmentKey,
   buildReceiptPaths,
-  isReceiptFile,
+  isReceiptPath,
 } from "@/lib/domain/receipt-path"
 import {
   type AmountMode,
@@ -67,24 +67,28 @@ const TYPE_TO_CSV: Readonly<Record<Lang, Record<EntryType, string>>> = {
   fi: { income: "tulo", expense: "kulu" },
   en: { income: "income", expense: "expense" },
 }
-const TYPE_FROM_CSV: Readonly<Record<string, EntryType>> = {
-  tulo: "income",
-  kulu: "expense",
-  income: "income",
-  expense: "expense",
-}
+/*
+ * The readers below take a word straight from the file, so they are Maps: on a
+ * plain object, "constructor" would find a prototype property and pass as a value.
+ */
+const TYPE_FROM_CSV: ReadonlyMap<string, EntryType> = new Map([
+  ["tulo", "income"],
+  ["kulu", "expense"],
+  ["income", "income"],
+  ["expense", "expense"],
+])
 
 /** An EU purchase ⇄ the `eu_purchase` column. */
 const EU_PURCHASE_TO_CSV: Readonly<Record<Lang, Record<EuPurchase, string>>> = {
   fi: { goods: "tavara", services: "palvelu" },
   en: { goods: "goods", services: "services" },
 }
-const EU_PURCHASE_FROM_CSV: Readonly<Record<string, EuPurchase>> = {
-  tavara: "goods",
-  palvelu: "services",
-  goods: "goods",
-  services: "services",
-}
+const EU_PURCHASE_FROM_CSV: ReadonlyMap<string, EuPurchase> = new Map([
+  ["tavara", "goods"],
+  ["palvelu", "services"],
+  ["goods", "goods"],
+  ["services", "services"],
+])
 
 /** The `cash` column's value on an entry paid in cash. Read case-insensitively. */
 const CASH_TO_CSV: Readonly<Record<Lang, string>> = { fi: "kyllä", en: "yes" }
@@ -120,19 +124,26 @@ const NET_VALUES: readonly string[] = ["netto", "veroton", "net"]
  * apostrophes before one of those characters gets one more, so every value
  * survives the round trip unchanged.
  *
+ * The same goes for such a character after a comma or a tab. An Excel whose list
+ * separator is a comma splits the row there rather than at the ";", and quoting
+ * does not stop it, because the quote is not at the start of its field.
+ *
  * Only the text columns go through this. The amount and the rate are written
  * by the app, and a negative amount has to stay a number.
  */
 const FORMULA_LEAD = /^'*[=+\-@\t\r]/
+const FORMULA_AFTER_SEPARATOR = /([,\t]\s*)('*[=+\-@])/g
+const DEFUSED_AFTER_SEPARATOR = /([,\t]\s*)'('*[=+\-@])/g
 
 function defuseFormula(value: string): string {
-  return FORMULA_LEAD.test(value) ? `'${value}` : value
+  const inner = value.replace(FORMULA_AFTER_SEPARATOR, "$1'$2")
+  return FORMULA_LEAD.test(inner) ? `'${inner}` : inner
 }
 
 function restoreFormula(value: string): string {
-  return value.startsWith("'") && FORMULA_LEAD.test(value)
-    ? value.slice(1)
-    : value
+  const inner =
+    value.startsWith("'") && FORMULA_LEAD.test(value) ? value.slice(1) : value
+  return inner.replace(DEFUSED_AFTER_SEPARATOR, "$1$2")
 }
 
 function quote(value: string): string {
@@ -173,7 +184,7 @@ export function serializeCsv(
      */
     const receipts = (e.atts ?? [])
       .map((a, i) => paths.get(attachmentKey(e.id, i)) ?? a.path ?? "")
-      .filter((p) => p && isReceiptFile({ name: p, type: "" }))
+      .filter((p) => p && isReceiptPath(p))
       .join("|")
 
     lines.push(
@@ -421,7 +432,7 @@ export function parseCsv(
       continue
     }
 
-    const type = TYPE_FROM_CSV[get("type").toLowerCase()]
+    const type = TYPE_FROM_CSV.get(get("type").toLowerCase())
     if (!type) {
       skipped.push({ line, code: "bad-type" })
       continue
@@ -471,11 +482,11 @@ export function parseCsv(
       .map((p) => p.trim())
       .filter(Boolean)
     /*
-     * A path naming anything but an image or a PDF is not a receipt and is
-     * dropped rather than carried along as a missing attachment, which would
-     * put it back in the next export.
+     * A path naming anything but an image or a PDF, or leading outside the
+     * archive, is not a receipt and is dropped rather than carried along as a
+     * missing attachment, which would put it back in the next export.
      */
-    const paths = listed.filter((p) => isReceiptFile({ name: p, type: "" }))
+    const paths = listed.filter(isReceiptPath)
     rejectedReceiptCount += listed.length - paths.length
 
     /*
@@ -542,7 +553,7 @@ function euPurchaseColumn(
   cat: Category
 ): { euPurchase?: EuPurchase } {
   if (cat.euPurchase) return { euPurchase: cat.euPurchase }
-  const euPurchase = EU_PURCHASE_FROM_CSV[value.trim().toLowerCase()]
+  const euPurchase = EU_PURCHASE_FROM_CSV.get(value.trim().toLowerCase())
   return euPurchase && canBeEuPurchase(LINE_BY_KEY.get(cat.line))
     ? { euPurchase }
     : {}

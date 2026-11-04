@@ -8,7 +8,13 @@ import { parseBusinessId } from "@/lib/domain/business-id"
 import { isVatRate } from "@/lib/domain/money"
 import type { AssetOpening } from "@/lib/domain/assets"
 import type { BankBalance } from "@/lib/domain/bank-balance"
-import type { ChangeRecord } from "@/lib/domain/change-log"
+import {
+  LOGGED_FIELDS,
+  type ChangeAction,
+  type ChangeRecord,
+  type FieldChange,
+  type LoggedField,
+} from "@/lib/domain/change-log"
 import {
   EMPTY_YEAR_END,
   type LoanOpening,
@@ -191,6 +197,45 @@ function parseCategory(value: unknown): Category | null {
   return cat
 }
 
+function parseFieldChange(value: unknown): FieldChange | null {
+  if (!isRecord(value)) return null
+  const { field, from, to } = value
+  const isValue = (v: unknown): v is FieldChange["from"] =>
+    v === null || typeof v === "string" || typeof v === "number"
+  if (!LOGGED_FIELDS.includes(field as LoggedField)) return null
+  if (!isValue(from) || !isValue(to)) return null
+  return { field: field as LoggedField, from, to }
+}
+
+/**
+ * One record of the change log, rebuilt field by field, because its dialog
+ * renders what it holds. An action this version does not know is kept, so that
+ * saving a newer file does not cut its log; the dialog shows it with no text.
+ */
+function parseChangeRecord(value: unknown): ChangeRecord | null {
+  if (!isRecord(value)) return null
+  const { at, action, entryId, voucher, date, description, changes, period } =
+    value
+  if (typeof at !== "string" || Number.isNaN(Date.parse(at))) return null
+  if (typeof action !== "string" || !action) return null
+  return {
+    at,
+    action: action as ChangeAction,
+    ...(typeof entryId === "string" && entryId ? { entryId } : {}),
+    ...(Number.isInteger(voucher) ? { voucher: voucher as number } : {}),
+    ...(typeof date === "string" && ISO_DATE.test(date) ? { date } : {}),
+    ...(typeof description === "string" ? { description } : {}),
+    ...(Array.isArray(changes)
+      ? {
+          changes: changes
+            .map(parseFieldChange)
+            .filter((c): c is FieldChange => c !== null),
+        }
+      : {}),
+    ...(typeof period === "string" ? { period } : {}),
+  }
+}
+
 /**
  * Overlay the file's categories on the defaults. A default keeps its own id,
  * line, name and kind, which are the chart of accounts, and takes only the
@@ -344,10 +389,9 @@ export function parseSettings(text: string): ParsedSettings {
     out.yearEnd = years
   }
   if (Array.isArray(raw.changeLog)) {
-    out.changeLog = raw.changeLog.filter(
-      (r): r is ChangeRecord =>
-        isRecord(r) && typeof r.at === "string" && typeof r.action === "string"
-    )
+    out.changeLog = raw.changeLog
+      .map(parseChangeRecord)
+      .filter((r): r is ChangeRecord => r !== null)
   }
   if (raw.bankBalance === null) out.bankBalance = null
   else if (

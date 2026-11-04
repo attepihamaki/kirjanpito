@@ -9,6 +9,7 @@ import {
   extensionFor,
   isPdf,
   isReceiptFile,
+  isReceiptPath,
   mimeForName,
   receiptStem,
 } from "@/lib/domain/receipt-path"
@@ -373,4 +374,51 @@ describe("defaultFileBaseName", () => {
     expect(defaultFileBaseName("fi")).toBe("kirjanpito")
     expect(defaultFileBaseName("en")).toBe("bookkeeping")
   })
+})
+
+describe("receipt types round-trip", () => {
+  /*
+   * A file accepted by its MIME type has to read back by its path, or the next
+   * open loses its link to the entry.
+   */
+  it.each([
+    ["piirros.svg", "image/svg+xml"],
+    ["skannaus.bmp", "image/bmp"],
+    ["kuva.avif", "image/avif"],
+    ["skannaus.tif", "image/tiff"],
+    ["kuva", "image/png"],
+    ["lasku.lopullinen", "application/pdf"],
+  ])("%j (%s) is written under a path that reads back", (name, type) => {
+    const a = att({ name, type })
+    expect(isReceiptFile(a)).toBe(true)
+    const path = buildReceiptPaths([entry({ atts: [a] })]).get("e1#0")!
+    expect(isReceiptPath(path)).toBe(true)
+  })
+
+  it("rejects an image type it cannot read back", () => {
+    expect(isReceiptFile({ name: "kuvake", type: "image/x-icon" })).toBe(false)
+  })
+
+  it("does not take a prototype property for a known type", () => {
+    expect(mimeForName("x.constructor")).toBe("application/octet-stream")
+    expect(extensionFor({ name: "x", type: "constructor" })).toBe("bin")
+  })
+})
+
+describe("isReceiptPath", () => {
+  it.each(["liitteet/2026/10/lasku.pdf", "a.jpg", "Kansio/2.11.2026 - X.pdf"])(
+    "accepts %j",
+    (path) => expect(isReceiptPath(path)).toBe(true)
+  )
+
+  it.each([
+    "../a.pdf",
+    "a/../../b.pdf",
+    "/a.pdf",
+    "a//b.pdf",
+    "./a.pdf",
+    "C:/a.pdf",
+    "a\\b.pdf",
+    "a/b.txt",
+  ])("rejects %j", (path) => expect(isReceiptPath(path)).toBe(false))
 })

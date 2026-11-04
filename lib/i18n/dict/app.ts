@@ -2040,6 +2040,10 @@ export const APP_DICT = {
     "ZIP-tiedostosta ei löytynyt CSV-tiedostoa.",
     "No CSV file was found in the ZIP file.",
   ],
+  "io.zipTooLarge": [
+    "ZIP-tiedoston CSV tai settings.json on purettuna liian suuri, joten sitä ei avattu.",
+    "The CSV or settings.json in the ZIP file is too large when unpacked, so it wasn’t opened.",
+  ],
 
   // --- Attachment viewer (§8.6) ---
   "viewer.prevReceipt": ["Edellinen liite", "Previous attachment"],

@@ -87,26 +87,42 @@ export function receiptStem(name: string): string {
   return out || FALLBACK_STEM
 }
 
-const MIME_BY_EXT: Readonly<Record<string, string>> = {
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  png: "image/png",
-  webp: "image/webp",
-  gif: "image/gif",
-  heic: "image/heic",
-  heif: "image/heif",
-  pdf: "application/pdf",
-}
+/*
+ * The file types a receipt can be. A type here has to be readable from both its
+ * MIME type and its extension: a file comes in by its type and goes back into
+ * the CSV by its path, so one known only by type would lose its link to the
+ * entry on the next open. They are Maps because the keys come from outside.
+ */
+const MIME_BY_EXT: ReadonlyMap<string, string> = new Map([
+  ["jpg", "image/jpeg"],
+  ["jpeg", "image/jpeg"],
+  ["png", "image/png"],
+  ["webp", "image/webp"],
+  ["gif", "image/gif"],
+  ["heic", "image/heic"],
+  ["heif", "image/heif"],
+  ["avif", "image/avif"],
+  ["bmp", "image/bmp"],
+  ["tif", "image/tiff"],
+  ["tiff", "image/tiff"],
+  ["svg", "image/svg+xml"],
+  ["pdf", "application/pdf"],
+])
 
-const EXT_BY_MIME: Readonly<Record<string, string>> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/gif": "gif",
-  "image/heic": "heic",
-  "image/heif": "heif",
-  "application/pdf": "pdf",
-}
+const EXT_BY_MIME: ReadonlyMap<string, string> = new Map([
+  ["image/jpeg", "jpg"],
+  ["image/jpg", "jpg"],
+  ["image/png", "png"],
+  ["image/webp", "webp"],
+  ["image/gif", "gif"],
+  ["image/heic", "heic"],
+  ["image/heif", "heif"],
+  ["image/avif", "avif"],
+  ["image/bmp", "bmp"],
+  ["image/tiff", "tiff"],
+  ["image/svg+xml", "svg"],
+  ["application/pdf", "pdf"],
+])
 
 function extFromName(name: string): string | null {
   const m = /\.([a-z0-9]+)$/i.exec(String(name ?? "").trim())
@@ -117,12 +133,18 @@ function extFromName(name: string): string | null {
 
 export function mimeForName(name: string): string {
   const ext = extFromName(name)
-  return (ext && MIME_BY_EXT[ext]) || "application/octet-stream"
+  return (ext && MIME_BY_EXT.get(ext)) || "application/octet-stream"
 }
 
-/** The extension to use in the ZIP: from the file name, else from the MIME. */
+/**
+ * The extension to use in the ZIP: from the file name if it is a receipt's,
+ * else from the MIME type. A PDF called "lasku.final" is written as a `.pdf`,
+ * or its path would not read back as a receipt.
+ */
 export function extensionFor(a: Pick<Attachment, "name" | "type">): string {
-  return extFromName(a.name) ?? EXT_BY_MIME[a.type] ?? "bin"
+  const ext = extFromName(a.name)
+  if (ext && MIME_BY_EXT.has(ext)) return ext
+  return EXT_BY_MIME.get(a.type) ?? ext ?? "bin"
 }
 
 export function isPdf(a: Pick<Attachment, "name" | "type">): boolean {
@@ -142,9 +164,20 @@ export function isPdf(a: Pick<Attachment, "name" | "type">): boolean {
  * extension.
  */
 export function isReceiptFile(a: Pick<Attachment, "name" | "type">): boolean {
-  if (a.type.startsWith("image/") || a.type === "application/pdf") return true
+  if (EXT_BY_MIME.has(a.type)) return true
   const ext = extFromName(a.name)
-  return !!ext && Object.hasOwn(MIME_BY_EXT, ext)
+  return !!ext && MIME_BY_EXT.has(ext)
+}
+
+/**
+ * Whether a path from a CSV can name a receipt inside the archive. One that
+ * climbs out of it, starts at a root or names a drive could reach a file system
+ * if it were written into a ZIP that a tool later unpacks.
+ */
+export function isReceiptPath(path: string): boolean {
+  if (/[\\:]/.test(path)) return false
+  const safe = path.split("/").every((s) => s && s !== "." && s !== "..")
+  return safe && isReceiptFile({ name: path, type: "" })
 }
 
 /**
@@ -204,7 +237,7 @@ export function buildReceiptPaths(
        * Judged by the path alone: it is what would be written, and a missing
        * attachment has no file behind it whose type could be trusted.
        */
-      if (a.missing && a.path && isReceiptFile({ name: a.path, type: "" })) {
+      if (a.missing && a.path && isReceiptPath(a.path)) {
         used.add(a.path.toLowerCase())
         paths.set(attachmentKey(e.id, i), a.path)
       }

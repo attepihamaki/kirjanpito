@@ -74,6 +74,84 @@ export interface UnpackedZip {
 
 export type ReceiptLookup = (path: string) => Promise<Uint8Array | null>
 
+const MEBIBYTE = 1024 * 1024
+
+/**
+ * The most one archive entry may unpack to. A small ZIP can hold gigabytes that
+ * would take the tab down, and the size in its header can be forged, so the
+ * limit applies to the bytes as they come out.
+ */
+export interface ZipLimits {
+  /** The CSV and `settings.json`: above this, the file is refused. */
+  textBytes: number
+  /** One receipt: above this, it reads as missing. */
+  receiptBytes: number
+}
+
+export const ZIP_LIMITS: ZipLimits = {
+  textBytes: 64 * MEBIBYTE,
+  receiptBytes: 512 * MEBIBYTE,
+}
+
+/** The CSV or `settings.json` unpacks to more than `ZipLimits.textBytes`. */
+export class ZipEntryTooLargeError extends Error {
+  constructor() {
+    super("A ZIP entry unpacks to more than the limit")
+    this.name = "ZipEntryTooLargeError"
+  }
+}
+
+/* The part of JSZip's documented StreamHelper used here; its types leave it out. */
+interface EntryStream {
+  on(event: "data", listener: (chunk: Uint8Array) => void): EntryStream
+  on(event: "error", listener: (error: Error) => void): EntryStream
+  on(event: "end", listener: () => void): EntryStream
+  pause(): EntryStream
+  resume(): EntryStream
+}
+
+/** The entry's bytes, or null as soon as they pass `limit`. */
+function readCapped(
+  file: JSZip.JSZipObject,
+  limit: number
+): Promise<Uint8Array | null> {
+  const stream = (
+    file as unknown as { internalStream(type: "uint8array"): EntryStream }
+  ).internalStream("uint8array")
+  return new Promise((resolve, reject) => {
+    const chunks: Uint8Array[] = []
+    let total = 0
+    stream
+      .on("data", (chunk) => {
+        total += chunk.length
+        if (total > limit) {
+          stream.pause()
+          chunks.length = 0
+          resolve(null)
+        } else {
+          chunks.push(chunk)
+        }
+      })
+      .on("error", reject)
+      .on("end", () => {
+        const bytes = new Uint8Array(total)
+        let at = 0
+        for (const chunk of chunks) {
+          bytes.set(chunk, at)
+          at += chunk.length
+        }
+        resolve(bytes)
+      })
+      .resume()
+  })
+}
+
+async function readText(file: JSZip.JSZipObject, limits: ZipLimits) {
+  const bytes = await readCapped(file, limits.textBytes)
+  if (!bytes) throw new ZipEntryTooLargeError()
+  return bytes
+}
+
 /**
  * Relative to the CSV's folder, falling back to the archive root, then to the
  * same path under a differently named folder, and last to a file of the same
@@ -88,7 +166,11 @@ export type ReceiptLookup = (path: string) => Promise<Uint8Array | null>
  * months may well share a name. The bare name is tried only after that, and a
  * name shared by two files is ambiguous, so it refuses rather than guessing.
  */
-function lookupIn(zip: JSZip, csvDir: string): ReceiptLookup {
+function lookupIn(
+  zip: JSZip,
+  csvDir: string,
+  limits: ZipLimits
+): ReceiptLookup {
   let byTail: Map<string, string | null> | undefined
   let byBase: Map<string, string | null> | undefined
 
@@ -125,7 +207,7 @@ function lookupIn(zip: JSZip, csvDir: string): ReceiptLookup {
       const match = byBase.get(baseOf(path))
       if (match) file = zip.file(match)
     }
-    return file ? file.async("uint8array") : null
+    return file ? readCapped(file, limits.receiptBytes) : null
   }
 }
 
@@ -142,19 +224,26 @@ export function findCsvEntry(names: readonly string[]): string | null {
   })
 }
 
-export async function unpackZip(data: Uint8Array): Promise<UnpackedZip | null> {
+/**
+ * Throws `ZipEntryTooLargeError` when the CSV or `settings.json` unpacks past
+ * the limit. Returns null for an archive with no CSV.
+ */
+export async function unpackZip(
+  data: Uint8Array,
+  limits: ZipLimits = ZIP_LIMITS
+): Promise<UnpackedZip | null> {
   const zip = await JSZip.loadAsync(data)
   const names = Object.keys(zip.files).filter((n) => !zip.files[n].dir)
   const csvPath = findCsvEntry(names)
   if (!csvPath) return null
 
-  const csvText = decodeCsv(await zip.files[csvPath].async("uint8array"))
+  const csvText = decodeCsv(await readText(zip.files[csvPath], limits))
   const csvDir = dirOf(csvPath)
   const settingsPath = [csvDir + SETTINGS_FILE_NAME, SETTINGS_FILE_NAME].find(
     (p) => names.includes(p)
   )
   const settingsText = settingsPath
-    ? await zip.files[settingsPath].async("string")
+    ? new TextDecoder().decode(await readText(zip.files[settingsPath], limits))
     : null
 
   const otherFiles = names.filter(
@@ -169,7 +258,7 @@ export async function unpackZip(data: Uint8Array): Promise<UnpackedZip | null> {
     csvText,
     settingsText,
     otherFiles,
-    readReceipt: lookupIn(zip, csvDir),
+    readReceipt: lookupIn(zip, csvDir, limits),
   }
 }
 
@@ -181,7 +270,7 @@ export async function receiptReader(data: Uint8Array): Promise<ReceiptLookup> {
   const zip = await JSZip.loadAsync(data)
   const names = Object.keys(zip.files).filter((n) => !zip.files[n].dir)
   const csvPath = findCsvEntry(names)
-  return lookupIn(zip, csvPath ? dirOf(csvPath) : "")
+  return lookupIn(zip, csvPath ? dirOf(csvPath) : "", ZIP_LIMITS)
 }
 
 /** The folder the CSV sits in, with a trailing slash — "" at the root. */

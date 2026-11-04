@@ -20,6 +20,7 @@ import {
   packZip,
   receiptReader,
   unpackZip,
+  ZipEntryTooLargeError,
 } from "@/lib/domain/zip"
 
 const baseCats = defaultCategories()
@@ -261,7 +262,10 @@ describe("readReceipt", () => {
   })
 
   it("refuses the fallback when two folders hold the same path", async () => {
-    const unpacked = await archiveOf("yksi/2026/10/a.jpg", "kaksi/2026/10/a.jpg")
+    const unpacked = await archiveOf(
+      "yksi/2026/10/a.jpg",
+      "kaksi/2026/10/a.jpg"
+    )
     expect(await unpacked.readReceipt("liitteet/2026/10/a.jpg")).toBeNull()
   })
 })
@@ -391,5 +395,40 @@ describe("carrying receipts from the file being replaced", () => {
       onAbsent: (key) => absent.push(key),
     })
     expect(absent).toEqual([])
+  })
+})
+
+describe("decompression limits", () => {
+  const limits = { textBytes: 1000, receiptBytes: 1000 }
+  const packed = (csvText: string, receipt: Uint8Array) =>
+    packZip({
+      csvName: "tositteet.csv",
+      csvText,
+      paths: new Map([["e#0", "liitteet/2026/01/a.pdf"]]),
+      attachmentIds: new Map([["e#0", "a1"]]),
+      read: async () => receipt,
+      settingsText: SETTINGS_TEXT,
+    })
+
+  it("refuses a CSV that unpacks past the limit", async () => {
+    const bytes = await packed("x".repeat(5000), enc.encode("kuitti"))
+    await expect(unpackZip(bytes, limits)).rejects.toBeInstanceOf(
+      ZipEntryTooLargeError
+    )
+  })
+
+  it("reads a receipt past the limit as missing", async () => {
+    const bytes = await packed("date;type;amount\r\n", new Uint8Array(5000))
+    const unpacked = (await unpackZip(bytes, limits))!
+    expect(await unpacked.readReceipt("liitteet/2026/01/a.pdf")).toBeNull()
+  })
+
+  it("reads entries within the limit whole", async () => {
+    const receipt = new Uint8Array(900).fill(7)
+    const bytes = await packed("date;type;amount\r\n", receipt)
+    const unpacked = (await unpackZip(bytes, limits))!
+    expect(await unpacked.readReceipt("liitteet/2026/01/a.pdf")).toEqual(
+      receipt
+    )
   })
 })

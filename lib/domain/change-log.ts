@@ -60,6 +60,45 @@ function logged(e: Entry, field: LoggedField): string | number | null {
   return e[field] ?? null
 }
 
+/**
+ * A log read from a file, with its records pointing at the entries just read.
+ *
+ * Entries take new ids when a file opens, since the CSV has no id column, while
+ * the log keeps the ids they had when it was written. An entry's newest record
+ * gives the voucher number and date it was left with, and a number is unique
+ * within its year (§4), so that finds the entry again. A deleted entry, or one
+ * whose number was changed outside the app, keeps its old id: its records stay
+ * in the log and no voucher shows them.
+ */
+export function relinkChangeLog(
+  log: readonly ChangeRecord[],
+  entries: readonly Entry[]
+): ChangeRecord[] {
+  const voucherKey = (voucher: number, date: string) =>
+    `${date.slice(0, 4)}#${voucher}`
+  const idByVoucher = new Map<string, string>()
+  for (const e of entries) {
+    if (e.voucher !== undefined) {
+      idByVoucher.set(voucherKey(e.voucher, e.date), e.id)
+    }
+  }
+
+  const newest = new Map<string, ChangeRecord>()
+  for (const r of log) if (r.entryId) newest.set(r.entryId, r)
+
+  const newIds = new Map<string, string>()
+  for (const [oldId, r] of newest) {
+    if (r.action === "delete" || r.voucher === undefined || !r.date) continue
+    const id = idByVoucher.get(voucherKey(r.voucher, r.date))
+    if (id) newIds.set(oldId, id)
+  }
+
+  return log.map((r) => {
+    const id = r.entryId ? newIds.get(r.entryId) : undefined
+    return id ? { ...r, entryId: id } : r
+  })
+}
+
 function subject(
   e: Entry
 ): Pick<ChangeRecord, "entryId" | "voucher" | "date" | "description"> {

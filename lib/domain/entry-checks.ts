@@ -50,7 +50,7 @@ function daysFrom(from: string, to: string): number {
 
 /**
  * The local date each entry was first added, from the change log. An entry
- * that came in a file has no record of being added, so it has no date here.
+ * from a file whose log has no record of adding it has no date here.
  */
 function addedOn(log: readonly ChangeRecord[]): Map<string, string> {
   const out = new Map<string, string>()

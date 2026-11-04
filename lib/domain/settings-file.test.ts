@@ -266,3 +266,52 @@ describe("overview layout", () => {
     expect(stepWidget(layout, "result", -1)).toEqual(layout)
   })
 })
+
+describe("change log records", () => {
+  const AT = "2026-11-03T10:00:00.000Z"
+  const read = (changeLog: unknown) =>
+    parseSettings(JSON.stringify({ changeLog })).changeLog
+
+  it("rebuilds each record from the fields it may hold", () => {
+    expect(
+      read([
+        {
+          at: AT,
+          action: "edit",
+          entryId: "e",
+          voucher: 1,
+          description: { a: 1 },
+          changes: [
+            { field: "amount", from: 100, to: 200 },
+            { field: "amount", from: { a: 1 }, to: 2 },
+            { field: "nope", from: 1, to: 2 },
+          ],
+        },
+      ])
+    ).toEqual([
+      {
+        at: AT,
+        action: "edit",
+        entryId: "e",
+        voucher: 1,
+        changes: [{ field: "amount", from: 100, to: 200 }],
+      },
+    ])
+  })
+
+  it("drops a record whose time cannot be read", () => {
+    expect(read([{ at: "x", action: "add" }])).toEqual([])
+  })
+
+  it("drops an edit's changes that are not a list", () => {
+    expect(read([{ at: AT, action: "edit", changes: "oops" }])).toEqual([
+      { at: AT, action: "edit" },
+    ])
+  })
+
+  it("keeps an action this version does not know", () => {
+    expect(read([{ at: AT, action: "archive" }])).toEqual([
+      { at: AT, action: "archive" },
+    ])
+  })
+})
