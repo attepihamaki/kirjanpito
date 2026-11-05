@@ -7,6 +7,12 @@ import type { Cents } from "@/lib/domain/types"
 export type Form5Row = TaxFormRow
 export type Form5Section = TaxFormSection
 
+/** Shown on 313: the amount is not typed, OmaVero derives it. */
+const CAR_HINT = {
+  fi: "OmaVero laskee tämän ajotiedoista (271, 273, 381, 396). Anna ne siellä äläkä kirjaa summaa erikseen.",
+  en: "OmaVero works this out from the driving details (271, 273, 381, 396). Enter those there and do not add the amount separately.",
+}
+
 /**
  * The fields of Form 5's section 2 (tuloverolaskelma) that the bookkeeping
  * can fill, in the form's own order. The Finnish label of every field is the
@@ -39,7 +45,12 @@ export function form5Sections(s: IncomeStatement): Form5Section[] {
     code: number,
     en: string,
     value: Cents,
-    opts: { portion?: boolean; total?: boolean; unused?: boolean } = {}
+    opts: {
+      portion?: boolean
+      total?: boolean
+      unused?: boolean
+      hint?: { fi: string; en: string }
+    } = {}
   ): Form5Row => ({
     kind: "field",
     code: String(code),
@@ -48,13 +59,16 @@ export function form5Sections(s: IncomeStatement): Form5Section[] {
     portion: opts.portion ?? false,
     total: opts.total ?? false,
     unused: opts.unused ?? false,
+    hint: opts.hint,
   })
   // 344 holds several categories, and the form's name is the last of them.
   const line = (code: number, value: Cents): Form5Row => {
     const { en } = LINE_BY_KEY.get(
       code === 344 ? "344-other" : String(code)
     )!.name
-    return field(code, en, value)
+    return field(code, en, value, {
+      hint: code === 313 ? CAR_HINT : undefined,
+    })
   }
   const group = (fi: string, en: string): Form5Row => ({
     kind: "group",

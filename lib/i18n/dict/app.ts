@@ -1356,6 +1356,14 @@ export const APP_DICT = {
     "Koneiden ja kaluston enimmäispoisto on {a}. Poiston voi kirjata vain ennen lukitusta.",
     "The maximum depreciation on machinery and equipment is {a}. It can be booked only before the lock.",
   ],
+  "statement.yearEndPrivateCar": [
+    "Auton yksityiskäyttö {a} vaatii ajotiedot",
+    "Private use of a car, {a}, needs the driving details",
+  ],
+  "statement.yearEndPrivateCarSub": [
+    "OmaVero laskee kohdan 313 itse ajetuista kilometreistä ja autokuluista, eikä lomake mene läpi ilman niitä. Anna ne OmaVerossa (271, 273, 381 ja 396) ja tarkista, että 313 vastaa kirjattua summaa.",
+    "OmaVero works out field 313 itself from the kilometres and car costs, and the form is not accepted without them. Enter them in OmaVero (271, 273, 381 and 396) and check that 313 matches the booked amount.",
+  ],
   "statement.yearEndFigures": [
     "Vuoden lopun varat ja velat puuttuvat",
     "Year-end assets and liabilities are missing",

@@ -60,6 +60,15 @@ describe("FORM5_RULES", () => {
     )
   })
 
+  it("asks for the driving details when 313 is booked (#1882)", () => {
+    expect(breaches({ 313: 500, 315: 0, 316: 500, 358: 500 })).toContain(
+      "form5.carDetail"
+    )
+    expect(
+      breaches({ 313: 500, 273: 10, 381: 900, 316: 500, 358: 500 })
+    ).not.toContain("form5.carDetail")
+  })
+
   it("names the specification check each rule implements", () => {
     for (const rule of FORM5_RULES.rules) {
       expect(rule.source).toMatch(/^Form 5 spec 2026 #\d+$/)

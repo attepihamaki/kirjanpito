@@ -99,6 +99,21 @@ describe("yearEndItems", () => {
     expect(found).toMatchObject({ maximum: 50_000 })
   })
 
+  it("warns that private use of a car needs the driving details (#1882)", () => {
+    const use = entry({
+      date: "2025-12-31",
+      type: "income",
+      catId: "313",
+      amount: 80_000,
+      vatRate: 0,
+    })
+    const found = yearEndItems(input({ entries: [use] })).find(
+      (i) => i.id === "privateCar"
+    )
+    expect(found).toMatchObject({ severity: "warn", amount: 80_000 })
+    expect(ids()).not.toContain("privateCar")
+  })
+
   it("notes year-end figures that were never typed in", () => {
     expect(ids({ yearEnd: undefined })).toContain("yearEndFigures")
     expect(ids()).not.toContain("yearEndFigures")
@@ -116,7 +131,9 @@ describe("yearEndItems", () => {
 
   it("lists empty months after the first entry, from the start month on", () => {
     const found = yearEndItems(
-      input({ entries: [entry({ date: "2025-10-01" }), entry({ date: "2025-12-01" })] })
+      input({
+        entries: [entry({ date: "2025-10-01" }), entry({ date: "2025-12-01" })],
+      })
     ).find((i) => i.id === "emptyMonths")
     expect(found).toMatchObject({ months: [11] })
   })

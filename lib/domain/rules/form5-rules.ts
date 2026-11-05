@@ -144,6 +144,13 @@ export const FORM5_RULES = defineRules<Form5Values, Form5Breach>([
     [871, 394],
     (v) => 10 * v(871) <= 3 * v(394)
   ),
+  /*
+   * The kilometres and costs behind the private use of a car are not in the
+   * book, so any amount on 313 breaches this until they are entered in OmaVero.
+   */
+  rule("carDetail", 1882, "warn", [313, 271, 273, 381, 396], (v) =>
+    v(313) > 0 ? v(273) > 0 && v(381) > 0 : true
+  ),
   rule("listedDividend", 1321, "warn", [319, 320], (v) => v(319) >= v(320)),
   rule("otherDividend", 1455, "warn", [321, 322], (v) => v(321) >= v(322)),
   rule("surplusShare", 1322, "warn", [327, 328], (v) =>

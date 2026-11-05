@@ -192,9 +192,7 @@ function YearEndForm() {
         return {
           title: f.t("statement.yearEndVatUnfiled", { p: names.join(", ") }),
           sub: f.t("statement.yearEndVatUnfiledSub"),
-          action: link(f.t("statement.yearEndOpen"), () =>
-            go(APP_ROUTES.vat)
-          ),
+          action: link(f.t("statement.yearEndOpen"), () => go(APP_ROUTES.vat)),
         }
       }
       case "depreciation":
@@ -206,6 +204,13 @@ function YearEndForm() {
           action: link(f.t("statement.yearEndOpen"), () =>
             go(STATEMENT_ROUTES.assets)
           ),
+        }
+      case "privateCar":
+        return {
+          title: f.t("statement.yearEndPrivateCar", {
+            a: f.money(item.amount),
+          }),
+          sub: f.t("statement.yearEndPrivateCarSub"),
         }
       case "yearEndFigures":
         return {
@@ -241,7 +246,9 @@ function YearEndForm() {
     <Dialog open onOpenChange={(open) => !open && closeDialog()}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{f.t("statement.yearEndTitle", { y: year })}</DialogTitle>
+          <DialogTitle>
+            {f.t("statement.yearEndTitle", { y: year })}
+          </DialogTitle>
           <DialogDescription>{f.t("statement.yearEndIntro")}</DialogDescription>
         </DialogHeader>
 
@@ -402,7 +409,10 @@ function CheckRow({
     <li className="grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-start gap-3 px-4 py-3">
       <span
         aria-hidden
-        className={cn("mt-0.5 grid size-5 place-items-center rounded-full", tone)}
+        className={cn(
+          "mt-0.5 grid size-5 place-items-center rounded-full",
+          tone
+        )}
       >
         <Icon className="size-3" strokeWidth={3} />
       </span>

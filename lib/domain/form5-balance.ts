@@ -173,6 +173,16 @@ export function form5Balance(input: Form5BalanceInput): Form5Balance {
   }
 }
 
+/* OmaVero carries the pool over and works out its end, so these are checks. */
+const OPENING_HINT = {
+  fi: "OmaVero tuo tämän edellisen vahvistetun vuoden lopusta. Anna se vain, jos se puuttuu, ja tarkista muuten, että luku täsmää.",
+  en: "OmaVero carries this over from the last confirmed year. Enter it only if it is missing, and otherwise check that it matches.",
+}
+const CLOSING_HINT = {
+  fi: "OmaVero laskee tämän itse ja vie sen kohtaan 704. Tarkista, että luku täsmää.",
+  en: "OmaVero works this out itself and carries it to 704. Check that it matches.",
+}
+
 export function form5BalanceSections(
   b: Form5Balance,
   yearEnd: YearEnd
@@ -181,7 +191,11 @@ export function form5BalanceSections(
     code: number,
     en: string,
     value: Cents,
-    opts: { total?: boolean; unused?: boolean } = {}
+    opts: {
+      total?: boolean
+      unused?: boolean
+      hint?: { fi: string; en: string }
+    } = {}
   ): TaxFormRow => ({
     kind: "field",
     code: String(code),
@@ -190,6 +204,7 @@ export function form5BalanceSections(
     portion: false,
     total: opts.total ?? false,
     unused: opts.unused ?? false,
+    hint: opts.hint,
   })
   const group = (fi: string, en: string): TaxFormRow => ({
     kind: "group",
@@ -218,7 +233,8 @@ export function form5BalanceSections(
         field(
           800,
           "Remaining expenditure at the start of the year",
-          pool.opening
+          pool.opening,
+          { hint: OPENING_HINT }
         ),
         field(801, "Additions during the year", pool.additions),
         field(802, "Selling prices and insurance compensation", pool.disposals),
@@ -232,7 +248,7 @@ export function form5BalanceSections(
           806,
           "Remaining expenditure at the end of the year",
           pool.closing,
-          { total: true }
+          { total: true, hint: CLOSING_HINT }
         ),
       ],
     })

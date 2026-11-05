@@ -1,5 +1,6 @@
 import { assetSchedule, type AssetOpening } from "@/lib/domain/assets"
 import type { ChangeRecord } from "@/lib/domain/change-log"
+import { calcEntry } from "@/lib/domain/calc"
 import { lastCompleteMonth, monthOf, yearOf } from "@/lib/domain/dates"
 import {
   ENTRY_CHECKS,
@@ -34,6 +35,12 @@ export type YearEndItem =
   | { id: "vatUnfiled"; severity: "warn"; keys: readonly string[] }
   /** A depreciation allowance the year did not use. */
   | { id: "depreciation"; severity: "warn"; maximum: Cents }
+  /**
+   * Private use of a car is booked on line 313. OmaVero works that amount out
+   * itself from the car's kilometres and costs (271, 273, 381 and 396 of
+   * the specification), which the book does not hold.
+   */
+  | { id: "privateCar"; severity: "warn"; amount: Cents }
   | { id: "yearEndFigures"; severity: "info" }
   | {
       id: "openItems"
@@ -68,8 +75,10 @@ export function yearEndItems(input: YearEndInput): YearEndItem[] {
   const yearEntries = entries.filter((e) => yearOf(e.date) === year)
   const items: YearEndItem[] = []
 
-  if (yearOf(today) <= year) items.push({ id: "yearOngoing", severity: "blocker" })
-  if (yearEntries.length === 0) items.push({ id: "noEntries", severity: "info" })
+  if (yearOf(today) <= year)
+    items.push({ id: "yearOngoing", severity: "blocker" })
+  if (yearEntries.length === 0)
+    items.push({ id: "noEntries", severity: "info" })
   if (input.dirty) items.push({ id: "unsaved", severity: "warn" })
 
   for (const check of ENTRY_CHECKS) {
@@ -113,6 +122,11 @@ export function yearEndItems(input: YearEndInput): YearEndItem[] {
   if (asset && asset.maximum > 0 && asset.taken === 0) {
     items.push({ id: "depreciation", severity: "warn", maximum: asset.maximum })
   }
+
+  const car = yearEntries
+    .filter((e) => cats.get(e.catId)?.line === "313")
+    .reduce((sum, e) => sum + calcEntry(e).net, 0)
+  if (car > 0) items.push({ id: "privateCar", severity: "warn", amount: car })
 
   if (!input.yearEnd) items.push({ id: "yearEndFigures", severity: "info" })
 
