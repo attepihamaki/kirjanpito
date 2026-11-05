@@ -80,14 +80,28 @@ const TYPE_FROM_CSV: ReadonlyMap<string, EntryType> = new Map([
 
 /** An EU purchase ⇄ the `eu_purchase` column. */
 const EU_PURCHASE_TO_CSV: Readonly<Record<Lang, Record<EuPurchase, string>>> = {
-  fi: { goods: "tavara", services: "palvelu" },
-  en: { goods: "goods", services: "services" },
+  fi: {
+    goods: "tavara",
+    services: "palvelu",
+    import: "tuonti",
+    reverse: "käänteinen",
+  },
+  en: {
+    goods: "goods",
+    services: "services",
+    import: "import",
+    reverse: "reverse",
+  },
 }
 const EU_PURCHASE_FROM_CSV: ReadonlyMap<string, EuPurchase> = new Map([
   ["tavara", "goods"],
   ["palvelu", "services"],
+  ["tuonti", "import"],
+  ["käänteinen", "reverse"],
   ["goods", "goods"],
   ["services", "services"],
+  ["import", "import"],
+  ["reverse", "reverse"],
 ])
 
 /** The `cash` column's value on an entry paid in cash. Read case-insensitively. */

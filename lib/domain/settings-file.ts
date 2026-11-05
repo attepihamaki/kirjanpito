@@ -25,7 +25,13 @@ import {
   type OverviewWidget,
 } from "@/lib/domain/overview-layout"
 import type { RecurringEntry } from "@/lib/domain/recurring"
-import type { Category, Lang, SalesKind } from "@/lib/domain/types"
+import {
+  EU_PURCHASE_KINDS,
+  type Category,
+  type EuPurchase,
+  type Lang,
+  type SalesKind,
+} from "@/lib/domain/types"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 
 /**
@@ -163,12 +169,14 @@ function parseRecurring(value: unknown): RecurringEntry | null {
     amount: amount as number,
     vatRate,
     amountMode,
-    ...(euPurchase === "goods" || euPurchase === "services"
-      ? { euPurchase }
-      : {}),
+    ...(isEuPurchase(euPurchase) ? { euPurchase } : {}),
     day: day as number,
     from,
   }
+}
+
+function isEuPurchase(value: unknown): value is EuPurchase {
+  return EU_PURCHASE_KINDS.includes(value as EuPurchase)
 }
 
 function parseCategory(value: unknown): Category | null {
@@ -189,7 +197,7 @@ function parseCategory(value: unknown): Category | null {
   }
   if (SALES_KINDS.includes(kind as SalesKind)) cat.kind = kind as SalesKind
   if (
-    (euPurchase === "goods" || euPurchase === "services") &&
+    isEuPurchase(euPurchase) &&
     canBeEuPurchase(LINE_BY_KEY.get(line))
   ) {
     cat.euPurchase = euPurchase

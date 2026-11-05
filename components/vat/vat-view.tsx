@@ -24,8 +24,12 @@ export function VatView() {
   const { report } = useVatPeriod()
   const refund = report.due < 0
   const eu = report.euPurchases
-  const euTax = eu.goods.vat + eu.services.vat
-  const hasEu = eu.goods.net !== 0 || eu.services.net !== 0
+  const euTax = eu.goods.vat + eu.services.vat + eu.import.vat + eu.reverse.vat
+  const hasEu =
+    eu.goods.net !== 0 ||
+    eu.services.net !== 0 ||
+    eu.import.net !== 0 ||
+    eu.reverse.net !== 0
 
   return (
     <div className="flex flex-col gap-5">
@@ -105,6 +109,27 @@ export function VatView() {
               label={f.t("vat.euServicesTax")}
               cents={eu.services.vat}
             />
+            {eu.import.net !== 0 ? (
+              <>
+                <OtherRow
+                  label={f.t("vat.importPurchases")}
+                  cents={eu.import.net}
+                />
+                <OtherRow label={f.t("vat.importTax")} cents={eu.import.vat} />
+              </>
+            ) : null}
+            {eu.reverse.net !== 0 ? (
+              <>
+                <OtherRow
+                  label={f.t("vat.reversePurchases")}
+                  cents={eu.reverse.net}
+                />
+                <OtherRow
+                  label={f.t("vat.reverseTax")}
+                  cents={eu.reverse.vat}
+                />
+              </>
+            ) : null}
             <OtherRow label={f.t("vat.euDeductible")} cents={eu.deductible} />
           </dl>
         </Panel>

@@ -89,6 +89,43 @@ describe("vatReturnSections", () => {
     expect(v("309")).toBe(0)
   })
 
+  it("reports an import in 310 and 304 without changing the tax payable", () => {
+    const base = values([entry({ id: "s" })])
+    const v = values([
+      entry({ id: "s" }),
+      entry({
+        id: "i",
+        type: "expense",
+        catId: "333-import",
+        euPurchase: "import",
+        vatRate: 25.5,
+        amount: 20000,
+      }),
+    ])
+    expect(v("310")).toBe(20000)
+    expect(v("304")).toBe(5100)
+    expect(v("307")).toBe(base("307") + 5100)
+    expect(v("308")).toBe(base("308"))
+  })
+
+  it("reports reverse-charge purchases in 320 and 318", () => {
+    const base = values([entry({ id: "s" })])
+    const v = values([
+      entry({ id: "s" }),
+      entry({
+        id: "r",
+        type: "expense",
+        catId: "334-reverse",
+        euPurchase: "reverse",
+        vatRate: 25.5,
+        amount: 10000,
+      }),
+    ])
+    expect(v("320")).toBe(10000)
+    expect(v("318")).toBe(2550)
+    expect(v("308")).toBe(base("308"))
+  })
+
   it("reports EU goods and services in their own fields", () => {
     const v = values([
       entry({ id: "a", catId: "300-eu-goods", vatRate: 0 }),

@@ -655,8 +655,8 @@ export const APP_DICT = {
   ],
   "ledger.bulkCategory": ["Vaihda luokka", "Change category"],
   "ledger.bulkMixedEu": [
-    "Luokan voi vaihtaa, kun valitut ovat kaikki EU-ostoja tai kaikki muita kuluja.",
-    "To change the category, select only EU purchases or only other expenses.",
+    "Luokan voi vaihtaa, kun valitut ovat kaikki ostoja, joiden veron ilmoitat itse, tai kaikki muita kuluja.",
+    "To change the category, select only purchases whose tax you report yourself, or only other expenses.",
   ],
   "ledger.bulkMixed": [
     "Luokan voi vaihtaa, kun valitut ovat kaikki tuloja tai kaikki kuluja.",
@@ -694,7 +694,7 @@ export const APP_DICT = {
     "A cash payment is booked without delay, day by day (Accounting Act 2:4). The book points it out when a cash voucher is booked more than {d} days after the payment. A cash payment does not move the bank estimate.",
   ],
   "entry.logFieldBuyer": ["Ostajan ALV-numero", "Buyer’s VAT number"],
-  "entry.logFieldEuPurchase": ["EU-osto", "EU purchase"],
+  "entry.logFieldEuPurchase": ["Veron ilmoitus itse", "Self-reported tax"],
   "entry.logFieldVoucher": ["Tositenumero", "Voucher number"],
   "entry.logFieldReceipts": ["Liitteet", "Attachments"],
   "ledger.chartTab": ["Tililuettelo", "Account list"],
@@ -799,6 +799,8 @@ export const APP_DICT = {
   "ledger.openItems": ["Avoimet", "Open"],
   "ledger.openPill": ["Avoin", "Open"],
   "ledger.euPill": ["EU-osto", "EU purchase"],
+  "ledger.importPill": ["Maahantuonti", "Import"],
+  "ledger.reversePill": ["Käänteinen ALV", "Reverse charge"],
   "ledger.checkFilter": ["Tarkistettavat", "Needs a look"],
   "ledger.checkAll": ["Kaikki tositteet", "All vouchers"],
   "ledger.withoutReceipt": ["Ilman liitettä", "Without an attachment"],
@@ -887,7 +889,23 @@ export const APP_DICT = {
   "entry.historyTitle": ["Muutoshistoria", "Change history"],
   "entry.euPurchaseGoods": ["Kyllä, tavara", "Yes, goods"],
   "entry.euPurchaseServices": ["Kyllä, palvelu", "Yes, services"],
-  "entry.euPurchaseInfo": ["Mikä on EU-osto?", "What is an EU purchase?"],
+  "entry.euPurchaseImport": ["Kyllä, maahantuonti", "Yes, import"],
+  "entry.euPurchaseReverse": [
+    "Kyllä, käänteinen verovelvollisuus",
+    "Yes, reverse charge",
+  ],
+  "entry.euPurchaseInfo": [
+    "Miksi veroa ei ole laskulla?",
+    "Why is there no VAT on the invoice?",
+  ],
+  "entry.importVat": [
+    "Tämä luokka on ostoille, jotka tuodaan EU:n ulkopuolelta. Kirjaa tavaran arvo ilman veroa. Vero {a} ({r}) menee ALV-ilmoitukselle sekä verona että vähennyksenä, joten maksettava vero ei muutu. Jos tulli perii veron erikseen, kirjaa maksettu vero omaksi kuluksi 0 %:n verolla.",
+    "This category is for goods imported from outside the EU. Book the value of the goods without tax. The tax of {a} ({r}) goes on the VAT return both as tax and as a deduction, so the tax payable does not change. If customs collects the tax separately, book what you paid as a cost of its own at 0%.",
+  ],
+  "entry.reverseVat": [
+    "Tämä luokka on rakentamispalvelun ja metalliromun ostoille Suomesta, kun myyjä laskuttaa ilman arvonlisäveroa. Kirjaa laskun summa. Vero {a} ({r}) menee ALV-ilmoitukselle sekä verona että vähennyksenä, joten maksettava vero ei muutu.",
+    "This category is for construction services and scrap metal bought in Finland, invoiced without VAT. Book the invoice amount. The tax of {a} ({r}) goes on the VAT return both as tax and as a deduction, so the tax payable does not change.",
+  ],
   "entry.euPurchaseVat": [
     "Tämä luokka on ostoille, jotka toisessa EU-maassa oleva myyjä laskuttaa ilman arvonlisäveroa. Kirjaa laskun summa. Vero {a} ({r}) menee ALV-ilmoitukselle sekä verona että vähennyksenä, joten maksettava vero ei muutu.",
     "This category is for purchases a seller in another EU country invoices without VAT. Book the invoice amount. The tax of {a} ({r}) goes on the VAT return both as tax and as a deduction, so the tax payable does not change.",
@@ -1171,9 +1189,19 @@ export const APP_DICT = {
     "VAT on sales and EU purchases {a} − deductible VAT {b}",
   ],
   "vat.euPurchases": [
-    "Ostot muista EU-maista",
-    "Purchases from other EU countries",
+    "Ostot, joiden veron ilmoitat itse",
+    "Purchases whose tax you report yourself",
   ],
+  "vat.importPurchases": [
+    "Maahantuonnit EU:n ulkopuolelta",
+    "Imports from outside the EU",
+  ],
+  "vat.importTax": ["Vero maahantuonneista", "Tax on imports"],
+  "vat.reversePurchases": [
+    "Rakentamispalvelun ja metalliromun ostot",
+    "Construction services and scrap metal purchased",
+  ],
+  "vat.reverseTax": ["Vero näistä ostoista", "Tax on these purchases"],
   "vat.euGoodsPurchases": ["Tavaraostot", "Purchases of goods"],
   "vat.euGoodsTax": ["Vero tavaraostoista", "Tax on goods"],
   "vat.euServicesPurchases": ["Palveluostot", "Purchases of services"],
@@ -1267,8 +1295,8 @@ export const APP_DICT = {
     "This period has sales at a rate the return has no field for ({v} of VAT). It is not in the fields, but it is included in the tax payable. Check the rates on the vouchers.",
   ],
   "vat.returnPurchases": [
-    "Kirjanpito ei erottele tuontia EU:n ulkopuolelta eikä rakentamispalvelun ja metalliromun ostoja. Jos sinulla on niitä, täytä niiden vero ja summa OmaVerossa, ja lisää vero myös vähennettävään veroon, jos saat vähentää sen. Maksettava vero muuttuu silloin.",
-    "The bookkeeping does not separate imports from outside the EU or purchases of construction services and scrap metal. If you have any, enter their tax and amount in MyTax, and add the tax to the deductible tax if you may deduct it. The tax payable then changes.",
+    "Tuonnit EU:n ulkopuolelta ja rakentamispalvelun ja metalliromun ostot tulevat laskelmaan vain, jos kirjasit ne luokalle, jonka veron ilmoitat itse. Muut täytä OmaVerossa, ja lisää niiden vero myös vähennettävään veroon, jos saat vähentää sen.",
+    "Imports from outside the EU and purchases of construction services and scrap metal reach the return only if you booked them on a category whose tax you report yourself. Enter any others in MyTax, and add their tax to the deductible tax if you may deduct it.",
   ],
   "vat.returnCodes": [
     "Numerot ovat Verohallinnon tunnukset tiedoille. Kohtien nimet ja järjestys noudattavat OmaVeron ilmoitusta.",
@@ -2035,8 +2063,8 @@ export const APP_DICT = {
   "settings.addCategory": ["Lisää oma luokka", "Add a category"],
   "settings.newCategory": ["Lisää luokka", "Add category"],
   "settings.euPurchase": [
-    "Osto muusta EU-maasta",
-    "Purchase from another EU country",
+    "Osto, jonka veron ilmoitat itse",
+    "Purchase whose tax you report yourself",
   ],
   "settings.euPurchaseNo": ["Ei", "No"],
   "settings.line": ["Tuloslaskelman rivi", "Income statement line"],

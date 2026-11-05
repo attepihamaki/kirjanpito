@@ -33,6 +33,8 @@ export function syncEuPurchase(
 const SUFFIX: Readonly<Record<EuPurchase, string>> = {
   goods: "EU, tavarat",
   services: "EU, palvelut",
+  import: "maahantuonti",
+  reverse: "käänteinen verovelvollisuus",
 }
 
 /**

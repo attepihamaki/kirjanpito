@@ -882,15 +882,22 @@ function EntryDialogForm({
                   <FieldLabel>{f.t("entry.category")}</FieldLabel>
                   {euPurchase ? (
                     <InfoPopover label={f.t("entry.euPurchaseInfo")}>
-                      {f.t("entry.euPurchaseVat", {
-                        a: f.money(
-                          euPurchaseVat({
-                            amount: formAmount ?? 0,
-                            vatRate: form.vatRate,
-                          })
-                        ),
-                        r: f.rate(form.vatRate),
-                      })}
+                      {f.t(
+                        euPurchase === "import"
+                          ? "entry.importVat"
+                          : euPurchase === "reverse"
+                            ? "entry.reverseVat"
+                            : "entry.euPurchaseVat",
+                        {
+                          a: f.money(
+                            euPurchaseVat({
+                              amount: formAmount ?? 0,
+                              vatRate: form.vatRate,
+                            })
+                          ),
+                          r: f.rate(form.vatRate),
+                        }
+                      )}
                     </InfoPopover>
                   ) : null}
                 </div>

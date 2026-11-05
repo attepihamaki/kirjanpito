@@ -65,8 +65,21 @@ export interface Attachment {
  * though the CSV columns they serialize to are Finnish (§7.1). `lib/domain/csv`
  * owns that translation and is the only place the Finnish names appear.
  */
-/** What an expense bought from another EU country was (§6.9). */
-export type EuPurchase = "goods" | "services"
+/**
+ * A purchase whose tax the buyer reports on the VAT return instead of the
+ * seller charging it (§6.9). `goods` and `services` come from another EU
+ * country, `import` is goods from outside the EU, and `reverse` is a
+ * construction service or scrap metal bought in Finland.
+ */
+export type EuPurchase = "goods" | "services" | "import" | "reverse"
+
+/** Every `EuPurchase`, for reading a value from a file. */
+export const EU_PURCHASE_KINDS: readonly EuPurchase[] = [
+  "goods",
+  "services",
+  "import",
+  "reverse",
+]
 
 export interface Entry {
   id: string
@@ -107,8 +120,9 @@ export interface Entry {
   /** The buyer's VAT number on a sale to another EU country (§8.7). */
   buyerVatId?: string
   /**
-   * Set on an expense bought from another EU country with no VAT on the invoice.
-   * The buyer reports the tax, so `amount` is what was paid and `vatRate` is the
+   * Set on an expense whose invoice carries no VAT because the buyer reports
+   * it: a purchase from another EU country, an import or a domestic
+   * reverse-charge purchase. The buyer reports the tax, so `amount` is what was paid and `vatRate` is the
    * rate the buyer reports it at (§6.9).
    */
   euPurchase?: EuPurchase
@@ -126,7 +140,7 @@ export interface Category {
   vatRate: number
   /** Set on income categories; drives the §6.1 VAT treatment. */
   kind?: SalesKind
-  /** Set on expense categories bought from another EU country (§6.9). */
+  /** Set on expense categories whose tax the buyer reports (§6.9). */
   euPurchase?: EuPurchase
   /** Shown in the entry dialog's dropdown. */
   enabled: boolean

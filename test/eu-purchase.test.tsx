@@ -66,7 +66,7 @@ describe("an EU purchase in the entry dialog", () => {
     expect(screen.queryByText("ALV %")).not.toBeInTheDocument()
     expect(screen.queryByText(/menee ALV-ilmoitukselle/)).toBeNull()
 
-    fireEvent.click(screen.getByLabelText("Mikä on EU-osto?"))
+    fireEvent.click(screen.getByLabelText("Miksi veroa ei ole laskulla?"))
 
     expect(
       await screen.findByText(/Vero 25,50 € \(25,5 %\) menee ALV-ilmoitukselle/)
@@ -79,7 +79,7 @@ describe("an EU purchase in the entry dialog", () => {
     })
     mount()
 
-    expect(screen.queryByLabelText("Mikä on EU-osto?")).toBeNull()
+    expect(screen.queryByLabelText("Miksi veroa ei ole laskulla?")).toBeNull()
   })
 
   it("keeps a saved rate of its own", async () => {
@@ -142,7 +142,7 @@ describe("changing several entries' category", () => {
     bar([subscription, other])
 
     expect(
-      screen.getByText(/kaikki EU-ostoja tai kaikki muita kuluja/)
+      screen.getByText(/kaikki ostoja, joiden veron ilmoitat itse, tai kaikki muita kuluja/)
     ).toBeVisible()
   })
 
@@ -162,7 +162,7 @@ describe("an EU purchase in the VAT view", () => {
       </LangProvider>
     )
 
-    expect(screen.getByText("Ostot muista EU-maista")).toBeVisible()
+    expect(screen.getByText("Ostot, joiden veron ilmoitat itse")).toBeVisible()
     expect(screen.getByText("Vero palveluostoista")).toBeVisible()
     expect(
       screen.getByText(
@@ -181,6 +181,6 @@ describe("an EU purchase in the VAT view", () => {
       </LangProvider>
     )
 
-    expect(screen.queryByText("Ostot muista EU-maista")).not.toBeInTheDocument()
+    expect(screen.queryByText("Ostot, joiden veron ilmoitat itse")).not.toBeInTheDocument()
   })
 })

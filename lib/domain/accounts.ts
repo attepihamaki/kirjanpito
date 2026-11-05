@@ -675,7 +675,9 @@ export interface EuPurchaseCategoryDef {
 }
 
 /**
- * Purchases from other EU countries, the counterpart of the EU sales (§6.9).
+ * Purchases whose tax the buyer reports (§6.9): from other EU countries, the
+ * counterpart of the EU sales, then imports from outside the EU and the
+ * domestic reverse-charge purchases of scrap metal and construction services.
  * Each sits on a line of its own rather than on one shared line like the sales,
  * because Form 5 has no single line for purchases. A custom category covers any
  * other line (§8.10). They come after the other categories, so a CSV row with
@@ -709,6 +711,27 @@ export const EU_PURCHASES: readonly EuPurchaseCategoryDef[] = [
     fi: "Koneiden ja kaluston hankinta – EU",
     en: "Purchase of machinery and equipment – EU",
     euPurchase: "goods",
+  },
+  {
+    id: "333-import",
+    line: "333",
+    fi: "Ostot ja varastojen muutokset – maahantuonti",
+    en: "Purchases and changes in inventory – import",
+    euPurchase: "import",
+  },
+  {
+    id: "333-reverse",
+    line: "333",
+    fi: "Ostot ja varastojen muutokset – metalliromu",
+    en: "Purchases and changes in inventory – scrap metal",
+    euPurchase: "reverse",
+  },
+  {
+    id: "334-reverse",
+    line: "334",
+    fi: "Ulkopuoliset palvelut – rakentaminen",
+    en: "External services – construction",
+    euPurchase: "reverse",
   },
 ]
 
@@ -767,7 +790,7 @@ export const FORMER_NAMES: Readonly<Record<string, readonly string[]>> = {
   "asset-sale": ["Käyttöomaisuuden myynti", "Sale of fixed assets"],
 }
 
-/** The built-in categories: six sales, one per remaining line and four EU purchases. */
+/** The built-in categories: six sales, one per remaining line and seven purchases whose tax the buyer reports. */
 export function defaultCategories(): Category[] {
   const sales: Category[] = SALES.map((s) => ({
     id: s.id,

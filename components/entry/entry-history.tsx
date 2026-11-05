@@ -51,9 +51,15 @@ function formatValue(
     case "cash":
       return f.t("entry.cash")
     case "euPurchase":
-      return value === "goods"
-        ? f.t("entry.euPurchaseGoods")
-        : f.t("entry.euPurchaseServices")
+      return f.t(
+        value === "goods"
+          ? "entry.euPurchaseGoods"
+          : value === "import"
+            ? "entry.euPurchaseImport"
+            : value === "reverse"
+              ? "entry.euPurchaseReverse"
+              : "entry.euPurchaseServices"
+      )
     default:
       return String(value)
   }

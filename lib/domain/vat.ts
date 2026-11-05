@@ -35,9 +35,15 @@ export type VatAnomaly = {
   vat: Cents
 }
 
+/**
+ * Purchases whose tax the buyer reports (§6.9), by kind: EU goods and
+ * services, imports from outside the EU and domestic reverse-charge purchases.
+ */
 export interface EuPurchases {
   goods: VatBucket
   services: VatBucket
+  import: VatBucket
+  reverse: VatBucket
   /** The part of their tax that may be deducted (§6.9). */
   deductible: Cents
 }
@@ -128,6 +134,8 @@ export function vatReport(
   const euPurchases: EuPurchases = {
     goods: { net: 0, vat: 0 },
     services: { net: 0, vat: 0 },
+    import: { net: 0, vat: 0 },
+    reverse: { net: 0, vat: 0 },
     deductible: 0,
   }
   const anomalies: VatAnomaly[] = []
@@ -180,7 +188,9 @@ export function vatReport(
     due:
       s.total.vat +
       euPurchases.goods.vat +
-      euPurchases.services.vat -
+      euPurchases.services.vat +
+      euPurchases.import.vat +
+      euPurchases.reverse.vat -
       p.total.vat -
       euPurchases.deductible +
       0,

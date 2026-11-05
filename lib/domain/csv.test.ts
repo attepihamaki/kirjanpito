@@ -378,6 +378,18 @@ describe("the words in a cell follow the export language", () => {
     }
   )
 
+  it.each(["fi", "en"] as const)(
+    "round-trips an import and a reverse-charge purchase through a %s file",
+    (lang) => {
+      for (const kind of ["import", "reverse"] as const) {
+        const one = entry({ ...e, euPurchase: kind })
+        const text = serializeCsv([one], cats, { lang })
+        const back = ok(parseCsv(text, baseCats)).entries[0]
+        expect(back.euPurchase).toBe(kind)
+      }
+    }
+  )
+
   it("writes the English words only in an English file", () => {
     const en = serializeCsv([e], cats, { lang: "en" })
     expect(en).toContain(";expense;")

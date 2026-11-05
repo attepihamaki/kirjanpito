@@ -48,7 +48,7 @@ describe("the EU purchase categories", () => {
 
   it("leave each line's own category first", () => {
     const on333 = cats.filter((c) => c.line === "333").map((c) => c.id)
-    expect(on333).toEqual(["333", "333-eu-goods"])
+    expect(on333).toEqual(["333", "333-eu-goods", "333-import", "333-reverse"])
   })
 
   it("put the cost on their own Form 5 line", () => {
@@ -87,6 +87,8 @@ describe("the order categories are listed in", () => {
     expect(on333).toEqual([
       "Ostot ja varastojen muutokset",
       "Ostot ja varastojen muutokset – EU",
+      "Ostot ja varastojen muutokset – maahantuonti",
+      "Ostot ja varastojen muutokset – metalliromu",
     ])
   })
 })

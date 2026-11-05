@@ -237,7 +237,13 @@ function LedgerRow({
             ) : null}
             {entry.euPurchase ? (
               <Pill size="sm" className="ml-2">
-                {f.t("ledger.euPill")}
+                {f.t(
+                  entry.euPurchase === "import"
+                    ? "ledger.importPill"
+                    : entry.euPurchase === "reverse"
+                      ? "ledger.reversePill"
+                      : "ledger.euPill"
+                )}
               </Pill>
             ) : null}
           </span>

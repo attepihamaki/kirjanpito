@@ -121,8 +121,8 @@ describe("SALES", () => {
 describe("defaultCategories", () => {
   const cats = defaultCategories()
 
-  it("returns six sales, one per remaining line and four EU purchases", () => {
-    expect(cats).toHaveLength(50)
+  it("returns six sales, one per remaining line and seven purchases the buyer reports", () => {
+    expect(cats).toHaveLength(53)
     expect(cats).toHaveLength(
       SALES.length + ALL_LINES.length - 1 + EU_PURCHASES.length
     )

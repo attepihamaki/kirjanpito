@@ -297,6 +297,8 @@ function CategoryFormDialog({
                   { value: "no", label: f.t("settings.euPurchaseNo") },
                   { value: "goods", label: f.t("entry.euPurchaseGoods") },
                   { value: "services", label: f.t("entry.euPurchaseServices") },
+                  { value: "import", label: f.t("entry.euPurchaseImport") },
+                  { value: "reverse", label: f.t("entry.euPurchaseReverse") },
                 ]}
                 value={eu || "no"}
                 onChange={(value) =>

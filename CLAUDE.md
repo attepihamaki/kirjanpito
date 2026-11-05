@@ -293,7 +293,7 @@ The table order is also the display order of the income statement. **It is not q
 | 344-eu-services   | 344-other      | Muut vähennyskelpoiset kulut – EU, palvelut | Other deductible expenses – EU, services | services   |
 | asset-purchase-eu | asset-purchase | Koneiden ja kaluston hankinta – EU          | Purchase of machinery and equipment – EU | goods      |
 
-All start at 25,5 %. They come last in the list, so a CSV row with no category name still finds its line's own category. The dropdowns and the settings table list a line's own category before its EU one (`compareCategories`), whatever the names.
+Three more sit on the same lines, for purchases whose tax the buyer reports without an EU seller (§6.9): `333-import` "Ostot ja varastojen muutokset – maahantuonti" (import), `333-reverse` "… – metalliromu" (reverse) and `334-reverse` "Ulkopuoliset palvelut – rakentaminen" (reverse). All start at 25,5 %. They come last in the list, so a CSV row with no category name still finds its line's own category. The dropdowns and the settings table list a line's own category before its EU one (`compareCategories`), whatever the names.
 
 **Default categories:** the six sales categories, the four EU purchases, plus one category per remaining line, with `id = line key`, `name = Finnish line name`, `vatRate = line default VAT`, and `kind = "domestic"` for income lines.
 
@@ -405,7 +405,8 @@ A seller in another EU country invoices a VAT-registered buyer without VAT, and 
 - **A custom category can be one on any cost line** (`canBeEuPurchase`), and the settings file drops the status from any other. A recurring template follows its category, since a monthly subscription is the usual case.
 - **Bulk category changes do not cross the line** (§8.4). An EU purchase's amount is without VAT and any other entry's follows its mode, so moving one across would change what was paid. The entry dialog can change it, with the amount in view.
 - **The rate comes from the category.** The dialog hides "ALV %" and "Verollisuus" on an EU category. An info icon beside "Luokka" opens a popover on hover or tap that says what the category is for and names the tax and the rate, and the receipt preview shows them too. The warning about a tax that cannot be deducted stays in view. Picking one sets the category's rate as it was on the entry's date, whatever was there before. A purchase taxed at another rate takes a custom EU category at that rate (§8.10), and an entry saved at another rate keeps it. A rate read from an invoice PDF is ignored on an EU category, since the invoice prints no Finnish tax. The ledger shows a pill.
-- **Not handled:** a business that is not VAT registered, which reports these on its own, and imports from outside the EU.
+- **Imports and domestic reverse charge use the same mechanism.** `EuPurchase` has two more values, `import` (goods from outside the EU) and `reverse` (construction services and scrap metal bought in Finland). The invoice or customs value is the amount, the category's rate gives the tax, and the deductible tax joins 307, so the tax payable does not change. Imports fill 310 and 304, reverse-charge purchases 320 and 318. The default categories are `333-import`, `333-reverse` (scrap metal) and `334-reverse` (construction), and a custom category can be either kind through "Osto, jonka veron ilmoitat itse" (§8.10). The `eu_purchase` column reads and writes `tuonti` / `import` and `käänteinen` / `reverse`. If customs collects import tax separately, the user books what was paid as a 0 % cost of its own, which the dialog says.
+- **Not handled:** a business that is not VAT registered, which reports these on its own.
 
 ### 6.10 The rule engine and the specification
 
@@ -835,7 +836,7 @@ The view has two sub-pages, as tabs shaped like the settings tabs (`SubPageTabs`
   - 309 (zero-rated turnover) is line 300 sales at 0 % plus non-EU sales. Its hint says to leave out exempt sales whose purchase VAT cannot be deducted, such as healthcare, because the book cannot tell them apart. 319 is reverse-charge sales.
   - 311 and 312 are the sales on `300-eu-goods` and `300-eu-services`. Their hints say these sales also go on the EC Sales List (yhteenvetoilmoitus). Sales on the retired `300-eu` (§5) get an extra "311/312" row, only while there are any.
   - EU purchases fill 305, 306, 313 and 314, and their deductible tax joins 307 (§6.9).
-  - The book records no imports or domestic reverse-charge purchases, so 304, 310, 318 and 320 stay empty. "Mitä laskelma ei sisällä" says to enter them in OmaVero and add their tax to 307 if deductible.
+  - Imports fill 310 and 304 and domestic reverse-charge purchases fill 320 and 318 (§6.9). Their deductible tax is in 307.
   - A sales rate outside `RATES` has no field. It stays in 308 and the view warns about it.
   - With no amounts, the checklist points to "Ei toimintaa verokaudella".
 
@@ -1455,7 +1456,6 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 - Form 5 fields the app does not work out: the car detail (271, 273, 274, 275, 379 to 382, 396) behind 313; 384 and 385, the owner's withdrawals and investments, which the specification lists as optional although §6.7 says a single-entry return does not ask for them; 347, the deductible part of interest (346), which it fills with the full amount (§8.8); and surplus from listed co-operatives (325, 326).
 - The VAT return of a business that stops trading (§6.5).
 - Asset classes other than machinery and equipment, and templates repeating less often than monthly.
-- VAT return fields the book cannot fill (§8.7): imports and domestic reverse-charge purchases.
 - Whether a VAT payment or refund booked on account 2939 (§6.6) is what an accountant would expect in a single-entry book, and whether 2939 should be another number. The same goes for the owner's transfers on 2000 (§6.7).
 
 ### Legal gaps

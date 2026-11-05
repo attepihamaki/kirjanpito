@@ -11,8 +11,9 @@ import type { VatReport } from "@/lib/domain/vat"
  * them. A sales rate outside RATES has no field at all: it stays out of 301–303
  * but in 308, so the view warns about it.
  *
- * The bookkeeping records no imports or domestic reverse-charge purchases, so
- * 304, 310, 318 and 320 stay empty. Sales on the retired EU category could
+ * Imports fill 304 and 310, and domestic reverse-charge purchases of
+ * construction services and scrap metal fill 318 and 320. Both come from
+ * categories that say so (§6.9). Sales on the retired EU category could
  * be either 311 or 312, so they get a row of their own, and only when there are
  * any: that row is not a field in OmaVero.
  */
@@ -86,13 +87,13 @@ export function vatReturnSections(report: VatReport): TaxFormSection[] {
           "304",
           "Vero tavaroiden maahantuonneista EU:n ulkopuolelta",
           "Tax on imports of goods from outside the EU",
-          0
+          report.euPurchases.import.vat
         ),
         field(
           "318",
           "Vero rakentamispalvelun ja metalliromun ostoista",
           "Tax on purchases of construction services and scrap metal",
-          0
+          report.euPurchases.reverse.vat
         ),
       ],
     },
@@ -199,7 +200,7 @@ export function vatReturnSections(report: VatReport): TaxFormSection[] {
           "310",
           "Tavaroiden maahantuonnit EU:n ulkopuolelta",
           "Imports of goods from outside the EU",
-          0
+          report.euPurchases.import.net
         ),
         field(
           "319",
@@ -211,7 +212,7 @@ export function vatReturnSections(report: VatReport): TaxFormSection[] {
           "320",
           "Rakentamispalvelun ja metalliromun ostot",
           "Purchases of construction services and scrap metal",
-          0
+          report.euPurchases.reverse.net
         ),
       ],
     },
