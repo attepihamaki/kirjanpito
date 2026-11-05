@@ -97,6 +97,7 @@ export function useVatPeriod() {
   return {
     mode,
     label,
+    period,
     report,
     periods: shown,
     statuses,

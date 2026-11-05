@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "@/components/ui/toast"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { useStatementDrill } from "@/hooks/use-figure-drill"
 import { useToday } from "@/hooks/use-today"
 import { periodFromKey } from "@/lib/domain/vat-deadline"
 import type { RuleSeverity } from "@/lib/domain/rules/engine"
@@ -68,6 +69,7 @@ function YearEndForm() {
   const closeDialog = useBookStore((s) => s.closeDialog)
   const setForm5Filed = useBookStore((s) => s.setForm5Filed)
   const { year, sections, balance } = useForm5()
+  const { form5Drill } = useStatementDrill()
   const filedOn = useBookStore((s) => s.form5Filed[String(year)])
   const [step, setStep] = React.useState<Step>("checks")
 
@@ -307,6 +309,7 @@ function YearEndForm() {
               intro={f.t("statement.form5Intro")}
               nothing={f.t("statement.form5Nothing")}
               sections={sections}
+              drill={form5Drill}
               notes={[
                 f.t("statement.form5Assumed"),
                 f.t("statement.form5Missing"),

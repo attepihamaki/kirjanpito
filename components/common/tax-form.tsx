@@ -7,6 +7,7 @@ import {
   CopyIcon,
   CornerDownRightIcon,
   ExternalLinkIcon,
+  ListIcon,
 } from "lucide-react"
 
 import { Money } from "@/components/common/money"
@@ -43,6 +44,7 @@ export function TaxForm({
   sections,
   notes,
   embedded = false,
+  drill,
   children,
 }: {
   kicker: string
@@ -58,6 +60,11 @@ export function TaxForm({
   sections: readonly TaxFormSection[]
   /** What the form leaves out, behind "Mitä laskelma ei sisällä". */
   notes: readonly string[]
+  /**
+   * Opens the vouchers behind a field (§8.18), or returns null for one that has
+   * none, such as a figure typed in by hand.
+   */
+  drill?: (row: TaxFormField) => (() => void) | null
   children?: React.ReactNode
 }) {
   const f = useFormatters()
@@ -189,6 +196,7 @@ export function TaxForm({
                           </span>
                         ) : null}
                       </div>
+                      <DrillButton row={row} drill={drill} />
                       <CopyButton
                         row={row}
                         copied={copied.has(row.code)}
@@ -226,6 +234,7 @@ export function TaxForm({
                   <span className="min-w-0 flex-1 text-sm leading-snug">
                     {row.label[f.lang]}
                   </span>
+                  <DrillButton row={row} drill={drill} />
                   <span className="font-semibold whitespace-nowrap">
                     <Money cents={row.value} />
                   </span>
@@ -244,6 +253,7 @@ export function TaxForm({
               section={section}
               copied={copied}
               onCopy={(row) => void copy(row)}
+              drill={drill}
             />
           ))}
         </div>
@@ -309,10 +319,12 @@ function AllFieldsSection({
   section,
   copied,
   onCopy,
+  drill,
 }: {
   section: TaxFormSection
   copied: ReadonlySet<string>
   onCopy: (row: TaxFormField) => void
+  drill?: (row: TaxFormField) => (() => void) | null
 }) {
   const f = useFormatters()
   const sum = section.rows.find(
@@ -353,6 +365,7 @@ function AllFieldsSection({
             <span className="min-w-0 flex-1 text-sm leading-snug font-semibold">
               {row.label[f.lang]}
             </span>
+            <DrillButton row={row} drill={drill} />
             <span className="font-bold whitespace-nowrap">
               {row.value ? <Money cents={row.value} /> : "–"}
             </span>
@@ -388,11 +401,14 @@ function AllFieldsSection({
               </span>
             </span>
             {row.value ? (
-              <CopyButton
-                row={row}
-                copied={copied.has(row.code)}
-                onCopy={() => onCopy(row)}
-              />
+              <>
+                <DrillButton row={row} drill={drill} />
+                <CopyButton
+                  row={row}
+                  copied={copied.has(row.code)}
+                  onCopy={() => onCopy(row)}
+                />
+              </>
             ) : (
               <span className="w-16 pr-1 text-right text-muted-foreground">
                 <span aria-hidden>–</span>
@@ -426,6 +442,35 @@ function CodeChip({
     >
       {children}
     </span>
+  )
+}
+
+/**
+ * Opens the vouchers behind the field (§8.18). A separate button beside the
+ * amount, because the amount itself is the copy button. Renders nothing for a
+ * field with no vouchers, and is hidden on paper.
+ */
+function DrillButton({
+  row,
+  drill,
+}: {
+  row: TaxFormField
+  drill?: (row: TaxFormField) => (() => void) | null
+}) {
+  const f = useFormatters()
+  const open = drill?.(row)
+  if (!open) return null
+  const label = f.t("common.figureShow", { x: `${row.code} ${row.label[f.lang]}` })
+  return (
+    <button
+      type="button"
+      onClick={open}
+      aria-label={label}
+      title={label}
+      className="focus-ring print-hidden ml-auto inline-flex size-10 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground [&+button]:ml-0"
+    >
+      <ListIcon aria-hidden className="size-4" />
+    </button>
   )
 }
 

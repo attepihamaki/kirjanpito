@@ -26,6 +26,7 @@ import {
   relinkChangeLog,
   type ChangeRecord,
 } from "@/lib/domain/change-log"
+import type { FigureRow } from "@/lib/domain/figure-vouchers"
 import type { LoanOpening, YearEnd } from "@/lib/domain/form5-balance"
 import type { PageSize } from "@/lib/domain/settings-file"
 import { shareReceipts, sharePayment } from "@/lib/domain/split"
@@ -33,6 +34,7 @@ import { indexCategories } from "@/lib/domain/types"
 import type {
   AmountMode,
   Category,
+  Cents,
   Entry,
   EntryType,
   Lang,
@@ -155,6 +157,24 @@ function shared(
     before,
     sharePayment(before, after, indexCategories(state.cats), state)
   )
+}
+
+/**
+ * The vouchers behind one figure of a return, listed over whatever dialog or
+ * view it was opened from (§8.18). The texts are already in the UI language;
+ * the rows are what each voucher added when the figure was clicked.
+ */
+export interface FigureDrill {
+  title: string
+  /** The period or year the figure is for. */
+  subtitle: string
+  /** What the amount column holds: "Veroton", "Vero", "Verollinen". */
+  amountLabel: string
+  rows: readonly FigureRow[]
+  /** The figure as the view or form shows it. */
+  figure: Cents
+  /** Why the vouchers may not add up to the figure, shown when they differ. */
+  differenceNote?: string
 }
 
 export type DialogState =
@@ -317,6 +337,8 @@ export interface BookState {
    */
   vatIndex: number | null
   dialog: DialogState
+  /** The figure whose vouchers are listed, over the dialog (§8.18). Not persisted. */
+  figure: FigureDrill | null
   /** Receipt ids held by the open entry dialog, protected from GC (§7.4). */
   draftAttachmentIds: string[]
   /**
@@ -488,6 +510,8 @@ export interface BookActions {
 
   openDialog(dialog: DialogState): void
   closeDialog(): void
+  openFigure(figure: FigureDrill): void
+  closeFigure(): void
   setDraftAttachmentIds(ids: string[]): void
   requestGc(): void
 }
@@ -547,6 +571,7 @@ function initialState(): BookState {
     catPage: 1,
     vatIndex: null,
     dialog: { kind: "none" },
+    figure: null,
     draftAttachmentIds: [],
     undoAttachmentIds: [],
     bookEpoch: 0,
@@ -784,6 +809,7 @@ export const useBookStore = create<BookStore>()(
           autosavePaused: false,
           dirty: false,
           dialog: { kind: "none" },
+          figure: null,
         }),
 
       closeBook: () =>
@@ -809,6 +835,7 @@ export const useBookStore = create<BookStore>()(
           yearEnd: {},
           changeLog: [],
           dialog: { kind: "none" },
+          figure: null,
           draftAttachmentIds: [],
           undoAttachmentIds: [],
           bookEpoch: get().bookEpoch + 1,
@@ -1151,10 +1178,13 @@ export const useBookStore = create<BookStore>()(
 
       setVatIndex: (vatIndex) => set({ vatIndex }),
 
-      openDialog: (dialog) => set({ dialog }),
+      openDialog: (dialog) => set({ dialog, figure: null }),
+      openFigure: (figure) => set({ figure }),
+      closeFigure: () => set({ figure: null }),
       closeDialog: () =>
         set({
           dialog: { kind: "none" },
+          figure: null,
           draftAttachmentIds: [],
           gcTick: get().gcTick + 1,
         }),

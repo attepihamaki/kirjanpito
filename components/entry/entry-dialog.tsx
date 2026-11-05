@@ -15,6 +15,7 @@ import { OptionSelect } from "@/components/common/option-select"
 import { InfoPopover } from "@/components/common/info-popover"
 import { Keys } from "@/components/common/keys"
 import { AttachmentGrid } from "@/components/entry/attachment-grid"
+import { EntryFigures } from "@/components/entry/entry-figures"
 import { EntryHistory } from "@/components/entry/entry-history"
 import { ReceiptPreview } from "@/components/entry/receipt-preview"
 import { AttachmentViewer } from "@/components/receipt/receipt-viewer"
@@ -1266,6 +1267,8 @@ function EntryDialogForm({
             </fieldset>
 
             <FieldError>{error?.message}</FieldError>
+
+            <EntryFigures entryId={editingId} />
 
             <EntryHistory records={history} cats={catMap} />
           </FieldGroup>

@@ -1,5 +1,6 @@
 "use client"
 
+import { EntryDisclosure } from "@/components/entry/entry-disclosure"
 import { useFormatters } from "@/components/lang-provider"
 import type {
   ChangeRecord,
@@ -106,9 +107,8 @@ export function EntryHistory({
   if (!records.some((r) => r.action !== "add")) return null
 
   return (
-    <section className="text-sm">
-      <h3 className="font-medium">{f.t("entry.historyTitle")}</h3>
-      <ul className="mt-1 flex flex-col gap-1 text-xs text-muted-foreground">
+    <EntryDisclosure title={f.t("entry.historyTitle")}>
+      <ul className="flex flex-col gap-1 text-xs text-muted-foreground">
         {records.map((r, i) => (
           <li key={`${r.at}-${i}`}>
             <span className="tabular">
@@ -118,6 +118,6 @@ export function EntryHistory({
           </li>
         ))}
       </ul>
-    </section>
+    </EntryDisclosure>
   )
 }

@@ -19,6 +19,7 @@ import { NewYearDialog } from "@/components/new-year/new-year-dialog"
 import { YearEndDialog } from "@/components/statement/year-end-dialog"
 import { VatReturnDialog } from "@/components/vat/vat-return-dialog"
 import { EntryDialog } from "@/components/entry/entry-dialog"
+import { FigureDialog } from "@/components/common/figure-dialog"
 import { Overlay } from "@/components/common/overlay"
 import { ReceiptViewer } from "@/components/receipt/receipt-viewer"
 import { LangRoot, useT } from "@/components/lang-provider"
@@ -245,6 +246,7 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
         <NewYearDialog />
         <VatReturnDialog />
         <CategoryDialogs />
+        <FigureDialog />
       </SidebarProvider>
     </TooltipProvider>
   )

@@ -28,6 +28,7 @@ import {
   VatSettlementControl,
 } from "@/components/vat/vat-settlement-control"
 import { VatAnomalyAlert } from "@/components/vat/vat-view"
+import { useVatDrill } from "@/hooks/use-figure-drill"
 import { useToday } from "@/hooks/use-today"
 import { useVatPeriod } from "@/hooks/use-vat-period"
 import { indexCategories } from "@/lib/domain/types"
@@ -72,6 +73,7 @@ function VatReturnForm() {
   const closeDialog = useBookStore((s) => s.closeDialog)
   const { label, report, current, currentStatus } = useVatPeriod()
   const settlementVisible = useSettlementVisible()
+  const { fieldDrill } = useVatDrill()
   const [step, setStep] = React.useState<Step>("checks")
 
   const entries = useBookStore((s) => s.entries)
@@ -270,6 +272,7 @@ function VatReturnForm() {
                 intro={f.t("vat.returnIntro")}
                 nothing={f.t("vat.returnNothing")}
                 sections={sections}
+                drill={(row) => fieldDrill(row, report.due)}
                 notes={[f.t("vat.returnPurchases"), f.t("vat.returnCodes")]}
               />
             </div>

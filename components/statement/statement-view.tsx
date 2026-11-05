@@ -3,6 +3,7 @@
 import * as React from "react"
 
 import { BusinessLine } from "@/components/common/business-line"
+import { FigureLink } from "@/components/common/figure-link"
 import { Money, ZeroDash } from "@/components/common/money"
 import { useFormatters } from "@/components/lang-provider"
 import { YearEndButton } from "@/components/statement/year-end-button"
@@ -14,7 +15,14 @@ import {
 import { incomeStatement } from "@/lib/domain/income-statement"
 import { indexCategories } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
+import { useStatementDrill } from "@/hooks/use-figure-drill"
 import { useStatementOptions, useTaxBasisEntries } from "@/hooks/use-tax-basis"
+import {
+  DEDUCTIBLE,
+  REVENUE,
+  lineSelection,
+  sideSelection,
+} from "@/lib/domain/figure-vouchers"
 import { balancesAt } from "@/lib/domain/open-items"
 import { useBookStore } from "@/stores/book-store"
 
@@ -33,6 +41,7 @@ export function StatementView() {
   const traderType = useBookStore((s) => s.traderType)
 
   const options = useStatementOptions()
+  const { selectionDrill, resultDrill, form5Drill } = useStatementDrill()
   const statement = React.useMemo(
     () => incomeStatement(basis, indexCategories(cats), year, options),
     [basis, cats, year, options]
@@ -146,7 +155,22 @@ export function StatementView() {
                       : f.t("statement.expenses")}
                   </th>
                   <td className="pt-5 pb-1 text-right font-semibold">
-                    <Money cents={row.total} />
+                    <FigureLink
+                      label={
+                        row.side === "income"
+                          ? f.t("statement.revenue")
+                          : f.t("statement.expenses")
+                      }
+                      onOpen={selectionDrill(
+                        row.side === "income"
+                          ? f.t("statement.revenue")
+                          : f.t("statement.expenses"),
+                        row.total,
+                        sideSelection(row.side)
+                      )}
+                    >
+                      <Money cents={row.total} />
+                    </FigureLink>
                   </td>
                 </tr>
               ) : row.kind === "group" ? (
@@ -179,7 +203,20 @@ export function StatementView() {
                     {row.label}
                   </td>
                   <td className="py-1.5 text-right">
-                    {row.net ? <Money cents={row.net} /> : <ZeroDash />}
+                    {row.net ? (
+                      <FigureLink
+                        label={`${row.account} ${row.label}`}
+                        onOpen={selectionDrill(
+                          `${row.account} ${row.label}`,
+                          row.net,
+                          lineSelection(row.id)
+                        )}
+                      >
+                        <Money cents={row.net} />
+                      </FigureLink>
+                    ) : (
+                      <ZeroDash />
+                    )}
                   </td>
                 </tr>
               )
@@ -190,13 +227,31 @@ export function StatementView() {
             <tr>
               <td className="pt-5">{f.t("statement.revenueTotal")}</td>
               <td className="pt-5 text-right">
-                <Money cents={statement.revenueTotal} />
+                <FigureLink
+                  label={f.t("statement.revenueTotal")}
+                  onOpen={selectionDrill(
+                    f.t("statement.revenueTotal"),
+                    statement.revenueTotal,
+                    REVENUE
+                  )}
+                >
+                  <Money cents={statement.revenueTotal} />
+                </FigureLink>
               </td>
             </tr>
             <tr>
               <td className="pb-2">{f.t("statement.deductibleTotal")}</td>
               <td className="pb-2 text-right">
-                <Money cents={statement.deductibleTotal} signed />
+                <FigureLink
+                  label={f.t("statement.deductibleTotal")}
+                  onOpen={selectionDrill(
+                    f.t("statement.deductibleTotal"),
+                    statement.deductibleTotal,
+                    DEDUCTIBLE
+                  )}
+                >
+                  <Money cents={statement.deductibleTotal} signed />
+                </FigureLink>
               </td>
             </tr>
             <tr className="border-t-[3px] border-double border-foreground/40">
@@ -207,7 +262,22 @@ export function StatementView() {
               </th>
               {/* Form 5 wants a positive figure on both 358 and 359. */}
               <td className="pt-2 text-right text-base font-semibold">
-                <Money cents={statement.resultMagnitude} />
+                <FigureLink
+                  label={
+                    statement.resultLine === "358"
+                      ? f.t("statement.profit")
+                      : f.t("statement.loss")
+                  }
+                  onOpen={resultDrill(
+                    statement.resultLine === "358"
+                      ? f.t("statement.profit")
+                      : f.t("statement.loss"),
+                    statement.resultMagnitude,
+                    statement.resultLine === "359"
+                  )}
+                >
+                  <Money cents={statement.resultMagnitude} />
+                </FigureLink>
               </td>
             </tr>
           </tfoot>
@@ -252,7 +322,16 @@ export function StatementView() {
                       {row.label[f.lang]}
                     </td>
                     <td className="py-1.5 text-right">
-                      {row.value ? <Money cents={row.value} /> : <ZeroDash />}
+                      {row.value ? (
+                        <FigureLink
+                          label={`${row.code} ${row.label[f.lang]}`}
+                          onOpen={form5Drill(row)}
+                        >
+                          <Money cents={row.value} />
+                        </FigureLink>
+                      ) : (
+                        <ZeroDash />
+                      )}
                     </td>
                   </tr>
                 )
