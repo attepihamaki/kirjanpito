@@ -204,6 +204,24 @@ describe("persisted preferences and bookkeeping (§12)", () => {
     expect(cat?.enabled).toBe(false)
   })
 
+  /* Every step guards on the data, so a second run changes nothing (§12). */
+  it("migrates a blob that is already current without changing it", () => {
+    const migrate = useBookStore.persist.getOptions().migrate!
+    const old = {
+      open: true,
+      cats: defaultCategories().filter((c) => c.id !== "333-eu-goods"),
+      entries: [
+        { id: "a", date: "2026-02-01", type: "expense", catId: "333", amount: 1 },
+        { id: "b", date: "2026-01-01", type: "expense", catId: "333", amount: 2 },
+      ],
+    }
+
+    const once = migrate(old, 9)
+    const twice = migrate(JSON.parse(JSON.stringify(once)), 11)
+
+    expect(twice).toEqual(once)
+  })
+
   /*
    * The guard against outside edits compares against it (§7.5), so a reload
    * must not turn it off.

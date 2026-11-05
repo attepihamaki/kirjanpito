@@ -1481,6 +1481,19 @@ data is orphaned; the user re-opens their exported CSV or ZIP. This was a
 deliberate choice over writing a one-shot copy step — the exported file is the
 real copy of the bookkeeping, and the browser is only a working buffer (§1).
 
+### Storage migrations
+
+`persist.version` in `stores/book-store.ts` is the version of the stored blob's shape. It is separate from `SETTINGS_VERSION` (§7.6), which versions the file.
+
+- **`migrate` ignores the version it is given.** Zustand calls it only when the stored version differs from the current one, and it then runs every step, whatever the stored version was. So **each step must be idempotent**: running it on a blob that is already current changes nothing. A step guards on the data (`Array.isArray`, `typeof`), never on a version number.
+- **A step reads its input as untyped.** The blob may come from any earlier version, so `migrate` casts it to `Record<string, unknown>`, checks each field it touches and leaves the rest alone. A missing field is not an error; the store's defaults fill it.
+- **Bump `version` when a stored value would otherwise be wrong**, not when a field is added. A new optional field needs no bump, since `merge` fills in the default. A renamed field, a changed meaning, a new invariant on stored entries (voucher numbers, EU categories) or a moved key does.
+- **Do the work in a pure function from `lib/domain`** and call it from `migrate`, so the step has a unit test without a browser. `assignVouchers`, `mergeCategories` and `moveEuPurchasesToCategories` are the pattern. The same function usually runs again when a file opens, so a file and a stored book end up in the same shape.
+- **Test each bump in `stores/storage.test.ts`** with a blob written at the previous version: the step does what it should, and a blob already current passes through unchanged.
+- **Migration only moves what the browser holds.** The file on disk is never rewritten by it; the next save writes the new shape. A file's own compatibility is `parseSettings` and the lenient CSV import (§7.1, §7.6).
+- **A break not worth migrating renames the key** (`bookkeeping.v2`) and orphans the old blob, as the prototype-era names were. The exported file is the real copy (§1), so this is acceptable, but say so in the commit message.
+- **A downgrade is not supported.** An older build that reads a newer blob runs its own `migrate` over it, which knows nothing of newer fields and may misread them. The file on disk is the way back.
+
 Wrap all storage access in try/catch, and render correctly when storage is empty or unavailable. **A failed write is shown, not swallowed.** Private browsing, blocked site data or a full quota leave the book in memory only, so `useStorageWarning` raises a toast that stays until a write succeeds again, the file menu adds a line under the save status (`StorageNote`), and closing the tab asks even when the book is saved to its file, because a reload would bring back the older book that storage still holds. `test/storage-warning.test.tsx` covers it.
 
 ---
