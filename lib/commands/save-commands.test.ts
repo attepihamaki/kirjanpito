@@ -539,7 +539,12 @@ describe("receipts the browser does not hold", () => {
     useBookStore.setState({
       entries: [
         { ...sample(), id: "e1", date: "2026-01-08", atts: [gone] },
-        { ...sample(), id: "e2", date: "2026-10-08", atts: [gone] },
+        {
+          ...sample(),
+          id: "e2",
+          date: "2026-10-08",
+          atts: [{ ...gone, id: "a-gone-2" }],
+        },
       ],
       exportLang: "en",
     })

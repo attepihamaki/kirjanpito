@@ -103,6 +103,51 @@ describe("dirOf", () => {
   })
 })
 
+describe("packZip with a receipt two entries share", () => {
+  const shared = att({ id: "a-shared", name: "kuitti.pdf" })
+  const entries = [
+    entry({ id: "e1", description: "Työkalut", atts: [shared] }),
+    entry({ id: "e2", description: "Lounas", atts: [{ ...shared }] }),
+  ]
+
+  it("writes the file once and reads it once", async () => {
+    const reads: string[] = []
+    const input = packInputs(entries)
+    const unpacked = (await unpackZip(
+      await packZip({
+        ...input,
+        read: async (id) => {
+          reads.push(id)
+          return enc.encode(`bytes-${id}`)
+        },
+      })
+    ))!
+    expect(unpacked.otherFiles).toEqual(["liitteet/2026/10/kuitti.pdf"])
+    expect(reads).toEqual(["a-shared"])
+  })
+
+  it("comes back as one stored file listed by both entries", async () => {
+    const unpacked = (await unpackZip(await packZip(packInputs(entries))))!
+    const parsed = ok(
+      parseCsv(unpacked.csvText, baseCats, createIdFactory("t"))
+    )
+    expect(parsed.entries.map((e) => e.paths)).toEqual([
+      ["liitteet/2026/10/kuitti.pdf"],
+      ["liitteet/2026/10/kuitti.pdf"],
+    ])
+  })
+
+  it("reports an absent shared file for each entry that lists it", async () => {
+    const absent: string[] = []
+    await packZip({
+      ...packInputs(entries),
+      read: async () => null,
+      onAbsent: (key) => absent.push(key),
+    })
+    expect(absent.sort()).toEqual(["e1#0", "e2#0"])
+  })
+})
+
 describe("packZip", () => {
   it("lays the archive out as documented", async () => {
     const entries = [entry({ atts: [att({ id: "a1", name: "lasku.pdf" })] })]

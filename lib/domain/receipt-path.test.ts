@@ -15,8 +15,17 @@ import {
 } from "@/lib/domain/receipt-path"
 import type { Attachment, Entry } from "@/lib/domain/types"
 
+let nextAttId = 0
+
+/** Each call is a distinct stored file, as two real attachments are. */
 function att(over: Partial<Attachment> = {}): Attachment {
-  return { id: "a1", name: "kuva.jpg", type: "image/jpeg", size: 100, ...over }
+  return {
+    id: `a${++nextAttId}`,
+    name: "kuva.jpg",
+    type: "image/jpeg",
+    size: 100,
+    ...over,
+  }
 }
 
 function entry(over: Partial<Entry> = {}): Entry {
@@ -203,6 +212,35 @@ describe("buildReceiptPaths", () => {
     expect(paths.get(attachmentKey("a", 0))).toBe("liitteet/2026/01/kuva.jpg")
     expect(paths.get(attachmentKey("b", 0))).toBe("liitteet/2026/01/kuva-2.jpg")
     expect(paths.get(attachmentKey("c", 0))).toBe("liitteet/2026/01/kuva-3.jpg")
+  })
+
+  it("gives one stored file the same path on every entry that holds it", () => {
+    const shared = att({ id: "a-shared", name: "kuitti.jpg" })
+    const paths = buildReceiptPaths([
+      entry({ id: "a", date: "2026-01-15", atts: [shared] }),
+      entry({ id: "b", date: "2026-01-15", atts: [{ ...shared }] }),
+    ])
+    expect(paths.get(attachmentKey("a", 0))).toBe("liitteet/2026/01/kuitti.jpg")
+    expect(paths.get(attachmentKey("b", 0))).toBe("liitteet/2026/01/kuitti.jpg")
+  })
+
+  it("uses the earliest entry's folder when a shared file spans months", () => {
+    const shared = att({ id: "a-shared", name: "kuitti.jpg" })
+    const paths = buildReceiptPaths([
+      entry({ id: "late", date: "2026-02-01", atts: [{ ...shared }] }),
+      entry({ id: "early", date: "2026-01-31", atts: [shared] }),
+    ])
+    expect(paths.get(attachmentKey("late", 0))).toBe(
+      "liitteet/2026/01/kuitti.jpg"
+    )
+  })
+
+  it("still separates different stored files that share a name", () => {
+    const paths = buildReceiptPaths([
+      entry({ id: "a", date: "2026-01-15", atts: [att({ id: "x" })] }),
+      entry({ id: "b", date: "2026-01-15", atts: [att({ id: "y" })] }),
+    ])
+    expect(paths.get(attachmentKey("b", 0))).toBe("liitteet/2026/01/kuva-2.jpg")
   })
 
   it("detects collisions case-insensitively", () => {

@@ -46,10 +46,18 @@ export async function packZip(input: PackInput): Promise<Uint8Array> {
   zip.file(input.csvName, input.csvText, { compression: "DEFLATE" })
   zip.file(SETTINGS_FILE_NAME, input.settingsText, { compression: "DEFLATE" })
 
+  /* Whether each path got its bytes, so a path several entries list is read once. */
+  const written = new Map<string, boolean>()
   for (const [key, path] of input.paths) {
+    const done = written.get(path)
+    if (done !== undefined) {
+      if (!done) input.onAbsent?.(key)
+      continue
+    }
     const id = input.attachmentIds.get(key)
     const bytes =
       (id ? await input.read(id) : null) ?? (await input.carry?.(path)) ?? null
+    written.set(path, bytes !== null)
     if (bytes) zip.file(path, bytes, { compression: "STORE" })
     else input.onAbsent?.(key)
   }

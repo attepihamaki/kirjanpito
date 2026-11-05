@@ -212,6 +212,11 @@ function stemFromName(name: string): string {
  * path is the name the next export writes, so a book can go round any number
  * of times without its receipts drifting.
  *
+ * Attachments that point at the same stored file (the same `id`) share one
+ * path, the one the earliest entry gets, so the archive holds the file once
+ * and the CSV lists the same path on every entry that uses it. Import turns
+ * a path listed twice back into one stored file.
+ *
  * Missing attachments keep their stored path and reserve it, so a real
  * attachment colliding with one gets the suffix instead.
  *
@@ -244,10 +249,18 @@ export function buildReceiptPaths(
     }
   }
 
+  /* The path given to each stored file, so a file two entries hold is written once. */
+  const pathById = new Map<string, string>()
+
   for (const e of sorted) {
     const atts = e.atts ?? []
     for (const [i, a] of atts.entries()) {
       if (a.missing || !isReceiptFile(a)) continue
+      const shared = a.id ? pathById.get(a.id) : undefined
+      if (shared) {
+        paths.set(attachmentKey(e.id, i), shared)
+        continue
+      }
       const [y, mo] = e.date.split("-")
       const base = `${RECEIPT_FOLDER[lang]}/${y}/${mo}/${receiptStem(a.name)}`
       const ext = extensionFor(a)
@@ -256,6 +269,7 @@ export function buildReceiptPaths(
       while (used.has(path.toLowerCase())) path = `${base}-${n++}.${ext}`
       used.add(path.toLowerCase())
       paths.set(attachmentKey(e.id, i), path)
+      if (a.id) pathById.set(a.id, path)
     }
   }
 

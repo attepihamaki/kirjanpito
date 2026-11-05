@@ -46,9 +46,12 @@ function entry(over: Partial<Entry> = {}): Entry {
   }
 }
 
+let nextAttId = 0
+
+/** Each call is a distinct stored file, as two real attachments are. */
 function att(over: Partial<Attachment> = {}): Attachment {
   return {
-    id: "a1",
+    id: `a${++nextAttId}`,
     name: "lasku.pdf",
     type: "application/pdf",
     size: 10,
