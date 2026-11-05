@@ -25,6 +25,7 @@ import {
   serializeCsv,
   type ImportSuccess,
 } from "@/lib/domain/csv"
+import { parseBankCsv } from "@/lib/domain/bank-csv"
 import { csvColumnLabel, csvHeaderLine } from "@/lib/domain/csv-header"
 import { uid } from "@/lib/domain/id"
 import {
@@ -151,10 +152,12 @@ export async function openFile(
    */
   if (useBookStore.getState().importing) return
   if (await refuseIfOpenElsewhere(ctx)) return
-  if (!(await guardDirty(ctx, true))) return
 
   const isZip =
     file.name.toLowerCase().endsWith(".zip") || file.type === ZIP_MIME
+  // Before the unsaved-changes prompt: a statement replaces nothing.
+  if (!isZip && (await claimBankStatement(ctx, file))) return
+  if (!(await guardDirty(ctx, true))) return
 
   /*
    * The UI shows nothing for the first few hundred milliseconds (see
@@ -414,6 +417,28 @@ function refuseFile(ctx: Ctx, title: string): Promise<void> {
     message: title,
     closeLabel: ctx.t("common.close"),
   })
+}
+
+/**
+ * A CSV that is a bank statement and no bookkeeping (§8.16). With a book open
+ * it goes to the review list on the ledger; with none there is nothing to
+ * match it against, so the user is told what to do. True when the file was
+ * dealt with, so the caller opens nothing.
+ */
+async function claimBankStatement(ctx: Ctx, file: File): Promise<boolean> {
+  const text = decodeCsv(await fileToUint8Array(file))
+  const own = parseCsv(text, useBookStore.getState().cats, uid)
+  if (own.ok || own.code !== "not-a-book" || !parseBankCsv(text).ok) {
+    return false
+  }
+  const state = useBookStore.getState()
+  if (!state.open) {
+    await refuseFile(ctx, ctx.t("bank.needBook"))
+    return true
+  }
+  ctx.navigate(APP_ROUTES.ledger)
+  state.openDialog({ kind: "bank-import", text, fileName: file.name })
+  return true
 }
 
 function failureMessage(

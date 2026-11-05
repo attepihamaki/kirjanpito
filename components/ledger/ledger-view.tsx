@@ -8,6 +8,7 @@ import {
   TypeFilterSelect,
 } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
+import { BankImportButton } from "@/components/bank/bank-import-button"
 import { NewEntryButton } from "@/components/common/new-entry-button"
 import { PageHeader } from "@/components/common/page-header"
 import { Surface } from "@/components/common/surface"
@@ -264,6 +265,7 @@ export function LedgerView() {
           </EmptyHeader>
           <EmptyContent>
             <NewEntryButton />
+            <BankImportButton />
           </EmptyContent>
         </Empty>
       </>
@@ -275,7 +277,12 @@ export function LedgerView() {
       <PageHeader
         title={f.t("nav.ledger")}
         subtitle={periodLabel}
-        actions={<NewEntryButton />}
+        actions={
+          <>
+            <BankImportButton />
+            <NewEntryButton />
+          </>
+        }
       />
       <LedgerTabs />
 

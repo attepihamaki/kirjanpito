@@ -283,3 +283,43 @@ describe("a file the app does not understand", () => {
     vi.restoreAllMocks()
   })
 })
+
+describe("a bank statement dropped as a file (§8.16)", () => {
+  const OP = [
+    '"Kirjauspäivä";"Arvopäivä";"Määrä EUROA";"Laji";"Selitys";"Saaja/Maksaja";"Saajan tilinumero";"Saajan pankin BIC";"Viite";"Viesti";"Arkistointitunnus"',
+    '"2026-10-27";"2026-10-27";-921,25;"106";"TILISIIRTO";"Esimerkki Oy";"";"";"ref=";"";"1/1/A"',
+  ].join("\r\n")
+
+  beforeEach(() => {
+    useBookStore.setState({
+      open: false,
+      hydrated: true,
+      entries: [],
+      cats: defaultCategories(),
+      dirty: false,
+      dialog: { kind: "none" },
+      importing: false,
+    })
+  })
+
+  it("opens the review list when a bookkeeping is open, replacing nothing", async () => {
+    useBookStore.setState({ open: true, dirty: true })
+    const asked = vi.fn()
+    registerConfirmHandler(async (o: ConfirmOptions) => (asked(o), true))
+    await openFile(ctx, pick("tapahtumat.csv", OP))
+
+    const state = useBookStore.getState()
+    expect(state.dialog).toMatchObject({ kind: "bank-import" })
+    expect(state.entries).toHaveLength(0)
+    expect(asked).not.toHaveBeenCalled()
+  })
+
+  it("explains itself when no bookkeeping is open", async () => {
+    const asked = vi.fn()
+    registerConfirmHandler(async (o: ConfirmOptions) => (asked(o), true))
+    await openFile(ctx, pick("tapahtumat.csv", OP))
+
+    expect(useBookStore.getState().dialog).toEqual({ kind: "none" })
+    expect(useBookStore.getState().open).toBe(false)
+  })
+})

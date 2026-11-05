@@ -182,6 +182,8 @@ export type DialogState =
   | { kind: "new-year"; year: number }
   /** Add a month's recurring entries (§8.5). `month` is `"2026-10"`. */
   | { kind: "recurring"; month: string }
+  /** Review a bank statement's rows before booking them (§8.16). */
+  | { kind: "bank-import"; text: string; fileName: string }
   /** Add a custom category (§8.10). */
   | { kind: "category-add" }
   /** Change a custom category's name, line or default VAT (§8.10). */

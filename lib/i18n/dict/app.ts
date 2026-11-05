@@ -595,10 +595,7 @@ export const APP_DICT = {
   ],
   "overview.rulesTravel": ["matkakorvaukset", "travel allowances"],
   "overview.rulesHomeOffice": ["kotitoimistovähennys", "home office deduction"],
-  "overview.rulesForm5Due": [
-    "lomakkeen 5 määräpäivä",
-    "Form 5 due date",
-  ],
+  "overview.rulesForm5Due": ["lomakkeen 5 määräpäivä", "Form 5 due date"],
   "settings.rulesChecked": [
     "Verosäännöt ja -rajat tarkistettu {d}.",
     "Tax rules and limits checked on {d}.",
@@ -2638,5 +2635,98 @@ export const APP_DICT = {
   "newYear.dueSub": [
     "Kopioi edellisen vuoden luvut ja tarkista toistuvat tositteet.",
     "Copy last year’s figures and review the recurring vouchers.",
+  ],
+
+  // --- Bank statement import (§8.16) ---
+
+  "bank.import": ["Tuo tiliote", "Import statement"],
+  "bank.title": ["Tuo tiliote", "Import bank statement"],
+  "bank.fileHint": [
+    "{file}: {n} tapahtumaa. Tarkista jokainen rivi. Mitään ei kirjata ennen kuin vahvistat.",
+    "{file}: {n} transactions. Check every row. Nothing is booked until you confirm.",
+  ],
+  "bank.fileEmpty": ["Tiedostossa ei ole rivejä.", "The file has no rows."],
+  "bank.readError": [
+    "Tiedostoa ei voitu lukea.",
+    "The file could not be read.",
+  ],
+  "bank.mapTitle": ["Valitse sarakkeet", "Choose the columns"],
+  "bank.mapHint": [
+    "Tiedoston rakennetta ei tunnistettu. Kerro, mistä sarakkeesta kukin tieto löytyy. Päivä ja summa (tai veloitus ja hyvitys) vaaditaan.",
+    "The layout was not recognised. Say which column holds each field. A date and an amount (or a debit and a credit) are required.",
+  ],
+  "bank.fieldDate": ["Kirjauspäivä", "Booking date"],
+  "bank.fieldAmount": ["Summa", "Amount"],
+  "bank.fieldDebit": ["Veloitus", "Debit"],
+  "bank.fieldCredit": ["Hyvitys", "Credit"],
+  "bank.fieldCounterparty": ["Saaja tai maksaja", "Payee or payer"],
+  "bank.fieldMessage": ["Viesti", "Message"],
+  "bank.fieldReference": ["Viite", "Reference"],
+  "bank.noColumn": ["Ei saraketta", "No column"],
+  "bank.useMapping": ["Käytä näitä sarakkeita", "Use these columns"],
+  "bank.skippedRows": [
+    pl(
+      "1 rivi ohitettiin, koska sitä ei voitu lukea.",
+      "{n} riviä ohitettiin, koska niitä ei voitu lukea."
+    ),
+    pl(
+      "1 row could not be read and was skipped.",
+      "{n} rows could not be read and were skipped."
+    ),
+  ],
+  "bank.colDate": ["Pvm", "Date"],
+  "bank.colParty": ["Vastapuoli", "Counterparty"],
+  "bank.colAmount": ["Summa", "Amount"],
+  "bank.colAction": ["Toiminto", "Action"],
+  "bank.colCategory": ["Luokka", "Category"],
+  "bank.actionSkip": ["Ohita", "Skip"],
+  "bank.actionNew": ["Uusi tosite", "New voucher"],
+  "bank.actionPaid": ["Maksettu: {v}", "Paid: {v}"],
+  "bank.statusLikely": ["Sopii avoimeen tositteeseen", "Fits an open voucher"],
+  "bank.statusAmount": [
+    "Summa sopii avoimeen tositteeseen",
+    "The amount fits an open voucher",
+  ],
+  "bank.statusAmbiguous": [
+    "Useampi avoin tosite sopii. Valitse yksi.",
+    "Several open vouchers fit. Choose one.",
+  ],
+  "bank.statusBooked": [
+    "Näyttää jo kirjatulta: {v}",
+    "Looks already booked: {v}",
+  ],
+  "bank.statusSuggested": [
+    "Luokka aiemmista tositteista",
+    "Category from earlier vouchers",
+  ],
+  "bank.statusNoCategory": ["Valitse luokka", "Choose a category"],
+  "bank.pickCategory": ["Valitse luokka", "Choose a category"],
+  "bank.needCategory": [
+    pl(
+      "1 uudelta tositteelta puuttuu luokka.",
+      "{n} uudelta tositteelta puuttuu luokka."
+    ),
+    pl("1 new voucher has no category.", "{n} new vouchers have no category."),
+  ],
+  "bank.claimedTwice": [
+    "Sama avoin tosite on valittu kahdelle riville.",
+    "The same open voucher is chosen for two rows.",
+  ],
+  "bank.confirm": [
+    "Kirjaa ({paid} maksua, {added} uutta)",
+    "Book ({paid} payments, {added} new)",
+  ],
+  "bank.booked": [
+    "Kirjattu: {paid} maksua, {added} uutta tositetta.",
+    "Booked: {paid} payments, {added} new vouchers.",
+  ],
+  "bank.needBook": [
+    "Tämä on tiliote, ei kirjanpitotiedosto. Avaa tai aloita ensin kirjanpito ja käytä Kirjanpito-näkymän Tuo tiliote -painiketta.",
+    "This is a bank statement, not a bookkeeping file. Open or start a bookkeeping first, then use Import statement on the ledger.",
+  ],
+  "bank.undone": ["Tiliotteen kirjaus peruttu.", "Statement booking undone."],
+  "bank.paidInFiledYear": [
+    "Maksupäivä osuisi vuoteen, jonka lomake 5 on merkitty ilmoitetuksi.",
+    "A payment date would fall in a year whose Form 5 is marked as filed.",
   ],
 } as const satisfies Dict

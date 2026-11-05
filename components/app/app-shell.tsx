@@ -8,6 +8,7 @@ import { AppSkeleton } from "@/components/app/app-skeleton"
 import { AppTopbar } from "@/components/app/app-topbar"
 import { ImportOverlay } from "@/components/app/import-overlay"
 import { ExportDialog } from "@/components/export/export-dialog"
+import { BankImportDialog } from "@/components/bank/bank-import-dialog"
 import { RecurringDialog } from "@/components/ledger/recurring-dialog"
 import { CategoryDialogs } from "@/components/settings/category-dialogs"
 import { SetupDialog } from "@/components/settings/setup-dialog"
@@ -235,6 +236,7 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
         <ReceiptViewer />
         <ExportDialog />
         <RecurringDialog />
+        <BankImportDialog />
         <SetupDialog />
         <YearEndDialog />
         <YearEndFiguresDialog />
