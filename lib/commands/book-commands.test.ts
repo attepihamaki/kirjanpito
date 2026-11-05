@@ -5,8 +5,10 @@ import { toast } from "@/components/ui/toast"
 import {
   deleteBook,
   deleteEntry,
+  offerEditUndo,
   renumberVouchers,
 } from "@/lib/commands/book-commands"
+import type { Entry } from "@/lib/domain/types"
 import {
   deleteEntries,
   recategorizeEntries,
@@ -109,6 +111,84 @@ describe("deleteEntry", () => {
     clickUndo()
     clickUndo()
     expect(useBookStore.getState().entries).toHaveLength(16)
+  })
+})
+
+describe("offerEditUndo", () => {
+  function edit(changes: Partial<Entry>) {
+    const store = useBookStore.getState()
+    const before = store.entries[0]
+    store.upsertEntry({ ...before, ...changes })
+    offerEditUndo(ctx, before, store.recurring)
+    return before
+  }
+
+  it("puts the entry back as it was", () => {
+    const before = edit({ description: "Muutettu", amount: 1 })
+    clickUndo()
+    expect(useBookStore.getState().entries.find((e) => e.id === before.id)).toEqual(
+      before
+    )
+  })
+
+  it("brings back the old voucher number after a move to another year", () => {
+    const before = edit({ date: "2027-01-05" })
+    const moved = useBookStore.getState().entries.find((e) => e.id === before.id)
+    expect(moved?.voucher).toBe(1)
+    clickUndo()
+    const back = useBookStore.getState().entries.find((e) => e.id === before.id)
+    expect(back).toEqual(before)
+  })
+
+  it("restores the monthly template the edit changed", () => {
+    const store = useBookStore.getState()
+    const template = {
+      id: "r1",
+      description: "Vuokra",
+      type: "expense" as const,
+      catId: "343",
+      amount: 45000,
+      vatRate: 25.5,
+      amountMode: "gross" as const,
+      day: 20,
+      from: "2026-02",
+    }
+    store.upsertRecurring(template)
+    const before = store.entries[0]
+    const recurringBefore = useBookStore.getState().recurring
+    store.upsertEntry({ ...before, description: "Muutettu" })
+    store.upsertRecurring({ ...template, amount: 50000 })
+    store.upsertRecurring({ ...template, id: "r2" })
+    offerEditUndo(ctx, before, recurringBefore)
+
+    clickUndo()
+    expect(useBookStore.getState().recurring).toEqual([template])
+  })
+
+  it("keeps the receipts of the old entry from the sweep until the toast is gone", () => {
+    edit({ atts: [] })
+    const s = useBookStore.getState()
+    expect(collectLiveIds(s.entries, s.undoAttachmentIds)).toContain("att-1")
+    lastUndo().onRemove?.()
+    expect(useBookStore.getState().undoAttachmentIds).toEqual([])
+  })
+
+  it("refuses when the entry was changed again", () => {
+    const before = edit({ description: "Muutettu" })
+    const store = useBookStore.getState()
+    store.upsertEntry({ ...store.entries[0], description: "Taas" })
+    clickUndo()
+    expect(
+      useBookStore.getState().entries.find((e) => e.id === before.id)?.description
+    ).toBe("Taas")
+    expect(raised.at(-1)?.title).toBe(ctx.t("entry.editUndoChanged"))
+  })
+
+  it("does nothing once another bookkeeping has taken over", () => {
+    edit({ description: "Muutettu" })
+    useBookStore.getState().newBook(2026, "fi")
+    clickUndo()
+    expect(useBookStore.getState().entries).toEqual([])
   })
 })
 

@@ -10,6 +10,7 @@ import { heldByAnotherTab } from "@/lib/browser/tab-lock"
 import { yearOf } from "@/lib/domain/dates"
 import { collectLiveIds } from "@/lib/domain/gc"
 import { lockedEntries } from "@/lib/domain/period-lock"
+import type { RecurringEntry } from "@/lib/domain/recurring"
 import { indexCategories, type Entry } from "@/lib/domain/types"
 import { renumberYear } from "@/lib/domain/voucher"
 import { LANDING, APP_ROUTES } from "@/lib/site"
@@ -291,6 +292,61 @@ export function offerUndo(
         if (gone.length) now.setCategories([...now.cats, ...gone])
         now.restoreEntries(removed)
         toast.add({ title: restoredTitle })
+      },
+    },
+    onRemove: () => useBookStore.getState().releaseUndoAttachments(held),
+  })
+}
+
+/**
+ * Raise a toast with "Kumoa" for an entry just edited (§8.11). The undo puts
+ * the whole entry back as it was, its voucher number and its monthly template
+ * included. Receipts the edit removed stay in IndexedDB while the toast is up.
+ * It does nothing once the entry has been changed again or is locked, and
+ * after another bookkeeping has taken over.
+ */
+export function offerEditUndo(
+  ctx: Ctx,
+  before: Entry,
+  recurringBefore: readonly RecurringEntry[]
+): void {
+  const store = useBookStore.getState()
+  const saved = store.entries.find((e) => e.id === before.id)
+  if (!saved) return
+  const epoch = store.bookEpoch
+  const held = (before.atts ?? []).flatMap((a) => (a.id ? [a.id] : []))
+  store.holdUndoAttachments(held)
+  const id = toast.add({
+    title: ctx.t("entry.changesSaved"),
+    timeout: UNDO_TIMEOUT_MS,
+    actionProps: {
+      children: ctx.t("common.undo"),
+      onClick: () => {
+        toast.close(id)
+        const now = useBookStore.getState()
+        if (now.bookEpoch !== epoch) return
+        const current = now.entries.find((e) => e.id === before.id)
+        if (!current || JSON.stringify(current) !== JSON.stringify(saved)) {
+          toast.add({ title: ctx.t("entry.editUndoChanged") })
+          return
+        }
+        if (refuseLocked(ctx, [current, before])) return
+        now.updateEntries([before])
+        // A move to another year takes a new number there; the old one is back.
+        if (before.voucher !== undefined && yearOf(before.date) !== yearOf(current.date)) {
+          now.setVouchers(new Map([[before.id, before.voucher]]))
+        }
+        const was = new Map(recurringBefore.map((r) => [r.id, r]))
+        for (const r of now.recurring) {
+          if (!was.has(r.id)) now.removeRecurring(r.id)
+        }
+        const here = new Map(now.recurring.map((r) => [r.id, r]))
+        for (const [rid, r] of was) {
+          if (JSON.stringify(here.get(rid)) !== JSON.stringify(r)) {
+            now.upsertRecurring(r)
+          }
+        }
+        toast.add({ title: ctx.t("entry.editUndone") })
       },
     },
     onRemove: () => useBookStore.getState().releaseUndoAttachments(held),

@@ -74,7 +74,7 @@ import { periodFromKey, vatPeriods } from "@/lib/domain/vat-deadline"
 import { defaultSettledKey } from "@/lib/domain/vat-settlement"
 import { periodLabel } from "@/lib/i18n/period-label"
 import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
-import { deleteEntry } from "@/lib/commands/book-commands"
+import { deleteEntry, offerEditUndo } from "@/lib/commands/book-commands"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
 import { categorySide, compareCategories } from "@/stores/selectors"
 import type {
@@ -709,9 +709,8 @@ function EntryDialogForm({
     setLastDefaults({ mode: form.amountMode, type: form.type })
     // §8.5: saving an entry from another year switches the selected year.
     if (yearOf(entry.date) !== year) setYear(yearOf(entry.date))
-    toast.add({
-      title: mode === "edit" ? f.t("entry.changesSaved") : f.t("entry.saved"),
-    })
+    if (mode === "edit" && editing) offerEditUndo(ctx, editing, recurring)
+    else toast.add({ title: f.t("entry.saved") })
 
     if (andNew) {
       // Keep the date, reset the rest.

@@ -513,7 +513,7 @@ On browsers with the File System Access API the app writes the bookkeeping
 back to the file it was opened from, so the user does not have to download a
 copy to keep their work. **Saving is an explicit action by default.** A
 handle's write permission reverts to "prompt" on reload and re-granting it
-needs a user gesture, an edit cannot be undone (only a delete can, §8.11) and
+needs a user gesture, an edit can be undone only for 10 seconds (§8.11) and
 the file has no version history, and packing a ZIP of receipts is not instant. Autosave exists, but it is opt-in and it never
 asks anything (below).
 
@@ -865,7 +865,7 @@ On **Yleiset**:
   - **There is no YTJ lookup.** PRH's open data API leaves out private traders, which is who this app is for, and VIES allows no browser requests, so the name is typed.
 - **"ALV-ilmoitusjakso"**: a segmented Kuukausi / Neljännesvuosi / Vuosi. It sets `vatPeriod` (§6.5), which the overview's due dates and the VAT view follow. Changing it keeps the VAT view on the same part of the year: October becomes Q4.
 - **"Kirjanpidon aloitus"**: the month the business began, as a month select ("Ensimmäisestä tositteesta" or a month) and, once a month is chosen, a year select. It sets `bookStart` (§6.5). Unset, returns are counted from the first entry.
-- **"Tallennus"**, only where the browser can write to a file: the "Tallenna automaattisesti" checkbox (§7.5), with a description that says what can be undone: a delete for 10 seconds (§8.11), an edit not at all.
+- **"Tallennus"**, only where the browser can write to a file: the "Tallenna automaattisesti" checkbox (§7.5), with a description that says what can be undone: a delete or an edit of one voucher for 10 seconds (§8.11).
 - **"Poista kirjanpito"**, last in the title row's menu, in the destructive colour (`deleteBook` in `book-commands.ts`). It erases the whole bookkeeping from this browser: entries, settings, the receipts in IndexedDB, the linked file handle and the `bookkeeping` localStorage key, then returns to the landing page. The confirmation says the deletion is permanent and to download the bookkeeping first. It **cannot be undone**, and it is not stopped by locked periods or unsaved changes: it is the user's own decision about the browser's working copy, and a file on disk is untouched. The `lang` and `theme` keys stay.
 
 On **Luokat**:
@@ -922,6 +922,8 @@ Closing a file clears entries, the file name and filters, puts the categories ba
 **A change that adds to a filed return says how to correct it.** `filedPeriodChanges` in `lib/domain/filed-changes.ts` builds each touched period's return before and after the change and compares the fields, so an entry no field counts (a 0 % grant) asks nothing. For each period that does change, the confirmation names it, the date it was marked, and how much the tax payable goes up or down. It then gives Vero's fix (vero.fi, "Miten arvonlisäveroilmoituksen tietoja korjataan?"): a replacement return (korvaava ilmoitus) for the period in OmaVero, or, when only the tax fields change and by at most 500 €, the next return instead (`fitsNextReturn`). A change to EU, reverse-charge or 0 % sales always needs the replacement. The filed mark stays as it was, since the user decides when the correction is made. `lib/commands/filed-commands.ts` holds the wording and is loaded on demand by `deleteEntry`, because `book-commands.ts` is in the landing bundle.
 
 **Deleting can be undone.** Deleting an entry still asks first, then raises a toast with "Kumoa" for 10 seconds (`offerUndo` in `lib/commands/book-commands.ts`). An undo also brings back a custom category deleted in the meantime, and undoing a bulk category change only moves the category back, so an edit made since stays. The deleted entries' receipts stay in IndexedDB while the toast is up (`undoAttachmentIds`, which the GC sweep counts as live), or an undo would bring back entries whose files were already gone. An undo after a new, closed or opened bookkeeping has taken over does nothing (`bookEpoch`). Undo marks the book dirty, since autosave may already have written the deletion. `lib/commands/book-commands.test.ts` covers it.
+
+**Editing one voucher can be undone too.** Saving an edited entry in the dialog raises "Muutokset tallennettu" with "Kumoa" for 10 seconds (`offerEditUndo`). The undo puts the whole entry back as it was: its fields, its receipts, its voucher number (also after a move to another year) and the monthly template the edit changed or made. Receipts the edit removed stay in IndexedDB while the toast is up, like a delete's. The undo does nothing once another bookkeeping has taken over, and it refuses with a message when the entry has been edited again since or is locked (§8.11). Bulk edits (§8.4) have their own undo and are not part of this.
 
 ### 8.12 Overview (Yleiskatsaus)
 
@@ -1433,7 +1435,7 @@ Wrap all storage access in try/catch, and render correctly when storage is empty
 ## 14. Open questions and ideas not yet done
 
 - A trader type setting. The app treats every user as an ammatinharjoittaja on the payment basis (§6.3). A liikkeenharjoittaja has to adjust single-entry books to accrual basis for tax, so their result is wrong when a payment crosses a year-end or an entry is open at one. The setting would choose between `taxBasisEntries` and the entries' own dates, go in `settings.json`, and need help for a user who does not know which kind they are.
-- Undo for edits. Deleting can be undone (§8.11); changing an entry cannot, though the change log shows the old values. Autosave (§7.5) makes a mistake reach the file within seconds, which is why it is opt-in.
+- Undo for edits beyond the 10-second toast (§8.11), for example a history of an entry's earlier versions. The change log holds the old values but the app can not restore from it. Autosave (§7.5) makes a mistake reach the file within seconds, which is why it is opt-in.
 - Filing through Ilmoitin.fi, at least for the VAT return. Not before the user asks for it (§8.8).
 - Form 5 fields the app does not work out: 338 and 347, the deductible parts of depreciation (337) and interest (346), which it fills with the full amounts (§8.8); co-operative surplus (325–328); and the additional deductions of 364, which come from fields 388 and 392 elsewhere on the return.
 - The VAT return of a business that stops trading (§6.5).

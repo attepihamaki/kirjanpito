@@ -985,6 +985,11 @@ export const APP_DICT = {
   ],
   "entry.restoredMany": ["Tositteet palautettu.", "Vouchers restored."],
   "entry.addUndone": ["Lisäys kumottu.", "Addition undone."],
+  "entry.editUndone": ["Muutokset kumottu.", "Changes undone."],
+  "entry.editUndoChanged": [
+    "Tositetta on muutettu sen jälkeen, joten muutosta ei voi kumota.",
+    "The voucher has changed since, so the edit cannot be undone.",
+  ],
   "entry.recategorized": [
     pl(
       "Luokka vaihdettu 1 tositteeseen.",
@@ -1957,8 +1962,8 @@ export const APP_DICT = {
   "settings.saving": ["Tallennus", "Saving"],
   "settings.autosave": ["Tallenna automaattisesti", "Save automatically"],
   "settings.autosaveHint": [
-    "Kirjanpito tallentuu avattuun tiedostoon muutama sekunti jokaisen muutoksen jälkeen. Poiston voi kumota ilmoituksesta 10 sekunnin ajan, ja palautus tallentuu samalla tavalla. Tositteen muokkausta ei voi kumota, eikä tiedostoon jää aiempia versioita. Jos selain kysyisi jotain, tallennus odottaa, kunnes tallennat kerran itse.",
-    "The bookkeeping is saved to the opened file a few seconds after each change. You can undo a delete from its notification for 10 seconds, and the restored voucher is saved the same way. Edits to a voucher can’t be undone, and the file keeps no earlier versions. If the browser would have to ask anything, autosave waits until you save once yourself.",
+    "Kirjanpito tallentuu avattuun tiedostoon muutama sekunti jokaisen muutoksen jälkeen. Poiston ja tositteen muokkauksen voi kumota ilmoituksesta 10 sekunnin ajan, ja palautus tallentuu samalla tavalla. Tiedostoon ei jää aiempia versioita. Jos selain kysyisi jotain, tallennus odottaa, kunnes tallennat kerran itse.",
+    "The bookkeeping is saved to the opened file a few seconds after each change. You can undo a delete or a voucher edit from its notification for 10 seconds, and the restored voucher is saved the same way. The file keeps no earlier versions. If the browser would have to ask anything, autosave waits until you save once yourself.",
   ],
   "settings.addCategory": ["Lisää oma luokka", "Add a category"],
   "settings.newCategory": ["Lisää luokka", "Add category"],
