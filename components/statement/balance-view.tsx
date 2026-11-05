@@ -1,45 +1,24 @@
 "use client"
 
 import * as React from "react"
-import { CheckIcon, FileTextIcon, LockIcon } from "lucide-react"
+import { CheckIcon, LockIcon, PencilIcon } from "lucide-react"
 
-import { EuroInput } from "@/components/common/euro-input"
 import { Money } from "@/components/common/money"
-import { cn } from "@/lib/utils"
-import { PANEL_ROWS, Panel } from "@/components/common/panel"
+import { Panel } from "@/components/common/panel"
 import { Pill } from "@/components/common/pill"
 import { StatStrip } from "@/components/common/stat-strip"
 import { useFormatters } from "@/components/lang-provider"
+import {
+  ASSET_FIELDS,
+  DEBT_FIELDS,
+  sumYearEnd as sum,
+} from "@/components/statement/year-end-figures-dialog"
 import { useMemoVoucher } from "@/components/statement/use-memo-voucher"
 import { Button } from "@/components/ui/button"
-import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { storeMemo } from "@/lib/commands/memo-commands"
-import {
-  EMPTY_YEAR_END,
-  inventoryChange,
-  type YearEnd,
-} from "@/lib/domain/form5-balance"
-import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
+import { EMPTY_YEAR_END, inventoryChange } from "@/lib/domain/form5-balance"
 import { useBookStore } from "@/stores/book-store"
-
-const ASSET_FIELDS = [
-  ["goods", "balance.goods"],
-  ["otherCurrent", "balance.otherCurrent"],
-  ["otherFixed", "balance.otherFixed"],
-  ["cash", "balance.cash"],
-  ["otherFinancial", "balance.otherFinancial"],
-] as const satisfies readonly (readonly [keyof YearEnd, string])[]
-
-const DEBT_FIELDS = [
-  ["loanCurrent", "balance.loanCurrent"],
-  ["otherCurrentDebt", "balance.otherCurrentDebt"],
-  ["otherLongDebt", "balance.otherLongDebt"],
-] as const satisfies readonly (readonly [keyof YearEnd, string])[]
-
-function sum(values: YearEnd, keys: readonly (keyof YearEnd)[]): number {
-  return keys.reduce((total, key) => total + values[key], 0)
-}
 
 /**
  * What Form 5's assets and liabilities need beyond the book (§8.8), year by
@@ -74,12 +53,11 @@ export function BalanceView() {
           </p>
         </div>
         <Button
-          variant="outline"
           className="print-hidden"
-          onClick={() => openDialog({ kind: "year-end" })}
+          onClick={() => openDialog({ kind: "year-end-figures" })}
         >
-          <FileTextIcon data-icon="inline-start" />
-          {f.t("balance.openForm5")}
+          <PencilIcon data-icon="inline-start" />
+          {f.t("balance.editFigures")}
         </Button>
       </div>
 
@@ -117,153 +95,8 @@ export function BalanceView() {
         ]}
       />
 
-      <div className={cn("grid gap-x-6 lg:grid-cols-2", PANEL_ROWS)}>
-        <AssetsPanel key={`assets-${year}`} year={year} filed={filed} />
-        <DebtsPanel key={`debts-${year}`} year={year} filed={filed} />
-      </div>
-
       <InventoryPanel year={year} />
     </div>
-  )
-}
-
-function AmountField({
-  id,
-  label,
-  cents,
-  disabled,
-  onCommit,
-}: {
-  id: string
-  label: string
-  cents: number
-  disabled: boolean
-  onCommit: (cents: number) => void
-}) {
-  const f = useFormatters()
-  const [text, setText] = React.useState(cents ? formatMoneyPlain(cents) : "")
-  const [bad, setBad] = React.useState(false)
-
-  const commit = () => {
-    const parsed = text.trim() === "" ? 0 : parseAmount(text)
-    if (parsed == null || parsed < 0) {
-      setBad(true)
-      return
-    }
-    setBad(false)
-    if (parsed !== cents) onCommit(parsed)
-  }
-
-  return (
-    <Field data-invalid={bad}>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <EuroInput
-        id={id}
-        disabled={disabled}
-        aria-invalid={bad}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={commit}
-      />
-      {bad ? <FieldError>{f.t("balance.badAmount")}</FieldError> : null}
-    </Field>
-  )
-}
-
-function TotalFooter({ cents }: { cents: number }) {
-  const f = useFormatters()
-  return (
-    <div className="flex w-full items-center justify-between gap-3 text-sm">
-      <span className="text-muted-foreground">{f.t("balance.total")}</span>
-      <Money cents={cents} className="text-base font-semibold" />
-    </div>
-  )
-}
-
-/** The assets the book cannot know: stock, other property and cash in hand. */
-function AssetsPanel({ year, filed }: { year: number; filed: boolean }) {
-  const f = useFormatters()
-  const yearEnds = useBookStore((s) => s.yearEnd)
-  const setYearEnd = useBookStore((s) => s.setYearEnd)
-  const values = yearEnds[year] ?? EMPTY_YEAR_END
-
-  return (
-    <Panel
-      title={f.t("balance.assetsTitle")}
-      description={f.t("balance.assetsHint")}
-      bodyClassName="grid gap-4 p-4"
-      footer={
-        <TotalFooter
-          cents={sum(
-            values,
-            ASSET_FIELDS.map(([key]) => key)
-          )}
-        />
-      }
-    >
-      {ASSET_FIELDS.map(([key, label]) => (
-        <AmountField
-          key={key}
-          id={`year-end-${key}`}
-          label={f.t(label)}
-          cents={values[key]}
-          disabled={filed}
-          onCommit={(cents) => setYearEnd(year, { ...values, [key]: cents })}
-        />
-      ))}
-    </Panel>
-  )
-}
-
-/** The debts the book cannot know, and the loans the year opened with. */
-function DebtsPanel({ year, filed }: { year: number; filed: boolean }) {
-  const f = useFormatters()
-  const yearEnds = useBookStore((s) => s.yearEnd)
-  const setYearEnd = useBookStore((s) => s.setYearEnd)
-  const loanOpening = useBookStore((s) => s.loanOpening)
-  const setLoanOpening = useBookStore((s) => s.setLoanOpening)
-  const values = yearEnds[year] ?? EMPTY_YEAR_END
-
-  return (
-    <Panel
-      title={f.t("balance.debtsTitle")}
-      description={f.t("balance.debtsHint")}
-      bodyClassName="grid gap-4 p-4"
-      footer={
-        <TotalFooter
-          cents={sum(
-            values,
-            DEBT_FIELDS.map(([key]) => key)
-          )}
-        />
-      }
-    >
-      {DEBT_FIELDS.map(([key, label]) => (
-        <AmountField
-          key={key}
-          id={`year-end-${key}`}
-          label={f.t(label)}
-          cents={values[key]}
-          disabled={filed}
-          onCommit={(cents) => setYearEnd(year, { ...values, [key]: cents })}
-        />
-      ))}
-      <div className="border-t pt-4">
-        <AmountField
-          id="loan-opening"
-          label={f.t("balance.loanOpening", {
-            y: loanOpening?.year ?? year,
-          })}
-          cents={loanOpening?.amount ?? 0}
-          disabled={filed}
-          onCommit={(amount) =>
-            setLoanOpening(
-              amount ? { year: loanOpening?.year ?? year, amount } : null
-            )
-          }
-        />
-      </div>
-    </Panel>
   )
 }
 

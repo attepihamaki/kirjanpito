@@ -159,6 +159,8 @@ export type DialogState =
   /** The selected year's checks, Form 5 values and lock (§8.8). */
   | { kind: "year-end" }
   | { kind: "vat-return" }
+  /** The year-end figures typed in on Varat ja velat (§8.8). */
+  | { kind: "year-end-figures" }
   /** What carries into `year`, its starting figures and templates (§8.14). */
   | { kind: "new-year"; year: number }
   /** Add a month's recurring entries (§8.5). `month` is `"2026-10"`. */

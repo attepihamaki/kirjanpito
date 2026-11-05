@@ -1591,7 +1591,6 @@ export const APP_DICT = {
     "Where the assets and liabilities come from",
   ],
   "balance.editFigures": ["Muokkaa lukuja", "Edit the figures"],
-  "balance.openForm5": ["Avaa vuoden ilmoitus", "Open the year’s report"],
   "balance.figures": [
     "Tositteista: myyntisaamiset {r}, ostovelat {p}, lainat {l}. Poistolaskelmasta: koneet ja kalusto {m}.",
     "From the vouchers: receivables {r}, payables {p}, loans {l}. From the depreciation register: machinery and equipment {m}.",
@@ -1634,6 +1633,47 @@ export const APP_DICT = {
   "balance.loanOpening": [
     "Lainat vuoden {y} alussa",
     "Loans at the start of {y}",
+  ],
+  "balance.figuresDialogTitle": [
+    "Varat ja velat {y}",
+    "Assets and liabilities {y}",
+  ],
+  "balance.figuresDone": ["Valmis", "Done"],
+  "balance.goodsHelp": [
+    "Jälleenmyyntiin ostetut tavarat, jotka ovat varastossa vuoden viimeisenä päivänä. Arvo on hankintameno. Jos sinulla ei ole myyntivarastoa, jätä tyhjäksi.",
+    "Goods bought for resale that are in stock on the last day of the year, valued at cost. Leave empty if you hold no stock for sale.",
+  ],
+  "balance.otherCurrentHelp": [
+    "Aineet, tarvikkeet ja itse valmistetut keskeneräiset tai valmiit tuotteet vuoden lopussa. Arvo on hankinta- tai valmistusmeno.",
+    "Materials, supplies and self-made unfinished or finished products at year end, valued at cost.",
+  ],
+  "balance.otherFixedHelp": [
+    "Pitkäaikainen omaisuus, joka ei ole koneita tai kalustoa, kiinteistöjä tai arvopapereita. Esimerkkejä ovat soranottopaikat ja sillat. Koneet ja kalusto tulevat Poistot-välilehdeltä.",
+    "Long-term property that is not machinery, equipment, real estate or securities, such as gravel pits or bridges. Machinery and equipment come from the Depreciation tab.",
+  ],
+  "balance.cashHelp": [
+    "Käteinen, joka sinulla on yrityksen kassassa vuoden viimeisenä päivänä. Pankkitilin saldo ei kuulu tähän.",
+    "Cash you hold for the business on the last day of the year. A bank balance does not belong here.",
+  ],
+  "balance.otherFinancialHelp": [
+    "Muu rahoitusomaisuus kuin pankkitalletukset, saamiset ja arvopaperit. Useimmilla toiminimillä tämä on tyhjä.",
+    "Financial assets other than bank deposits, receivables and securities. For most sole traders this stays empty.",
+  ],
+  "balance.loanCurrentHelp": [
+    "Se osa yrityksen lainoista, joka erääntyy seuraavan 12 kuukauden aikana. Kirjanpito laskee lainat kokonaisuudessaan tositteista, ja tämä summa siirretään pitkäaikaisista lyhytaikaisiin.",
+    "The part of the business loans that falls due in the next 12 months. The bookkeeping works out the loans in full from the vouchers, and this amount moves from non-current to current.",
+  ],
+  "balance.otherCurrentDebtHelp": [
+    "Alle vuoden sisällä maksettavat velat, jotka eivät ole ostovelkoja tai lainoja. Avoimet ostolaskut tulevat tositteista, joten niitä ei kirjoiteta tähän.",
+    "Debts due within a year that are not purchase payables or loans. Open purchase invoices come from the vouchers, so do not enter them here.",
+  ],
+  "balance.otherLongDebtHelp": [
+    "Yli vuoden päästä erääntyvät velat, jotka eivät ole lainoja. Lainat tulevat tositteista.",
+    "Debts due in over a year that are not loans. Loans come from the vouchers.",
+  ],
+  "balance.loanOpeningHelp": [
+    "Yrityksen lainojen saldo kirjanpidon aloitusvuoden alussa. Sen jälkeiset nostot ja lyhennykset tulevat tositteista.",
+    "The balance of the business loans at the start of the year the books begin. Later drawdowns and repayments come from the vouchers.",
   ],
   "balance.badAmount": [
     "Anna summa, esim. 124,50.",
