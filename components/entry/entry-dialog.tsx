@@ -65,8 +65,10 @@ import {
   isEmptyGuess,
   parseInvoiceText,
   previousEntryFrom,
+
   suggestCategory,
 } from "@/lib/domain/invoice-text"
+import { findCategoryRule } from "@/lib/domain/category-rules"
 import {
   CASH_BOOKING_DAYS,
   duplicateOf,
@@ -351,12 +353,27 @@ function EntryDialogForm({
       const current = formRef.current
       if (isEmptyGuess(guess) || current.amount || current.description) return
 
-      const previous = previousEntryFrom(
-        useBookStore.getState().entries,
-        guess.vendor
+      const state = useBookStore.getState()
+      /*
+       * The user's own rules come first (§8.17), over the seller's earlier
+       * entry. The rule reads the seller and the rows, like the hints below.
+       */
+      const ruleHit = findCategoryRule(
+        state.categoryRules,
+        [guess.vendor ?? "", ...guess.items].join(" "),
+        indexCategories(cats)
       )
-      const previousCat =
-        previous && cats.some((c) => c.id === previous.catId)
+      const previous = previousEntryFrom(state.entries, guess.vendor)
+      const previousCat = ruleHit
+        ? {
+            type: ruleHit.type,
+            catId: ruleHit.catId,
+            vatRate:
+              ruleHit.vatRate ??
+              cats.find((c) => c.id === ruleHit.catId)?.vatRate ??
+              0,
+          }
+        : previous && cats.some((c) => c.id === previous.catId)
           ? previous
           : undefined
       /*
@@ -378,7 +395,9 @@ function EntryDialogForm({
       const euCategory = !!(
         previousCat && cats.find((c) => c.id === previousCat.catId)?.euPurchase
       )
-      const readRate = euCategory ? null : guess.vatRate
+      const readRate = euCategory
+        ? null
+        : (ruleHit?.vatRate ?? guess.vatRate)
       if (readRate != null) keepRate.current = true
 
       setForm((prev) => ({

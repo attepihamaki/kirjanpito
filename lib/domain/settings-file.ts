@@ -24,6 +24,11 @@ import {
   normalizeLayout,
   type OverviewWidget,
 } from "@/lib/domain/overview-layout"
+import {
+  foldText,
+  MIN_RULE_TEXT,
+  type CategoryRule,
+} from "@/lib/domain/category-rules"
 import type { RecurringEntry } from "@/lib/domain/recurring"
 import {
   EU_PURCHASE_KINDS,
@@ -93,6 +98,8 @@ export interface BookSettings {
   pageSize: { ledger: PageSize; categories: PageSize }
   /** Monthly templates (§8.5). */
   recurring: RecurringEntry[]
+  /** The user's rules for picking a category, in order (§8.17). */
+  categoryRules: CategoryRule[]
   /** The fixed asset balance the register starts from, or null (§8.8). */
   assetOpening: AssetOpening | null
   /** The bank balance as last read, or null (§8.12). */
@@ -178,6 +185,20 @@ function parseRecurring(value: unknown): RecurringEntry | null {
     day: day as number,
     from,
   }
+}
+
+function parseCategoryRule(value: unknown): CategoryRule | null {
+  if (!isRecord(value)) return null
+  const { id, contains, catId, vatRate } = value
+  if (typeof id !== "string" || !id) return null
+  if (typeof contains !== "string" || foldText(contains).length < MIN_RULE_TEXT) {
+    return null
+  }
+  if (typeof catId !== "string" || !catId) return null
+  if (vatRate != null && (typeof vatRate !== "number" || !isVatRate(vatRate))) {
+    return null
+  }
+  return { id, contains: contains.trim(), catId, vatRate: vatRate ?? null }
 }
 
 function isEuPurchase(value: unknown): value is EuPurchase {
@@ -366,6 +387,11 @@ export function parseSettings(text: string): ParsedSettings {
       .map(parseRecurring)
       .filter((r): r is RecurringEntry => r !== null)
   }
+  if (Array.isArray(raw.categoryRules)) {
+    out.categoryRules = raw.categoryRules
+      .map(parseCategoryRule)
+      .filter((r): r is CategoryRule => r !== null)
+  }
   if (raw.assetOpening === null) out.assetOpening = null
   else if (
     isRecord(raw.assetOpening) &&
@@ -466,6 +492,7 @@ export function serializeSettings(s: BookSettings): string {
     })),
     pageSize: s.pageSize,
     recurring: s.recurring,
+    categoryRules: s.categoryRules,
     assetOpening: s.assetOpening,
     bankBalance: s.bankBalance,
     loanOpening: s.loanOpening,

@@ -226,6 +226,7 @@ function Review({
   const entries = useBookStore((s) => s.entries)
   const cats = useBookStore((s) => s.cats)
   const closeDialog = useBookStore((s) => s.closeDialog)
+  const categoryRules = useBookStore((s) => s.categoryRules)
   const catMap = React.useMemo(() => indexCategories(cats), [cats])
   const byId = React.useMemo(
     () => new Map(entries.map((e) => [e.id, e])),
@@ -234,7 +235,11 @@ function Review({
 
   // Decided once, so ticking a row never reshuffles the proposals.
   const [proposals] = React.useState(() =>
-    proposeForRows(result.rows, { entries, cats: catMap })
+    proposeForRows(result.rows, {
+      entries,
+      cats: catMap,
+      rules: categoryRules,
+    })
   )
   const [plans, setPlans] = React.useState<Plan[]>(() =>
     proposals.map(initialPlan)

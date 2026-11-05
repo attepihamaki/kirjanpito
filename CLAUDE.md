@@ -639,6 +639,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
   "encrypted": false,
   "pageSize": { "ledger": 10, "categories": 25 },
   "recurring": [{ "id": "r1", "description": "Vuokra", "type": "expense", "catId": "343", "amount": 45000, "vatRate": 25.5, "amountMode": "gross", "day": 20, "from": "2026-02" }],
+  "categoryRules": [{ "id": "rule-1", "contains": "Elisa", "catId": "344-other", "vatRate": 25.5 }],
   "assetOpening": { "year": 2026, "amount": 300000 },
   "bankBalance": { "amount": 125000, "date": "2026-10-31" },
   "loanOpening": { "year": 2026, "amount": 800000 },
@@ -654,7 +655,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
 - **The overview layout** goes through `normalizeLayout` in `lib/domain/overview-layout.ts`: an unknown widget id is dropped and a missing one goes right after the widget it follows in the default layout, at its default size, so a file from an older or newer version still opens and a new widget does not land at the bottom of the page.
 - **Language and theme** are written from the browser's own keys (§12) at save. Opening a file switches the app to them. They are preferences of the browser as much as of the book, so changing them does not mark the book dirty, and the landing page goes on using the browser's keys. The theme is applied through `Ctx.setTheme`, because only React can reach next-themes.
 - **Page sizes and autosave** are saved the same way: written at save, applied on open, never dirty.
-- **The export language, whether the file is encrypted (§7.8), the business's name and ID, the VAT period, the trader type, the start month, the filed marks, the archived years, the layout, the categories, the recurring templates, the opening balances, the year-end figures and the bank balance do mark the book dirty**, since the file no longer matches.
+- **The export language, whether the file is encrypted (§7.8), the business's name and ID, the VAT period, the trader type, the start month, the filed marks, the archived years, the layout, the categories, the recurring templates, the category rules, the opening balances, the year-end figures and the bank balance do mark the book dirty**, since the file no longer matches.
 - A plain CSV has no settings. Opening one starts with no filed marks and no start month, and keeps the rest as it was.
 - `lib/domain/settings-file.test.ts` covers the round trip and the lenient reading; `lib/commands/io-commands.test.ts` covers opening a ZIP with settings.
 
@@ -921,6 +922,7 @@ Every section is a `Panel` (§11). The page is split into two sub-pages, so the 
 - **Yleiset** at `/app/settings`: the VAT period, the start month, saving, the voucher numbers (§4), and deleting the bookkeeping.
 - **Luokat** at `/app/settings/categories`: the categories table, with adding in a dialog, and restoring the defaults.
 - **Toistuvat** at `/app/settings/recurring`: the monthly templates (§8.5).
+- **Säännöt** at `/app/settings/rules`: the category rules (§8.17).
 
 `app/app/settings/layout.tsx` renders `SettingsShell` (`components/settings/settings-shell.tsx`): the page title and a row of tab links shaped like the month chips (§8.4). The current tab is `bg-muted` with `aria-current="page"`, not filled with the primary colour, because it marks a place rather than a filter. The routes are `SETTINGS_ROUTES` in `lib/site.ts`. The sidebar keeps Asetukset lit on any path below it.
 
@@ -1050,6 +1052,18 @@ Most of a new year's starting point carries over without any action, and the fir
 - **Categories offered** are the enabled ones on the row's side, except EU purchases, whose amount is net and whose tax the buyer reports (§6.9). Pick those in the entry dialog.
 - **Locks** (§8.11). A payment date is allowed in a filed VAT period, since it reports nothing new, but not in or out of a year whose Form 5 is filed (`paidChangeHitsForm5`). A new entry in a stored or Form 5 filed year refuses the whole booking with a toast. A change that adds to a filed return asks first.
 - **Not handled:** attaching the statement as the voucher of a VAT payment, an owner's transfer or a loan row, splitting one row across entries, recognising the owner's own name as a transfer, and the other banks' presets.
+
+### 8.17 Category rules (Säännöt)
+
+`lib/domain/category-rules.ts`, pure and tested, and `components/settings/rule-settings.tsx`. A rule says that text appearing in a bank row or an invoice belongs to a category: "a description containing Elisa goes to 344-other at 25,5 %". The user makes them on Asetukset, Säännöt; nothing creates one by itself.
+
+- **A rule** is `contains`, `catId` and `vatRate`, where a null rate leaves the category's own default (dated, §5) in force. They are `categoryRules` in `settings.json` (§7.6), dirty like any setting. Reading drops a rule with no usable text, no category id or a rate that is not 0 to 100.
+- **Matching** folds case, accents and punctuation (`foldText`) and looks for the text anywhere in the other. Text under two characters never matches. The side comes from the category, so a rule has no type of its own.
+- **The first rule in the user's order wins** (`findCategoryRule`), and the settings page moves a rule up or down. A rule whose category is missing, switched off or on the wrong side for the row is skipped and a later one may fit. The settings table marks such a rule.
+- **The bank import** (§8.16) reads the counterparty and the message and tries the rules before `suggestFromHistory`. The review list still lets the user change every proposal.
+- **The PDF pre-fill** (§8.5) reads the seller and the invoice rows and tries the rules before the seller's earlier entry and before `suggestCategory`. A rule's own rate beats the rate read off the invoice, except on an EU purchase category, which keeps the category's rate (§6.9).
+- **Rules never touch booked vouchers.** They only fill what a new entry starts with.
+- `lib/domain/category-rules.test.ts` covers the matching, the order, the bank proposals and the settings round trip.
 
 ---
 
@@ -1436,7 +1450,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
 
 - localStorage `bookkeeping` — exported as `BOOK_STORAGE_KEY` from
   `stores/book-store.ts`, so nothing hard-codes the string twice:
-  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, exportLang, businessId, businessName, vatPeriod, traderType, bookStart, vatFiled, yearsArchived, overviewLayout, autosave, encrypted, recurring, assetOpening, bankBalance }`.
+  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, exportLang, businessId, businessName, vatPeriod, traderType, bookStart, vatFiled, yearsArchived, overviewLayout, autosave, encrypted, recurring, categoryRules, assetOpening, bankBalance }`.
   The book's settings are kept twice: here, as the working buffer, and in the
   file's `settings.json` (§7.6), as the record. A reload restores them from
   here; opening a file replaces them from there.

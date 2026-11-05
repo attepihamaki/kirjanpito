@@ -7,6 +7,7 @@ import { defaultCategories } from "@/lib/domain/accounts"
 import type { AssetOpening } from "@/lib/domain/assets"
 import type { BankBalance } from "@/lib/domain/bank-balance"
 import type { EntryCheck } from "@/lib/domain/entry-checks"
+import type { CategoryRule } from "@/lib/domain/category-rules"
 import type { RecurringEntry } from "@/lib/domain/recurring"
 import { mergeCategories } from "@/lib/domain/settings-file"
 import { assignVouchers, keepVoucher } from "@/lib/domain/voucher"
@@ -247,6 +248,8 @@ export interface BookState {
   encrypted: boolean
   /** Monthly templates (§8.5). Saved in settings.json. */
   recurring: RecurringEntry[]
+  /** The user's rules for picking a category (§8.17). Saved in settings.json. */
+  categoryRules: CategoryRule[]
   /** The balance the asset register starts from (§8.8). Saved in settings.json. */
   assetOpening: AssetOpening | null
   /** The bank balance as last read (§8.12). Saved in settings.json. */
@@ -377,6 +380,7 @@ export interface BookActions {
       yearsArchived?: Record<string, string>
       form5Filed?: Record<string, string>
       recurring?: RecurringEntry[]
+      categoryRules?: CategoryRule[]
       assetOpening?: AssetOpening | null
       bankBalance?: BankBalance | null
       loanOpening?: LoanOpening | null
@@ -449,6 +453,11 @@ export interface BookActions {
   setAutosavePaused(paused: boolean): void
   upsertRecurring(template: RecurringEntry): void
   removeRecurring(id: string): void
+  /** Add a rule at the end, or replace the one with the same id (§8.17). */
+  upsertCategoryRule(rule: CategoryRule): void
+  removeCategoryRule(id: string): void
+  /** Move a rule one place earlier (-1) or later (1). The first match wins. */
+  moveCategoryRule(id: string, step: -1 | 1): void
   setLoanOpening(loanOpening: LoanOpening | null): void
   setYearEnd(year: number, values: YearEnd): void
   setAssetOpening(opening: AssetOpening | null): void
@@ -511,6 +520,7 @@ function initialState(): BookState {
     autosave: false,
     encrypted: false,
     recurring: [],
+    categoryRules: [],
     assetOpening: null,
     bankBalance: null,
     loanOpening: null,
@@ -572,6 +582,7 @@ type PersistedBook = Pick<
   | "autosave"
   | "encrypted"
   | "recurring"
+  | "categoryRules"
   | "assetOpening"
   | "bankBalance"
   | "loanOpening"
@@ -748,6 +759,7 @@ export const useBookStore = create<BookStore>()(
           yearsArchived: {},
           form5Filed: {},
           recurring: [],
+          categoryRules: [],
           assetOpening: null,
           bankBalance: null,
           loanOpening: null,
@@ -790,6 +802,7 @@ export const useBookStore = create<BookStore>()(
           yearsArchived: {},
           form5Filed: {},
           recurring: [],
+          categoryRules: [],
           assetOpening: null,
           bankBalance: null,
           loanOpening: null,
@@ -842,6 +855,7 @@ export const useBookStore = create<BookStore>()(
           yearsArchived: s.yearsArchived ?? {},
           form5Filed: s.form5Filed ?? {},
           recurring: book.recurring,
+          categoryRules: s.categoryRules ?? [],
           assetOpening: s.assetOpening ?? null,
           bankBalance: s.bankBalance ?? null,
           loanOpening: s.loanOpening ?? null,
@@ -1040,6 +1054,26 @@ export const useBookStore = create<BookStore>()(
           recurring: get().recurring.filter((r) => r.id !== id),
           dirty: true,
         }),
+      upsertCategoryRule: (rule) => {
+        const categoryRules = [...get().categoryRules]
+        const i = categoryRules.findIndex((r) => r.id === rule.id)
+        if (i >= 0) categoryRules[i] = rule
+        else categoryRules.push(rule)
+        set({ categoryRules, dirty: true })
+      },
+      removeCategoryRule: (id) =>
+        set({
+          categoryRules: get().categoryRules.filter((r) => r.id !== id),
+          dirty: true,
+        }),
+      moveCategoryRule: (id, step) => {
+        const categoryRules = [...get().categoryRules]
+        const i = categoryRules.findIndex((r) => r.id === id)
+        const j = i + step
+        if (i < 0 || j < 0 || j >= categoryRules.length) return
+        ;[categoryRules[i], categoryRules[j]] = [categoryRules[j], categoryRules[i]]
+        set({ categoryRules, dirty: true })
+      },
       setAssetOpening: (assetOpening) => set({ assetOpening, dirty: true }),
       setBankBalance: (bankBalance) => set({ bankBalance, dirty: true }),
       setLoanOpening: (loanOpening) => set({ loanOpening, dirty: true }),
@@ -1163,6 +1197,7 @@ export const useBookStore = create<BookStore>()(
         autosave: s.autosave,
         encrypted: s.encrypted,
         recurring: s.recurring,
+        categoryRules: s.categoryRules,
         assetOpening: s.assetOpening,
         bankBalance: s.bankBalance,
         loanOpening: s.loanOpening,

@@ -35,6 +35,7 @@ export function useAutosave() {
   const vatPeriod = useBookStore((s) => s.vatPeriod)
   const layout = useBookStore((s) => s.overviewLayout)
   const recurring = useBookStore((s) => s.recurring)
+  const categoryRules = useBookStore((s) => s.categoryRules)
   const assetOpening = useBookStore((s) => s.assetOpening)
   const bankBalance = useBookStore((s) => s.bankBalance)
   const loanOpening = useBookStore((s) => s.loanOpening)
@@ -64,6 +65,7 @@ export function useAutosave() {
     vatPeriod,
     layout,
     recurring,
+    categoryRules,
     assetOpening,
     bankBalance,
     loanOpening,

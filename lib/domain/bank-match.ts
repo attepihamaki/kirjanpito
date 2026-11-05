@@ -1,6 +1,7 @@
 import type { BankRow } from "@/lib/domain/bank-csv"
 import { calcEntry } from "@/lib/domain/calc"
 import { LINE_BY_KEY } from "@/lib/domain/accounts"
+import { findCategoryRule, type CategoryRule } from "@/lib/domain/category-rules"
 import { canBeUnpaid, paidDate } from "@/lib/domain/open-items"
 import type { CategoryMap, Cents, Entry, EntryType } from "@/lib/domain/types"
 
@@ -98,6 +99,8 @@ function textAgrees(row: BankRow, e: Entry): boolean {
 export interface BankContext {
   entries: readonly Entry[]
   cats: CategoryMap
+  /** The user's own category rules (§8.17). Tried before the book's history. */
+  rules?: readonly CategoryRule[]
 }
 
 /** An entry that already records this payment: same side, amount and payment day. */
@@ -146,7 +149,15 @@ export function suggestFromHistory(
 function draftFor(row: BankRow, ctx: BankContext): NewEntryDraft {
   const type = signedType(row)
   const parts = [row.counterparty, row.message].filter(Boolean)
-  const suggestion = suggestFromHistory(row.counterparty, type, ctx)
+  const hit = findCategoryRule(
+    ctx.rules ?? [],
+    parts.join(" "),
+    ctx.cats,
+    type
+  )
+  const suggestion = hit
+    ? { catId: hit.catId, vatRate: hit.vatRate }
+    : suggestFromHistory(row.counterparty, type, ctx)
   return {
     type,
     description: parts.join(" – "),

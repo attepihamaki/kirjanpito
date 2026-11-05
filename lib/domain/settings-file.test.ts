@@ -54,6 +54,10 @@ function settings(): BookSettings {
         from: "2026-02",
       },
     ],
+    categoryRules: [
+      { id: "k1", contains: "Elisa", catId: "344-other", vatRate: 25.5 },
+      { id: "k2", contains: "Neste", catId: "344-vehicle", vatRate: null },
+    ],
     assetOpening: { year: 2026, amount: 300_000 },
     bankBalance: { amount: -12_345, date: "2026-10-31" },
     loanOpening: { year: 2026, amount: 800_000 },
