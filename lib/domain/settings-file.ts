@@ -32,6 +32,7 @@ import {
   type Lang,
   type SalesKind,
 } from "@/lib/domain/types"
+import type { TraderType } from "@/lib/domain/open-items"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 
 /**
@@ -73,6 +74,8 @@ export interface BookSettings {
   /** The business's own name, or null (§8.10). */
   businessName: string | null
   vatPeriod: VatPeriodKind
+  /** Which kind of sole trader keeps the book (§6.3). */
+  traderType: TraderType
   /** `"2026-10"`: the month the bookkeeping began, or null to follow the first entry. */
   bookStart: string | null
   /** Period key (`"2026-09"`, `"2026-Q3"`, `"2026"`) → ISO date it was marked. */
@@ -309,6 +312,9 @@ export function parseSettings(text: string): ParsedSettings {
   ) {
     out.vatPeriod = raw.vatPeriod
   }
+  if (raw.traderType === "professional" || raw.traderType === "business") {
+    out.traderType = raw.traderType
+  }
   if (raw.bookStart === null) out.bookStart = null
   else if (typeof raw.bookStart === "string" && MONTH.test(raw.bookStart)) {
     out.bookStart = raw.bookStart
@@ -434,6 +440,7 @@ export function serializeSettings(s: BookSettings): string {
     businessId: s.businessId,
     businessName: s.businessName,
     vatPeriod: s.vatPeriod,
+    traderType: s.traderType,
     bookStart: s.bookStart,
     vatFiled: Object.fromEntries(
       Object.entries(s.vatFiled).sort(([a], [b]) => a.localeCompare(b))

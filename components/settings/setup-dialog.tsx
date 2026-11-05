@@ -22,11 +22,13 @@ import {
   AutosaveCheckbox,
   BookStartSelects,
   ExportLanguageToggle,
+  TraderTypeToggle,
   VatPeriodToggle,
 } from "@/components/settings/general-settings"
 import { useFormatters } from "@/components/lang-provider"
 import { useCanSaveToFile } from "@/hooks/use-save-book"
 import { parseBusinessId } from "@/lib/domain/business-id"
+import type { TraderType } from "@/lib/domain/open-items"
 import type { Lang } from "@/lib/domain/types"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 import { useBookStore } from "@/stores/book-store"
@@ -62,6 +64,9 @@ function SetupDialogForm({ onClose }: { onClose: () => void }) {
   const [vatPeriod, setVatPeriod] = React.useState<VatPeriodKind>(
     initial.vatPeriod
   )
+  const [traderType, setTraderType] = React.useState<TraderType>(
+    initial.traderType
+  )
   const [bookStart, setBookStart] = React.useState<string | null>(
     initial.bookStart
   )
@@ -86,6 +91,7 @@ function SetupDialogForm({ onClose }: { onClose: () => void }) {
       businessName: businessName.trim() || null,
       businessId: parsedId,
       vatPeriod,
+      traderType,
       bookStart,
       autosave,
     })
@@ -146,6 +152,12 @@ function SetupDialogForm({ onClose }: { onClose: () => void }) {
             <FieldDescription>
               {f.t("settings.exportLangHint")}
             </FieldDescription>
+          </Field>
+
+          <Field>
+            <FieldLabel>{f.t("settings.traderType")}</FieldLabel>
+            <TraderTypeToggle value={traderType} onChange={setTraderType} />
+            <FieldDescription>{f.t("settings.traderTypeHint")}</FieldDescription>
           </Field>
 
           <Field>

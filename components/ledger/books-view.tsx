@@ -363,9 +363,10 @@ export function GeneralLedgerView() {
 function ReconciliationSection() {
   const f = useFormatters()
   const { entries, catMap, year } = useBookData()
+  const traderType = useBookStore((s) => s.traderType)
   const recon = React.useMemo(
-    () => ledgerReconciliation(entries, catMap, year),
-    [entries, catMap, year]
+    () => ledgerReconciliation(entries, catMap, year, traderType),
+    [entries, catMap, year, traderType]
   )
   if (recon.crossings.length === 0) return null
   const head = "pb-2 pr-3 text-xs font-medium text-muted-foreground last:pr-0"

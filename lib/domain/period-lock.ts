@@ -1,4 +1,4 @@
-import { paidDate } from "@/lib/domain/open-items"
+import { paidDate, type TraderType } from "@/lib/domain/open-items"
 import type { CategoryMap, Entry } from "@/lib/domain/types"
 import { countsOnVatReturn } from "@/lib/domain/vat"
 
@@ -26,6 +26,8 @@ export interface LockMarks {
   vatFiled: Readonly<Record<string, string>>
   yearsArchived: Readonly<Record<string, string>>
   form5Filed: Readonly<Record<string, string>>
+  /** Absent means an ammatinharjoittaja (§6.3). */
+  traderType?: TraderType
 }
 
 /** Whichever mark holds this date, the stored year first. */
@@ -65,7 +67,8 @@ export function paidChangeHitsForm5(
  * The lock on one entry, if any: a filed period holds only what its return
  * counts. Form 5 reads an entry in the year it was paid (§6.3), so an entry paid
  * in a year whose Form 5 is filed is locked too, whatever year it is dated in.
- * That is a prepayment: paid before the date it carries.
+ * That is a prepayment: paid before the date it carries. A liikkeenharjoittaja
+ * is read by the entry's own date, so the payment year adds no lock.
  */
 export function entryLock(
   entry: Entry,
@@ -76,6 +79,7 @@ export function entryLock(
   if (lock && !(lock.kind === "filed" && !countsOnVatReturn(entry, cats))) {
     return lock
   }
+  if (marks.traderType === "business") return null
   const paidYear = paidDate(entry)?.slice(0, 4)
   const form5 = paidYear && marks.form5Filed[paidYear]
   if (paidYear && form5)

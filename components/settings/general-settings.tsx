@@ -25,6 +25,7 @@ import {
   setBookPassword,
 } from "@/lib/commands/encryption-commands"
 import { RULES } from "@/lib/domain/rule-tables"
+import type { TraderType } from "@/lib/domain/open-items"
 import type { Lang } from "@/lib/domain/types"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 import { useBookStore } from "@/stores/book-store"
@@ -40,6 +41,7 @@ export function GeneralSettings() {
     <>
       <SettingGrid>
         <BusinessSetting />
+        <TraderTypeSetting />
         <VatPeriodSetting />
         <BookStartSetting />
         <ExportLanguageSetting />
@@ -142,6 +144,70 @@ export function VatPeriodToggle({
       <ToggleGroupItem value="quarter">{f.t("vat.quarter")}</ToggleGroupItem>
       <ToggleGroupItem value="year">{f.t("vat.year")}</ToggleGroupItem>
     </ToggleGroup>
+  )
+}
+
+/** The control alone, so the setup dialog (§8.3) shows the same one. */
+export function TraderTypeToggle({
+  value,
+  onChange,
+}: {
+  value: TraderType
+  onChange: (kind: TraderType) => void
+}) {
+  const f = useFormatters()
+
+  return (
+    <ToggleGroup
+      aria-label={f.t("settings.traderType")}
+      value={[value]}
+      onValueChange={(next) => {
+        const kind = next[0] as TraderType | undefined
+        if (kind) onChange(kind)
+      }}
+    >
+      <ToggleGroupItem value="professional">
+        {f.t("settings.traderProfessional")}
+      </ToggleGroupItem>
+      <ToggleGroupItem value="business">
+        {f.t("settings.traderBusiness")}
+      </ToggleGroupItem>
+    </ToggleGroup>
+  )
+}
+
+/**
+ * Which kind of sole trader keeps the book (§6.3). It decides whether the
+ * income statement and Form 5 read entries by payment date or by their own.
+ */
+function TraderTypeSetting() {
+  const f = useFormatters()
+  const traderType = useBookStore((s) => s.traderType)
+  const setTraderType = useBookStore((s) => s.setTraderType)
+
+  return (
+    <SettingCard
+      label={f.t("settings.traderType")}
+      editor={
+        <>
+          <TraderTypeToggle value={traderType} onChange={setTraderType} />
+          <SettingHint>{f.t("settings.traderTypeHint")}</SettingHint>
+        </>
+      }
+    >
+      <SettingValue
+        value={f.t(
+          traderType === "business"
+            ? "settings.traderBusiness"
+            : "settings.traderProfessional"
+        )}
+        note={f.t(
+          traderType === "business"
+            ? "settings.traderBusinessNote"
+            : "settings.traderProfessionalNote"
+        )}
+      />
+    </SettingCard>
   )
 }
 

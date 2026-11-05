@@ -10,7 +10,11 @@ import {
   type YearEnd,
 } from "@/lib/domain/form5-balance"
 import { incomeStatement } from "@/lib/domain/income-statement"
-import { balancesAt, taxBasisEntries } from "@/lib/domain/open-items"
+import {
+  balancesAt,
+  taxBasisEntries,
+  type TraderType,
+} from "@/lib/domain/open-items"
 import type { RecurringEntry } from "@/lib/domain/recurring"
 import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
 
@@ -32,6 +36,8 @@ export interface NewYearInput {
   yearEnd: Readonly<Record<string, YearEnd>>
   form5Filed: Readonly<Record<string, string>>
   recurring: readonly RecurringEntry[]
+  /** Absent means an ammatinharjoittaja. */
+  traderType?: TraderType
 }
 
 export interface NewYearSummary {
@@ -60,7 +66,7 @@ export interface NewYearSummary {
 export function newYearSummary(input: NewYearInput): NewYearSummary {
   const { entries, cats, year } = input
   const previous = year - 1
-  const basis = taxBasisEntries(entries)
+  const basis = taxBasisEntries(entries, input.traderType)
   const assetPool =
     assetSchedule(entries, cats, input.assetOpening, previous).find(
       (y) => y.year === previous

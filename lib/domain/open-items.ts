@@ -79,11 +79,25 @@ export function balancesAt(
 }
 
 /**
- * The entries as the income statement and Form 5 read them (§6.3). The app
- * treats every user as an ammatinharjoittaja, so each entry is placed on its
- * payment date and an open one is left out.
+ * Which kind of sole trader keeps the book (§6.3). An ammatinharjoittaja is
+ * taxed on payment (EVL 27 a §). A liikkeenharjoittaja has to adjust
+ * single-entry books to accrual basis for tax.
  */
-export function taxBasisEntries(entries: readonly Entry[]): readonly Entry[] {
+export type TraderType = "professional" | "business"
+
+export const TRADER_TYPES: readonly TraderType[] = ["professional", "business"]
+
+/**
+ * The entries as the income statement and Form 5 read them (§6.3). An
+ * ammatinharjoittaja has each entry placed on its payment date and an open one
+ * left out. A liikkeenharjoittaja is read by the entry's own date, paid or not,
+ * which is the accrual adjustment.
+ */
+export function taxBasisEntries(
+  entries: readonly Entry[],
+  trader: TraderType = "professional"
+): readonly Entry[] {
+  if (trader === "business") return entries
   return entries.flatMap((e) => {
     const paid = paidDate(e)
     if (paid === null) return []

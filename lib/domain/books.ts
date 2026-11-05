@@ -6,7 +6,7 @@ import {
 } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
 import { monthOf, yearOf } from "@/lib/domain/dates"
-import { paidDate } from "@/lib/domain/open-items"
+import { paidDate, type TraderType } from "@/lib/domain/open-items"
 import type { Category, Cents, CategoryMap, Entry } from "@/lib/domain/types"
 
 /**
@@ -156,13 +156,16 @@ export interface Reconciliation {
  * (KPL 2:6). The books go by the entry's date, as KPL 2:4 has them, and the
  * statement by the payment date (§6.3), so the two part on exactly the entries
  * paid in a year other than their own. Off-statement lines never reach the
- * statement and are left out.
+ * statement and are left out. A liikkeenharjoittaja's statement goes by the
+ * entry's date too, so nothing crosses.
  */
 export function ledgerReconciliation(
   entries: readonly Entry[],
   cats: CategoryMap,
-  year: number
+  year: number,
+  trader: TraderType = "professional"
 ): Reconciliation {
+  if (trader === "business") return { lines: [], crossings: [] }
   const crossings: CrossingEntry[] = []
   for (const entry of entries) {
     const cat = cats.get(entry.catId)

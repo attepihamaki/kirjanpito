@@ -110,4 +110,24 @@ describe("taxBasisEntries", () => {
       1_064_253
     )
   })
+
+  describe("for a liikkeenharjoittaja", () => {
+    const business = (rows: Entry[], y: number) =>
+      incomeStatement(taxBasisEntries(rows, "business"), cats, y).result
+
+    it("keeps income in the year of the voucher date, however late it is paid", () => {
+      const rows = [sale({ paidOn: "2027-01-10" })]
+      expect(business(rows, 2026)).toBe(100_000)
+      expect(business(rows, 2027)).toBe(0)
+    })
+
+    it("counts an open invoice", () => {
+      expect(business([sale({ paidOn: null })], 2026)).toBe(100_000)
+    })
+
+    it("matches the reference figures", () => {
+      const rows = sampleEntries(createIdFactory("o"))
+      expect(business([...rows], 2026)).toBe(1_064_253)
+    })
+  })
 })

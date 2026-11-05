@@ -529,7 +529,13 @@ function EntryDialogForm({
   const vatFiledMarks = useBookStore((s) => s.vatFiled)
   const yearsArchived = useBookStore((s) => s.yearsArchived)
   const form5Filed = useBookStore((s) => s.form5Filed)
-  const marks = { vatFiled: vatFiledMarks, yearsArchived, form5Filed }
+  const traderType = useBookStore((s) => s.traderType)
+  const marks = {
+    vatFiled: vatFiledMarks,
+    yearsArchived,
+    form5Filed,
+    traderType,
+  }
   // Read-only apart from the payment date (KPL 2:7, §8.11).
   const lock =
     mode === "edit" && editing ? entryLock(editing, marks, catMap) : null

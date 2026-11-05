@@ -74,6 +74,7 @@ function NewYearForm({ year }: { year: number }) {
   const yearEnd = useBookStore((s) => s.yearEnd)
   const form5Filed = useBookStore((s) => s.form5Filed)
   const recurring = useBookStore((s) => s.recurring)
+  const traderType = useBookStore((s) => s.traderType)
   const [step, setStep] = React.useState<Step>("carried")
 
   const summary = React.useMemo(
@@ -87,6 +88,7 @@ function NewYearForm({ year }: { year: number }) {
         yearEnd,
         form5Filed,
         recurring,
+        traderType,
       }),
     [
       entries,
@@ -97,6 +99,7 @@ function NewYearForm({ year }: { year: number }) {
       yearEnd,
       form5Filed,
       recurring,
+      traderType,
     ]
   )
 

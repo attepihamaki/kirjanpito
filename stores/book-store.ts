@@ -36,6 +36,7 @@ import type {
   EntryType,
   Lang,
 } from "@/lib/domain/types"
+import type { TraderType } from "@/lib/domain/open-items"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 import { LANG_STORAGE_KEY, writeLang } from "@/stores/lang-store"
 
@@ -222,6 +223,8 @@ export interface BookState {
   businessName: string | null
   /** How often the user files a VAT return (§6.5). Saved in settings.json. */
   vatPeriod: VatPeriodKind
+  /** Which kind of sole trader keeps the book (§6.3). Saved in settings.json. */
+  traderType: TraderType
   /**
    * `"2026-10"`: the month the bookkeeping began (§8.10). No return is owed
    * for a period that ended before it. Null follows the first entry.
@@ -342,6 +345,7 @@ export interface BookActions {
     businessName: string | null
     businessId: string | null
     vatPeriod: VatPeriodKind
+    traderType: TraderType
     bookStart: string | null
     autosave: boolean
   }): void
@@ -367,6 +371,7 @@ export interface BookActions {
       businessId?: string | null
       businessName?: string | null
       vatPeriod?: VatPeriodKind
+      traderType?: TraderType
       bookStart?: string | null
       vatFiled?: Record<string, string>
       yearsArchived?: Record<string, string>
@@ -427,6 +432,7 @@ export interface BookActions {
    */
   setExportLang(lang: Lang): void
   setVatPeriod(kind: VatPeriodKind): void
+  setTraderType(kind: TraderType): void
   /** `"2026-10"`, or null to follow the first entry. */
   setBusinessId(id: string | null): void
   setBusinessName(name: string | null): void
@@ -496,6 +502,7 @@ function initialState(): BookState {
     businessId: null,
     businessName: null,
     vatPeriod: "month",
+    traderType: "professional",
     bookStart: null,
     vatFiled: {},
     yearsArchived: {},
@@ -556,6 +563,7 @@ type PersistedBook = Pick<
   | "businessId"
   | "businessName"
   | "vatPeriod"
+  | "traderType"
   | "bookStart"
   | "vatFiled"
   | "yearsArchived"
@@ -828,6 +836,7 @@ export const useBookStore = create<BookStore>()(
           businessName: s.businessName ?? null,
           vatPeriod,
           vatIndex: clampVatIndex(get().vatIndex, get().vatPeriod, vatPeriod),
+          traderType: s.traderType ?? "professional",
           bookStart: s.bookStart ?? null,
           vatFiled: s.vatFiled ?? {},
           yearsArchived: s.yearsArchived ?? {},
@@ -983,6 +992,7 @@ export const useBookStore = create<BookStore>()(
           vatIndex: clampVatIndex(get().vatIndex, get().vatPeriod, vatPeriod),
           dirty: true,
         }),
+      setTraderType: (traderType) => set({ traderType, dirty: true }),
       setBusinessId: (businessId) => set({ businessId, dirty: true }),
       setBusinessName: (businessName) => set({ businessName, dirty: true }),
       setBookStart: (bookStart) => set({ bookStart, dirty: true }),
@@ -1144,6 +1154,7 @@ export const useBookStore = create<BookStore>()(
         businessId: s.businessId,
         businessName: s.businessName,
         vatPeriod: s.vatPeriod,
+        traderType: s.traderType,
         bookStart: s.bookStart,
         vatFiled: s.vatFiled,
         yearsArchived: s.yearsArchived,

@@ -1559,6 +1559,10 @@ export const APP_DICT = {
     "Poistot (337) vähennetään Poistot-sivun enimmäismäärään asti, joten 338 on enintään yhtä suuri kuin 337. Korkokulut (346) on laskettu kokonaan vähennyskelpoisiksi, joten 347 on sama summa. Jos osa koroista ei ole vähennyskelpoista, muuta kohtaa OmaVerossa, jolloin myös 355 ja tulos muuttuvat.",
     "Depreciation (337) is deducted up to the maximum on the Depreciation page, so 338 is at most 337. Interest expenses (346) are counted as fully deductible, so 347 is the same amount. If part of the interest is not deductible, change that field in OmaVero, and 355 and the result change with it.",
   ],
+  "statement.accrualNote": [
+    "Liikkeenharjoittajan suoriteperuste: tulot ja kulut ovat tositteen päivän mukaan, maksettuina tai avoimina. Myyntisaamiset {d}: {r}. Ostovelat {d}: {p}.",
+    "A liikkeenharjoittaja’s accrual basis: income and expenses go by voucher date, paid or open. Receivables on {d}: {r}. Payables on {d}: {p}.",
+  ],
   "statement.cashNote": [
     "Ammatinharjoittajan maksuperuste (EVL 27 a §): tulot ja kulut ovat maksupäivän mukaan, eikä avoimia tositteita ole mukana. Myyntisaamiset {d}: {r}. Ostovelat {d}: {p}.",
     "An ammatinharjoittaja’s cash basis (EVL 27 a §): income and expenses go by payment date, and open vouchers are left out. Receivables on {d}: {r}. Payables on {d}: {p}.",
@@ -2124,6 +2128,21 @@ export const APP_DICT = {
   "settings.exportLangHint": [
     "Kieli, jolla kirjanpito tallennetaan: tiedoston nimi, CSV:n sarakkeet ja arvot sekä liitekansio. Summat, päivämäärät ja erotin pysyvät samoina molemmilla kielillä.",
     "The language the bookkeeping is saved in: the file name, the CSV’s columns and values, and the attachment folder. Amounts, dates and the separator stay the same in both languages.",
+  ],
+  "settings.traderType": ["Elinkeinonharjoittajan tyyppi", "Type of sole trader"],
+  "settings.traderProfessional": ["Ammatinharjoittaja", "Professional"],
+  "settings.traderBusiness": ["Liikkeenharjoittaja", "Business trader"],
+  "settings.traderTypeHint": [
+    "Ammatinharjoittaja (esimerkiksi konsultti tai freelancer) verotetaan maksuperusteisesti: tulo ja meno kuuluvat sille vuodelle, jona ne maksetaan. Liikkeenharjoittaja (esimerkiksi kauppias tai valmistaja) verotetaan suoriteperusteisesti: tulo ja meno kuuluvat tositteen päivän mukaiselle vuodelle, vaikka maksu tulisi myöhemmin. Jos et tiedä kumpi olet, tarkista asia Verohallinnolta tai tilitoimistolta.",
+    "A professional (for example a consultant or freelancer) is taxed on payment: income and costs belong to the year they are paid. A business trader (for example a shopkeeper or manufacturer) is taxed on accrual: income and costs belong to the year of the voucher date, even when payment comes later. If you do not know which you are, ask Verohallinto or an accountant.",
+  ],
+  "settings.traderProfessionalNote": [
+    "Tuloslaskelma ja lomake 5 lukevat tositteet maksupäivän mukaan.",
+    "The income statement and Form 5 read vouchers by payment date.",
+  ],
+  "settings.traderBusinessNote": [
+    "Tuloslaskelma ja lomake 5 lukevat tositteet tositteen päivän mukaan, maksettuina tai avoimina.",
+    "The income statement and Form 5 read vouchers by voucher date, paid or open.",
   ],
   "settings.vatPeriod": ["ALV-ilmoitusjakso", "VAT reporting period"],
   "settings.vatPeriodHint": [
