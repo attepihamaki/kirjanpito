@@ -2199,6 +2199,17 @@ export const APP_DICT = {
       " {n} columns were not recognised and were not read: {c}."
     ),
   ],
+  /* A split row whose other parts are not in the file stands alone. */
+  "io.splitDissolved": [
+    pl(
+      " Yksi jaetun kuitin osa jäi ilman muita osia ja on tavallinen tosite.",
+      " {n} jaetun kuitin osaa jäi ilman muita osia ja ovat tavallisia tositteita."
+    ),
+    pl(
+      " One part of a split receipt had no other parts in the file and is now an ordinary voucher.",
+      " {n} parts of split receipts had no other parts in the file and are now ordinary vouchers."
+    ),
+  ],
   "io.noRows": [
     "Yhtään riviä ei voitu lukea. {e}",
     "No rows could be read. {e}",

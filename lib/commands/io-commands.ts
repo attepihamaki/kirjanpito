@@ -106,6 +106,8 @@ function importSummary(
       c: unknown.columns.join(", "),
     })
   }
+  const dissolved = result.warnings.find((w) => w.code === "split-dissolved")
+  if (dissolved) text += ctx.t("io.splitDissolved", { n: dissolved.rows })
   if (result.skipped.length) {
     const first = result.skipped
       .slice(0, 3)

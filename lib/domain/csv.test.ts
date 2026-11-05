@@ -71,10 +71,10 @@ describe("serializeCsv", () => {
   it("starts with a BOM and the exact header of its language", () => {
     expect(out.startsWith(`﻿${csvHeaderLine("fi")}\r\n`)).toBe(true)
     expect(csvHeaderLine("fi")).toBe(
-      "tositenro;päivämäärä;selite;tyyppi;tili;luokka;summa;alv;verollisuus;liitteet;verokausi;maksettu;ostajan_alv;eu_osto;käteinen"
+      "tositenro;päivämäärä;selite;tyyppi;tili;luokka;summa;alv;verollisuus;liitteet;verokausi;maksettu;ostajan_alv;eu_osto;käteinen;jaettu"
     )
     expect(HEADER).toBe(
-      "voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase;cash"
+      "voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase;cash;split"
     )
   })
 
@@ -917,7 +917,7 @@ describe("VAT settlements", () => {
   it("writes and reads back the period a payment settles", () => {
     const text = serializeCsv([payment], cats)
     expect(text).toContain(
-      ";2939;Arvonlisäveron maksu;362,18;0;brutto;;2026-10;;;;\r\n"
+      ";2939;Arvonlisäveron maksu;362,18;0;brutto;;2026-10;;;;;\r\n"
     )
 
     const back = ok(parseCsv(text, baseCats)).entries[0]
@@ -1221,7 +1221,7 @@ describe("cash column", () => {
     ok(parseCsv(serializeCsv([e], cats, { lang }), baseCats)).entries[0]
 
   it("round-trips in both languages", () => {
-    expect(serializeCsv([entry({ cash: true })], cats)).toContain(";kyllä\r\n")
+    expect(serializeCsv([entry({ cash: true })], cats)).toContain(";kyllä;\r\n")
     expect(back(entry({ cash: true })).cash).toBe(true)
     expect(back(entry({ cash: true }), "en").cash).toBe(true)
     expect(back(entry({})).cash).toBeUndefined()
@@ -1232,6 +1232,100 @@ describe("cash column", () => {
     expect(
       back(entry({ cash: true, catId: "337", vatRate: 0 })).cash
     ).toBeUndefined()
+  })
+})
+
+describe("split column", () => {
+  const part = (
+    id: string,
+    voucher: number,
+    over: Partial<Entry> = {}
+  ): Entry => ({
+    id,
+    voucher,
+    date: "2026-03-10",
+    description: "Kuitti",
+    type: "expense",
+    catId: "333",
+    amount: 1_990,
+    vatRate: 25.5,
+    amountMode: "gross",
+    split: "g1",
+    ...over,
+  })
+  const read = (entries: Entry[], lang: "fi" | "en" = "fi") =>
+    ok(parseCsv(serializeCsv(entries, cats, { lang }), baseCats))
+
+  it("writes the first part's voucher number on every part", () => {
+    const text = serializeCsv([part("a", 4), part("b", 5)], cats)
+    const rows = text.split("\r\n").filter(Boolean).slice(1)
+    expect(rows.map((r) => r.split(";").pop())).toEqual(["4", "4"])
+  })
+
+  it("links the parts again on import, in both languages", () => {
+    for (const lang of ["fi", "en"] as const) {
+      const [a, b] = read([part("a", 4), part("b", 5)], lang).entries
+      expect(a.split).toBeDefined()
+      expect(b.split).toBe(a.split)
+    }
+  })
+
+  it("keeps two splits in one year apart", () => {
+    const parts = [
+      part("a", 4),
+      part("b", 5),
+      part("c", 6, { split: "g2" }),
+      part("d", 7, { split: "g2" }),
+    ]
+    const [a, b, c, d] = read(parts).entries
+    expect(a.split).toBe(b.split)
+    expect(c.split).toBe(d.split)
+    expect(a.split).not.toBe(c.split)
+  })
+
+  it("leaves an ordinary entry without a split", () => {
+    const [x] = read([part("a", 4, { split: undefined })]).entries
+    expect(x.split).toBeUndefined()
+  })
+
+  it("does not write a group of one or a group whose first part has no number", () => {
+    const lone = serializeCsv([part("a", 4)], cats)
+    const unnumbered = serializeCsv(
+      [part("a", 4, { voucher: undefined }), part("b", 5)],
+      cats
+    )
+    for (const text of [lone, unnumbered]) {
+      const rows = text.split("\r\n").filter(Boolean).slice(1)
+      expect(rows.every((r) => r.endsWith(";"))).toBe(true)
+    }
+  })
+
+  it("does not link a part dated in another year than the first", () => {
+    const parts = [part("a", 4), part("b", 5, { date: "2027-01-02" })]
+    const result = read(parts)
+    expect(result.entries.every((e) => e.split === undefined)).toBe(true)
+  })
+
+  it("stands a row alone when no other row holds its number, and says so", () => {
+    const text = serializeCsv([part("a", 4), part("b", 5)], cats).replace(
+      /;4\r\n$/,
+      ";9\r\n"
+    )
+    const result = ok(parseCsv(text, baseCats))
+    expect(result.entries.every((e) => e.split === undefined)).toBe(true)
+    expect(result.warnings).toContainEqual({ code: "split-dissolved", rows: 2 })
+  })
+
+  it("ignores a cell that is not a number", () => {
+    const text = serializeCsv([part("a", 4), part("b", 5)], cats).replace(
+      /;4\r\n/g,
+      ";x\r\n"
+    )
+    const result = ok(parseCsv(text, baseCats))
+    expect(result.entries.every((e) => e.split === undefined)).toBe(true)
+    expect(result.warnings.some((w) => w.code === "split-dissolved")).toBe(
+      false
+    )
   })
 })
 

@@ -431,8 +431,8 @@ category names, the ZIP's suggested name, the CSV's name and the receipt folder
 (§7.2) — and nothing else.
 
 - **Header row**, always these columns in this order, in one of two spellings:
-  - fi: `tositenro;päivämäärä;selite;tyyppi;tili;luokka;summa;alv;verollisuus;liitteet;verokausi;maksettu;ostajan_alv;eu_osto;käteinen`
-  - en: `voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase;cash`
+  - fi: `tositenro;päivämäärä;selite;tyyppi;tili;luokka;summa;alv;verollisuus;liitteet;verokausi;maksettu;ostajan_alv;eu_osto;käteinen;jaettu`
+  - en: `voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase;cash;split`
 - **`lib/domain/csv-header.ts` is the one place a column name is spelled.** The
   English names are the canonical ones the parser works in; `FINNISH_LABELS`
   gives the Finnish spelling of each, `csvHeaderLine(lang)` builds a header and
@@ -462,6 +462,7 @@ category names, the ZIP's suggested name, the CSV's name and the receipt folder
   - `paid` is the payment date when it is not the entry's own, `avoin` / `open` while the entry is open, and otherwise empty (§6.3).
   - `buyer_vat` is the buyer's VAT number on an EU sale (§8.7), empty on every other row.
   - `cash` is `kyllä` / `yes` on an entry paid in cash (§8.5), empty on every other row. Reading also takes `käteinen`, `cash` and `x`, and keeps it only on a paid entry on a line that can be paid.
+  - `split` is the voucher number of the first part of a receipt that was split, on every part of it (§8.4), and empty on every other row. A voucher number is unique within a year, so the import links rows by year and number. A part dated in another year than the first, a group whose first part has no number and a group of one are not written. On import a number only one row holds links nothing: the row stands alone and the toast says so. A cell that is not a whole number is ignored. `Entry.split` itself is an opaque id and renumbering does not touch it.
   - `eu_purchase` is `tavara`/`palvelu` or `goods`/`services` on an EU purchase (§6.9), empty on every other row. A CSV opened on its own has no `settings.json`, so this is what tells a custom EU category it is one. A row marked on any other category moves to an EU category when the book opens.
   - Rows are sorted by date, then by voucher number. Nothing about the format depends on the **UI** language, only on the book's.
   - **A text cell that Excel would run as a formula gets a leading apostrophe.** That is `description`, `category` or `receipts` starting with `=`, `+`, `-`, `@`, a tab or a carriage return. A value that already starts with apostrophes before one of those gets one more, and the import takes exactly one off, so every value round-trips. The amount and rate columns are left alone, so a negative amount stays a number. Excel may show the apostrophe in the cell.

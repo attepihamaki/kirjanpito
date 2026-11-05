@@ -188,6 +188,8 @@ export function serializeCsv(
       a.date.localeCompare(b.date) || (a.voucher ?? 0) - (b.voucher ?? 0)
   )
 
+  const splitKeys = splitColumnValues(sorted)
+
   for (const e of sorted) {
     const cat = cats.get(e.catId)
     const line = cat ? LINE_BY_KEY.get(cat.line) : undefined
@@ -218,6 +220,7 @@ export function serializeCsv(
         defuseFormula(e.buyerVatId ?? ""),
         e.euPurchase ? EU_PURCHASE_TO_CSV[lang][e.euPurchase] : "",
         e.cash ? CASH_TO_CSV[lang] : "",
+        splitKeys.get(e.id) ?? "",
       ]
         .map(quote)
         .join(";")
@@ -225,6 +228,33 @@ export function serializeCsv(
   }
 
   return "﻿" + lines.join("\r\n") + "\r\n"
+}
+
+/**
+ * The `split` cell of each entry that is one of several parts of a receipt:
+ * the voucher number of the group's first part (§8.4). A voucher number is
+ * unique within a year, so a part dated in another year than the first, a group
+ * whose first part has no number and a group of one are left out; they come
+ * back as ordinary entries.
+ */
+function splitColumnValues(sorted: readonly Entry[]): Map<string, string> {
+  const groups = new Map<string, Entry[]>()
+  for (const e of sorted) {
+    if (e.split === undefined) continue
+    const members = groups.get(e.split)
+    if (members) members.push(e)
+    else groups.set(e.split, [e])
+  }
+  const out = new Map<string, string>()
+  for (const members of groups.values()) {
+    const [first] = members
+    if (!isVoucherNumber(first.voucher)) continue
+    const year = yearOf(first.date)
+    const parts = members.filter((e) => yearOf(e.date) === year)
+    if (parts.length < 2) continue
+    for (const e of parts) out.set(e.id, String(first.voucher))
+  }
+  return out
 }
 
 /* -------------------------------------------------------------------------
@@ -321,6 +351,8 @@ export type ImportWarning =
   | { code: "new-category"; line: number; catId: string; name: string }
   /** Header cells this app does not know, so their columns were not read. */
   | { code: "unknown-columns"; columns: readonly string[] }
+  /** Rows whose `split` value no other row of their year shared, so they stand alone. */
+  | { code: "split-dissolved"; rows: number }
 
 export type ImportFailure =
   | { ok: false; code: "empty-file" }
@@ -430,6 +462,8 @@ export function parseCsv(
   const entries: ImportedEntry[] = []
   const skipped: SkippedRow[] = []
   const warnings: ImportWarning[] = []
+  /* Each entry's `split` cell as a year and number, in step with `entries`. */
+  const splitKeysRead: (string | null)[] = []
   let newCategoryCount = 0
   let rejectedReceiptCount = 0
   let latestYear: number | null = null
@@ -529,9 +563,17 @@ export function parseCsv(
       ...euPurchaseColumn(get("eu_purchase"), cat),
     })
 
+    const splitRaw = get("split")
+    splitKeysRead.push(
+      /^\d+$/.test(splitRaw) ? `${yearOf(date)}:${Number(splitRaw)}` : null
+    )
+
     const y = yearOf(date)
     if (latestYear == null || y > latestYear) latestYear = y
   }
+
+  const dissolved = linkSplits(entries, splitKeysRead, makeId)
+  if (dissolved) warnings.push({ code: "split-dissolved", rows: dissolved })
 
   /*
    * Rows that were all bad are a failure. No rows at all is a bookkeeping with
@@ -555,6 +597,38 @@ export function parseCsv(
     latestYear,
     delimiter,
   }
+}
+
+/**
+ * Give the entries that share a `split` value in one year a common group id.
+ * A value only one row holds links nothing, so that row stands alone; the
+ * count of such rows is returned for the import to report.
+ */
+function linkSplits(
+  entries: ImportedEntry[],
+  keys: readonly (string | null)[],
+  makeId: () => string
+): number {
+  const sizes = new Map<string, number>()
+  for (const key of keys) {
+    if (key !== null) sizes.set(key, (sizes.get(key) ?? 0) + 1)
+  }
+  const ids = new Map<string, string>()
+  let dissolved = 0
+  keys.forEach((key, i) => {
+    if (key === null) return
+    if ((sizes.get(key) ?? 0) < 2) {
+      dissolved += 1
+      return
+    }
+    let id = ids.get(key)
+    if (id === undefined) {
+      id = makeId()
+      ids.set(key, id)
+    }
+    entries[i].split = id
+  })
+  return dissolved
 }
 
 /**
