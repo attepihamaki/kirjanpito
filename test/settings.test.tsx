@@ -200,6 +200,29 @@ describe("editing and deleting a custom category", () => {
     expect(useBookStore.getState().dialog.kind).toBe("none")
   })
 
+  it("sets the VAT return row of a new sales category", async () => {
+    const user = userEvent.setup()
+    setup()
+    act(() => useBookStore.getState().openDialog({ kind: "category-add" }))
+    await user.click(await screen.findByRole("button", { name: "Tulo" }))
+    await user.type(document.getElementById("cat-name")!, "Konsultointi EU")
+    await user.click(
+      (
+        await screen.findAllByRole("combobox", { name: "ALV-ilmoituksen rivi" })
+      ).at(-1)!
+    )
+    await user.click(
+      await screen.findByRole("option", {
+        name: "Myynti EU:hun, palvelut",
+      })
+    )
+    await user.click(screen.getByRole("button", { name: "Tallenna" }))
+
+    expect(
+      useBookStore.getState().cats.find((c) => c.name === "Konsultointi EU")
+    ).toMatchObject({ line: "300", kind: "euServices" })
+  })
+
   it("keeps the add dialog open on an empty name", async () => {
     const user = userEvent.setup()
     setup()

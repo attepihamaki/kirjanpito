@@ -127,7 +127,10 @@ export const APP_DICT = {
     "The open bookkeeping has changes that haven’t been saved. The file you open will replace them.",
   ],
   "confirm.replaceConfirm": ["Korvaa", "Replace"],
-  "confirm.deleteBookTitle": ["Poistetaanko kirjanpito?", "Delete the bookkeeping?"],
+  "confirm.deleteBookTitle": [
+    "Poistetaanko kirjanpito?",
+    "Delete the bookkeeping?",
+  ],
   "confirm.deleteBookMessage": [
     "Tositteet, liitteet ja asetukset poistetaan tästä selaimesta pysyvästi, eikä poistoa voi perua. Lataa kirjanpito tiedostoksi ensin, jos haluat säilyttää sen.",
     "The vouchers, attachments and settings are removed from this browser for good, and there is no undoing it. Download the bookkeeping as a file first if you want to keep it.",
@@ -1984,6 +1987,25 @@ export const APP_DICT = {
   "settings.lineLocked": [
     "Tositteet käyttävät tätä luokkaa, joten sen riviä ei voi vaihtaa. Lisää uusi luokka ja poista tämä, jolloin tositteet siirtyvät sinne.",
     "Vouchers use this category, so its line can’t change. Add a new category and delete this one, which moves the vouchers there.",
+  ],
+  "settings.vatRow": ["ALV-ilmoituksen rivi", "VAT return row"],
+  "settings.vatRowDomestic": [
+    "Kotimaan myynti (verokannan mukaan)",
+    "Domestic sales (by VAT rate)",
+  ],
+  "settings.vatRowEuGoods": [
+    "Myynti EU:hun, tavarat",
+    "Sales to the EU, goods",
+  ],
+  "settings.vatRowEuServices": [
+    "Myynti EU:hun, palvelut",
+    "Sales to the EU, services",
+  ],
+  "settings.vatRowNonEu": ["Myynti EU:n ulkopuolelle", "Sales outside the EU"],
+  "settings.vatRowReverse": ["Käänteinen verotus", "Reverse charge"],
+  "settings.vatRowLocked": [
+    "Tositteet käyttävät tätä luokkaa, joten sen ALV-riviä ei voi vaihtaa. Lisää uusi luokka ja poista tämä, jolloin tositteet siirtyvät sinne.",
+    "Vouchers use this category, so its VAT row can’t change. Add a new category and delete this one, which moves the vouchers there.",
   ],
   "settings.nameTaken": [
     "Tilillä {a} on jo tämän niminen luokka.",

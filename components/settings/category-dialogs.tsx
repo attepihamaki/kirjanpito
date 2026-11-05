@@ -28,7 +28,12 @@ import { GENERAL_RATE, LINE_BY_KEY, LINES } from "@/lib/domain/accounts"
 import { categoryNameTaken } from "@/lib/domain/category-names"
 import { todayIso } from "@/lib/domain/dates"
 import { uid } from "@/lib/domain/id"
-import type { Category, EntryType, EuPurchase } from "@/lib/domain/types"
+import type {
+  Category,
+  EntryType,
+  EuPurchase,
+  SalesKind,
+} from "@/lib/domain/types"
 import { validRates } from "@/lib/domain/vat-rates"
 import { useBookStore } from "@/stores/book-store"
 import {
@@ -36,6 +41,15 @@ import {
   categorySide,
   compareCategories,
 } from "@/stores/selectors"
+
+/** The VAT return rows a sale on line 300 can report to, with their labels. */
+const VAT_ROW_OPTIONS = [
+  ["domestic", "settings.vatRowDomestic"],
+  ["euGoods", "settings.vatRowEuGoods"],
+  ["euServices", "settings.vatRowEuServices"],
+  ["nonEu", "settings.vatRowNonEu"],
+  ["reverse", "settings.vatRowReverse"],
+] as const
 
 /**
  * A category's default VAT: the rates in force today. A rate the category
@@ -116,6 +130,9 @@ function CategoryFormDialog({
     cat ? s.entries.some((e) => e.catId === cat.id) : false
   )
 
+  /* Moving a voucher between return rows would shift a filed period (§8.11). */
+  const kindFixed = lineFixed
+
   const [side, setSide] = React.useState<EntryType>(
     (cat && categorySide(cat)) || "expense"
   )
@@ -124,6 +141,9 @@ function CategoryFormDialog({
   // Null until picked, so a new category's rate can follow the EU choice below.
   const [rateChoice, setRate] = React.useState<number | null>(
     cat ? cat.vatRate : null
+  )
+  const [kindChoice, setKind] = React.useState<SalesKind>(
+    cat?.kind ?? "domestic"
   )
   const [eu, setEu] = React.useState<EuPurchase | "">("")
   const [error, setError] = React.useState<string | null>(null)
@@ -142,8 +162,22 @@ function CategoryFormDialog({
       ? lineChoice
       : (lineOptions[0]?.key ?? "")
 
+  /*
+   * The VAT return row is a choice on line 300 only: income on any other line
+   * is not turnover, so it stays domestic. The retired "eu" kind is kept as it
+   * is, not offered.
+   */
+  const showKind = side === "income" && line === "300"
+  const kind: SalesKind = showKind ? kindChoice : "domestic"
+
   const euPurchase = !cat && side === "expense" && eu ? eu : undefined
-  const rate = rateChoice ?? (euPurchase ? GENERAL_RATE : 0)
+  /*
+   * An EU, non-EU or reverse-charge sale is reported at 0 %, and an EU
+   * purchase at the general rate, so the rate is not asked for.
+   */
+  const foreignSale = showKind && kind !== "domestic"
+  const rateHidden = foreignSale || !!euPurchase || !!cat?.euPurchase
+  const rate = foreignSale ? 0 : (rateChoice ?? (euPurchase ? GENERAL_RATE : 0))
 
   const submit = () => {
     const trimmed = name.trim()
@@ -161,7 +195,13 @@ function CategoryFormDialog({
       return
     }
     if (cat) {
-      upsertCategory({ ...cat, name: trimmed, line, vatRate: rate })
+      upsertCategory({
+        ...cat,
+        name: trimmed,
+        line,
+        vatRate: rate,
+        ...(side === "income" ? { kind: kindFixed ? cat.kind : kind } : {}),
+      })
       toast.add({ title: f.t("settings.categoryUpdated", { c: trimmed }) })
     } else {
       upsertCategory({
@@ -169,7 +209,7 @@ function CategoryFormDialog({
         line,
         name: trimmed,
         vatRate: rate,
-        ...(side === "income" ? { kind: "domestic" as const } : {}),
+        ...(side === "income" ? { kind } : {}),
         ...(euPurchase ? { euPurchase } : {}),
         enabled: true,
         custom: true,
@@ -228,10 +268,26 @@ function CategoryFormDialog({
             ) : null}
           </Field>
 
-          <Field>
-            <FieldLabel>{f.t("settings.defaultVat")}</FieldLabel>
-            <DefaultVatSelect value={rate} onChange={setRate} />
-          </Field>
+          {showKind ? (
+            <Field>
+              <FieldLabel>{f.t("settings.vatRow")}</FieldLabel>
+              <OptionSelect
+                options={VAT_ROW_OPTIONS.map(([value, key]) => ({
+                  value,
+                  label: f.t(key),
+                }))}
+                value={kindChoice === "eu" ? "domestic" : kindChoice}
+                onChange={(value) => setKind(value as SalesKind)}
+                label={f.t("settings.vatRow")}
+                disabled={kindFixed}
+              />
+              {kindFixed ? (
+                <FieldDescription>
+                  {f.t("settings.vatRowLocked")}
+                </FieldDescription>
+              ) : null}
+            </Field>
+          ) : null}
 
           {!cat && side === "expense" ? (
             <Field>
@@ -250,6 +306,13 @@ function CategoryFormDialog({
               />
             </Field>
           ) : null}
+
+          {rateHidden ? null : (
+            <Field>
+              <FieldLabel>{f.t("settings.defaultVat")}</FieldLabel>
+              <DefaultVatSelect value={rate} onChange={setRate} />
+            </Field>
+          )}
 
           <FieldError>{error}</FieldError>
         </div>

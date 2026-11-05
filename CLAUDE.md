@@ -874,6 +874,7 @@ On **Luokat**:
   - Type, adding only: the same `EntryTypeToggle` the entry dialog uses, Tulo before Kulu, coloured when selected. Editing fixes the side.
   - Name (required), focused first.
   - Income statement line, filtered by type. Fixed once an entry uses the category (below).
+  - "ALV-ilmoituksen rivi", income on line 300 only: Kotimaan myynti, EU goods, EU services, outside the EU or reverse charge, which sets `Category.kind` and so the row of the VAT return (§8.7) and the EC Sales List. Fixed once an entry uses the category, like the line.
   - Default VAT %, a select of the rates in force today (`validRates`, §5), plus the rate the category already holds. A new category starts at 0, or 25,5 on an EU purchase.
   - "Osto muusta EU-maasta" (Ei / Kyllä, tavara / Kyllä, palvelu), adding on the expense side only (§6.9). It is fixed once the category exists.
   - New income categories get `kind: "domestic"`.
