@@ -1640,7 +1640,10 @@ export const APP_DICT = {
   "balance.statAssets": ["Syötetyt varat", "Assets entered"],
   "balance.statDebts": ["Syötetyt velat", "Liabilities entered"],
   "balance.statStock": ["Varaston muutos", "Change in stock"],
-  "balance.statHint": ["Ei sisällä tositteista laskettua", "Excludes what the vouchers add"],
+  "balance.statHint": [
+    "Ei sisällä tositteista laskettua",
+    "Excludes what the vouchers add",
+  ],
   "balance.locked": ["Lukittu", "Locked"],
   "balance.stockOpening": ["Varasto vuoden alussa", "Stock at start of year"],
   "balance.stockClosing": ["Varasto vuoden lopussa", "Stock at end of year"],
@@ -1888,6 +1891,45 @@ export const APP_DICT = {
     "Kuinka usein annat arvonlisäveroilmoituksen. Yleiskatsauksen eräpäivät lasketaan tämän mukaan.",
     "How often you file a VAT return. The due dates on the overview follow it.",
   ],
+  "settings.filing": ["ALV-ilmoitukset", "VAT returns"],
+  "settings.change": ["Muuta", "Change"],
+  "settings.done": ["Valmis", "Done"],
+  "settings.notSet": ["Ei asetettu", "Not set"],
+  "settings.moreActions": ["Lisää toimintoja", "More actions"],
+  "settings.businessIdLine": ["Y-tunnus {id}", "Business ID {id}"],
+  "settings.vatPeriodNote": [
+    "Määrää yleiskatsauksen eräpäivät.",
+    "Sets the due dates on the overview.",
+  ],
+  "settings.bookStartNote": [
+    "Ei ALV-ilmoitusta sitä aiemmilta jaksoilta",
+    "No VAT return for earlier periods",
+  ],
+  "settings.bookStartNoteNone": [
+    "Ilmoitukset lasketaan ensimmäisestä tositteesta",
+    "Returns are counted from the first voucher",
+  ],
+  "settings.exportLangNote": [
+    "Nimi, sarakkeet ja liitekansio",
+    "File name, columns and attachment folder",
+  ],
+  "settings.autosaveOn": ["Automaattinen", "Automatic"],
+  "settings.autosaveOff": ["Manuaalinen", "Manual"],
+  "settings.autosaveOnNote": [
+    "Tallentuu muutaman sekunnin kuluttua",
+    "Saves a few seconds after a change",
+  ],
+  "settings.autosaveOffNote": [
+    "Tallennat itse tiedostovalikosta",
+    "You save from the file menu",
+  ],
+  "settings.vouchersOk": ["Järjestyksessä", "In order"],
+  "settings.vouchersOutValue": [
+    pl("1 numero uusittavana", "{n} numeroa uusittavana"),
+    pl("1 number to renumber", "{n} numbers to renumber"),
+  ],
+  "settings.vouchersYear": ["Vuosi {year}", "Year {year}"],
+  "settings.renumberShort": ["Numeroi", "Renumber"],
   "settings.business": ["Yrityksen tiedot", "Business details"],
   "settings.businessHint": [
     "Nimi ja y-tunnus näkyvät tuloslaskelman, päiväkirjan, pääkirjan ja tililuettelon otsikossa ja tallentuvat tiedostoon.",
@@ -1993,24 +2035,6 @@ export const APP_DICT = {
     "Default categories restored.",
   ],
   "settings.vouchers": ["Tositenumerot", "Voucher numbers"],
-  "settings.vouchersHint": [
-    "Tosite pitää numeronsa, vaikka sen päivä muuttuisi tai väliin lisättäisiin tosite. Uudelleennumerointi antaa vuoden tositteille numerot 1:stä alkaen päivämääräjärjestyksessä ja poistaa aukot.",
-    "A voucher keeps its number when its date changes or an earlier voucher is added. Renumbering gives the year’s vouchers numbers from 1 in date order and closes the gaps.",
-  ],
-  "settings.vouchersInOrder": [
-    "Vuoden {year} tositenumerot ovat jo päivämääräjärjestyksessä.",
-    "The voucher numbers of {year} are already in date order.",
-  ],
-  "settings.vouchersOutOfOrder": [
-    pl(
-      "Uudelleennumerointi muuttaisi vuodelta {year} 1 tositteen numeron.",
-      "Uudelleennumerointi muuttaisi vuodelta {year} {n} tositteen numeron."
-    ),
-    pl(
-      "Renumbering would change the number of 1 voucher in {year}.",
-      "Renumbering would change the numbers of {n} vouchers in {year}."
-    ),
-  ],
   "settings.renumber": ["Numeroi vuosi {year} uudelleen", "Renumber {year}"],
   "settings.renumbered": [
     pl("1 tositenumero muutettu.", "{n} tositenumeroa muutettu."),
@@ -2021,10 +2045,6 @@ export const APP_DICT = {
     "Voucher numbers restored.",
   ],
   "settings.clearEntries": ["Tyhjennä tositteet", "Clear all vouchers"],
-  "settings.clearHint": [
-    "Poistaa kaikki tositteet tästä selaimesta. Vie ne ensin CSV-tiedostoksi, jos haluat säilyttää ne.",
-    "Removes every voucher from this browser. Export them to CSV first if you want to keep them.",
-  ],
   "settings.cleared": ["Tositteet tyhjennetty.", "Vouchers cleared."],
   "settings.restored": ["Tositteet palautettu.", "Vouchers restored."],
 
@@ -2203,11 +2223,6 @@ export const APP_DICT = {
     "See what carries over from the year before, copy the year-end figures as starting values and review the recurring vouchers.",
   ],
   "newYear.open": ["Aloita vuosi {y}", "Open year {y}"],
-  "newYear.panelTitle": ["Uusi vuosi", "New year"],
-  "newYear.panelHint": [
-    "Katso, mitä vuodelle {y} siirtyy, kopioi tilinpäätöslukujen lähtöarvot ja tarkista toistuvat tositteet. Ehdotettu vuosi vaihtuu seuraavaan marraskuussa.",
-    "See what carries into {y}, copy the year-end figures and review the recurring vouchers. The suggested year moves on in November.",
-  ],
   "newYear.steps": ["Vaiheet", "Steps"],
   "newYear.stepCarried": ["Siirtyy", "Carried over"],
   "newYear.stepFigures": ["Luvut", "Figures"],

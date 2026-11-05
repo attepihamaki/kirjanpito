@@ -2,7 +2,11 @@
 
 import * as React from "react"
 
-import { Panel } from "@/components/common/panel"
+import {
+  SettingCard,
+  SettingHint,
+  SettingValue,
+} from "@/components/common/setting-card"
 import { useFormatters } from "@/components/lang-provider"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
@@ -46,42 +50,55 @@ export function BusinessSetting() {
   }
 
   return (
-    <Panel
-      title={f.t("settings.business")}
-      description={f.t("settings.businessHint")}
-      bodyClassName="flex flex-col gap-4 p-4"
-    >
-      <Field>
-        <FieldLabel htmlFor={nameId}>{f.t("settings.businessName")}</FieldLabel>
-        <Input
-          id={nameId}
-          className="max-w-md"
-          autoComplete="organization"
-          value={nameDraft}
-          onChange={(e) => setNameDraft(e.target.value)}
-          onBlur={commitName}
-        />
-      </Field>
+    <SettingCard
+      label={f.t("settings.business")}
+      editor={
+        <div className="flex flex-col gap-3">
+          <Field>
+            <FieldLabel htmlFor={nameId}>
+              {f.t("settings.businessName")}
+            </FieldLabel>
+            <Input
+              id={nameId}
+              autoComplete="organization"
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              onBlur={commitName}
+            />
+          </Field>
 
-      <Field>
-        <FieldLabel htmlFor={idId}>{f.t("common.businessId")}</FieldLabel>
-        <Input
-          id={idId}
-          aria-invalid={idInvalid || undefined}
-          className="tabular w-56"
-          placeholder="1234567-1"
-          autoComplete="off"
-          value={idDraft}
-          onChange={(e) => {
-            setIdDraft(e.target.value)
-            setIdInvalid(false)
-          }}
-          onBlur={commitId}
-        />
-        <FieldError>
-          {idInvalid ? f.t("settings.businessIdInvalid") : undefined}
-        </FieldError>
-      </Field>
-    </Panel>
+          <Field>
+            <FieldLabel htmlFor={idId}>{f.t("common.businessId")}</FieldLabel>
+            <Input
+              id={idId}
+              aria-invalid={idInvalid || undefined}
+              className="tabular w-40"
+              placeholder="1234567-1"
+              autoComplete="off"
+              value={idDraft}
+              onChange={(e) => {
+                setIdDraft(e.target.value)
+                setIdInvalid(false)
+              }}
+              onBlur={commitId}
+            />
+            <FieldError>
+              {idInvalid ? f.t("settings.businessIdInvalid") : undefined}
+            </FieldError>
+          </Field>
+          <SettingHint>{f.t("settings.businessHint")}</SettingHint>
+        </div>
+      }
+    >
+      <SettingValue
+        muted={!businessName}
+        value={businessName ?? f.t("settings.notSet")}
+        note={
+          businessId
+            ? f.t("settings.businessIdLine", { id: businessId })
+            : f.t("common.businessId") + ": " + f.t("settings.notSet")
+        }
+      />
+    </SettingCard>
   )
 }

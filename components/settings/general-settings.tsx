@@ -1,48 +1,51 @@
 "use client"
 
-import { CalendarPlusIcon, ListOrderedIcon, Trash2Icon } from "lucide-react"
+import { CheckIcon } from "lucide-react"
 import * as React from "react"
 
-import { BusinessSetting } from "@/components/settings/business-setting"
 import { OptionSelect } from "@/components/common/option-select"
-import { Panel } from "@/components/common/panel"
-import { Button } from "@/components/ui/button"
+import {
+  SettingCard,
+  SettingGrid,
+  SettingHint,
+  SettingValue,
+} from "@/components/common/setting-card"
+import { useFormatters } from "@/components/lang-provider"
+import { BusinessSetting } from "@/components/settings/business-setting"
+import { useRenumberChanges } from "@/components/settings/general-actions"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { useCanSaveToFile } from "@/hooks/use-save-book"
-import { useToday } from "@/hooks/use-today"
-import { newYearTarget } from "@/lib/domain/new-year"
-import { clearAllEntries, renumberVouchers } from "@/lib/commands/book-commands"
+import { renumberVouchers } from "@/lib/commands/book-commands"
 import type { Lang } from "@/lib/domain/types"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
-import { renumberYear } from "@/lib/domain/voucher"
 import { useBookStore } from "@/stores/book-store"
 import { LANGS, LANG_NAMES } from "@/stores/lang-store"
 
-/** The first settings page (§8.10): how the book is filed and saved. */
+/**
+ * The first settings page (§8.10): how the book is filed and saved, as a grid
+ * of summaries that each open into their controls. The actions that are not
+ * settings, opening a year and clearing the entries, are on the title row.
+ */
 export function GeneralSettings() {
   return (
-    <div className="flex flex-col gap-6">
-      <ExportLanguageSetting />
+    <SettingGrid>
       <BusinessSetting />
       <VatPeriodSetting />
       <BookStartSetting />
+      <ExportLanguageSetting />
       <AutosaveSetting />
       <VoucherNumbers />
-      <NewYear />
-      <ClearEntries />
-    </div>
+    </SettingGrid>
   )
 }
 
 /**
- * The language the bookkeeping is written out in (§7.1, §7.2). It comes first
- * because it decides the shape of the file, where the VAT period only decides
- * what goes in it. The options are endonyms, as in the language picker, so
- * each reads the same whichever language the UI is in.
+ * The language the bookkeeping is written out in (§7.1, §7.2). The options
+ * are endonyms, as in the language picker, so each reads the same whichever
+ * language the UI is in.
  */
 export function ExportLanguageSetting() {
   const f = useFormatters()
@@ -50,13 +53,21 @@ export function ExportLanguageSetting() {
   const setExportLang = useBookStore((s) => s.setExportLang)
 
   return (
-    <Panel
-      title={f.t("settings.exportLang")}
-      description={f.t("settings.exportLangHint")}
-      bodyClassName="p-4"
+    <SettingCard
+      label={f.t("settings.exportLang")}
+      editor={
+        <>
+          <ExportLanguageToggle value={exportLang} onChange={setExportLang} />
+          <SettingHint>{f.t("settings.exportLangHint")}</SettingHint>
+        </>
+      }
     >
-      <ExportLanguageToggle value={exportLang} onChange={setExportLang} />
-    </Panel>
+      <SettingValue
+        lang={exportLang}
+        value={LANG_NAMES[exportLang]}
+        note={f.t("settings.exportLangNote")}
+      />
+    </SettingCard>
   )
 }
 
@@ -85,26 +96,6 @@ export function ExportLanguageToggle({
         </ToggleGroupItem>
       ))}
     </ToggleGroup>
-  )
-}
-
-/**
- * How often the user files VAT (§6.5). It decides the due dates the overview
- * counts down to and the period the VAT view opens on.
- */
-function VatPeriodSetting() {
-  const f = useFormatters()
-  const vatPeriod = useBookStore((s) => s.vatPeriod)
-  const setVatPeriod = useBookStore((s) => s.setVatPeriod)
-
-  return (
-    <Panel
-      title={f.t("settings.vatPeriod")}
-      description={f.t("settings.vatPeriodHint")}
-      bodyClassName="p-4"
-    >
-      <VatPeriodToggle value={vatPeriod} onChange={setVatPeriod} />
-    </Panel>
   )
 }
 
@@ -138,8 +129,40 @@ export function VatPeriodToggle({
 const NO_START = "none"
 
 /**
- * The month the business began (§8.10). A period that ended before it owes
- * no return, so a company founded in October sees no overdue January.
+ * How often the user files VAT (§6.5). It decides the due dates the overview
+ * counts down to and the period the VAT view opens on.
+ */
+function VatPeriodSetting() {
+  const f = useFormatters()
+  const vatPeriod = useBookStore((s) => s.vatPeriod)
+  const setVatPeriod = useBookStore((s) => s.setVatPeriod)
+  const names = {
+    month: "vat.month",
+    quarter: "vat.quarter",
+    year: "vat.year",
+  } as const
+
+  return (
+    <SettingCard
+      label={f.t("settings.vatPeriod")}
+      editor={
+        <>
+          <VatPeriodToggle value={vatPeriod} onChange={setVatPeriod} />
+          <SettingHint>{f.t("settings.vatPeriodHint")}</SettingHint>
+        </>
+      }
+    >
+      <SettingValue
+        value={f.t(names[vatPeriod])}
+        note={f.t("settings.vatPeriodNote")}
+      />
+    </SettingCard>
+  )
+}
+
+/**
+ * The month the business began (§8.10). A period that ended before it owes no
+ * return, so a company founded in October sees no overdue January.
  */
 function BookStartSetting() {
   const f = useFormatters()
@@ -147,13 +170,28 @@ function BookStartSetting() {
   const setBookStart = useBookStore((s) => s.setBookStart)
 
   return (
-    <Panel
-      title={f.t("settings.bookStart")}
-      description={f.t("settings.bookStartHint")}
-      bodyClassName="flex flex-wrap gap-2 p-4"
+    <SettingCard
+      label={f.t("settings.bookStart")}
+      editor={
+        <>
+          <div className="flex flex-wrap gap-2">
+            <BookStartSelects value={bookStart} onChange={setBookStart} />
+          </div>
+          <SettingHint>{f.t("settings.bookStartHint")}</SettingHint>
+        </>
+      }
     >
-      <BookStartSelects value={bookStart} onChange={setBookStart} />
-    </Panel>
+      <SettingValue
+        value={
+          bookStart
+            ? `${f.month(Number(bookStart.slice(5, 7)) - 1)} ${bookStart.slice(0, 4)}`
+            : f.t("settings.bookStartNone")
+        }
+        note={f.t(
+          bookStart ? "settings.bookStartNote" : "settings.bookStartNoteNone"
+        )}
+      />
+    </SettingCard>
   )
 }
 
@@ -219,17 +257,35 @@ function AutosaveSetting() {
   if (!useCanSaveToFile()) return null
 
   return (
-    <Panel
-      title={f.t("settings.saving")}
-      description={f.t("settings.autosaveHint")}
-      bodyClassName="p-4"
+    <SettingCard
+      label={f.t("settings.saving")}
+      editor={
+        <>
+          <AutosaveCheckbox
+            id="settings-autosave"
+            value={autosave}
+            onChange={setAutosave}
+          />
+          <SettingHint>{f.t("settings.autosaveHint")}</SettingHint>
+        </>
+      }
     >
-      <AutosaveCheckbox
-        id="settings-autosave"
-        value={autosave}
-        onChange={setAutosave}
+      <SettingValue
+        tone={autosave ? "ok" : "default"}
+        lead={
+          autosave ? (
+            <span
+              aria-hidden
+              className="size-2 shrink-0 rounded-full bg-primary"
+            />
+          ) : null
+        }
+        value={f.t(autosave ? "settings.autosaveOn" : "settings.autosaveOff")}
+        note={f.t(
+          autosave ? "settings.autosaveOnNote" : "settings.autosaveOffNote"
+        )}
       />
-    </Panel>
+    </SettingCard>
   )
 }
 
@@ -265,89 +321,42 @@ export function AutosaveCheckbox({
 }
 
 /**
- * Renumbering the selected year (§4). The button is off while the numbers are
- * already in date order, and the count says how many a run would change.
+ * The state of the selected year's voucher numbers (§4). "Numeroi" is off
+ * while they are already in date order, and the count says how many a run
+ * would change.
  */
 function VoucherNumbers() {
   const f = useFormatters()
   const ctx = useCommandCtx()
   const year = useBookStore((s) => s.year)
-  const entries = useBookStore((s) => s.entries)
-
-  const changes = React.useMemo(() => {
-    const after = renumberYear(entries, year)
-    return after.filter((e, i) => e !== entries[i]).length
-  }, [entries, year])
+  const changes = useRenumberChanges()
+  const inOrder = changes === 0
 
   return (
-    <Panel
-      title={f.t("settings.vouchers")}
-      description={f.t("settings.vouchersHint")}
-      bodyClassName="p-4 text-sm text-muted-foreground"
-      footer={
-        <Button
-          variant="outline"
-          disabled={changes === 0}
+    <SettingCard
+      label={f.t("settings.vouchers")}
+      action={
+        <button
+          type="button"
+          disabled={inOrder}
+          aria-label={f.t("settings.renumber", { year })}
+          className="rounded-sm text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:text-muted-foreground"
           onClick={() => void renumberVouchers(ctx, year)}
         >
-          <ListOrderedIcon data-icon="inline-start" />
-          {f.t("settings.renumber", { year })}
-        </Button>
+          {f.t("settings.renumberShort")}
+        </button>
       }
     >
-      {changes === 0
-        ? f.t("settings.vouchersInOrder", { year })
-        : f.t("settings.vouchersOutOfOrder", { year, n: changes })}
-    </Panel>
-  )
-}
-
-/**
- * The way into opening a year (§8.14), for the year `newYearTarget` names:
- * the current one, or the next from November.
- */
-function NewYear() {
-  const f = useFormatters()
-  const today = useToday()
-  const openDialog = useBookStore((s) => s.openDialog)
-  const year = newYearTarget(today)
-
-  return (
-    <Panel
-      title={f.t("newYear.panelTitle")}
-      description={f.t("newYear.panelHint", { y: year })}
-      footer={
-        <Button
-          variant="outline"
-          onClick={() => openDialog({ kind: "new-year", year })}
-        >
-          <CalendarPlusIcon data-icon="inline-start" />
-          {f.t("newYear.open", { y: year })}
-        </Button>
-      }
-    />
-  )
-}
-
-/**
- * Clearing the entries erases the bookkeeping from this browser, so it sits
- * last on the page in a destructive panel of its own.
- */
-function ClearEntries() {
-  const f = useFormatters()
-  const ctx = useCommandCtx()
-
-  return (
-    <Panel
-      variant="destructive"
-      title={f.t("settings.clearEntries")}
-      description={f.t("settings.clearHint")}
-      footer={
-        <Button variant="destructive" onClick={() => void clearAllEntries(ctx)}>
-          <Trash2Icon data-icon="inline-start" />
-          {f.t("confirm.clearConfirm")}
-        </Button>
-      }
-    />
+      <SettingValue
+        tone={inOrder ? "ok" : "default"}
+        lead={inOrder ? <CheckIcon className="size-4 shrink-0" /> : null}
+        value={
+          inOrder
+            ? f.t("settings.vouchersOk")
+            : f.t("settings.vouchersOutValue", { n: changes })
+        }
+        note={f.t("settings.vouchersYear", { year })}
+      />
+    </SettingCard>
   )
 }

@@ -7,11 +7,13 @@ import { BusinessSetting } from "@/components/settings/business-setting"
 import { useBookStore } from "@/stores/book-store"
 
 function renderSetting() {
-  return render(
+  const view = render(
     <LangProvider lang="fi">
       <BusinessSetting />
     </LangProvider>
   )
+  fireEvent.click(screen.getByRole("button", { name: /^Muuta/ }))
+  return view
 }
 
 const idField = () => screen.getByRole("textbox", { name: "Y-tunnus" })

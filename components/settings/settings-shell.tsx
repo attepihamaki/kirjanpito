@@ -1,8 +1,11 @@
 "use client"
 
+import { usePathname } from "next/navigation"
+
 import { PageHeader } from "@/components/common/page-header"
 import { SubPageTabs } from "@/components/common/sub-page-tabs"
 import { useT } from "@/components/lang-provider"
+import { GeneralActions } from "@/components/settings/general-actions"
 import { SETTINGS_ROUTES } from "@/lib/site"
 
 /**
@@ -12,10 +15,16 @@ import { SETTINGS_ROUTES } from "@/lib/site"
  */
 export function SettingsShell({ children }: { children: React.ReactNode }) {
   const t = useT()
+  const trim = (path: string) => path.replace(/\/$/, "")
+  const general = trim(usePathname()) === trim(SETTINGS_ROUTES.general)
 
   return (
     <>
-      <PageHeader title={t("nav.settings")} subtitle={t("settings.subtitle")} />
+      <PageHeader
+        title={t("nav.settings")}
+        subtitle={t("settings.subtitle")}
+        actions={general ? <GeneralActions /> : undefined}
+      />
       <SubPageTabs
         label={t("settings.sections")}
         tabs={[

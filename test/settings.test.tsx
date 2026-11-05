@@ -64,7 +64,10 @@ describe("settings sub-pages", () => {
     )
     expect(screen.getByText("ALV-ilmoitusjakso")).toBeVisible()
     expect(screen.getByText("Kirjanpidon aloitus")).toBeVisible()
-    expect(screen.getByRole("button", { name: "Tyhjennä" })).toBeVisible()
+    expect(screen.getByRole("button", { name: /^Aloita vuosi/ })).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Lisää toimintoja" })
+    ).toBeVisible()
     expect(screen.queryByText("Lisää oma luokka")).toBeNull()
   })
 
