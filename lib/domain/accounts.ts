@@ -38,6 +38,11 @@ export interface AccountLine {
    */
   taxableShare: number | null
   /**
+   * Line 327, surplus from non-listed co-operatives: Form 5's 327, with the
+   * taxable part as 328. The share is tiered, so it is not `taxableShare`.
+   */
+  surplus: boolean
+  /**
    * Fixed asset purchases and sales (§5): not on the income statement or Form
    * 5, since the cost is deducted as depreciation, but on the VAT return.
    */
@@ -202,6 +207,15 @@ export const LINES: readonly AccountLine[] = [
     0
   ),
   l(
+    "327",
+    327,
+    "income",
+    "Ylijäämät muista kuin julkisesti noteeratuista osuuskunnista",
+    "Surplus from non-listed co-operatives",
+    GROUP.muutTuotot,
+    0
+  ),
+  l(
     "323",
     323,
     "income",
@@ -326,6 +340,26 @@ export const LINES: readonly AccountLine[] = [
     "expense",
     "Kirjanpidon ulkopuoliset vähennyskelpoiset kulut",
     "Deductible expenses not entered in accounting",
+    GROUP.muutVah,
+    0,
+    "otherDeductible"
+  ),
+  l(
+    "364-travel",
+    364,
+    "expense",
+    "Lisävähennys tilapäisistä työmatkoista",
+    "Additional deduction for temporary business trips",
+    GROUP.muutVah,
+    0,
+    "otherDeductible"
+  ),
+  l(
+    "364-car",
+    364,
+    "expense",
+    "Lisävähennys yksityisauton käytöstä",
+    "Additional deduction for use of a private car",
     GROUP.muutVah,
     0,
     "otherDeductible"
@@ -558,6 +592,7 @@ function l(
     halfDeductible: key === "341",
     noVatDeduction: key === "341" || nondeductible,
     taxableShare: TAXABLE_SHARE[key] ?? null,
+    surplus: key === "327",
     capital: false,
     settlement: false,
     owner: false,
@@ -703,6 +738,7 @@ export const DEFAULT_EN_NAMES: Readonly<Record<string, string>> =
 export const DEFAULT_CATEGORY_FOR_ACCOUNT: Readonly<Record<number, string>> = {
   300: "300-domestic",
   344: "344-other",
+  364: "364-travel",
 }
 
 /**

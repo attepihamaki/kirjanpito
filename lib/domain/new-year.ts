@@ -1,4 +1,8 @@
-import { assetSchedule, type AssetOpening } from "@/lib/domain/assets"
+import {
+  assetSchedule,
+  depreciationMaximums,
+  type AssetOpening,
+} from "@/lib/domain/assets"
 import {
   EMPTY_YEAR_END,
   loanBalance,
@@ -66,7 +70,14 @@ export function newYearSummary(input: NewYearInput): NewYearSummary {
     year,
     previous,
     previousHasEntries: entries.some((e) => e.date.startsWith(`${previous}-`)),
-    previousResult: incomeStatement(basis, cats, previous).result,
+    previousResult: incomeStatement(basis, cats, previous, {
+      depreciationMax: depreciationMaximums(
+        entries,
+        cats,
+        input.assetOpening,
+        previous
+      ),
+    }).result,
     assetPool,
     loans: loanBalance(entries, cats, input.loanOpening, previous),
     receivables: open.receivables,

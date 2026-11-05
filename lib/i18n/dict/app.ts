@@ -1384,8 +1384,8 @@ export const APP_DICT = {
     "Click an amount to copy it. Paste it into the field with the same code in MyTax.",
   ],
   "statement.form5Assumed": [
-    "Poistot (337) ja korkokulut (346) on laskettu kokonaan vähennyskelpoisiksi, joten 338 ja 347 ovat samat summat. Jos osa ei ole vähennyskelpoista, muuta kohtia OmaVerossa, jolloin myös 355 ja tulos muuttuvat.",
-    "Depreciation (337) and interest expenses (346) are counted as fully deductible, so 338 and 347 are the same amounts. If part of them is not deductible, change those fields in OmaVero, and 355 and the result change with them.",
+    "Poistot (337) vähennetään Poistot-sivun enimmäismäärään asti, joten 338 on enintään yhtä suuri kuin 337. Korkokulut (346) on laskettu kokonaan vähennyskelpoisiksi, joten 347 on sama summa. Jos osa koroista ei ole vähennyskelpoista, muuta kohtaa OmaVerossa, jolloin myös 355 ja tulos muuttuvat.",
+    "Depreciation (337) is deducted up to the maximum on the Depreciation page, so 338 is at most 337. Interest expenses (346) are counted as fully deductible, so 347 is the same amount. If part of the interest is not deductible, change that field in OmaVero, and 355 and the result change with it.",
   ],
   "statement.cashNote": [
     "Ammatinharjoittajan maksuperuste (EVL 27 a §): tulot ja kulut ovat maksupäivän mukaan, eikä avoimia tositteita ole mukana. Myyntisaamiset {d}: {r}. Ostovelat {d}: {p}.",
@@ -1404,8 +1404,8 @@ export const APP_DICT = {
     "The bookkeeping includes no payroll records or income register reporting.",
   ],
   "statement.form5Missing": [
-    "Kirjanpito ei täytä osuuskuntien ylijäämiä (325–328), lisävähennyksiä (364) eikä lomakkeen muita osia, kuten poistoja ja ajoneuvoja. Ne täytetään OmaVerossa.",
-    "The bookkeeping does not fill co-operative surplus (325–328), additional deductions (364) or the form’s other sections, such as depreciation and vehicles. Fill those in OmaVero.",
+    "Kirjanpito ei täytä julkisesti noteerattujen osuuskuntien ylijäämiä (325, 326), jotka Verohallinnon mukaan puuttuivat vuonna 2026, eikä lomakkeen muita osia, kuten poistoerittelyä ja ajoneuvoja. Ne täytetään OmaVerossa.",
+    "The bookkeeping does not fill surplus from listed co-operatives (325, 326), which the Tax Administration says did not exist in 2026, or the form’s other sections, such as the depreciation breakdown and vehicles. Fill those in OmaVero.",
   ],
   "statement.form5Nothing": [
     "Tälle vuodelle ei ole summia, jotka täytetään lomakkeelle.",
@@ -1430,6 +1430,14 @@ export const APP_DICT = {
   "statement.entertainmentNote": [
     "Edustuskuluista (341, yhteensä {a}) vähennetään puolet, {b}. Veroilmoitukseen koko summa kuuluu kohtaan 341 ja vähennettävä osuus kohtaan 342.",
     "Half of entertainment expenses (341, total {a}) is deducted, {b}. On the tax return the full amount goes in 341 and the deductible part in 342.",
+  ],
+  "statement.surplusNote": [
+    "Osuuskuntien ylijäämät {a}, josta veronalaista {b}. Veronalaista on 25 % ensimmäisestä 5 000 eurosta ja 75 % siitä ylittävästä osasta. Helpotus on yksi henkilöä kohden vuodessa, ja se käytetään elinkeinotoimintaan viimeisenä. Jos olet käyttänyt sen jo muussa tulolähteessä, muuta kohtaa 328 OmaVerossa.",
+    "Co-operative surplus {a}, of which {b} is taxable. 25% of the first 5,000 euros is taxable and 75% of the rest. The relief is one per person per year and is applied to business income last. If you have used it in another income source, change field 328 in OmaVero.",
+  ],
+  "statement.depreciationNote": [
+    "Poistoja on kirjattu {a} yli Poistot-sivun enimmäismäärän. Tämä osa ei ole vähennyskelpoinen, eikä se ole mukana tuloksessa. Tarkista Poistot-sivun avaussaldo ja ostot.",
+    "Depreciation of {a} is booked above the maximum on the Depreciation page. That part is not deductible and is left out of the result. Check the opening balance and purchases on that page.",
   ],
   "statement.dividendNote": [
     "Osingoista (319 ja 321, yhteensä {a}) tulokseen lasketaan veronalainen osuus, {b}: 85 % julkisesti noteeratun yhtiön ja 75 % muun yhtiön osingosta. Veroilmoitukseen osuudet kuuluvat kohtiin 320 ja 322.",
@@ -1728,8 +1736,8 @@ export const APP_DICT = {
 
   "deductions.tab": ["Vähennykset", "Deductions"],
   "deductions.intro": [
-    "Nämä vähennykset kirjataan riville 354, kirjanpidon ulkopuolisiin vähennyskelpoisiin kuluihin. Laskelmat käyttävät Verohallinnon vuoden {y} määriä, ja ne ovat apuväline: säilytä ajopäiväkirja ja matkojen tiedot itse.",
-    "These deductions go on line 354, deductible expenses outside the books. The calculators use the Tax Administration’s amounts for {y}. They are an aid: keep your own logbook and trip records.",
+    "Matkojen ja yksityisauton lisävähennykset kirjataan riville 364 (veroilmoituksen kohdat 388 ja 392) ja työhuonevähennys riville 354, kirjanpidon ulkopuolisiin vähennyskelpoisiin kuluihin. Laskelmat käyttävät Verohallinnon vuoden {y} määriä, ja ne ovat apuväline: säilytä ajopäiväkirja ja matkojen tiedot itse.",
+    "The travel and private car deductions go on line 364 (fields 388 and 392 of the return), and the home office deduction on line 354, deductible expenses outside the books. The calculators use the Tax Administration’s amounts for {y}. They are an aid: keep your own logbook and trip records.",
   ],
   "deductions.noTravelRates": [
     "Sovelluksessa ei ole Verohallinnon matkakorvausten määriä vuodelle {y}.",
@@ -1805,8 +1813,8 @@ export const APP_DICT = {
   "deductions.statDay": ["Kokopäiväraha", "Full per diem"],
   "deductions.bookedTitle": ["Kirjattu vuodelle {y}", "Booked for {y}"],
   "deductions.noneBooked": [
-    "Rivillä 354 ei ole vielä tositteita.",
-    "No vouchers on line 354 yet.",
+    "Riveillä 354 ja 364 ei ole vielä tositteita.",
+    "No vouchers on lines 354 and 364 yet.",
   ],
 
   "memo.title": ["Muistiotosite", "Memo voucher"],

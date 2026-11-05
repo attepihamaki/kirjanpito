@@ -30,7 +30,7 @@ import { indexCategories } from "@/lib/domain/types"
 import { yearComparison, type CompareRow } from "@/lib/domain/year-compare"
 import { BUCKET_KEYS } from "@/lib/i18n/messages"
 import { cn } from "@/lib/utils"
-import { useTaxBasisEntries } from "@/hooks/use-tax-basis"
+import { useStatementOptions, useTaxBasisEntries } from "@/hooks/use-tax-basis"
 import { useBookStore } from "@/stores/book-store"
 
 export function SummaryView() {
@@ -40,14 +40,15 @@ export function SummaryView() {
   const cats = useBookStore((s) => s.cats)
   const year = useBookStore((s) => s.year)
 
+  const options = useStatementOptions()
   const { data, figures, compare } = React.useMemo(() => {
     const catMap = indexCategories(cats)
     return {
       data: summary(basis, catMap, year),
-      figures: monthFigures(entries, catMap, year, basis),
-      compare: yearComparison(basis, catMap, year),
+      figures: monthFigures(entries, catMap, year, basis, options),
+      compare: yearComparison(basis, catMap, year, options),
     }
-  }, [entries, basis, cats, year])
+  }, [entries, basis, cats, year, options])
 
   return (
     <>

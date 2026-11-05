@@ -1,7 +1,12 @@
-import { assetSchedule, type AssetOpening } from "@/lib/domain/assets"
+import {
+  assetSchedule,
+  type AssetOpening,
+  type AssetYear,
+} from "@/lib/domain/assets"
 import { LINE_BY_KEY } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
 import { yearOf } from "@/lib/domain/dates"
+import { form5Label } from "@/lib/domain/form5-spec"
 import { balancesAt, paidDate } from "@/lib/domain/open-items"
 import type { TaxFormRow, TaxFormSection } from "@/lib/domain/tax-form"
 import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
@@ -112,6 +117,8 @@ export interface Form5BalanceInput {
 }
 
 export interface Form5Balance {
+  /** The machinery pool's year (800 to 806), or null before the register starts. */
+  assetYear: AssetYear | null
   machinery: Cents
   receivables: Cents
   payables: Cents
@@ -131,10 +138,11 @@ export interface Form5Balance {
 
 export function form5Balance(input: Form5BalanceInput): Form5Balance {
   const { entries, cats, year, yearEnd, assetOpening, loanOpening } = input
-  const machinery =
+  const assetYear =
     assetSchedule(entries, cats, assetOpening, year).find(
       (y) => y.year === year
-    )?.closing ?? 0
+    ) ?? null
+  const machinery = assetYear?.closing ?? 0
   const { receivables, payables } = balancesAt(entries, cats, `${year}-12-31`)
   const loans = loanBalance(entries, cats, loanOpening, year)
   const loanCurrent = Math.min(yearEnd.loanCurrent, loans)
@@ -151,6 +159,7 @@ export function form5Balance(input: Form5BalanceInput): Form5Balance {
   const nonCurrent = loans - loanCurrent + yearEnd.otherLongDebt
   const liabilities = current + nonCurrent
   return {
+    assetYear,
     machinery,
     receivables,
     payables,
@@ -170,14 +179,13 @@ export function form5BalanceSections(
 ): TaxFormSection[] {
   const field = (
     code: number,
-    fi: string,
     en: string,
     value: Cents,
     opts: { total?: boolean; unused?: boolean } = {}
   ): TaxFormRow => ({
     kind: "field",
     code: String(code),
-    label: { fi, en },
+    label: { fi: form5Label(code), en },
     value,
     portion: false,
     total: opts.total ?? false,
@@ -191,76 +199,82 @@ export function form5BalanceSections(
   const empty = b.assets === 0 && b.liabilities === 0
   const total = { total: true, unused: empty }
 
-  return [
+  const sections: TaxFormSection[] = []
+
+  /*
+   * The pool of machinery and equipment, as the form asks for it beside
+   * depreciation: the balance at both ends of the year, what joined and left
+   * it, and the depreciation taken. Only a year the register covers has one.
+   */
+  const pool = b.assetYear
+  if (pool) {
+    sections.push({
+      number: "",
+      title: {
+        fi: "Irtaimen käyttöomaisuuden hankintamenoista tehdyt poistot",
+        en: "Depreciation on the cost of movable fixed assets",
+      },
+      rows: [
+        field(
+          800,
+          "Remaining expenditure at the start of the year",
+          pool.opening
+        ),
+        field(801, "Additions during the year", pool.additions),
+        field(802, "Selling prices and insurance compensation", pool.disposals),
+        field(
+          804,
+          "Depreciation of the year",
+          Math.min(pool.taken, pool.maximum)
+        ),
+        field(805, "Extra depreciation (EVL 32 §)", 0),
+        field(
+          806,
+          "Remaining expenditure at the end of the year",
+          pool.closing,
+          { total: true }
+        ),
+      ],
+    })
+  }
+
+  sections.push(
     {
       number: "",
       title: { fi: "Elinkeinotoiminnan varat", en: "Business assets" },
       rows: [
         group("Käyttöomaisuus", "Fixed assets"),
-        field(704, "Koneet ja kalusto", "Machinery and equipment", b.machinery),
-        field(
-          706,
-          "Muu käyttöomaisuus",
-          "Other fixed assets",
-          yearEnd.otherFixed
-        ),
+        field(704, "Machinery and equipment", b.machinery),
+        field(706, "Other fixed assets", yearEnd.otherFixed),
         group("Vaihto-omaisuus", "Current assets"),
-        field(708, "Tavarat", "Goods", yearEnd.goods),
-        field(
-          709,
-          "Muu vaihto-omaisuus",
-          "Other current assets",
-          yearEnd.otherCurrent
-        ),
+        field(708, "Goods", yearEnd.goods),
+        field(709, "Other current assets", yearEnd.otherCurrent),
         group("Rahoitusomaisuus", "Financial assets"),
-        field(711, "Myyntisaamiset", "Accounts receivable", b.receivables),
-        field(
-          714,
-          "Käteisvarat, ei pankkitalletuksia",
-          "Cash in hand, no bank deposits",
-          yearEnd.cash
-        ),
+        field(711, "Accounts receivable", b.receivables),
+        field(714, "Cash in hand, no bank deposits", yearEnd.cash),
         field(
           716,
-          "Muu rahoitusomaisuus, ei pankkitalletuksia",
           "Other financial assets, no bank deposits",
           yearEnd.otherFinancial
         ),
-        field(718, "Varat yhteensä", "Total business assets", b.assets, total),
+        field(718, "Total business assets", b.assets, total),
       ],
     },
     {
       number: "",
       title: { fi: "Elinkeinotoiminnan velat", en: "Business liabilities" },
       rows: [
-        field(749, "Lyhytaikaiset velat", "Current liabilities", b.current),
-        field(
-          750,
-          "Pitkäaikaiset velat",
-          "Non-current liabilities",
-          b.nonCurrent
-        ),
-        field(
-          725,
-          "Velat yhteensä",
-          "Total business liabilities",
-          b.liabilities,
-          total
-        ),
-        field(
-          733,
-          "Positiivinen nettovarallisuus",
-          "Positive net worth",
-          Math.max(0, b.netWorth),
-          { total: true, unused: empty || b.netWorth < 0 }
-        ),
-        field(
-          734,
-          "Negatiivinen nettovarallisuus",
-          "Negative net worth",
-          Math.max(0, -b.netWorth),
-          { total: true, unused: b.netWorth >= 0 }
-        ),
+        field(749, "Current liabilities", b.current),
+        field(750, "Non-current liabilities", b.nonCurrent),
+        field(725, "Total business liabilities", b.liabilities, total),
+        field(733, "Positive net worth", Math.max(0, b.netWorth), {
+          total: true,
+          unused: empty || b.netWorth < 0,
+        }),
+        field(734, "Negative net worth", Math.max(0, -b.netWorth), {
+          total: true,
+          unused: b.netWorth >= 0,
+        }),
       ],
     },
     {
@@ -269,11 +283,11 @@ export function form5BalanceSections(
       rows: [
         field(
           394,
-          "Ennakonpidätyksen alaiset palkat verovuoden päättymistä edeltäneiltä 12 kuukaudelta",
           "Wages subject to withholding paid in the 12 months before the tax year’s end",
           b.wages
         ),
       ],
-    },
-  ]
+    }
+  )
+  return sections
 }

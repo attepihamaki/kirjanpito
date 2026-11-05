@@ -19,8 +19,8 @@ import {
 import type { Category } from "@/lib/domain/types"
 
 describe("LINES", () => {
-  it("has the 30 income statement lines", () => {
-    expect(LINES).toHaveLength(30)
+  it("has the 33 income statement lines", () => {
+    expect(LINES).toHaveLength(33)
   })
 
   /*
@@ -41,6 +41,7 @@ describe("LINES", () => {
       "318",
       "319",
       "321",
+      "327",
       "323",
       "324",
       "333",
@@ -55,6 +56,8 @@ describe("LINES", () => {
       "344-meeting",
       "344-other",
       "354",
+      "364-travel",
+      "364-car",
       "346",
       "349",
       "353",
@@ -119,7 +122,7 @@ describe("defaultCategories", () => {
   const cats = defaultCategories()
 
   it("returns six sales, one per remaining line and four EU purchases", () => {
-    expect(cats).toHaveLength(47)
+    expect(cats).toHaveLength(50)
     expect(cats).toHaveLength(
       SALES.length + ALL_LINES.length - 1 + EU_PURCHASES.length
     )

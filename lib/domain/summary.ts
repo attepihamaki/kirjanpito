@@ -6,7 +6,10 @@ import {
 } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
 import { monthOf, yearOf } from "@/lib/domain/dates"
-import { incomeStatement } from "@/lib/domain/income-statement"
+import {
+  incomeStatement,
+  type StatementOptions,
+} from "@/lib/domain/income-statement"
 import { filterPeriod } from "@/lib/domain/period"
 import type { Bucket, Cents, CategoryMap, Entry } from "@/lib/domain/types"
 import { vatReport } from "@/lib/domain/vat"
@@ -153,7 +156,8 @@ export function monthFigures(
   entries: readonly Entry[],
   cats: CategoryMap,
   year: number,
-  basis: readonly Entry[] = entries
+  basis: readonly Entry[] = entries,
+  options: StatementOptions = {}
 ): MonthFigures {
   const yearEntries = entries.filter((e) => yearOf(e.date) === year)
   const basisEntries = basis.filter((e) => yearOf(e.date) === year)
@@ -167,7 +171,8 @@ export function monthFigures(
         incomeStatement(
           basisEntries.filter((e) => monthOf(e.date) <= i + 1),
           cats,
-          year
+          year,
+          options
         ).result
     ),
   ]

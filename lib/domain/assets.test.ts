@@ -73,6 +73,21 @@ describe("asset schedule", () => {
     expect(maximumDepreciation(120_001)).toBe(30_000)
   })
 
+  it("keeps depreciation above the maximum out of the pool", () => {
+    const [year] = assetSchedule(
+      [
+        entry("2026-01-01", "asset-purchase", 400_000),
+        entry("2026-12-31", "337", 300_000),
+      ],
+      cats,
+      null,
+      2026
+    )
+    expect(year.maximum).toBe(100_000)
+    expect(year.taken).toBe(300_000)
+    expect(year.closing).toBe(300_000)
+  })
+
   it("reports a sale above the balance", () => {
     const [year] = assetSchedule(
       [entry("2026-01-01", "asset-sale", 50_000, { type: "income" })],
@@ -120,7 +135,7 @@ describe("a fixed asset purchase", () => {
   it("stays out of the result and the income and expense figures", () => {
     const statement = incomeStatement([purchase, sale], cats, 2026)
     expect(statement.result).toBe(0)
-    expect(statement.lines).toHaveLength(30)
+    expect(statement.lines).toHaveLength(33)
     const grid = summary([purchase, sale], cats, 2026)
     expect(grid.totals.incomeNet).toBe(0)
     expect(grid.totals.expenseNet).toBe(0)

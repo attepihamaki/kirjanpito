@@ -34,6 +34,10 @@ import type { Cents, Entry } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
 
 const CAT_354 = "354"
+const CAT_TRAVEL = "364-travel"
+const CAT_CAR = "364-car"
+/** The categories the calculators book on, which the list of booked vouchers reads. */
+const CALCULATED = new Set([CAT_354, CAT_TRAVEL, CAT_CAR])
 
 /** Whole, non-negative numbers: kilometres and days. Anything else is zero. */
 function count(text: string): number {
@@ -41,7 +45,7 @@ function count(text: string): number {
   return Number.isFinite(n) && n > 0 ? n : 0
 }
 
-/** The calculators for line 354, for the selected year (§8.8). */
+/** The calculators for lines 354 and 364, for the selected year (§8.8). */
 export function DeductionsView() {
   const f = useFormatters()
   const year = useBookStore((s) => s.year)
@@ -49,7 +53,7 @@ export function DeductionsView() {
   const openDialog = useBookStore((s) => s.openDialog)
   const rates = travelRates(year)
   const booked = React.useMemo(
-    () => entries.filter((e) => e.catId === CAT_354 && yearOf(e.date) === year),
+    () => entries.filter((e) => CALCULATED.has(e.catId) && yearOf(e.date) === year),
     [entries, year]
   )
 
@@ -135,19 +139,24 @@ interface DeductionMemo {
   notes: string[]
 }
 
-/** Book an amount on line 354 as an entry of the selected year, with its memo voucher. */
+/** Book an amount on a category as an entry of the selected year, with its memo voucher. */
 function useBookDeduction() {
   const f = useFormatters()
   const ctx = useCommandCtx()
   const year = useBookStore((s) => s.year)
   const memoVoucher = useMemoVoucher()
-  return (description: string, amount: Cents, memo: DeductionMemo) => {
+  return (
+    catId: string,
+    description: string,
+    amount: Cents,
+    memo: DeductionMemo
+  ) => {
     const entry: Entry = {
       id: `e-${uid()}`,
       date: calculatedEntryDate(year, todayIso()),
       description,
       type: "expense",
-      catId: CAT_354,
+      catId,
       amount,
       vatRate: 0,
       amountMode: "net",
@@ -228,6 +237,7 @@ function MileageForm({ rates }: { rates: TravelRates }) {
           ready={kilometres > 0}
           onBook={() =>
             void book(
+              CAT_CAR,
               f.t("deductions.mileageEntry", {
                 y: year,
                 k: kilometres,
@@ -319,6 +329,7 @@ function PerDiemForm({ rates }: { rates: TravelRates }) {
           ready={fullDays + partialDays > 0}
           onBook={() =>
             void book(
+              CAT_TRAVEL,
               f.t("deductions.perDiemEntry", {
                 y: year,
                 a: fullDays,
@@ -447,7 +458,7 @@ function HomeOfficeForm() {
           amount={exists ? 0 : amounts[tier]}
           ready={false}
           onBook={() =>
-            void book(description, amounts[tier], {
+            void book(CAT_354, description, amounts[tier], {
               heading: f.t("memo.homeHeading", { y: year }),
               calculation: [
                 { label: f.t("deductions.tier"), value: tierLabel[tier] },

@@ -8,7 +8,7 @@ import {
 } from "@/lib/domain/form5-balance"
 import { incomeStatement } from "@/lib/domain/income-statement"
 import { indexCategories } from "@/lib/domain/types"
-import { useTaxBasisEntries } from "@/hooks/use-tax-basis"
+import { useStatementOptions, useTaxBasisEntries } from "@/hooks/use-tax-basis"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -18,6 +18,7 @@ import { useBookStore } from "@/stores/book-store"
  */
 export function useForm5() {
   const basis = useTaxBasisEntries()
+  const options = useStatementOptions()
   const entries = useBookStore((s) => s.entries)
   const cats = useBookStore((s) => s.cats)
   const year = useBookStore((s) => s.year)
@@ -39,10 +40,12 @@ export function useForm5() {
   )
   const sections = React.useMemo(
     () => [
-      ...form5Sections(incomeStatement(basis, indexCategories(cats), year)),
+      ...form5Sections(
+        incomeStatement(basis, indexCategories(cats), year, options)
+      ),
       ...form5BalanceSections(balance, yearEnd),
     ],
-    [basis, cats, year, balance, yearEnd]
+    [basis, cats, year, balance, yearEnd, options]
   )
 
   return { year, sections, balance }

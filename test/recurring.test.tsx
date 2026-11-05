@@ -161,7 +161,7 @@ describe("the statement's new pages", () => {
     expect(booked?.amount).toBe(250_000)
   })
 
-  it("books a mileage deduction on line 354, less the booked costs", async () => {
+  it("books a mileage deduction on line 364, less the booked costs", async () => {
     useBookStore.setState({
       entries: [{ ...entry, catId: "344-vehicle", amount: 10_000, vatRate: 0 }],
     })
@@ -176,7 +176,7 @@ describe("the statement's new pages", () => {
     await waitFor(() => expect(useBookStore.getState().entries).toHaveLength(2))
     const booked = useBookStore
       .getState()
-      .entries.find((e) => e.catId === "354")
+      .entries.find((e) => e.catId === "364-car")
     // 1 000 km × 0,55 € − 100,00 €.
     expect(booked?.amount).toBe(45_000)
     expect(booked?.vatRate).toBe(0)

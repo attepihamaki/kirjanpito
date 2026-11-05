@@ -100,7 +100,9 @@ export function assetSchedule(
       .reduce((sum, e) => sum + calcEntry(e).net, 0)
     const raw = openingNow + additions - disposals
     const base = Math.max(0, raw)
-    const closing = Math.max(0, base - taken)
+    const maximum = maximumDepreciation(base)
+    // Depreciation above the maximum is not deductible, so it leaves the pool alone.
+    const closing = Math.max(0, base - Math.min(taken, maximum))
     out.push({
       year,
       opening: openingNow,
@@ -108,11 +110,31 @@ export function assetSchedule(
       disposals,
       base,
       saleExcess: Math.max(0, -raw),
-      maximum: maximumDepreciation(base),
+      maximum,
       taken,
       closing,
     })
     balance = closing
   }
   return out
+}
+
+/**
+ * The most depreciation each year of the register allows, for
+ * `StatementOptions.depreciationMax`. A year before the register starts, or
+ * every year while it has no purchase and no opening balance, is absent and so
+ * not capped.
+ */
+export function depreciationMaximums(
+  entries: readonly Entry[],
+  cats: CategoryMap,
+  opening: AssetOpening | null,
+  through: number
+): ReadonlyMap<number, Cents> {
+  return new Map(
+    assetSchedule(entries, cats, opening, through).map((y) => [
+      y.year,
+      y.maximum,
+    ])
+  )
 }

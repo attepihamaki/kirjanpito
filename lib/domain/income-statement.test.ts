@@ -71,7 +71,7 @@ describe("incomeStatement — sample 2026", () => {
     expect(s.resultMagnitude).toBe(1064253)
   })
 
-  it("renders all 30 lines in display order, zeros included", () => {
+  it("renders all 33 lines in display order, zeros included", () => {
     expect(s.lines.map((l) => l.line.key)).toEqual([...LINE_KEYS])
     expect(s.lines.find((l) => l.line.key === "312")!.net).toBe(0)
   })

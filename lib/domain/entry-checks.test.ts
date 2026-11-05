@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest"
 
 import { defaultCategories } from "@/lib/domain/accounts"
 import {
+  ENTRY_CHECKS,
+  ENTRY_RULES,
   duplicateOf,
   entryWithReceipt,
   flaggedEntryIds,
@@ -243,5 +245,17 @@ describe("lateCash", () => {
     expect(late([bank, imported], [added("b", "2026-10-20T09:00:00")])).toEqual(
       []
     )
+  })
+})
+
+describe("ENTRY_RULES", () => {
+  it("has one rule for each check, under the check's name", () => {
+    expect(ENTRY_RULES.rules.map((r) => r.id)).toEqual([...ENTRY_CHECKS])
+  })
+
+  it("flags nothing in an empty year", () => {
+    for (const check of ENTRY_CHECKS) {
+      expect(flaggedEntryIds(check, [], new Map(), "2026-11-05").size).toBe(0)
+    }
   })
 })

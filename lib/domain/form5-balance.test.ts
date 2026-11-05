@@ -9,6 +9,9 @@ import {
   loanBalance,
   wagesPaid,
 } from "@/lib/domain/form5-balance"
+import { form5Values } from "@/lib/domain/form5"
+import { evaluate } from "@/lib/domain/rules/engine"
+import { FORM5_RULES } from "@/lib/domain/rules/form5-rules"
 import { taxFormSteps } from "@/lib/domain/tax-form"
 import { indexCategories, type Entry } from "@/lib/domain/types"
 
@@ -117,7 +120,7 @@ describe("form5Balance", () => {
   it("uses only the net worth line that applies", () => {
     const sections = form5BalanceSections(form5Balance(input), input.yearEnd)
     const { totals } = taxFormSteps(sections)
-    expect(totals.map((t) => t.code)).toEqual(["718", "725", "733"])
+    expect(totals.map((t) => t.code)).toEqual(["806", "718", "725", "733"])
   })
 
   it("has no totals to check without assets or liabilities", () => {
@@ -143,5 +146,28 @@ describe("form5Balance", () => {
     })
     expect(b.current).toBe(100_000)
     expect(b.nonCurrent).toBe(0)
+  })
+
+  it("fills the machinery pool so Verohallinto's rules for 800 to 806 hold", () => {
+    const b = form5Balance(input)
+    const sections = form5BalanceSections(b, input.yearEnd)
+    const v = form5Values(sections)
+    const get = (code: number) => v.get(code) ?? 0
+    expect(b.assetYear).not.toBeNull()
+    expect(get(806)).toBe(b.machinery)
+    expect(get(800) + get(801) - get(802) - get(804) - get(805)).toBe(get(806))
+    expect(get(704)).toBe(get(806))
+    expect(evaluate(FORM5_RULES, get, ["form5.depreciationClosing"])).toEqual(
+      []
+    )
+  })
+
+  it("has no pool section before the register starts", () => {
+    const b = form5Balance({ ...input, entries: [], assetOpening: null })
+    expect(b.assetYear).toBeNull()
+    const codes = form5BalanceSections(b, input.yearEnd).flatMap((s) =>
+      s.rows.flatMap((r) => (r.kind === "field" ? [r.code] : []))
+    )
+    expect(codes).not.toContain("800")
   })
 })

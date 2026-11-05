@@ -14,7 +14,7 @@ import {
 import { incomeStatement } from "@/lib/domain/income-statement"
 import { indexCategories } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
-import { useTaxBasisEntries } from "@/hooks/use-tax-basis"
+import { useStatementOptions, useTaxBasisEntries } from "@/hooks/use-tax-basis"
 import { balancesAt } from "@/lib/domain/open-items"
 import { useBookStore } from "@/stores/book-store"
 
@@ -31,9 +31,10 @@ export function StatementView() {
   const cats = useBookStore((s) => s.cats)
   const year = useBookStore((s) => s.year)
 
+  const options = useStatementOptions()
   const statement = React.useMemo(
-    () => incomeStatement(basis, indexCategories(cats), year),
-    [basis, cats, year]
+    () => incomeStatement(basis, indexCategories(cats), year, options),
+    [basis, cats, year, options]
   )
   const yearEnd = useBookStore((s) => s.yearEnd[year]) ?? EMPTY_YEAR_END
   const assetOpening = useBookStore((s) => s.assetOpening)
@@ -272,6 +273,23 @@ export function StatementView() {
             {f.t("statement.dividendNote", {
               a: f.money(statement.dividendTotal),
               b: f.money(statement.dividendTaxable),
+            })}
+          </p>
+        ) : null}
+
+        {statement.surplusTotal ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            {f.t("statement.surplusNote", {
+              a: f.money(statement.surplusTotal),
+              b: f.money(statement.surplusTaxable),
+            })}
+          </p>
+        ) : null}
+
+        {statement.depreciationExcess > 0 ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            {f.t("statement.depreciationNote", {
+              a: f.money(statement.depreciationExcess),
             })}
           </p>
         ) : null}

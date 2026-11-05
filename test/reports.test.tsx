@@ -194,10 +194,10 @@ describe("StatementView", () => {
   it("renders every line, with a dash for the empty ones", () => {
     mount(<StatementView />)
     /*
-     * All 30 lines render; the sample touches eight, so 22 show a dash. The
+     * All 33 lines render; the sample touches eight, so 25 show a dash. The
      * assets, liabilities and wages below the result add 14 more.
      */
-    expect(screen.getAllByText("–")).toHaveLength(36)
+    expect(screen.getAllByText("–")).toHaveLength(39)
     expect(screen.getByText("Elinkeinotoiminnan varat")).toBeInTheDocument()
     expect(screen.getByText("Elinkeinotoiminnan velat")).toBeInTheDocument()
     expect(screen.getByText("Maksetut palkat")).toBeInTheDocument()
@@ -334,9 +334,9 @@ describe("YearEndDialog", () => {
     expect(
       screen.getByRole("button", { name: "Kopioi kohta 708: 1200,00" })
     ).toBeInTheDocument()
-    expect(screen.getByText("Varat yhteensä")).toBeInTheDocument()
+    expect(screen.getByText("Elinkeinotoiminnan varat yhteensä")).toBeInTheDocument()
     expect(
-      screen.getByText("Positiivinen nettovarallisuus")
+      screen.getByText("Elinkeinotoiminnan positiivinen nettovarallisuus")
     ).toBeInTheDocument()
   })
 

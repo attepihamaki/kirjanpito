@@ -4,6 +4,7 @@ import type { ChangeRecord } from "@/lib/domain/change-log"
 import { todayIso } from "@/lib/domain/dates"
 import { paidDate } from "@/lib/domain/open-items"
 import type { Attachment, Cents, CategoryMap, Entry } from "@/lib/domain/types"
+import { defineRules, type Rule } from "@/lib/domain/rules/engine"
 import { rateMismatch } from "@/lib/domain/vat-rates"
 
 /**
@@ -154,6 +155,135 @@ function isDomesticSale(e: Entry, cats: CategoryMap): boolean {
   return e.type === "income" && cat?.line === "300" && cat.kind === "domestic"
 }
 
+/** What the entry checks look at: the selected year's entries and the book around them. */
+export interface EntryCheckContext {
+  /** The selected year's entries: the large-amount and zero-VAT checks compare an entry with the rest of the year. */
+  entries: readonly Entry[]
+  cats: CategoryMap
+  today: string
+  /** The change log, which says when a cash voucher was booked. */
+  log: readonly ChangeRecord[]
+}
+
+type EntryRule = Rule<EntryCheckContext, string>
+
+function entryRule(
+  id: EntryCheck,
+  source: string,
+  flagged: (ctx: EntryCheckContext) => Iterable<string>
+): EntryRule {
+  return {
+    id,
+    severity: "warn",
+    source,
+    check: (ctx) => [...flagged(ctx)],
+  }
+}
+
+const idsWhere = (ctx: EntryCheckContext, keep: (e: Entry) => boolean) =>
+  ctx.entries.filter(keep).map((e) => e.id)
+
+/**
+ * One rule per check, each returning the ids of the entries it flags. They
+ * are hints, never errors (`severity: "warn"`): the entry may be right.
+ */
+export const ENTRY_RULES = defineRules<EntryCheckContext, string>([
+  /*
+   * Every entry, calculated ones included: depreciation, line 354 and the
+   * stock change rest on a memo voucher the calculator attaches (KPL 2:5).
+   */
+  entryRule("noReceipt", "KPL 2:5", (ctx) =>
+    idsWhere(ctx, (e) => !hasReceipt(e))
+  ),
+  entryRule("rateMismatch", "vero.fi, VAT rates", (ctx) =>
+    idsWhere(ctx, (e) => rateMismatch(e.vatRate, e.date) !== null)
+  ),
+  entryRule("futureDate", "app", (ctx) =>
+    idsWhere(ctx, (e) => e.date > ctx.today)
+  ),
+  entryRule("zeroVatSale", "app", (ctx) => {
+    /*
+     * A business that is not VAT registered sells everything at 0 %, so a
+     * 0 % domestic sale is flagged only in a year that also has domestic
+     * sales with VAT.
+     */
+    const sales = ctx.entries.filter((e) => isDomesticSale(e, ctx.cats))
+    if (!sales.some((e) => e.vatRate > 0)) return []
+    return idsWhere(ctx, (e) => isDomesticSale(e, ctx.cats) && e.vatRate === 0)
+  }),
+  entryRule("largeAmount", "app", (ctx) => {
+    /*
+     * Typically a misplaced decimal comma or an extra zero. Income and
+     * expenses are compared separately, since one invoice can easily be
+     * worth a year of receipts. A VAT payment is a quarter's or a year's tax
+     * in one sum, and the owner and a loan move money in round sums, so all
+     * are large next to a receipt by nature (§6.6 to §6.8).
+     */
+    const exempt = (e: Entry) => {
+      const cat = ctx.cats.get(e.catId)
+      const line = cat && LINE_BY_KEY.get(cat.line)
+      return !!line && (line.settlement || line.owner || line.loan)
+    }
+    const out: string[] = []
+    for (const type of ["income", "expense"] as const) {
+      const ofType = ctx.entries.filter((e) => e.type === type && !exempt(e))
+      if (ofType.length < LARGE_MIN_ENTRIES) continue
+      const gross = (e: Entry) => Math.abs(calcEntry(e).gross)
+      const limit = Math.max(
+        LARGE_FLOOR,
+        median(ofType.map(gross)) * LARGE_FACTOR
+      )
+      for (const e of ofType) if (gross(e) > limit) out.push(e.id)
+    }
+    return out
+  }),
+  entryRule("duplicate", "app", (ctx) => {
+    /*
+     * Entries that share their figures, or a receipt file, with another
+     * entry. Both of a pair are flagged, since either may be the extra one.
+     */
+    const out = new Set<string>()
+    const group = (keysOf: (e: Entry) => (string | null)[]) => {
+      const seen = new Map<string, string>()
+      for (const e of ctx.entries) {
+        for (const key of new Set(keysOf(e))) {
+          if (key === null) continue
+          const first = seen.get(key)
+          if (first === undefined) seen.set(key, e.id)
+          else out.add(first).add(e.id)
+        }
+      }
+    }
+    group((e) => [figuresKey(e)])
+    group((e) => (e.atts ?? []).map(fileKey))
+    return out
+  }),
+  entryRule("vatNotDeductible", "AVL 114 § 1 mom. 3 kohta", (ctx) =>
+    idsWhere(ctx, (e) => vatNotDeductible(e, ctx.cats))
+  ),
+  entryRule("privateUseNoVat", "AVL 21 §", (ctx) => {
+    // Line 314 only: a car's private use depends on how much of it was deducted.
+    const goods = ctx.entries.filter(
+      (e) => ctx.cats.get(e.catId)?.line === "314"
+    )
+    const total = goods.reduce((sum, e) => sum + calcEntry(e).net, 0)
+    if (total <= PRIVATE_USE_FREE) return []
+    return idsWhere(
+      ctx,
+      (e) => ctx.cats.get(e.catId)?.line === "314" && e.vatRate === 0
+    )
+  }),
+  entryRule("lateCash", "KPL 2:4", (ctx) => {
+    // A cash payment is booked without delay and day by day.
+    const added = addedOn(ctx.log)
+    return idsWhere(ctx, (e) => {
+      const paid = e.cash ? paidDate(e) : null
+      const on = added.get(e.id)
+      return !!paid && !!on && daysFrom(paid, on) > CASH_BOOKING_DAYS
+    })
+  }),
+])
+
 /**
  * The ids of the entries a check flags among `entries`, which are the
  * selected year's: the large-amount and zero-VAT checks compare an entry with
@@ -164,100 +294,7 @@ export function flaggedEntryIds(
   entries: readonly Entry[],
   cats: CategoryMap,
   today: string,
-  /** The change log, which says when a cash voucher was booked. */
   log: readonly ChangeRecord[] = []
 ): Set<string> {
-  const ids = (keep: (e: Entry) => boolean) =>
-    new Set(entries.filter(keep).map((e) => e.id))
-
-  switch (check) {
-    case "noReceipt":
-      /*
-       * Every entry, calculated ones included: depreciation, line 354 and the
-       * stock change rest on a memo voucher the calculator attaches (KPL 2:5).
-       */
-      return ids((e) => !hasReceipt(e))
-    case "rateMismatch":
-      return ids((e) => rateMismatch(e.vatRate, e.date) !== null)
-    case "futureDate":
-      return ids((e) => e.date > today)
-    case "zeroVatSale": {
-      /*
-       * A business that is not VAT registered sells everything at 0 %, so a
-       * 0 % domestic sale is flagged only in a year that also has domestic
-       * sales with VAT.
-       */
-      const sales = entries.filter((e) => isDomesticSale(e, cats))
-      if (!sales.some((e) => e.vatRate > 0)) return new Set()
-      return ids((e) => isDomesticSale(e, cats) && e.vatRate === 0)
-    }
-    case "largeAmount": {
-      /*
-       * Typically a misplaced decimal comma or an extra zero. Income and
-       * expenses are compared separately, since one invoice can easily be
-       * worth a year of receipts.
-       */
-      const out = new Set<string>()
-      /*
-       * A VAT payment is a quarter's or a year's tax in one sum, and the owner
-       * and a loan move money in round sums, so all are large next to a receipt
-       * by nature (§6.6 to §6.8).
-       */
-      const exempt = (e: Entry) => {
-        const cat = cats.get(e.catId)
-        const line = cat && LINE_BY_KEY.get(cat.line)
-        return !!line && (line.settlement || line.owner || line.loan)
-      }
-      for (const type of ["income", "expense"] as const) {
-        const ofType = entries.filter((e) => e.type === type && !exempt(e))
-        if (ofType.length < LARGE_MIN_ENTRIES) continue
-        const gross = (e: Entry) => Math.abs(calcEntry(e).gross)
-        const limit = Math.max(
-          LARGE_FLOOR,
-          median(ofType.map(gross)) * LARGE_FACTOR
-        )
-        for (const e of ofType) if (gross(e) > limit) out.add(e.id)
-      }
-      return out
-    }
-    case "vatNotDeductible":
-      return ids((e) => vatNotDeductible(e, cats))
-    case "lateCash": {
-      // A cash payment is booked without delay and day by day (KPL 2:4).
-      const added = addedOn(log)
-      return ids((e) => {
-        const paid = e.cash ? paidDate(e) : null
-        const on = added.get(e.id)
-        return !!paid && !!on && daysFrom(paid, on) > CASH_BOOKING_DAYS
-      })
-    }
-    case "privateUseNoVat": {
-      // Line 314 only: a car's private use depends on how much of it was deducted.
-      const goods = entries.filter((e) => cats.get(e.catId)?.line === "314")
-      const total = goods.reduce((sum, e) => sum + calcEntry(e).net, 0)
-      if (total <= PRIVATE_USE_FREE) return new Set()
-      return ids((e) => cats.get(e.catId)?.line === "314" && e.vatRate === 0)
-    }
-    case "duplicate": {
-      /*
-       * Entries that share their figures, or a receipt file, with another
-       * entry. Both of a pair are flagged, since either may be the extra one.
-       */
-      const out = new Set<string>()
-      const group = (keysOf: (e: Entry) => (string | null)[]) => {
-        const seen = new Map<string, string>()
-        for (const e of entries) {
-          for (const key of new Set(keysOf(e))) {
-            if (key === null) continue
-            const first = seen.get(key)
-            if (first === undefined) seen.set(key, e.id)
-            else out.add(first).add(e.id)
-          }
-        }
-      }
-      group((e) => [figuresKey(e)])
-      group((e) => (e.atts ?? []).map(fileKey))
-      return out
-    }
-  }
+  return new Set(ENTRY_RULES.get(check).check({ entries, cats, today, log }))
 }

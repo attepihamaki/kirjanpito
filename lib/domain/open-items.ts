@@ -21,6 +21,8 @@ export const NON_CASH_LINES: ReadonlySet<string> = new Set([
   "337",
   "353",
   "354",
+  "364-travel",
+  "364-car",
 ])
 
 /**

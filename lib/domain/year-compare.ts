@@ -1,5 +1,8 @@
 import { monthOf, yearOf } from "@/lib/domain/dates"
-import { incomeStatement } from "@/lib/domain/income-statement"
+import {
+  incomeStatement,
+  type StatementOptions,
+} from "@/lib/domain/income-statement"
 import { monthFigures, summary } from "@/lib/domain/summary"
 import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
 
@@ -29,14 +32,21 @@ function hasEntries(entries: readonly Entry[], year: number): boolean {
 export function yearComparison(
   entries: readonly Entry[],
   cats: CategoryMap,
-  year: number
+  year: number,
+  options: StatementOptions = {}
 ): YearComparison | null {
   const previous = year - 1
   if (!hasEntries(entries, previous)) return null
   const now = summary(entries, cats, year)
   const prev = summary(entries, cats, previous)
-  const result = monthFigures(entries, cats, year).result
-  const resultPrev = monthFigures(entries, cats, previous).result
+  const result = monthFigures(entries, cats, year, entries, options).result
+  const resultPrev = monthFigures(
+    entries,
+    cats,
+    previous,
+    entries,
+    options
+  ).result
 
   const months = now.months.map((row, i) => ({
     month: row.month,
@@ -56,8 +66,8 @@ export function yearComparison(
       incomePrev: prev.totals.incomeNet,
       expense: now.totals.expenseNet,
       expensePrev: prev.totals.expenseNet,
-      result: incomeStatement(entries, cats, year).result,
-      resultPrev: incomeStatement(entries, cats, previous).result,
+      result: incomeStatement(entries, cats, year, options).result,
+      resultPrev: incomeStatement(entries, cats, previous, options).result,
     },
   }
 }
@@ -79,7 +89,8 @@ export function sameTimeLastYear(
   entries: readonly Entry[],
   cats: CategoryMap,
   year: number,
-  through: string
+  through: string,
+  options: StatementOptions = {}
 ): SameTimeLastYear | null {
   const previous = year - 1
   if (!hasEntries(entries, previous)) return null
@@ -90,8 +101,11 @@ export function sameTimeLastYear(
     result: incomeStatement(
       entries.filter((e) => e.date <= cutoff),
       cats,
-      previous
+      previous,
+      options
     ).result,
-    monthResult: monthFigures(entries, cats, previous).result[month - 1],
+    monthResult: monthFigures(entries, cats, previous, entries, options).result[
+      month - 1
+    ],
   }
 }

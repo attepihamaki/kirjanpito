@@ -31,7 +31,7 @@ import {
   type TimelinePeriod,
   type VatPeriod,
 } from "@/lib/domain/vat-deadline"
-import { useTaxBasisEntries } from "@/hooks/use-tax-basis"
+import { useStatementOptions, useTaxBasisEntries } from "@/hooks/use-tax-basis"
 import { useToday } from "@/hooks/use-today"
 import { useBookStore } from "@/stores/book-store"
 
@@ -76,6 +76,7 @@ export function OverviewDataProvider({
   const bookStart = useBookStore((s) => s.bookStart)
   const vatFiled = useBookStore((s) => s.vatFiled)
   const basis = useTaxBasisEntries()
+  const options = useStatementOptions()
   const today = useToday()
 
   const value = React.useMemo<OverviewData>(() => {
@@ -98,9 +99,9 @@ export function OverviewDataProvider({
       elapsedMonths,
       yearEntries,
       summary: summary(basis, catMap, year),
-      statement: incomeStatement(basis, catMap, year),
-      months: monthFigures(entries, catMap, year, basis),
-      lastYear: sameTimeLastYear(basis, catMap, year, through),
+      statement: incomeStatement(basis, catMap, year, options),
+      months: monthFigures(entries, catMap, year, basis, options),
+      lastYear: sameTimeLastYear(basis, catMap, year, through, options),
       bookStart,
       timeline: vatTimeline(
         vatPeriod,
@@ -109,7 +110,7 @@ export function OverviewDataProvider({
         vatFiled
       ),
     }
-  }, [entries, basis, cats, year, today, vatPeriod, bookStart, vatFiled])
+  }, [entries, basis, options, cats, year, today, vatPeriod, bookStart, vatFiled])
 
   return (
     <OverviewDataContext.Provider value={value}>
