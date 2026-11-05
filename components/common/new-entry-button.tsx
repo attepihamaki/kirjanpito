@@ -10,6 +10,7 @@ import { useBookStore } from "@/stores/book-store"
 export function NewEntryButton({ className }: { className?: string }) {
   const f = useFormatters()
   const openDialog = useBookStore((s) => s.openDialog)
+  const readOnly = useBookStore((s) => s.archiveYear !== null)
   const label = f.t("ledger.newEntry")
 
   return (
@@ -17,6 +18,7 @@ export function NewEntryButton({ className }: { className?: string }) {
       className={className}
       title={`${label} (N)`}
       aria-keyshortcuts="N"
+      disabled={readOnly}
       onClick={() => openDialog({ kind: "entry", mode: "new" })}
     >
       <PlusIcon data-icon="inline-start" />

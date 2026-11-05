@@ -633,6 +633,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
   "vatFiled": { "2026-08": "2026-10-12" },
   "yearsArchived": { "2025": "2026-01-20" },
   "form5Filed": { "2025": "2026-03-20" },
+  "archives": { "2024": { "file": "kirjanpito-2024.zip", "on": "2025-03-01", "entries": 42 } },
   "overview": { "layout": [{ "id": "result", "size": "L", "hidden": false }] },
   "categories": [{ "id": "333", "line": "333", "name": "Ostot ja varastojen muutokset", "vatRate": 25.5, "enabled": true, "custom": false }],
   "autosave": false,
@@ -1080,6 +1081,21 @@ KPL 2:6 has the link between transactions, vouchers and entries, through any sub
 - **The way back** is `entryFigureRefs`: the VAT return fields, Form 5 fields and balance fields a voucher adds to, found with the same contributions as the lists, so a voucher is listed under a figure exactly when that figure's list holds it. The VAT return is the one of the filing period that holds the voucher's date. Form 5 reads the voucher on its payment date and not at all while it is open (§6.3). The balance fields are asked for the voucher's own years and the selected year. The totals (308, 316, 355, 358, 359) follow from the fields and are left out. The entry dialog shows it as "Missä tosite näkyy" for a saved voucher (`EntryFigures`), in a closed section like the history, by the voucher as saved and not by the form being edited, and a line opens the list behind that field. A voucher that counts nowhere, such as a VAT payment, shows nothing.
 - `lib/domain/figure-vouchers.test.ts` checks that every field of the VAT return and every statement line adds up and that the two directions agree, and `test/figure-drill.test.tsx` the views, the entry dialog and the stacking.
 
+### 8.19 Archived years (Arkistoidut vuodet)
+
+`lib/domain/year-archive.ts` (pure, tested), `archiveClosedYear` in `lib/commands/io-commands.ts` and `components/app/archive-banner.tsx`. A closed year can leave the working book and live in a ZIP of its own, so a book of ten years stays small. The archive opens read-only as a reference.
+
+- **Who can be archived** (`archiveBlockers`). The year has ended, its Form 5 is marked as filed (§8.8), every closed VAT period of it is marked as filed (§6.5), no older year is still in the book (years go oldest first), no voucher dated in it is open or was paid after it, and an asset opening balance is not dated beyond the next year. The overview's checklist row for a closed year (§8.12) has an "Arkistoi" button beside "Tallessa", and the blockers are listed in a dialog when any holds.
+- **What moves.** The vouchers dated and paid in the year (`movableEntries`) and their receipts. A voucher dated in the year but paid later, and one dated later but paid in the year, stay in the working book under their own dates, since a later year's result and open items read them (§6.3). The archive file holds both kinds as copies (`archiveContents`), so its income statement and Form 5 read as filed.
+- **What carries forward.** The asset pool's closing balance and the loans outstanding are written as the next year's opening (`rolledOpenings`, §8.8, §6.8), and a book with no start month gets the first entry's month, so the VAT timeline does not move. The year-end figures, the filed marks and the change log stay in the working book's `settings.json`.
+- **The archive is a bookkeeping ZIP** (§7.2): a CSV, receipts and a `settings.json` that holds only the year's marks, its year-end figures and its change log records, and `archiveOf` (the year). It has the book's export language, its password if the book is encrypted (§7.8), and an integrity seal (§7.9). Its `yearsArchived` mark locks every voucher of the year (§8.11).
+- **Safety order.** The save picker comes first, so only a browser that writes files directly can archive (§7.5). The ZIP is built, refused if any receipt is missing from this browser, read back in memory, and written. Only then do the entries leave the book (`applyArchive`), which marks it dirty. A failure at any step leaves the book as it was. The working book's file on disk still holds the year until the user saves, and the archive holds it too.
+- **The working book keeps a stub** per year in `archives` (`settings.json`): the file name, the date and the entry count. Asetukset, Yleiset lists them. The app cannot find the file again, since a browser hands back no path, so the user opens it from wherever they put it.
+- **Opening an archive** is opening any file (§7.2). `archiveOf` in its settings sets `archiveYear` in the store, which is persisted. Nothing is parked: the archive replaces the open book after the usual unsaved-changes prompt (§8.11), and "Sulje arkisto" in the banner returns to the landing page, where the working book is opened again from its file.
+- **Read-only is the store's rule, not each action's.** While `archiveYear` is set, a state change that touches any of `BOOK_DATA_KEYS` is dropped, so no action needs its own check. Filters, the selected year and sorting stay free. `openDialog` opens only the dialogs that show (a viewer, export, the VAT return, the year-end dialog, and an existing voucher). Saving, autosave and "Uusi tosite" are refused or disabled. A download of the archive is allowed and keeps `archiveOf`.
+- **Not handled:** unarchiving into the working book, parking the working book while an archive is open, archiving a year with open items, and finding an archive again from its stub.
+- `lib/domain/year-archive.test.ts` covers the rules and `stores/archive-guard.test.ts` the read-only guard.
+
 ---
 
 ## 9. Internationalisation and formatting
@@ -1466,7 +1482,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
 
 - localStorage `bookkeeping` — exported as `BOOK_STORAGE_KEY` from
   `stores/book-store.ts`, so nothing hard-codes the string twice:
-  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, exportLang, businessId, businessName, vatPeriod, traderType, bookStart, vatFiled, yearsArchived, overviewLayout, autosave, encrypted, recurring, categoryRules, assetOpening, bankBalance }`.
+  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, exportLang, businessId, businessName, vatPeriod, traderType, bookStart, vatFiled, yearsArchived, archives, archiveYear, overviewLayout, autosave, encrypted, recurring, categoryRules, assetOpening, bankBalance }`.
   The book's settings are kept twice: here, as the working buffer, and in the
   file's `settings.json` (§7.6), as the record. A reload restores them from
   here; opening a file replaces them from there.

@@ -39,6 +39,7 @@ import {
 } from "@/lib/domain/types"
 import type { TraderType } from "@/lib/domain/open-items"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
+import type { ArchiveStub } from "@/lib/domain/year-archive"
 
 /**
  * `settings.json`, the second file in a bookkeeping ZIP (§7.6).
@@ -89,6 +90,13 @@ export interface BookSettings {
   yearsArchived: Record<string, string>
   /** Year (`"2025"`) → ISO date its Form 5 was marked as filed (§8.8). */
   form5Filed: Record<string, string>
+  /** Year (`"2025"`) → where its entries went when it was archived (§8.19). */
+  archives: Record<string, ArchiveStub>
+  /**
+   * Present only in an archive file: the year it holds. A book opened from
+   * such a file is read-only (§8.19).
+   */
+  archiveOf: number | null
   overviewLayout: OverviewWidget[]
   autosave: boolean
   /** The ZIP is written AES-encrypted (§7.8). */
@@ -191,7 +199,10 @@ function parseCategoryRule(value: unknown): CategoryRule | null {
   if (!isRecord(value)) return null
   const { id, contains, catId, vatRate } = value
   if (typeof id !== "string" || !id) return null
-  if (typeof contains !== "string" || foldText(contains).length < MIN_RULE_TEXT) {
+  if (
+    typeof contains !== "string" ||
+    foldText(contains).length < MIN_RULE_TEXT
+  ) {
     return null
   }
   if (typeof catId !== "string" || !catId) return null
@@ -222,10 +233,7 @@ function parseCategory(value: unknown): Category | null {
     custom: custom === true,
   }
   if (SALES_KINDS.includes(kind as SalesKind)) cat.kind = kind as SalesKind
-  if (
-    isEuPurchase(euPurchase) &&
-    canBeEuPurchase(LINE_BY_KEY.get(line))
-  ) {
+  if (isEuPurchase(euPurchase) && canBeEuPurchase(LINE_BY_KEY.get(line))) {
     cat.euPurchase = euPurchase
   }
   return cat
@@ -371,6 +379,35 @@ export function parseSettings(text: string): ParsedSettings {
     }
     out.form5Filed = filed
   }
+  if (isRecord(raw.archives)) {
+    const stubs: Record<string, ArchiveStub> = {}
+    for (const [key, value] of Object.entries(raw.archives)) {
+      if (!YEAR.test(key) || !isRecord(value)) continue
+      if (
+        typeof value.file === "string" &&
+        value.file &&
+        typeof value.on === "string" &&
+        ISO_DATE.test(value.on) &&
+        Number.isInteger(value.entries) &&
+        (value.entries as number) >= 0
+      ) {
+        stubs[key] = {
+          file: value.file,
+          on: value.on,
+          entries: value.entries as number,
+        }
+      }
+    }
+    out.archives = stubs
+  }
+  if (raw.archiveOf === null) out.archiveOf = null
+  else if (
+    typeof raw.archiveOf === "number" &&
+    Number.isInteger(raw.archiveOf) &&
+    YEAR.test(String(raw.archiveOf))
+  ) {
+    out.archiveOf = raw.archiveOf
+  }
   if (isRecord(raw.overview) && Array.isArray(raw.overview.layout)) {
     out.overviewLayout = normalizeLayout(raw.overview.layout)
   }
@@ -477,6 +514,10 @@ export function serializeSettings(s: BookSettings): string {
     form5Filed: Object.fromEntries(
       Object.entries(s.form5Filed).sort(([a], [b]) => a.localeCompare(b))
     ),
+    archives: Object.fromEntries(
+      Object.entries(s.archives).sort(([a], [b]) => a.localeCompare(b))
+    ),
+    ...(s.archiveOf !== null ? { archiveOf: s.archiveOf } : {}),
     overview: { layout: s.overviewLayout },
     autosave: s.autosave,
     encrypted: s.encrypted,

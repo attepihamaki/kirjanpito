@@ -40,6 +40,8 @@ import { cn } from "@/lib/utils"
 import { toast } from "@/components/ui/toast"
 import { newYearDue, newYearTarget } from "@/lib/domain/new-year"
 import { retentionDates, yearsToArchive } from "@/lib/domain/retention"
+import { archiveClosedYear } from "@/lib/commands/io-commands"
+import { useCommandCtx } from "@/hooks/use-commands"
 import { BOOK_LIMIT_RULES } from "@/lib/domain/book-limits"
 import { evaluate, type RuleSeverity } from "@/lib/domain/rules/engine"
 import { EMPTY_YEAR_END, form5Balance } from "@/lib/domain/form5-balance"
@@ -234,6 +236,7 @@ export function ChecksWidget() {
   const yearsArchived = useBookStore((s) => s.yearsArchived)
   const recurring = useBookStore((s) => s.recurring)
   const setYearArchived = useBookStore((s) => s.setYearArchived)
+  const ctx = useCommandCtx()
   const canSave = useCanSaveToFile()
   const save = useSaveBook()
 
@@ -571,9 +574,18 @@ export function ChecksWidget() {
         v: f.date(vouchers),
       }),
       action: (
-        <Button variant="ghost" size="sm" onClick={() => archiveYear(y)}>
-          {f.t("overview.yearStored")}
-        </Button>
+        <div className="flex gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => void archiveClosedYear(ctx, y, data.today)}
+          >
+            {f.t("overview.yearArchive")}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => archiveYear(y)}>
+            {f.t("overview.yearStored")}
+          </Button>
+        </div>
       ),
     })
   }

@@ -235,10 +235,7 @@ export const APP_DICT = {
     "Kopiointi ei onnistunut. Selain ei salli leikepöydän käyttöä.",
     "Could not copy. The browser does not allow clipboard access.",
   ],
-  "common.figureShow": [
-    "Näytä tositteet: {x}",
-    "Show the vouchers behind {x}",
-  ],
+  "common.figureShow": ["Näytä tositteet: {x}", "Show the vouchers behind {x}"],
   "common.figureCount": ["Tositteita: {n}", "Vouchers: {n}"],
   "common.figureEmpty": [
     "Tässä luvussa ei ole tositteita.",
@@ -2158,7 +2155,10 @@ export const APP_DICT = {
     "Kieli, jolla kirjanpito tallennetaan: tiedoston nimi, CSV:n sarakkeet ja arvot sekä liitekansio. Summat, päivämäärät ja erotin pysyvät samoina molemmilla kielillä.",
     "The language the bookkeeping is saved in: the file name, the CSV’s columns and values, and the attachment folder. Amounts, dates and the separator stay the same in both languages.",
   ],
-  "settings.traderType": ["Elinkeinonharjoittajan tyyppi", "Type of sole trader"],
+  "settings.traderType": [
+    "Elinkeinonharjoittajan tyyppi",
+    "Type of sole trader",
+  ],
   "settings.traderProfessional": ["Ammatinharjoittaja", "Professional"],
   "settings.traderBusiness": ["Liikkeenharjoittaja", "Business trader"],
   "settings.traderTypeHint": [
@@ -2569,6 +2569,83 @@ export const APP_DICT = {
   // --- Saving back to the opened file (§7.5) ---
   "io.saving": ["Tallennetaan…", "Saving…"],
   "io.saved": ["Tallennettu tiedostoon {f}.", "Saved to {f}."],
+  "io.archiveReadOnly": [
+    "Arkisto on vain luettavissa. Avaa työkirjanpito, jos haluat tallentaa.",
+    "This archive is read-only. Open your working book to save.",
+  ],
+  "io.archiveRunning": [
+    "Vuosi {y} ei ole vielä päättynyt.",
+    "Year {y} has not ended yet.",
+  ],
+  "io.archiveForm5": [
+    "Merkitse vuoden {y} lomake 5 ilmoitetuksi.",
+    "Mark the Form 5 for {y} as filed.",
+  ],
+  "io.archiveVat": [
+    "Merkitse nämä ALV-kaudet ilmoitetuiksi: {p}.",
+    "Mark these VAT periods as filed: {p}.",
+  ],
+  "io.archiveOlder": [
+    "Arkistoi ensin vuosi {y}. Vuodet arkistoidaan vanhimmasta alkaen.",
+    "Archive {y} first. Years go oldest first.",
+  ],
+  "io.archiveUnsettled": [
+    "Tositteita, jotka ovat avoimia tai maksettu vasta myöhemmin: {n}. Ne pysyvät kirjanpidossa, joten arkistoi vuosi vasta kun ne on maksettu.",
+    "Vouchers that are open or were paid later: {n}. They stay in the book, so archive the year once they are paid.",
+  ],
+  "io.archiveAssetOpening": [
+    "Koneiden ja kaluston alkusaldo on myöhemmältä vuodelta kuin seuraava vuosi. Korjaa se Poistot-sivulla.",
+    "The machinery opening balance is dated later than the next year. Fix it on the Depreciation page.",
+  ],
+  "io.archiveEmpty": [
+    "Vuodella {y} ei ole tositteita.",
+    "Year {y} has no vouchers.",
+  ],
+  "io.archiveBlockedTitle": [
+    "Vuotta {y} ei voi vielä arkistoida",
+    "Year {y} cannot be archived yet",
+  ],
+  "io.archiveNeedsPickerTitle": [
+    "Arkistointi ei toimi tässä selaimessa",
+    "Archiving does not work in this browser",
+  ],
+  "io.archiveNeedsPicker": [
+    "Tositteet poistetaan kirjanpidosta vasta, kun arkistotiedosto on varmasti kirjoitettu. Siihen tarvitaan selain, joka tallentaa tiedostoja suoraan, esimerkiksi Chrome tai Edge.",
+    "Vouchers leave the book only once the archive file is certainly written. That needs a browser that saves files directly, such as Chrome or Edge.",
+  ],
+  "io.archiveLost": [
+    "Liitteitä, joita tämä selain ei pidä hallussaan: {n}. Arkistosta puuttuisi tositteita. Avaa kirjanpito uudelleen tiedostosta ja yritä sitten.",
+    "Attachments this browser does not hold: {n}. The archive would be missing vouchers. Reopen the book from its file and try again.",
+  ],
+  "io.archiveDone": [
+    "Vuosi {y} arkistoitu tiedostoon {f}. Kirjanpidosta poistettiin {n} tositetta. Tallenna kirjanpito.",
+    "Year {y} archived to {f}. {n} vouchers left the book. Save the book now.",
+  ],
+  "io.archiveFailed": [
+    "Arkistointi epäonnistui. Kirjanpito ei muuttunut.",
+    "Archiving failed. Your book is unchanged.",
+  ],
+  "confirm.archiveTitle": ["Arkistoidaanko vuosi {y}?", "Archive {y}?"],
+  "confirm.archiveMessage": [
+    "Vuosi {y} tallennetaan omaan ZIP-tiedostoonsa. Sen jälkeen {n} tositetta liitteineen poistetaan tästä kirjanpidosta ja kirjanpito pitää tallentaa. Arkiston voi avata vain luettavaksi milloin tahansa.",
+    "{y} is written to a ZIP of its own. After that {n} vouchers and their attachments leave this book, and the book needs saving. You can open the archive read-only at any time.",
+  ],
+  "confirm.archiveConfirm": [
+    "Valitse tiedosto ja arkistoi",
+    "Choose file and archive",
+  ],
+  "overview.yearArchive": ["Arkistoi", "Archive"],
+  "app.archiveBanner": ["Arkisto {y}: vain luku", "Archive {y}: read-only"],
+  "app.archiveClose": ["Sulje arkisto", "Close archive"],
+  "settings.archivesTitle": ["Arkistoidut vuodet", "Archived years"],
+  "settings.archivesDesc": [
+    "Nämä vuodet ovat omissa ZIP-tiedostoissaan. Avaa arkisto Avaa tiedosto -toiminnolla, niin se avautuu vain luettavana.",
+    "These years live in ZIP files of their own. Open one with Open file and it opens read-only.",
+  ],
+  "settings.archivesRow": [
+    "{y}: {f}, tositteita {n}, arkistoitu {d}",
+    "{y}: {f}, {n} vouchers, archived {d}",
+  ],
   "io.saveFailed": ["Tallennus epäonnistui.", "Couldn’t save the file."],
   "io.saveDenied": [
     "Selain ei antanut lupaa kirjoittaa tiedostoon. Voit silti ladata kopion.",

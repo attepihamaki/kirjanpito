@@ -46,8 +46,16 @@ import { checkIntegrity, sealSettings } from "@/lib/domain/integrity"
 import {
   parseSettings,
   serializeSettings,
+  type BookSettings,
   type ParsedSettings,
 } from "@/lib/domain/settings-file"
+import {
+  archiveBlockers,
+  archiveContents,
+  movableEntries,
+  rolledOpenings,
+  type ArchiveBlocker,
+} from "@/lib/domain/year-archive"
 import { normalizeLayout } from "@/lib/domain/overview-layout"
 import {
   ZipEntryTooLargeError,
@@ -510,6 +518,7 @@ function applyImport(
   releaseAllObjectUrls()
   useBookStore.getState().replaceBook({
     encrypted: archive.encrypted,
+    archiveYear: settings?.archiveOf ?? null,
     entries,
     cats: result.categories,
     // The name carries its extension (§7.3).
@@ -535,6 +544,7 @@ function applyImport(
           vatFiled: settings.vatFiled,
           yearsArchived: settings.yearsArchived,
           form5Filed: settings.form5Filed,
+          archives: settings.archives,
           recurring: settings.recurring,
           categoryRules: settings.categoryRules,
           assetOpening: settings.assetOpening,
@@ -596,6 +606,7 @@ function bookVersion() {
     s.vatFiled,
     s.yearsArchived,
     s.form5Filed,
+    s.archives,
     s.overviewLayout,
     s.recurring,
     s.categoryRules,
@@ -620,7 +631,7 @@ function changedSince(version: BookVersion): boolean {
 }
 
 /** Everything `settings.json` holds, as the app stands right now (§7.6). */
-function currentSettingsText(): string {
+function currentSettingsText(over: Partial<BookSettings> = {}): string {
   const s = useBookStore.getState()
   return serializeSettings({
     language: useLangStore.getState().lang,
@@ -634,6 +645,8 @@ function currentSettingsText(): string {
     vatFiled: s.vatFiled,
     yearsArchived: s.yearsArchived,
     form5Filed: s.form5Filed,
+    archives: s.archives,
+    archiveOf: s.archiveYear,
     overviewLayout: normalizeLayout(s.overviewLayout),
     autosave: s.autosave,
     encrypted: s.encrypted,
@@ -646,6 +659,7 @@ function currentSettingsText(): string {
     loanOpening: s.loanOpening,
     yearEnd: s.yearEnd,
     changeLog: s.changeLog,
+    ...over,
   })
 }
 
@@ -681,9 +695,12 @@ function bookFileName(baseName: string, lang: Lang): string {
 /** A bookkeeping is a ZIP, because settings.json has to travel with the entries (§7.6). */
 async function buildBookFile(
   baseName: string,
-  source: FileSystemFileHandle | null = null
+  source: FileSystemFileHandle | null = null,
+  /** Write these entries and these settings instead of the open book's (§8.19). */
+  only?: { entries: readonly Entry[]; settings: Partial<BookSettings> }
 ): Promise<BookFile> {
-  const { entries, cats, exportLang, encrypted } = useBookStore.getState()
+  const { cats, exportLang, encrypted } = useBookStore.getState()
+  const entries = only?.entries ?? useBookStore.getState().entries
   const version = bookVersion()
   /*
    * An encrypted book is never written plain because a password is missing:
@@ -724,7 +741,10 @@ async function buildBookFile(
     paths,
     attachmentIds,
     read: async (id) => (await getReceipt(id)) ?? null,
-    settingsText: await sealSettings(currentSettingsText(), csvText),
+    settingsText: await sealSettings(
+      currentSettingsText(only?.settings),
+      csvText
+    ),
     password: encrypted ? (heldPassword() ?? undefined) : undefined,
     carry: carryFrom(source),
     onAbsent: (key) => {
@@ -859,6 +879,10 @@ function replacedSince(epoch: number): boolean {
  */
 export async function saveBook(ctx: Ctx, suggestedBase: string): Promise<void> {
   const state = useBookStore.getState()
+  if (state.archiveYear !== null) {
+    toast.add({ title: ctx.t("io.archiveReadOnly") })
+    return
+  }
   // A dirty book with no entries still differs from its file: the last one was deleted.
   if (!state.entries.length && !state.dirty) {
     toast.add({ title: ctx.t("io.nothingToExport") })
@@ -982,6 +1006,7 @@ async function handleToWrite(
 export async function autosaveBook(ctx: Ctx): Promise<boolean> {
   const state = useBookStore.getState()
   const handle = state.fileHandle
+  if (state.archiveYear !== null) return false
   if (!state.autosave || state.autosavePaused || !state.dirty) return false
   if (state.saving || state.importing) return false
 
@@ -1022,6 +1047,178 @@ export async function autosaveBook(ctx: Ctx): Promise<boolean> {
     console.error(error)
     toast.add({ title: ctx.t("io.saveFailed") })
     return pause()
+  } finally {
+    useBookStore.getState().setSaving(false)
+  }
+}
+
+/* -------------------------------------------------------------------------
+ * Archiving a closed year (§8.19)
+ * ---------------------------------------------------------------------- */
+
+function blockerText(ctx: Ctx, year: number, b: ArchiveBlocker): string {
+  switch (b.kind) {
+    case "running":
+      return ctx.t("io.archiveRunning", { y: year })
+    case "form5":
+      return ctx.t("io.archiveForm5", { y: year })
+    case "vat":
+      return ctx.t("io.archiveVat", { p: b.periods.join(", ") })
+    case "older":
+      return ctx.t("io.archiveOlder", { y: b.year })
+    case "unsettled":
+      return ctx.t("io.archiveUnsettled", { n: b.count })
+    case "assetOpening":
+      return ctx.t("io.archiveAssetOpening")
+    case "empty":
+      return ctx.t("io.archiveEmpty", { y: year })
+  }
+}
+
+/**
+ * Move a closed year out of the working book into a ZIP of its own (§8.19).
+ * The archive is written and read back before anything leaves the book, so a
+ * failure at any point leaves the book as it was. Must be called from a user
+ * gesture, for the save picker.
+ */
+export async function archiveClosedYear(
+  ctx: Ctx,
+  year: number,
+  today: string
+): Promise<boolean> {
+  const state = useBookStore.getState()
+  if (state.archiveYear !== null || state.saving || state.importing) {
+    return false
+  }
+  const cats = indexCategories(state.cats)
+  const blockers = archiveBlockers({
+    year,
+    entries: state.entries,
+    cats,
+    today,
+    vatPeriod: state.vatPeriod,
+    vatFiled: state.vatFiled,
+    form5Filed: state.form5Filed,
+    assetOpening: state.assetOpening,
+  })
+  if (blockers.length) {
+    await alertDialog({
+      title: ctx.t("io.archiveBlockedTitle", { y: year }),
+      message: blockers.map((b) => blockerText(ctx, year, b)).join("\n"),
+      closeLabel: ctx.t("common.close"),
+    })
+    return false
+  }
+  /* Entries leave the book only once the archive is known to be on disk. */
+  if (!isFileHandleSupported()) {
+    await alertDialog({
+      title: ctx.t("io.archiveNeedsPickerTitle"),
+      message: ctx.t("io.archiveNeedsPicker"),
+      closeLabel: ctx.t("common.close"),
+    })
+    return false
+  }
+
+  const leaving = movableEntries(state.entries, year)
+  const contents = archiveContents(state.entries, year)
+  const goAhead = await confirm({
+    title: ctx.t("confirm.archiveTitle", { y: year }),
+    message: ctx.t("confirm.archiveMessage", { y: year, n: leaving.length }),
+    confirmLabel: ctx.t("confirm.archiveConfirm"),
+    cancelLabel: ctx.t("common.cancel"),
+    destructive: false,
+  })
+  if (!goAhead) return false
+
+  useBookStore.getState().setSaving(true)
+  try {
+    if (!(await ensurePassword(ctx, state.fileHandle))) return false
+    const base = state.fileName
+      ? baseOf(state.fileName)
+      : defaultFileBaseName(state.exportLang)
+    const handle = await pickFileToSave(
+      bookFileName(`${base}-${year}`, state.exportLang)
+    )
+    if (!handle || replacedSince(state.bookEpoch)) return false
+
+    const key = String(year)
+    const settings: Partial<BookSettings> = {
+      archives: {},
+      archiveOf: year,
+      autosave: false,
+      vatFiled: Object.fromEntries(
+        Object.entries(state.vatFiled).filter(([k]) => k.startsWith(key))
+      ),
+      yearsArchived: { [key]: today },
+      form5Filed: state.form5Filed[key] ? { [key]: state.form5Filed[key] } : {},
+      recurring: [],
+      categoryRules: [],
+      bankBalance: null,
+      yearEnd: Object.fromEntries(
+        Object.entries(state.yearEnd).filter(
+          ([k]) => k === key || k === String(year - 1)
+        )
+      ),
+      changeLog: state.changeLog.filter((r) =>
+        [r.date, r.period?.replace(/^form5-/, "")].some((d) =>
+          d?.startsWith(key)
+        )
+      ),
+    }
+    const file = await buildBookFile(base, null, {
+      entries: contents,
+      settings,
+    })
+    if (file.absentReceipts) {
+      await alertDialog({
+        title: ctx.t("io.archiveBlockedTitle", { y: year }),
+        message: ctx.t("io.archiveLost", { n: file.absentReceipts }),
+        closeLabel: ctx.t("common.close"),
+      })
+      return false
+    }
+    if (replacedSince(state.bookEpoch)) return false
+
+    /* Read the bytes back first: a file that does not open is no archive. */
+    const bytes = new Uint8Array(await file.blob.arrayBuffer())
+    const check = await unpackZip(bytes, undefined, heldPassword() ?? undefined)
+    if (!check || check.csvText.trim() === "") {
+      throw new Error("The archive does not read back")
+    }
+
+    await writeFile(handle, file.blob)
+    if (replacedSince(state.bookEpoch)) return false
+
+    const now = useBookStore.getState()
+    const firstMonth = now.entries.map((e) => e.date.slice(0, 7)).sort()[0]
+    const next = rolledOpenings({
+      year,
+      entries: now.entries,
+      cats,
+      assetOpening: now.assetOpening,
+      loanOpening: now.loanOpening,
+    })
+    now.applyArchive({
+      year,
+      stub: { file: handle.name, on: today, entries: contents.length },
+      removeIds: leaving.map((e) => e.id),
+      /* The VAT timeline starts at the first entry; keep it from moving. */
+      bookStart: now.bookStart ?? firstMonth ?? null,
+      assetOpening: next.assetOpening,
+      loanOpening: next.loanOpening,
+    })
+    toast.add({
+      title: ctx.t("io.archiveDone", {
+        y: year,
+        f: handle.name,
+        n: leaving.length,
+      }),
+    })
+    return true
+  } catch (error) {
+    console.error(error)
+    toast.add({ title: ctx.t("io.archiveFailed") })
+    return false
   } finally {
     useBookStore.getState().setSaving(false)
   }

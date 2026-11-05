@@ -1,6 +1,6 @@
 "use client"
 
-import { create } from "zustand"
+import { create, type StateCreator } from "zustand"
 import { persist, type PersistStorage } from "zustand/middleware"
 
 import { defaultCategories } from "@/lib/domain/accounts"
@@ -41,6 +41,7 @@ import type {
 } from "@/lib/domain/types"
 import type { TraderType } from "@/lib/domain/open-items"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
+import type { ArchiveStub } from "@/lib/domain/year-archive"
 import { LANG_STORAGE_KEY, writeLang } from "@/stores/lang-store"
 
 /**
@@ -260,6 +261,17 @@ export interface BookState {
   yearsArchived: Record<string, string>
   /** Year → ISO date its Form 5 was marked as filed (§8.8). Saved in settings.json. */
   form5Filed: Record<string, string>
+  /**
+   * Year (`"2025"`) → where its entries went when it was archived (§8.19).
+   * Saved in settings.json.
+   */
+  archives: Record<string, ArchiveStub>
+  /**
+   * The year this book is an archive of, or null for a working book. An
+   * archive is read-only: the store refuses every change to the book's data
+   * (§8.19). Saved as `archiveOf` in settings.json.
+   */
+  archiveYear: number | null
   /** The overview's widgets, in order (§8.12). Normalised where it is read. */
   overviewLayout: OverviewWidget[]
   /** Save to the linked file a moment after each change (§7.5). Opt-in. */
@@ -387,6 +399,8 @@ export interface BookActions {
     savedAt: number | null
     /** Whether the archive was encrypted when it was read (§7.8). */
     encrypted?: boolean
+    /** The year an archive file holds, or null for a working book (§8.19). */
+    archiveYear?: number | null
     /**
      * What the file's `settings.json` carried. A plain CSV has none: its
      * filed marks start empty and everything else stays as it was.
@@ -401,6 +415,7 @@ export interface BookActions {
       vatFiled?: Record<string, string>
       yearsArchived?: Record<string, string>
       form5Filed?: Record<string, string>
+      archives?: Record<string, ArchiveStub>
       recurring?: RecurringEntry[]
       categoryRules?: CategoryRule[]
       assetOpening?: AssetOpening | null
@@ -468,6 +483,18 @@ export interface BookActions {
   /** Mark a closed year as stored away on `date`, or clear it with null. */
   setYearArchived(year: number, date: string | null): void
   setForm5Filed(year: number, date: string | null): void
+  /**
+   * Take an archived year out of the working book (§8.19): drop its entries,
+   * record the stub and the mark, and roll the openings forward.
+   */
+  applyArchive(archive: {
+    year: number
+    stub: ArchiveStub
+    removeIds: readonly string[]
+    bookStart: string | null
+    assetOpening: AssetOpening | null
+    loanOpening: LoanOpening | null
+  }): void
   setOverviewLayout(layout: OverviewWidget[]): void
   setAutosave(on: boolean): void
   /** Turn encryption on or off. The file no longer matches, so the book is dirty (§7.8). */
@@ -540,6 +567,8 @@ function initialState(): BookState {
     vatFiled: {},
     yearsArchived: {},
     form5Filed: {},
+    archives: {},
+    archiveYear: null,
     overviewLayout: DEFAULT_LAYOUT.map((w) => ({ ...w })),
     autosave: false,
     encrypted: false,
@@ -603,6 +632,8 @@ type PersistedBook = Pick<
   | "vatFiled"
   | "yearsArchived"
   | "form5Filed"
+  | "archives"
+  | "archiveYear"
   | "overviewLayout"
   | "autosave"
   | "encrypted"
@@ -711,6 +742,7 @@ const unlinked = {
   fileHandle: null,
   savedAt: null,
   encrypted: false,
+  archiveYear: null,
 }
 
 /** Reset the filters that would otherwise survive a file switch (§8.11). */
@@ -750,9 +782,81 @@ function lockRecord(period: string, date: string | null): ChangeRecord {
   }
 }
 
+/**
+ * The fields that make up a bookkeeping's data. An archive book (§8.19)
+ * refuses any change that touches one of them, so no action has to remember
+ * to check. Filters, the selected year and the page state stay free.
+ */
+const BOOK_DATA_KEYS: readonly (keyof BookState)[] = [
+  "entries",
+  "cats",
+  "dirty",
+  "exportLang",
+  "businessId",
+  "businessName",
+  "vatPeriod",
+  "traderType",
+  "bookStart",
+  "vatFiled",
+  "yearsArchived",
+  "form5Filed",
+  "archives",
+  "recurring",
+  "categoryRules",
+  "assetOpening",
+  "bankBalance",
+  "loanOpening",
+  "yearEnd",
+  "changeLog",
+  "encrypted",
+  "overviewLayout",
+  "autosave",
+]
+
+type BookCreator = StateCreator<BookStore, [["zustand/persist", unknown]], []>
+
+/** Wraps `set` so an archive book drops any change to its data (§8.19). */
+const readOnlyGuard =
+  (creator: BookCreator): BookCreator =>
+  (set, get, api) =>
+    creator(
+      (partial, replace) => {
+        const next = typeof partial === "function" ? partial(get()) : partial
+        if (
+          get().archiveYear !== null &&
+          !("archiveYear" in next) &&
+          BOOK_DATA_KEYS.some((key) => key in next)
+        ) {
+          return
+        }
+        set(next, replace as false | undefined)
+      },
+      get,
+      api
+    )
+
+/**
+ * The dialogs an archive book may open: the ones that only show. Any other
+ * opens nothing, since what it would do is refused anyway.
+ */
+function readOnlyDialog(dialog: DialogState): boolean {
+  switch (dialog.kind) {
+    case "none":
+    case "viewer":
+    case "export":
+    case "vat-return":
+    case "year-end":
+      return true
+    case "entry":
+      return dialog.mode === "edit"
+    default:
+      return false
+  }
+}
+
 export const useBookStore = create<BookStore>()(
   persist(
-    (set, get) => ({
+    readOnlyGuard((set, get) => ({
       ...initialState(),
 
       setHydrated: (partial) => set({ ...partial, hydrated: true }),
@@ -783,6 +887,7 @@ export const useBookStore = create<BookStore>()(
           vatFiled: {},
           yearsArchived: {},
           form5Filed: {},
+          archives: {},
           recurring: [],
           categoryRules: [],
           assetOpening: null,
@@ -827,6 +932,7 @@ export const useBookStore = create<BookStore>()(
           vatFiled: {},
           yearsArchived: {},
           form5Filed: {},
+          archives: {},
           recurring: [],
           categoryRules: [],
           assetOpening: null,
@@ -881,6 +987,8 @@ export const useBookStore = create<BookStore>()(
           vatFiled: s.vatFiled ?? {},
           yearsArchived: s.yearsArchived ?? {},
           form5Filed: s.form5Filed ?? {},
+          archives: s.archives ?? {},
+          archiveYear: next.archiveYear ?? null,
           recurring: book.recurring,
           categoryRules: s.categoryRules ?? [],
           assetOpening: s.assetOpening ?? null,
@@ -1057,6 +1165,27 @@ export const useBookStore = create<BookStore>()(
           dirty: true,
         })
       },
+      applyArchive: ({
+        year,
+        stub,
+        removeIds,
+        bookStart,
+        assetOpening,
+        loanOpening,
+      }) => {
+        const gone = new Set(removeIds)
+        set({
+          entries: get().entries.filter((e) => !gone.has(e.id)),
+          archives: { ...get().archives, [String(year)]: stub },
+          yearsArchived: { ...get().yearsArchived, [String(year)]: stub.on },
+          bookStart,
+          assetOpening,
+          loanOpening,
+          changeLog: [...get().changeLog, lockRecord(String(year), stub.on)],
+          dirty: true,
+          gcTick: get().gcTick + 1,
+        })
+      },
       setYearArchived: (year, date) => {
         const yearsArchived = { ...get().yearsArchived }
         if (date) yearsArchived[String(year)] = date
@@ -1178,7 +1307,10 @@ export const useBookStore = create<BookStore>()(
 
       setVatIndex: (vatIndex) => set({ vatIndex }),
 
-      openDialog: (dialog) => set({ dialog, figure: null }),
+      openDialog: (dialog) => {
+        if (get().archiveYear !== null && !readOnlyDialog(dialog)) return
+        set({ dialog, figure: null })
+      },
       openFigure: (figure) => set({ figure }),
       closeFigure: () => set({ figure: null }),
       closeDialog: () =>
@@ -1191,7 +1323,7 @@ export const useBookStore = create<BookStore>()(
       setDraftAttachmentIds: (draftAttachmentIds) =>
         set({ draftAttachmentIds }),
       requestGc: () => set({ gcTick: get().gcTick + 1 }),
-    }),
+    })),
     {
       name: BOOK_STORAGE_KEY,
       version: 11,
@@ -1223,6 +1355,8 @@ export const useBookStore = create<BookStore>()(
         vatFiled: s.vatFiled,
         yearsArchived: s.yearsArchived,
         form5Filed: s.form5Filed,
+        archives: s.archives,
+        archiveYear: s.archiveYear,
         overviewLayout: s.overviewLayout,
         autosave: s.autosave,
         encrypted: s.encrypted,

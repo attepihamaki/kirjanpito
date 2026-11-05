@@ -10,6 +10,7 @@ import {
   SettingHint,
   SettingValue,
 } from "@/components/common/setting-card"
+import { Panel } from "@/components/common/panel"
 import { useFormatters } from "@/components/lang-provider"
 import { BusinessSetting } from "@/components/settings/business-setting"
 import { useRenumberChanges } from "@/components/settings/general-actions"
@@ -49,8 +50,37 @@ export function GeneralSettings() {
         <EncryptionSetting />
         <VoucherNumbers />
       </SettingGrid>
+      <ArchivedYears />
       <RulesChecked />
     </>
+  )
+}
+
+/** The years that live in ZIP files of their own (§8.19). Absent until there is one. */
+function ArchivedYears() {
+  const f = useFormatters()
+  const archives = useBookStore((s) => s.archives)
+  const years = Object.keys(archives).sort()
+  if (years.length === 0) return null
+  return (
+    <Panel
+      title={f.t("settings.archivesTitle")}
+      description={f.t("settings.archivesDesc")}
+      className="mt-4"
+    >
+      <ul className="divide-y">
+        {years.map((y) => (
+          <li key={y} className="px-4 py-3 text-sm">
+            {f.t("settings.archivesRow", {
+              y,
+              f: archives[y].file,
+              n: archives[y].entries,
+              d: f.date(archives[y].on),
+            })}
+          </li>
+        ))}
+      </ul>
+    </Panel>
   )
 }
 
