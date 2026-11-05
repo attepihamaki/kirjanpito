@@ -193,8 +193,14 @@ describe("StatementView", () => {
 
   it("renders every line, with a dash for the empty ones", () => {
     mount(<StatementView />)
-    // All 30 lines render; the sample touches eight, so 22 show a dash.
-    expect(screen.getAllByText("–")).toHaveLength(22)
+    /*
+     * All 30 lines render; the sample touches eight, so 22 show a dash. The
+     * assets, liabilities and wages below the result add 14 more.
+     */
+    expect(screen.getAllByText("–")).toHaveLength(36)
+    expect(screen.getByText("Elinkeinotoiminnan varat")).toBeInTheDocument()
+    expect(screen.getByText("Elinkeinotoiminnan velat")).toBeInTheDocument()
+    expect(screen.getByText("Maksetut palkat")).toBeInTheDocument()
     expect(
       screen.getByText("Osingot muista kuin julkisesti noteeratuista yhtiöistä")
     ).toBeInTheDocument()

@@ -6,6 +6,11 @@ import { BusinessLine } from "@/components/common/business-line"
 import { Money, ZeroDash } from "@/components/common/money"
 import { useFormatters } from "@/components/lang-provider"
 import { YearEndButton } from "@/components/statement/year-end-button"
+import {
+  EMPTY_YEAR_END,
+  form5Balance,
+  form5BalanceSections,
+} from "@/lib/domain/form5-balance"
 import { incomeStatement } from "@/lib/domain/income-statement"
 import { indexCategories } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
@@ -29,6 +34,24 @@ export function StatementView() {
   const statement = React.useMemo(
     () => incomeStatement(basis, indexCategories(cats), year),
     [basis, cats, year]
+  )
+  const yearEnd = useBookStore((s) => s.yearEnd[year]) ?? EMPTY_YEAR_END
+  const assetOpening = useBookStore((s) => s.assetOpening)
+  const loanOpening = useBookStore((s) => s.loanOpening)
+  const balanceSections = React.useMemo(
+    () =>
+      form5BalanceSections(
+        form5Balance({
+          entries,
+          cats: indexCategories(cats),
+          year,
+          yearEnd,
+          assetOpening,
+          loanOpening,
+        }),
+        yearEnd
+      ),
+    [entries, cats, year, yearEnd, assetOpening, loanOpening]
   )
   const open = React.useMemo(
     () => balancesAt(entries, indexCategories(cats), `${year}-12-31`),
@@ -187,6 +210,54 @@ export function StatementView() {
             </tr>
           </tfoot>
         </table>
+
+        {/* The assets, liabilities and wages Form 5 asks for beside the result (§8.8). */}
+        {balanceSections.map((section) => (
+          <table key={section.title.fi} className="mt-6 w-full text-sm">
+            <tbody>
+              <tr>
+                <th
+                  scope="colgroup"
+                  colSpan={2}
+                  className="pb-1 text-left font-heading text-[0.95rem] font-semibold"
+                >
+                  {section.title[f.lang]}
+                </th>
+              </tr>
+              {section.rows.map((row) =>
+                row.kind === "group" ? (
+                  <tr key={row.label.fi}>
+                    <td
+                      colSpan={2}
+                      className="pt-3 pb-1 text-xs tracking-wide text-muted-foreground"
+                    >
+                      {row.label[f.lang]}
+                    </td>
+                  </tr>
+                ) : (
+                  <tr
+                    key={row.code}
+                    className={cn(
+                      "border-b border-dashed border-sheet-edge/60",
+                      !row.value && "text-muted-foreground",
+                      row.total && "font-semibold"
+                    )}
+                  >
+                    <td className="py-1.5 pl-3">
+                      <span className="tabular mr-2 text-xs text-muted-foreground">
+                        {row.code}
+                      </span>
+                      {row.label[f.lang]}
+                    </td>
+                    <td className="py-1.5 text-right">
+                      {row.value ? <Money cents={row.value} /> : <ZeroDash />}
+                    </td>
+                  </tr>
+                )
+              )}
+            </tbody>
+          </table>
+        ))}
 
         {statement.taxExemptTotal ? (
           <p className="mt-6 text-xs text-muted-foreground">
