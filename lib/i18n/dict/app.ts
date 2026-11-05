@@ -691,6 +691,7 @@ export const APP_DICT = {
     pl("1 selected", "{n} selected"),
   ],
   "ledger.bulkCategory": ["Vaihda luokka", "Change category"],
+  "ledger.editDescription": ["Muokkaa kuvausta", "Edit description"],
   "ledger.bulkMixedEu": [
     "Luokan voi vaihtaa, kun valitut ovat kaikki ostoja, joiden veron ilmoitat itse, tai kaikki muita kuluja.",
     "To change the category, select only purchases whose tax you report yourself, or only other expenses.",

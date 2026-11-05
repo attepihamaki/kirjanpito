@@ -13,8 +13,10 @@ import {
   deleteEntries,
   recategorizeEntries,
   mergeSplit,
+  renameEntry,
   splitEntry,
 } from "@/lib/commands/bulk-commands"
+import { entryToRecurring } from "@/lib/domain/recurring"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
 import type { Ctx } from "@/lib/commands/ctx"
 import { defaultCategories } from "@/lib/domain/accounts"
@@ -310,6 +312,37 @@ describe("a payment shared across a split", () => {
     useBookStore.getState().upsertEntry({ ...first, paidOn: undefined })
     const paid = useBookStore.getState().entries
     expect(paid.find((e) => e.id === b.id)?.paidOn).toBeUndefined()
+  })
+})
+
+describe("renameEntry", () => {
+  it("changes the description and undoes from the toast", () => {
+    const before = useBookStore.getState().entries[0]
+    expect(renameEntry(ctx, before, "  Uusi kuvaus ")).toBe(true)
+    const named = () =>
+      useBookStore.getState().entries.find((e) => e.id === before.id)
+    expect(named()?.description).toBe("Uusi kuvaus")
+    clickUndo()
+    expect(named()).toEqual(before)
+  })
+
+  it("does nothing when the text is the same", () => {
+    const before = useBookStore.getState().entries[0]
+    expect(renameEntry(ctx, before, before.description)).toBe(false)
+    expect(raised).toHaveLength(0)
+  })
+
+  it("moves the monthly template with the new text and puts it back on undo", () => {
+    const store = useBookStore.getState()
+    const before = store.entries.find((e) => e.catId === "343")!
+    const template = entryToRecurring(before, "r1", "2026-02")
+    store.upsertRecurring(template)
+    renameEntry(ctx, before, "Toimitilan vuokra")
+    expect(useBookStore.getState().recurring).toEqual([
+      { ...template, description: "Toimitilan vuokra" },
+    ])
+    clickUndo()
+    expect(useBookStore.getState().recurring).toEqual([template])
   })
 })
 

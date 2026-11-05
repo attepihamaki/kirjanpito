@@ -4,10 +4,12 @@ import * as React from "react"
 import { CopyIcon, PaperclipIcon, PencilIcon, Trash2Icon } from "lucide-react"
 
 import { Money, ZeroDash } from "@/components/common/money"
+import { OptionSelect } from "@/components/common/option-select"
 import { Pill } from "@/components/common/pill"
 import { SortableHeader } from "@/components/common/sortable-header"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -19,10 +21,12 @@ import {
 import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { deleteEntry } from "@/lib/commands/book-commands"
+import { recategorizeEntries, renameEntry } from "@/lib/commands/bulk-commands"
 import { calcEntry } from "@/lib/domain/calc"
-import type { Category, Entry } from "@/lib/domain/types"
+import type { Entry } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
 import { useBookStore, type LedgerSortKey } from "@/stores/book-store"
+import { categoriesToMoveTo, compareCategories } from "@/stores/selectors"
 
 /**
  * The ledger table (§8.4).
@@ -38,12 +42,10 @@ import { useBookStore, type LedgerSortKey } from "@/stores/book-store"
  */
 export function LedgerTable({
   rows,
-  cats,
   selected,
   onSelect,
 }: {
   rows: readonly Entry[]
-  cats: ReadonlyMap<string, Category>
   /** Ids of the rows picked for a bulk action (§8.4). */
   selected: ReadonlySet<string>
   /** Add the ids to the selection, or take them out. */
@@ -139,8 +141,11 @@ export function LedgerTable({
           <LedgerRow
             key={entry.id}
             entry={entry}
-            cat={cats.get(entry.catId)}
             splitWith={splitVouchers.get(entry.id)}
+            onRename={(text) => renameEntry(ctx, entry, text)}
+            onRecategorize={(catId) =>
+              void recategorizeEntries(ctx, [entry], catId)
+            }
             selected={selected.has(entry.id)}
             onSelect={(on) => onSelect([entry.id], on)}
             onEdit={() =>
@@ -188,8 +193,9 @@ function splitVoucherLabels(entries: readonly Entry[]): Map<string, string> {
 
 function LedgerRow({
   entry,
-  cat,
   splitWith,
+  onRename,
+  onRecategorize,
   selected,
   onSelect,
   onEdit,
@@ -198,9 +204,11 @@ function LedgerRow({
   onViewReceipt,
 }: {
   entry: Entry
-  cat: Category | undefined
   /** The voucher numbers of the whole split this entry is part of, if any. */
   splitWith: string | undefined
+  /** Commit new description text typed in the row. */
+  onRename: (text: string) => void
+  onRecategorize: (catId: string) => void
   selected: boolean
   onSelect: (on: boolean) => void
   onEdit: () => void
@@ -212,6 +220,26 @@ function LedgerRow({
   const { net, vat, gross } = calcEntry(entry)
   const income = entry.type === "income"
   const attachments = entry.atts ?? []
+  const allCats = useBookStore((s) => s.cats)
+  /*
+   * The categories a row can move to are the bulk bar's (§8.4), plus its own
+   * even if disabled.
+   */
+  const categoryOptions = React.useMemo(() => {
+    const list = categoriesToMoveTo(allCats, entry.type, !!entry.euPurchase)
+    const own = allCats.find((c) => c.id === entry.catId)
+    if (own && !list.includes(own)) list.push(own)
+    return list
+      .sort((x, y) =>
+        compareCategories(x, y, (p, q) =>
+          f.collator.compare(f.catName(p), f.catName(q))
+        )
+      )
+      .map((c) => ({ value: c.id, label: f.catLabel(c) }))
+  }, [allCats, entry.type, entry.euPurchase, entry.catId, f])
+  const [editingDescription, setEditingDescription] = React.useState(false)
+  // Escape blurs the field to leave it, and the blur must not save.
+  const cancelled = React.useRef(false)
 
   return (
     <TableRow
@@ -256,63 +284,109 @@ function LedgerRow({
         </Pill>
       </TableCell>
 
-      <TableCell className="max-w-[22rem]">
-        <div className="flex items-center gap-1.5">
-          <span
-            className={cn(
-              "truncate",
-              !entry.description && "text-muted-foreground"
-            )}
-          >
-            {entry.description || f.t("ledger.noDescription")}
-            {entry.paidOn === null ? (
-              <Pill size="sm" className="ml-2">
-                {f.t("ledger.openPill")}
-              </Pill>
+      <TableCell className="group/desc max-w-[22rem]">
+        {editingDescription ? (
+          <Input
+            autoFocus
+            defaultValue={entry.description}
+            aria-label={f.t("ledger.colDescription")}
+            className="h-8"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              e.stopPropagation()
+              if (e.key === "Enter") e.currentTarget.blur()
+              if (e.key === "Escape") {
+                cancelled.current = true
+                e.currentTarget.blur()
+              }
+            }}
+            onBlur={(e) => {
+              setEditingDescription(false)
+              if (cancelled.current) cancelled.current = false
+              else onRename(e.currentTarget.value)
+            }}
+          />
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <span
+              className={cn(
+                "truncate",
+                !entry.description && "text-muted-foreground"
+              )}
+            >
+              {entry.description || f.t("ledger.noDescription")}
+              {entry.paidOn === null ? (
+                <Pill size="sm" className="ml-2">
+                  {f.t("ledger.openPill")}
+                </Pill>
+              ) : null}
+              {splitWith ? (
+                <Pill size="sm" className="ml-2">
+                  {f.t("ledger.splitPill", { v: splitWith })}
+                </Pill>
+              ) : null}
+              {entry.euPurchase ? (
+                <Pill size="sm" className="ml-2">
+                  {f.t(
+                    entry.euPurchase === "import"
+                      ? "ledger.importPill"
+                      : entry.euPurchase === "reverse"
+                        ? "ledger.reversePill"
+                        : "ledger.euPill"
+                  )}
+                </Pill>
+              ) : null}
+            </span>
+            {attachments.length ? (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label={f.t("receipt.count", { n: attachments.length })}
+                title={f.t("receipt.count", { n: attachments.length })}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onViewReceipt(0)
+                }}
+              >
+                <PaperclipIcon />
+                {attachments.length > 1 ? (
+                  <span className="tabular text-[0.65rem]">
+                    {attachments.length}
+                  </span>
+                ) : null}
+              </Button>
             ) : null}
-            {splitWith ? (
-              <Pill size="sm" className="ml-2">
-                {f.t("ledger.splitPill", { v: splitWith })}
-              </Pill>
-            ) : null}
-            {entry.euPurchase ? (
-              <Pill size="sm" className="ml-2">
-                {f.t(
-                  entry.euPurchase === "import"
-                    ? "ledger.importPill"
-                    : entry.euPurchase === "reverse"
-                      ? "ledger.reversePill"
-                      : "ledger.euPill"
-                )}
-              </Pill>
-            ) : null}
-          </span>
-          {attachments.length ? (
             <Button
               variant="ghost"
               size="icon-xs"
-              aria-label={f.t("receipt.count", { n: attachments.length })}
-              title={f.t("receipt.count", { n: attachments.length })}
+              className="opacity-0 group-hover/desc:opacity-100 focus-visible:opacity-100"
+              aria-label={f.t("ledger.editDescription")}
+              title={f.t("ledger.editDescription")}
               onClick={(e) => {
                 e.stopPropagation()
-                onViewReceipt(0)
+                setEditingDescription(true)
               }}
             >
-              <PaperclipIcon />
-              {attachments.length > 1 ? (
-                <span className="tabular text-[0.65rem]">
-                  {attachments.length}
-                </span>
-              ) : null}
+              <PencilIcon />
             </Button>
-          ) : null}
-        </div>
+          </div>
+        )}
       </TableCell>
 
-      <TableCell className="hidden max-w-[16rem] min-[1240px]:table-cell">
-        <span className="block truncate text-muted-foreground">
-          {cat ? f.catLabel(cat) : f.t("entry.unknownCategory")}
-        </span>
+      {/* Its own cell for clicks, so picking a category does not open the entry. */}
+      <TableCell
+        className="hidden max-w-[16rem] min-[1240px]:table-cell"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <OptionSelect
+          options={categoryOptions}
+          value={entry.catId}
+          label={f.t("ledger.colCategory")}
+          size="sm"
+          className="w-full border-transparent bg-transparent text-muted-foreground shadow-none hover:border-input"
+          onChange={onRecategorize}
+        />
       </TableCell>
 
       <TableCell className="hidden text-right min-[560px]:table-cell">

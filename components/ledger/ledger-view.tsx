@@ -377,7 +377,6 @@ export function LedgerView() {
                 <Surface className="overflow-hidden">
                   <LedgerTable
                     rows={view.rows}
-                    cats={catMap}
                     selected={picked}
                     onSelect={select}
                   />

@@ -1,6 +1,7 @@
 import { toast } from "@/components/ui/toast"
 
 import {
+  offerEditUndo,
   offerUndo,
   refuseLocked,
   UNDO_TIMEOUT_MS,
@@ -8,6 +9,7 @@ import {
 import type { Ctx } from "@/lib/commands/ctx"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
 import { uid } from "@/lib/domain/id"
+import { entryToRecurring, matchRecurring } from "@/lib/domain/recurring"
 import { carveSplit, mergeSplitPart, type SplitPart } from "@/lib/domain/split"
 import { indexCategories, type Entry } from "@/lib/domain/types"
 import { confirm } from "@/lib/ui/confirm"
@@ -214,6 +216,32 @@ export async function mergeSplit(ctx: Ctx, entry: Entry): Promise<boolean> {
     },
     onRemove: () => useBookStore.getState().releaseUndoAttachments(held),
   })
+  return true
+}
+
+/**
+ * Change one voucher's description from the ledger row (§8.4). A locked
+ * voucher refuses. The monthly template the voucher was made from follows the
+ * new text, or the month would count as lacking its entry (§8.5). The toast
+ * undoes it like any single-voucher edit (§8.11). False when nothing changed.
+ */
+export function renameEntry(
+  ctx: Ctx,
+  entry: Entry,
+  description: string
+): boolean {
+  const text = description.trim()
+  if (text === entry.description) return false
+  if (refuseLocked(ctx, [entry])) return false
+  const store = useBookStore.getState()
+  const recurringBefore = store.recurring
+  const template = matchRecurring(recurringBefore, entry)
+  const renamed = { ...entry, description: text }
+  store.updateEntries([renamed])
+  if (template && text) {
+    store.upsertRecurring(entryToRecurring(renamed, template.id, template.from))
+  }
+  offerEditUndo(ctx, entry, recurringBefore)
   return true
 }
 
