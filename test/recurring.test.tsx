@@ -9,6 +9,7 @@ import {
   RecurringNotice,
 } from "@/components/ledger/recurring-dialog"
 import { AssetsView } from "@/components/statement/assets-view"
+import { DeductionDialog } from "@/components/statement/deduction-dialog"
 import { DeductionsView } from "@/components/statement/deductions-view"
 import { defaultCategories } from "@/lib/domain/accounts"
 import type { RecurringEntry } from "@/lib/domain/recurring"
@@ -165,13 +166,19 @@ describe("the statement's new pages", () => {
     useBookStore.setState({
       entries: [{ ...entry, catId: "344-vehicle", amount: 10_000, vatRate: 0 }],
     })
-    mount(<DeductionsView />)
-    fireEvent.change(screen.getByLabelText("Työajot, km"), {
+    mount(
+      <>
+        <DeductionsView />
+        <DeductionDialog />
+      </>
+    )
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Laske ja kirjaa" })[0]
+    )
+    fireEvent.change(await screen.findByLabelText("Työajot, km"), {
       target: { value: "1000" },
     })
-    fireEvent.click(
-      screen.getAllByRole("button", { name: "Kirjaa vähennys" })[0]
-    )
+    fireEvent.click(screen.getByRole("button", { name: "Kirjaa vähennys" }))
 
     await waitFor(() => expect(useBookStore.getState().entries).toHaveLength(2))
     const booked = useBookStore

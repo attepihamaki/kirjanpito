@@ -1834,6 +1834,19 @@ export const APP_DICT = {
     "Satunnainen mutta toistuva käyttö",
     "Occasional but repeated use",
   ],
+  "deductions.calculate": ["Laske ja kirjaa", "Calculate and book"],
+  "deductions.mileageCard": [
+    "Työajot omalla autolla, vähennettynä auton kirjatuilla kuluilla.",
+    "Business driving in your own car, less the car’s booked costs.",
+  ],
+  "deductions.perDiemCard": [
+    "Tilapäiset työmatkat, vähennettynä kirjatuilla elantokuluilla.",
+    "Temporary work trips, less the booked living costs.",
+  ],
+  "deductions.homeCard": [
+    "Kaavamainen vähennys kodin käytöstä työhön.",
+    "A standard deduction for using your home for work.",
+  ],
   "deductions.tier": ["Käyttö", "Use"],
   "deductions.result": ["Vähennys", "Deduction"],
   "deductions.book": ["Kirjaa vähennys", "Book deduction"],
@@ -1857,8 +1870,6 @@ export const APP_DICT = {
   ],
   "deductions.statBooked": ["Kirjattu yhteensä", "Booked in total"],
   "deductions.statVouchers": ["Tositteita", "Vouchers"],
-  "deductions.statKm": ["Kilometrikorvaus", "Mileage rate"],
-  "deductions.statDay": ["Kokopäiväraha", "Full per diem"],
   "deductions.bookedTitle": ["Kirjattu vuodelle {y}", "Booked for {y}"],
   "deductions.noneBooked": [
     "Riveillä 354 ja 364 ei ole vielä tositteita.",
