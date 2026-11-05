@@ -243,8 +243,10 @@ export function LedgerView() {
   const [printAll, setPrintAll] = React.useState(false)
   React.useEffect(() => {
     if (!printAll) return
+    const done = () => setPrintAll(false)
+    window.addEventListener("afterprint", done, { once: true })
     window.print()
-    setPrintAll(false)
+    return () => window.removeEventListener("afterprint", done)
   }, [printAll])
 
   const view = paginate(filtered, page, size)
