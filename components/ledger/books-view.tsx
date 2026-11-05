@@ -68,7 +68,7 @@ function ReportPage({
         <LedgerTabs />
       </div>
 
-      <div className="print-sheet mx-auto max-w-4xl rounded-lg border border-sheet-edge bg-sheet p-4 shadow-sm md:p-8">
+      <div className="print-sheet max-w-4xl rounded-lg border border-sheet-edge bg-sheet p-4 shadow-sm md:p-8">
         <header className="mb-6">
           <h2 className="font-heading text-xl font-semibold">{title}</h2>
           <BusinessLine />

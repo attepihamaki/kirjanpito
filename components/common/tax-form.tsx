@@ -88,7 +88,7 @@ export function TaxForm({
       className={cn(
         "flex w-full flex-col gap-6",
         !embedded &&
-          "print-sheet mx-auto max-w-2xl rounded-xl border border-sheet-edge bg-sheet p-4 shadow-sm sm:p-7"
+          "print-sheet max-w-2xl rounded-xl border border-sheet-edge bg-sheet p-4 shadow-sm sm:p-7"
       )}
     >
       <header className="flex flex-col gap-4">
