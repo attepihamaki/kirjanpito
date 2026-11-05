@@ -162,6 +162,40 @@ describe("duplicate", () => {
     expect(flagged("duplicate", pair)).toEqual([])
   })
 
+  describe("parts of a split receipt", () => {
+    const part = (id: string, over: Partial<Entry> = {}) =>
+      entry({ id, split: "s1", atts: [receipt], ...over })
+
+    it("do not flag each other for sharing a receipt file or figures", () => {
+      const parts = [part("x"), part("y", { atts: [{ ...receipt, id: "a2" }] })]
+      expect(flagged("duplicate", parts)).toEqual([])
+    })
+
+    it("still flag a part that matches an entry outside the split", () => {
+      const outsider = entry({ id: "z", atts: [{ ...receipt, id: "a3" }] })
+      const parts = [part("x"), part("y"), outsider]
+      expect(flagged("duplicate", parts).sort()).toEqual(["x", "y", "z"])
+    })
+
+    it("are told apart from another split with the same figures", () => {
+      const other = entry({ id: "z", split: "s2", atts: [receipt] })
+      expect(flagged("duplicate", [part("x"), other]).sort()).toEqual([
+        "x",
+        "z",
+      ])
+    })
+
+    it("are skipped by the dialog's two lookups", () => {
+      const x = part("x")
+      const sibling = part("new")
+      const attached = { ...receipt, id: "a9" }
+      expect(duplicateOf(sibling, [x])).toBeUndefined()
+      expect(entryWithReceipt(attached, [x, sibling], "new")).toBeUndefined()
+      // An entry outside the split still gets the hint.
+      expect(entryWithReceipt(attached, [x], "elsewhere")).toBe(x)
+    })
+  })
+
   it("finds the other entry for the dialog, never the entry itself", () => {
     const x = entry({ atts: [receipt] })
     expect(duplicateOf(x, [x])).toBeUndefined()

@@ -126,6 +126,12 @@ export interface Entry {
    * rate the buyer reports it at (§6.9).
    */
   euPurchase?: EuPurchase
+  /**
+   * Links the parts of one receipt that was split across categories or VAT
+   * rates. Entries with the same value belong together. The value is opaque
+   * and only means something next to other entries that hold it.
+   */
+  split?: string
 }
 
 /** A category (luokka) the user books entries to. */

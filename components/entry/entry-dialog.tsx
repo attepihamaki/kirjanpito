@@ -569,6 +569,7 @@ function EntryDialogForm({
             vatRate: form.vatRate,
             amountMode: form.amountMode,
             euPurchase,
+            split: entries.find((e) => e.id === editingId)?.split,
           },
           entries
         )

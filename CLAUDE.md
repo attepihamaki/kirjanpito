@@ -157,6 +157,7 @@ interface Entry {
   cash?: true // paid in cash (§8.5)
   buyerVatId?: string // the buyer's VAT number on an EU sale (§8.7)
   euPurchase?: "goods" | "services" // a copy of its category's, for `calcEntry` (§6.9)
+  split?: string // links the parts of one receipt split across categories or rates
 }
 ```
 
@@ -737,7 +738,7 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
     - A future date is any date after today.
     - A domestic sale without VAT is a line 300 `domestic` sale at 0 %, flagged only in a year that also has domestic sales with VAT, since a business that is not VAT registered sells everything at 0 %.
     - A large amount is a gross amount over ten times the median of that year's income, or expenses, given at least five of them, and never under 1 000 €. It is meant to catch a misplaced decimal comma.
-    - A possible duplicate shares its date, side and gross amount with another entry, or a stored receipt file (same name, type and size). Both of a pair are flagged. The category is not compared, since the same receipt entered twice can land in two categories.
+    - A possible duplicate shares its date, side and gross amount with another entry, or a stored receipt file (same name, type and size). Both of a pair are flagged. Entries with the same `split` value are parts of one receipt and never a pair, in the filter and in the dialog's two hints. The category is not compared, since the same receipt entered twice can land in two categories.
     - Private use without VAT is a 0 % entry on line 314 in a year where that line adds up to more than 850 €, the free part for a natural person (AVL 21 §). Line 313 is not checked, since a car's VAT depends on how much of it was deducted. The entry dialog explains the rule under the category on 313 to 315.
     - VAT not deductible is an expense with VAT on entertainment (341) or a non-deductible line (365–367), `AccountLine.noVatDeduction`. VAT on entertainment cannot be deducted (AVL 114 § 1 mom. 3 kohta, checked in Vero's guide "Markkinointi- ja edustustilaisuudet arvonlisäverotuksessa"), and a cost that is not deductible for income tax is usually not for the taxable business either. Such a cost is booked at its gross amount with 0 % VAT, so the tax stays part of the cost; with a rate it would count as purchase VAT.
     - The overview's checklist sets this filter when it sends the user here.

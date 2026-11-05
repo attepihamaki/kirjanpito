@@ -84,21 +84,29 @@ function fileKey(a: Attachment): string | null {
   return a.id === null ? null : `${a.name}|${a.type}|${a.size}`
 }
 
+/** Whether two entries are parts of one split receipt, which share figures and files on purpose. */
+function sameSplit(a: Pick<Entry, "split">, b: Pick<Entry, "split">): boolean {
+  return a.split !== undefined && a.split === b.split
+}
+
 /**
  * Another entry that has the same figures as `entry`, if any. The entry
- * itself, by id, never counts.
+ * itself, by id, and the other parts of its split never count.
  */
 export function duplicateOf(
   entry: Entry,
   entries: readonly Entry[]
 ): Entry | undefined {
   const key = figuresKey(entry)
-  return entries.find((e) => e.id !== entry.id && figuresKey(e) === key)
+  return entries.find(
+    (e) => e.id !== entry.id && !sameSplit(e, entry) && figuresKey(e) === key
+  )
 }
 
 /**
  * The entry other than `exceptId` that already holds a stored receipt file
- * looking like `att`, if any.
+ * looking like `att`, if any. The other parts of `exceptId`'s split share its
+ * receipt on purpose, so they never count.
  */
 export function entryWithReceipt(
   att: Attachment,
@@ -107,8 +115,12 @@ export function entryWithReceipt(
 ): Entry | undefined {
   const key = fileKey(att)
   if (key === null) return undefined
+  const own = entries.find((e) => e.id === exceptId)
   return entries.find(
-    (e) => e.id !== exceptId && e.atts?.some((a) => fileKey(a) === key)
+    (e) =>
+      e.id !== exceptId &&
+      !(own && sameSplit(e, own)) &&
+      e.atts?.some((a) => fileKey(a) === key)
   )
 }
 
@@ -241,16 +253,23 @@ export const ENTRY_RULES = defineRules<EntryCheckContext, string>([
     /*
      * Entries that share their figures, or a receipt file, with another
      * entry. Both of a pair are flagged, since either may be the extra one.
+     * Parts of one split receipt share both on purpose and are not a pair.
      */
     const out = new Set<string>()
     const group = (keysOf: (e: Entry) => (string | null)[]) => {
-      const seen = new Map<string, string>()
+      const seen = new Map<string, Entry[]>()
       for (const e of ctx.entries) {
         for (const key of new Set(keysOf(e))) {
           if (key === null) continue
-          const first = seen.get(key)
-          if (first === undefined) seen.set(key, e.id)
-          else out.add(first).add(e.id)
+          const earlier = seen.get(key)
+          if (!earlier) {
+            seen.set(key, [e])
+            continue
+          }
+          for (const other of earlier) {
+            if (!sameSplit(other, e)) out.add(other.id).add(e.id)
+          }
+          earlier.push(e)
         }
       }
     }
