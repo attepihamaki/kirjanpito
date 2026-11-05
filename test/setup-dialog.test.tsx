@@ -70,6 +70,46 @@ describe("the new-bookkeeping setup dialog", () => {
     expect(state.dirty).toBe(false)
   })
 
+  it("starts the getting-started checklist", async () => {
+    await startNewBook(ctx)
+    expect(useBookStore.getState().onboarding).toBe(true)
+    useBookStore.getState().dismissOnboarding()
+    expect(useBookStore.getState().onboarding).toBe(false)
+  })
+
+  it("stores the business details, with the ID normalised", () => {
+    useBookStore.setState({ open: true, dialog: { kind: "setup" } })
+    open()
+
+    fireEvent.change(screen.getByLabelText("Yrityksen nimi"), {
+      target: { value: " Oma Yritys Oy " },
+    })
+    fireEvent.change(screen.getByLabelText("Y-tunnus"), {
+      target: { value: "01120389" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Aloita" }))
+
+    const state = useBookStore.getState()
+    expect(state.businessName).toBe("Oma Yritys Oy")
+    expect(state.businessId).toBe("0112038-9")
+  })
+
+  it("stays open on an invalid business ID", () => {
+    useBookStore.setState({ open: true, dialog: { kind: "setup" } })
+    open()
+
+    fireEvent.change(screen.getByLabelText("Y-tunnus"), {
+      target: { value: "1234567-0" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Aloita" }))
+
+    expect(useBookStore.getState().dialog).toEqual({ kind: "setup" })
+    expect(screen.getByLabelText("Y-tunnus")).toHaveAttribute(
+      "aria-invalid",
+      "true"
+    )
+  })
+
   it("keeps the defaults when it is skipped", () => {
     useBookStore.setState({ open: true, dialog: { kind: "setup" } })
     open()

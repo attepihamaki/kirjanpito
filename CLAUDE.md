@@ -721,7 +721,7 @@ A full-width page with no sidebar. It has its own nav: logo, FI/EN, theme, and "
 6. A closing call to action, "Aloita tämän kuun tositteista.", and a footer disclaimer: "Laskelmat eivät ole vero- tai kirjanpitoneuvontaa."
 
 - "Aloita uusi kirjanpito" opens the empty overview and sets the year to the current year. If there are unsaved changes, it asks first.
-- **It then opens the setup dialog** (`components/settings/setup-dialog.tsx`, `DialogState` kind `setup`), which asks for the four settings a bookkeeping starts with rather than deciding them silently: the export language (§7.1, seeded from the UI language), the VAT period, the start month, and autosave where a file can be written at all. The controls are the ones Asetukset, Yleiset exports — `ExportLanguageToggle`, `VatPeriodToggle`, `BookStartSelects`, `AutosaveCheckbox` — not copies of them (§11). "Ohita" closes with the defaults; everything it asks lives on Asetukset, so it is never a dead end. `startBook` applies all four at once and leaves `dirty` false, since a bookkeeping nobody has typed into has nothing unsaved. The dialog is **not** shown when a file is opened: a file brings its own `settings.json`. Its host is in `AppShell`, which the route it navigates to mounts. `test/setup-dialog.test.tsx` covers it.
+- **It then opens the setup dialog** (`components/settings/setup-dialog.tsx`, `DialogState` kind `setup`), which asks for every book-level setting a bookkeeping starts with rather than deciding them silently: the business's name and ID (an ID that fails its check digit keeps the dialog open, §8.10), the export language (§7.1, seeded from the UI language), the VAT period, the start month, and autosave where a file can be written at all. The getting-started checklist of §8.15 follows it on the overview. The controls are the ones Asetukset, Yleiset exports — `ExportLanguageToggle`, `VatPeriodToggle`, `BookStartSelects`, `AutosaveCheckbox` — not copies of them (§11). "Ohita" closes with the defaults; everything it asks lives on Asetukset, so it is never a dead end. `startBook` applies all four at once and leaves `dirty` false, since a bookkeeping nobody has typed into has nothing unsaved. The dialog is **not** shown when a file is opened: a file brings its own `settings.json`. Its host is in `AppShell`, which the route it navigates to mounts. `test/setup-dialog.test.tsx` covers it.
 
 ### 8.4 Ledger (Kirjanpito)
 
@@ -981,6 +981,15 @@ Most of a new year's starting point carries over without any action, and the fir
 - **Recurring.** The third step lists the templates with an editable amount (`RecurringAmountInput`, shared with Asetukset, Toistuvat) and opens the recurring dialog for the current month of the year, or January, to book what is due (§8.5).
 - Nothing new is stored in `settings.json`, and the stock change is not booked here.
 - `test/new-year.test.tsx` covers the dialog and `lib/domain/new-year.test.ts` the figures.
+
+### 8.15 Getting started (Aloita tästä)
+
+`components/overview/onboarding-checklist.tsx` and `lib/domain/onboarding.ts`, pure and tested. A panel above the overview's widgets, shown after "Aloita uusi kirjanpito" and whether or not the setup dialog was skipped. There is no sample ledger (§10), so the checklist teaches with examples written as text.
+
+- **Five steps**, each done by what is in the book, never ticked by hand: business details set, a first sale, a first cost, a receipt attached and available, and a saved file (a file name and no unsaved changes). Sales and costs on lines that sit off the statement (§5) do not count.
+- **Each step has an example of what to type** (Lasku 1001 – Mäkinen Rakennus Oy, 2 510,00 € with 25,5 %, and so on) and a button. The buttons open the entry dialog with the type, category and VAT rate filled in, or Asetukset, or save. The description and the amount stay empty, so a click cannot book an invoice that did not happen.
+- **`onboarding` in the store is ephemeral.** `newBook` sets it, "Piilota lista" clears it, and opening a file or closing the book clears it too, so a file brought from elsewhere is never nagged. A reload drops it. When every step is done the panel says so and stays until closed.
+- `lib/domain/onboarding.test.ts` covers the steps and `test/setup-dialog.test.tsx` the flag.
 
 ---
 

@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/common/page-header"
 import { Surface } from "@/components/common/surface"
 import { Button } from "@/components/ui/button"
 import { useFormatters } from "@/components/lang-provider"
+import { OnboardingChecklist } from "@/components/overview/onboarding-checklist"
 import { OverviewBoard } from "@/components/overview/overview-board"
 import { OverviewDataProvider } from "@/components/overview/overview-data"
 import { DEFAULT_LAYOUT } from "@/lib/domain/overview-layout"
@@ -23,6 +24,7 @@ export function OverviewView() {
   const year = useBookStore((s) => s.year)
   const hasEntries = useBookStore((s) => s.entries.length > 0)
   const setLayout = useBookStore((s) => s.setOverviewLayout)
+  const onboarding = useBookStore((s) => s.onboarding)
   const [editing, setEditing] = React.useState(false)
 
   const actions = editing ? (
@@ -58,6 +60,7 @@ export function OverviewView() {
         subtitle={f.t("overview.subtitle", { y: year })}
         actions={<div className="flex flex-wrap gap-2">{actions}</div>}
       />
+      {onboarding ? <OnboardingChecklist /> : null}
       {hasEntries ? (
         <OverviewDataProvider>
           <OverviewBoard editing={editing} />

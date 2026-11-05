@@ -11,7 +11,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 import {
   AutosaveCheckbox,
   BookStartSelects,
@@ -20,6 +26,7 @@ import {
 } from "@/components/settings/general-settings"
 import { useFormatters } from "@/components/lang-provider"
 import { useCanSaveToFile } from "@/hooks/use-save-book"
+import { parseBusinessId } from "@/lib/domain/business-id"
 import type { Lang } from "@/lib/domain/types"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 import { useBookStore } from "@/stores/book-store"
@@ -29,7 +36,10 @@ import { useBookStore } from "@/stores/book-store"
  *
  * It opens on "Aloita uusi kirjanpito" and never when a file is opened, since
  * a file brings its own settings.json. Nothing here is unrecoverable — all
- * four live on Asetukset, Yleiset — so skipping it keeps the defaults.
+ * live on Asetukset, Yleiset — so skipping it keeps the defaults. It holds
+ * every book-level setting: the business's name and ID, the export language,
+ * the VAT period, the start month and autosave. The checklist on the overview
+ * (§8.15) follows it.
  */
 export function SetupDialog() {
   const dialog = useBookStore((s) => s.dialog)
@@ -56,6 +66,30 @@ function SetupDialogForm({ onClose }: { onClose: () => void }) {
     initial.bookStart
   )
   const [autosave, setAutosave] = React.useState(initial.autosave)
+  const [businessName, setBusinessName] = React.useState(
+    initial.businessName ?? ""
+  )
+  const [businessId, setBusinessId] = React.useState(initial.businessId ?? "")
+  const [idInvalid, setIdInvalid] = React.useState(false)
+  const nameInputId = React.useId()
+  const idInputId = React.useId()
+
+  function start() {
+    const parsedId = parseBusinessId(businessId)
+    /* A typed ID that fails its check digit is corrected, never dropped. */
+    if (businessId.trim() && !parsedId) {
+      setIdInvalid(true)
+      return
+    }
+    startBook({
+      exportLang,
+      businessName: businessName.trim() || null,
+      businessId: parsedId,
+      vatPeriod,
+      bookStart,
+      autosave,
+    })
+  }
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -71,7 +105,41 @@ function SetupDialogForm({ onClose }: { onClose: () => void }) {
           <DialogDescription>{f.t("settings.setupIntro")}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-5">
+        <div className="flex max-h-[60vh] flex-col gap-5 overflow-y-auto px-0.5">
+          <Field>
+            <FieldLabel htmlFor={nameInputId}>
+              {f.t("settings.businessName")}
+            </FieldLabel>
+            <Input
+              id={nameInputId}
+              autoComplete="organization"
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
+            />
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor={idInputId}>
+              {f.t("common.businessId")}
+            </FieldLabel>
+            <Input
+              id={idInputId}
+              aria-invalid={idInvalid || undefined}
+              className="tabular w-40"
+              placeholder="1234567-1"
+              autoComplete="off"
+              value={businessId}
+              onChange={(e) => {
+                setBusinessId(e.target.value)
+                setIdInvalid(false)
+              }}
+            />
+            <FieldError>
+              {idInvalid ? f.t("settings.businessIdInvalid") : undefined}
+            </FieldError>
+            <FieldDescription>{f.t("settings.businessHint")}</FieldDescription>
+          </Field>
+
           <Field>
             <FieldLabel>{f.t("settings.exportLang")}</FieldLabel>
             <ExportLanguageToggle value={exportLang} onChange={setExportLang} />
@@ -114,13 +182,7 @@ function SetupDialogForm({ onClose }: { onClose: () => void }) {
           <Button variant="outline" onClick={onClose}>
             {f.t("settings.setupSkip")}
           </Button>
-          <Button
-            onClick={() =>
-              startBook({ exportLang, vatPeriod, bookStart, autosave })
-            }
-          >
-            {f.t("settings.setupStart")}
-          </Button>
+          <Button onClick={start}>{f.t("settings.setupStart")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

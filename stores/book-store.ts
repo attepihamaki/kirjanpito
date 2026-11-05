@@ -282,6 +282,12 @@ export interface BookState {
    * and stopped. A manual save, which may ask, starts it again.
    */
   autosavePaused: boolean
+  /**
+   * The getting-started checklist is up on the overview (§8.15). Set by a new
+   * bookkeeping, cleared by dismissing it, finishing it, or any other book
+   * taking over. Not persisted: a reload drops it.
+   */
+  onboarding: boolean
   month: MonthFilter
   ledgerQuery: string
   ledgerType: TypeFilter
@@ -329,10 +335,14 @@ export interface BookActions {
    */
   startBook(settings: {
     exportLang: Lang
+    businessName: string | null
+    businessId: string | null
     vatPeriod: VatPeriodKind
     bookStart: string | null
     autosave: boolean
   }): void
+  /** Take the getting-started checklist off the overview (§8.15). */
+  dismissOnboarding(): void
   closeBook(): void
   replaceBook(next: {
     entries: Entry[]
@@ -497,6 +507,7 @@ function initialState(): BookState {
     savedAt: null,
     saving: false,
     autosavePaused: false,
+    onboarding: false,
     month: 0,
     ledgerQuery: "",
     ledgerType: "all",
@@ -723,10 +734,13 @@ export const useBookStore = create<BookStore>()(
           loanOpening: null,
           yearEnd: {},
           changeLog: [],
+          onboarding: true,
           undoAttachmentIds: [],
           bookEpoch: get().bookEpoch + 1,
           gcTick: get().gcTick + 1,
         }),
+
+      dismissOnboarding: () => set({ onboarding: false }),
 
       startBook: (settings) =>
         set({
@@ -746,6 +760,7 @@ export const useBookStore = create<BookStore>()(
           ...clearedFilters,
           ...unlinked,
           open: false,
+          onboarding: false,
           entries: [],
           cats: defaultCategories(),
           dirty: false,
@@ -816,6 +831,7 @@ export const useBookStore = create<BookStore>()(
           overviewLayout: s.overviewLayout ?? get().overviewLayout,
           autosave: s.autosave ?? get().autosave,
           autosavePaused: false,
+          onboarding: false,
           ledgerSize: s.ledgerSize ?? get().ledgerSize,
           ctSize: s.ctSize ?? get().ctSize,
           undoAttachmentIds: [],

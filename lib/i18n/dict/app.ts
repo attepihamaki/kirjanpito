@@ -657,6 +657,61 @@ export const APP_DICT = {
     "Asetuksista. Eräpäivät näkyvät täällä ensimmäisestä tositteesta alkaen.",
     "In Settings. The due dates appear here from your first voucher on.",
   ],
+  "overview.onboardTitle": ["Aloita tästä", "Get started"],
+  "overview.onboardIntro": [
+    "Viisi askelta ensimmäisestä tositteesta tiedostoon. Esimerkit näyttävät, mitä kenttiin kirjoitetaan. Ne ovat mallia, eivät valmiita tositteita.",
+    "Five steps from the first voucher to a saved file. The examples show what goes in the fields. They are models, not ready-made vouchers.",
+  ],
+  "overview.onboardProgress": ["{done}/{total} tehty", "{done}/{total} done"],
+  "overview.onboardDismiss": ["Piilota lista", "Hide the list"],
+  "overview.onboardAllDone": [
+    "Kaikki tehty. Lista poistuu, kun suljet sen.",
+    "All done. The list goes away when you close it.",
+  ],
+  "overview.onboardStepDone": ["Tehty", "Done"],
+  "overview.onboardRecord": ["Kirjaa tosite", "Record a voucher"],
+  "overview.onboardSettings": ["Avaa asetukset", "Open settings"],
+  "overview.onboardSave": ["Tallenna", "Save"],
+  "overview.onboardBusinessTitle": [
+    "Kerro yrityksesi tiedot",
+    "Add your business details",
+  ],
+  "overview.onboardBusinessExample": [
+    "Esim. Oma Yritys Oy ja y-tunnus 0112038-9. Ne näkyvät tuloslaskelman ja kirjojen otsikossa.",
+    "E.g. Oma Yritys Oy and business ID 0112038-9. They show in the heading of the income statement and the books.",
+  ],
+  "overview.onboardSaleTitle": [
+    "Kirjaa ensimmäinen myyntilasku",
+    "Record your first sales invoice",
+  ],
+  "overview.onboardSaleExample": [
+    "Esim. Lasku 1001 – Mäkinen Rakennus Oy, 2 510,00 € verollisena, ALV 25,5 %. Kirjaa summa niin kuin laskulla.",
+    "E.g. Invoice 1001 – Mäkinen Rakennus Oy, 2 510,00 € including VAT, VAT 25.5%. Enter the amount as the invoice shows it.",
+  ],
+  "overview.onboardPurchaseTitle": [
+    "Kirjaa ensimmäinen kulu",
+    "Record your first expense",
+  ],
+  "overview.onboardPurchaseExample": [
+    "Esim. Osto – K-Rauta – tarvikkeet, 186,40 €, ALV 25,5 %. Palkat, YEL ja pankin kulut ovat 0 %:n kuluja.",
+    "E.g. Purchase – K-Rauta – supplies, 186,40 €, VAT 25.5%. Wages, YEL and bank fees are 0% expenses.",
+  ],
+  "overview.onboardReceiptTitle": [
+    "Liitä kuitti tai lasku tositteeseen",
+    "Attach a receipt or an invoice to a voucher",
+  ],
+  "overview.onboardReceiptExample": [
+    "Pudota kuva tai PDF tositteen päälle. Laskun PDF täyttää päivän, summan ja myyjän puolestasi.",
+    "Drop a photo or a PDF on the voucher. An invoice PDF fills in the date, amount and seller for you.",
+  ],
+  "overview.onboardSaveTitle": [
+    "Tallenna kirjanpito tiedostoon",
+    "Save the bookkeeping to a file",
+  ],
+  "overview.onboardSaveExample": [
+    "Tiedosto on kirjanpitosi. Selain on vain työtila, joten tallenna ennen kuin suljet välilehden.",
+    "The file is your bookkeeping. The browser is only a workspace, so save before you close the tab.",
+  ],
   "overview.step3Title": ["Tallenna tiedostoon", "Save to a file"],
   "overview.step3Body": [
     "Tiedosto on kirjanpitosi. Selain on vain työtila.",
