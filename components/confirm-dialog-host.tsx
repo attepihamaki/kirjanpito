@@ -12,11 +12,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
 import { registerConfirmHandler, type ConfirmOptions } from "@/lib/ui/confirm"
+
+type Answer = boolean | "alternative"
 
 interface Pending {
   options: ConfirmOptions
-  resolve: (value: boolean) => void
+  resolve: (value: Answer) => void
 }
 
 /**
@@ -39,7 +42,7 @@ export function ConfirmDialogHost() {
        * legitimate case for one, so a second ask while one is open declines.
        */
       if (pendingRef.current) return Promise.resolve(false)
-      return new Promise<boolean>((resolve) => {
+      return new Promise<Answer>((resolve) => {
         const next = { options, resolve }
         pendingRef.current = next
         setPending(next)
@@ -48,7 +51,7 @@ export function ConfirmDialogHost() {
     return () => registerConfirmHandler(null)
   }, [])
 
-  const settle = React.useCallback((value: boolean) => {
+  const settle = React.useCallback((value: Answer) => {
     const current = pendingRef.current
     pendingRef.current = null
     setPending(null)
@@ -86,6 +89,11 @@ export function ConfirmDialogHost() {
             <AlertDialogCancel autoFocus onClick={() => settle(false)}>
               {options.cancelLabel}
             </AlertDialogCancel>
+          ) : null}
+          {options?.alternativeLabel ? (
+            <Button variant="outline" onClick={() => settle("alternative")}>
+              {options.alternativeLabel}
+            </Button>
           ) : null}
           <AlertDialogAction
             autoFocus={!options?.cancelLabel}

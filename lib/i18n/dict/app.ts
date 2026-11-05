@@ -114,6 +114,16 @@ export const APP_DICT = {
     "Valitut tositteet poistetaan. Voit perua poiston heti sen jälkeen.",
     "The selected vouchers will be deleted. You can undo it right after.",
   ],
+  "confirm.deleteSplitTitle": [
+    "Poistetaanko jaetun kuitin osa?",
+    "Delete a part of a split receipt?",
+  ],
+  "confirm.deleteSplitMessage": [
+    "Tosite ”{x}” on yksi jaetun kuitin osista. Voit poistaa vain tämän osan tai kaikki osat. Voit perua poiston heti sen jälkeen.",
+    "The voucher “{x}” is one part of a split receipt. You can delete only this part or all parts. You can undo it right after.",
+  ],
+  "confirm.deleteSplitAll": ["Poista kaikki {n} osaa", "Delete all {n} parts"],
+  "confirm.deleteSplitOne": ["Vain tämä osa", "Only this part"],
   "confirm.deleteMessage": [
     "Tosite ”{x}” poistetaan.",
     "The voucher “{x}” will be deleted.",

@@ -12,9 +12,10 @@ import { collectLiveIds } from "@/lib/domain/gc"
 import { lockedEntries } from "@/lib/domain/period-lock"
 import type { RecurringEntry } from "@/lib/domain/recurring"
 import { indexCategories, type Entry } from "@/lib/domain/types"
+import { splitSiblings } from "@/lib/domain/split"
 import { renumberYear } from "@/lib/domain/voucher"
 import { LANDING, APP_ROUTES } from "@/lib/site"
-import { confirm } from "@/lib/ui/confirm"
+import { choose, confirm } from "@/lib/ui/confirm"
 import type { Ctx } from "@/lib/commands/ctx"
 import { useBookStore } from "@/stores/book-store"
 import { useLangStore } from "@/stores/lang-store"
@@ -124,6 +125,8 @@ export async function closeBook(ctx: Ctx): Promise<void> {
 
 export async function deleteEntry(ctx: Ctx, entry: Entry): Promise<boolean> {
   if (refuseLocked(ctx, [entry])) return false
+  const siblings = splitSiblings(entry, useBookStore.getState().entries)
+  if (siblings.length > 0) return deleteSplitPart(ctx, entry, siblings)
   const message = ctx.t("confirm.deleteMessage", {
     x: entry.description || ctx.t("ledger.noDescription"),
   })
@@ -136,6 +139,44 @@ export async function deleteEntry(ctx: Ctx, entry: Entry): Promise<boolean> {
   if (!confirmed) return false
   useBookStore.getState().removeEntry(entry.id)
   offerUndo(ctx, [entry], ctx.t("entry.deleted"), ctx.t("entry.restored"))
+  return true
+}
+
+/**
+ * Deleting one part of a split receipt asks whether to take the other parts
+ * with it (§8.4). Deleting only this part leaves the others as they are, and
+ * one undo brings back whatever went.
+ */
+async function deleteSplitPart(
+  ctx: Ctx,
+  entry: Entry,
+  siblings: readonly Entry[]
+): Promise<boolean> {
+  const all = [entry, ...siblings]
+  const answer = await choose({
+    title: ctx.t("confirm.deleteSplitTitle", { n: all.length }),
+    message: ctx.t("confirm.deleteSplitMessage", {
+      x: entry.description || ctx.t("ledger.noDescription"),
+    }),
+    confirmLabel: ctx.t("confirm.deleteSplitAll", { n: all.length }),
+    alternativeLabel: ctx.t("confirm.deleteSplitOne"),
+    cancelLabel: ctx.t("common.cancel"),
+  })
+  if (answer === "cancel") return false
+
+  const removed = answer === "confirm" ? all : [entry]
+  if (answer === "confirm" && refuseLocked(ctx, all)) return false
+  useBookStore.getState().removeEntries(removed.map((e) => e.id))
+  if (removed.length === 1) {
+    offerUndo(ctx, removed, ctx.t("entry.deleted"), ctx.t("entry.restored"))
+  } else {
+    offerUndo(
+      ctx,
+      removed,
+      ctx.t("entry.deletedMany", { n: removed.length }),
+      ctx.t("entry.restoredMany")
+    )
+  }
   return true
 }
 
@@ -333,7 +374,10 @@ export function offerEditUndo(
         if (refuseLocked(ctx, [current, before])) return
         now.updateEntries([before])
         // A move to another year takes a new number there; the old one is back.
-        if (before.voucher !== undefined && yearOf(before.date) !== yearOf(current.date)) {
+        if (
+          before.voucher !== undefined &&
+          yearOf(before.date) !== yearOf(current.date)
+        ) {
           now.setVouchers(new Map([[before.id, before.voucher]]))
         }
         const was = new Map(recurringBefore.map((r) => [r.id, r]))

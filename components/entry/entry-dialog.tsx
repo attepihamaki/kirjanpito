@@ -648,6 +648,8 @@ function EntryDialogForm({
         ? { buyerVatId: normalizeVatId(form.buyerVatId) }
         : {}),
       ...(euPurchase ? { euPurchase } : {}),
+      // A part stays a part of its receipt; a copy is a new voucher of its own.
+      ...(mode === "edit" && editing?.split ? { split: editing.split } : {}),
     }
   }
 

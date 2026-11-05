@@ -15,9 +15,12 @@ export interface ConfirmOptions {
   cancelLabel?: string
   /** Renders the confirm button as destructive. Defaults to true. */
   destructive?: boolean
+  /** A second way forward, shown between cancel and confirm. See `choose`. */
+  alternativeLabel?: string
 }
 
-type Handler = (options: ConfirmOptions) => Promise<boolean>
+/** What a host reports: confirmed, declined, or the alternative button. */
+type Handler = (options: ConfirmOptions) => Promise<boolean | "alternative">
 
 let handler: Handler | null = null
 
@@ -30,9 +33,22 @@ export function registerConfirmHandler(next: Handler | null): void {
  * closed means a destructive path can never fire silently during prerender,
  * in a test, or after the host unmounts.
  */
-export function confirm(options: ConfirmOptions): Promise<boolean> {
-  if (!handler) return Promise.resolve(false)
-  return handler(options)
+export async function confirm(options: ConfirmOptions): Promise<boolean> {
+  if (!handler) return false
+  return (await handler(options)) === true
+}
+
+/**
+ * Ask with a second way forward besides confirming or cancelling. Resolves
+ * `"cancel"` when no host is mounted, for the reason `confirm` fails closed.
+ */
+export async function choose(
+  options: ConfirmOptions & { alternativeLabel: string }
+): Promise<"confirm" | "alternative" | "cancel"> {
+  if (!handler) return "cancel"
+  const result = await handler(options)
+  if (result === "alternative") return "alternative"
+  return result ? "confirm" : "cancel"
 }
 
 /**

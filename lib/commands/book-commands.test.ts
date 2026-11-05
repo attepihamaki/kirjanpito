@@ -22,7 +22,7 @@ import { collectLiveIds } from "@/lib/domain/gc"
 import { assignVouchers } from "@/lib/domain/voucher"
 import { createAppT } from "@/lib/i18n/messages"
 import { LANDING } from "@/lib/site"
-import { confirm } from "@/lib/ui/confirm"
+import { choose, confirm } from "@/lib/ui/confirm"
 import { BOOK_STORAGE_KEY, useBookStore } from "@/stores/book-store"
 
 /** Intl puts no-break spaces in money; the expectations use plain ones. */
@@ -30,7 +30,10 @@ const flat = (s: string | undefined) => (s ?? "").replace(/[  ]/g, " ")
 
 /* Undoing a deletion, and warning about filed periods (§8.11). */
 
-vi.mock("@/lib/ui/confirm", () => ({ confirm: vi.fn(async () => true) }))
+vi.mock("@/lib/ui/confirm", () => ({
+  confirm: vi.fn(async () => true),
+  choose: vi.fn(async () => "confirm"),
+}))
 
 const ctx: Ctx = { t: createAppT("fi"), navigate: vi.fn() }
 
@@ -114,6 +117,87 @@ describe("deleteEntry", () => {
   })
 })
 
+describe("deleteEntry on a split receipt", () => {
+  function splitInto(n: number) {
+    const store = useBookStore.getState()
+    const ids = store.entries.slice(0, n).map((e) => e.id)
+    store.updateEntries(
+      store.entries.slice(0, n).map((e) => ({ ...e, split: "g1" }))
+    )
+    return ids
+  }
+
+  it("deletes every part and undoes them together", async () => {
+    const [first] = splitInto(3)
+    vi.mocked(choose).mockResolvedValueOnce("confirm")
+    await deleteEntry(
+      ctx,
+      useBookStore.getState().entries.find((e) => e.id === first)!
+    )
+    expect(useBookStore.getState().entries).toHaveLength(13)
+
+    clickUndo()
+    expect(useBookStore.getState().entries).toHaveLength(16)
+  })
+
+  it("deletes only this part when asked to", async () => {
+    const [first] = splitInto(3)
+    vi.mocked(choose).mockResolvedValueOnce("alternative")
+    await deleteEntry(
+      ctx,
+      useBookStore.getState().entries.find((e) => e.id === first)!
+    )
+    const left = useBookStore.getState().entries
+    expect(left).toHaveLength(15)
+    expect(left.filter((e) => e.split === "g1")).toHaveLength(2)
+  })
+
+  it("does nothing on cancel", async () => {
+    const [first] = splitInto(2)
+    vi.mocked(choose).mockResolvedValueOnce("cancel")
+    const ok = await deleteEntry(
+      ctx,
+      useBookStore.getState().entries.find((e) => e.id === first)!
+    )
+    expect(ok).toBe(false)
+    expect(useBookStore.getState().entries).toHaveLength(16)
+  })
+
+  it("asks the ordinary question about an entry with no other parts", async () => {
+    const [only] = splitInto(1)
+    vi.mocked(choose).mockClear()
+    await deleteEntry(
+      ctx,
+      useBookStore.getState().entries.find((e) => e.id === only)!
+    )
+    expect(choose).not.toHaveBeenCalled()
+    expect(useBookStore.getState().entries).toHaveLength(15)
+  })
+})
+
+describe("a payment shared across a split", () => {
+  it("moves the other parts when one is marked open, and back on undo", () => {
+    const store = useBookStore.getState()
+    const [a, b] = store.entries.filter(
+      (e) => e.type === "expense" && e.vatRate > 0
+    )
+    store.updateEntries([
+      { ...a, split: "g1" },
+      { ...b, date: a.date, split: "g1" },
+    ])
+    const now = useBookStore.getState().entries
+    const first = now.find((e) => e.id === a.id)!
+    useBookStore.getState().upsertEntry({ ...first, paidOn: null })
+
+    const after = useBookStore.getState().entries
+    expect(after.find((e) => e.id === b.id)?.paidOn).toBeNull()
+
+    useBookStore.getState().upsertEntry({ ...first, paidOn: undefined })
+    const paid = useBookStore.getState().entries
+    expect(paid.find((e) => e.id === b.id)?.paidOn).toBeUndefined()
+  })
+})
+
 describe("offerEditUndo", () => {
   function edit(changes: Partial<Entry>) {
     const store = useBookStore.getState()
@@ -126,14 +210,16 @@ describe("offerEditUndo", () => {
   it("puts the entry back as it was", () => {
     const before = edit({ description: "Muutettu", amount: 1 })
     clickUndo()
-    expect(useBookStore.getState().entries.find((e) => e.id === before.id)).toEqual(
-      before
-    )
+    expect(
+      useBookStore.getState().entries.find((e) => e.id === before.id)
+    ).toEqual(before)
   })
 
   it("brings back the old voucher number after a move to another year", () => {
     const before = edit({ date: "2027-01-05" })
-    const moved = useBookStore.getState().entries.find((e) => e.id === before.id)
+    const moved = useBookStore
+      .getState()
+      .entries.find((e) => e.id === before.id)
     expect(moved?.voucher).toBe(1)
     clickUndo()
     const back = useBookStore.getState().entries.find((e) => e.id === before.id)
@@ -179,7 +265,8 @@ describe("offerEditUndo", () => {
     store.upsertEntry({ ...store.entries[0], description: "Taas" })
     clickUndo()
     expect(
-      useBookStore.getState().entries.find((e) => e.id === before.id)?.description
+      useBookStore.getState().entries.find((e) => e.id === before.id)
+        ?.description
     ).toBe("Taas")
     expect(raised.at(-1)?.title).toBe(ctx.t("entry.editUndoChanged"))
   })
@@ -230,7 +317,10 @@ describe("deleteBook", () => {
   })
 
   it("deletes a book with filed periods and unsaved changes", async () => {
-    useBookStore.setState({ vatFiled: { "2026-10": "2026-12-14" }, dirty: true })
+    useBookStore.setState({
+      vatFiled: { "2026-10": "2026-12-14" },
+      dirty: true,
+    })
 
     await deleteBook(ctx)
 

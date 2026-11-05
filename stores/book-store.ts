@@ -27,6 +27,8 @@ import {
 } from "@/lib/domain/change-log"
 import type { LoanOpening, YearEnd } from "@/lib/domain/form5-balance"
 import type { PageSize } from "@/lib/domain/settings-file"
+import { sharePayment } from "@/lib/domain/split"
+import { indexCategories } from "@/lib/domain/types"
 import type {
   AmountMode,
   Category,
@@ -139,6 +141,15 @@ function numbered(
   cats: readonly Category[]
 ): Entry[] {
   return [...assignVouchers(syncEuPurchase(entries, cats))]
+}
+
+/** `after`, with a changed payment carried across the parts of a split (§8.5). */
+function shared(
+  before: readonly Entry[],
+  after: readonly Entry[],
+  state: Pick<BookState, "cats" | "form5Filed">
+): Entry[] {
+  return sharePayment(before, after, indexCategories(state.cats), state)
 }
 
 export type DialogState =
@@ -809,12 +820,16 @@ export const useBookStore = create<BookStore>()(
       },
 
       upsertEntry: (entry) => {
-        const entries = [...get().entries]
+        const before = get().entries
+        const entries = [...before]
         const i = entries.findIndex((e) => e.id === entry.id)
         if (i >= 0) entries[i] = keepVoucher(entry, entries[i])
         else entries.push(entry)
         set({
-          ...withLog(get(), numbered(entries, get().cats)),
+          ...withLog(
+            get(),
+            numbered(shared(before, entries, get()), get().cats)
+          ),
           dirty: true,
           gcTick: get().gcTick + 1,
         })
@@ -851,12 +866,16 @@ export const useBookStore = create<BookStore>()(
 
       updateEntries: (updated) => {
         const byId = new Map(updated.map((e) => [e.id, e]))
-        const entries = get().entries.map((e) => {
+        const before = get().entries
+        const entries = before.map((e) => {
           const next = byId.get(e.id)
           return next ? keepVoucher(next, e) : e
         })
         set({
-          ...withLog(get(), numbered(entries, get().cats)),
+          ...withLog(
+            get(),
+            numbered(shared(before, entries, get()), get().cats)
+          ),
           dirty: true,
           gcTick: get().gcTick + 1,
         })
