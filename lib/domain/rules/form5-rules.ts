@@ -110,12 +110,17 @@ export const FORM5_RULES = defineRules<Form5Values, Form5Breach>([
   rule("depreciationHasBase", 425, "blocker", [800, 801, 804], (v) =>
     v(804) > 0 ? v(800) > 0 || v(801) > 0 : true
   ),
+  /*
+   * The specification asks for at most 25 %. A remaining balance of 1 200 € or
+   * less may be depreciated at once (EVL 30 §), which this remark still flags,
+   * as OmaVero does.
+   */
   rule(
     "depreciationMaximum",
     1410,
     "warn",
     [800, 801, 802, 804],
-    (v) => 4 * v(804) <= v(800) + v(801) - v(802)
+    (v) => 4 * v(804) <= Math.max(0, v(800) + v(801) - v(802))
   ),
   sumRule(718, [703, 704, 705, 706, 708, 709, 714, 745, 711, 716], 25),
   rule(

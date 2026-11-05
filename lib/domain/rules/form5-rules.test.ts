@@ -54,6 +54,12 @@ describe("FORM5_RULES", () => {
     ).toContain("form5.depreciationMaximum")
   })
 
+  it("does not flag a pool that a sale emptied (#1410)", () => {
+    expect(breaches({ 800: 100, 802: 500, 804: 0, 806: 0 })).not.toContain(
+      "form5.depreciationMaximum"
+    )
+  })
+
   it("names the specification check each rule implements", () => {
     for (const rule of FORM5_RULES.rules) {
       expect(rule.source).toMatch(/^Form 5 spec 2026 #\d+$/)
