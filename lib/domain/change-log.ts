@@ -9,7 +9,15 @@ import type { Entry } from "@/lib/domain/types"
  * the log is not proof that nothing else happened.
  */
 export type ChangeAction =
-  "add" | "edit" | "delete" | "restore" | "lock" | "unlock" | "import"
+  | "add"
+  | "edit"
+  | "delete"
+  | "restore"
+  | "lock"
+  | "unlock"
+  | "import"
+  /* On opening, the file no longer matched its integrity seal (§7.9). */
+  | "external-edit"
 
 export interface FieldChange {
   field: LoggedField

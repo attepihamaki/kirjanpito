@@ -42,6 +42,7 @@ import {
   type Entry,
   type Lang,
 } from "@/lib/domain/types"
+import { checkIntegrity, sealSettings } from "@/lib/domain/integrity"
 import {
   parseSettings,
   serializeSettings,
@@ -347,7 +348,38 @@ async function importZip(
     settings,
     { encrypted: unpacked.encrypted, password }
   )
+  await reportEdits(
+    ctx,
+    await checkIntegrity(unpacked.csvText, unpacked.settingsText)
+  )
   return true
+}
+
+/**
+ * Tell the user that the file was changed outside the app (§7.9). The book is
+ * already open: the edit may be intended, so the dialog informs and blocks
+ * nothing. The log gets a record, and the next save writes a fresh seal.
+ */
+async function reportEdits(
+  ctx: Ctx,
+  result: Awaited<ReturnType<typeof checkIntegrity>>
+): Promise<void> {
+  if (result.status !== "edited") return
+  useBookStore.setState((s) => ({
+    changeLog: [
+      ...s.changeLog,
+      { at: new Date().toISOString(), action: "external-edit" },
+    ],
+  }))
+  const parts = [
+    result.csv ? ctx.t("io.editedEntries") : null,
+    result.settings ? ctx.t("io.editedSettings") : null,
+  ].filter((p): p is string => p !== null)
+  await alertDialog({
+    title: ctx.t("io.editedTitle"),
+    message: ctx.t("io.edited", { parts: parts.join(" ") }),
+    closeLabel: ctx.t("common.close"),
+  })
 }
 
 /**
@@ -689,7 +721,7 @@ async function buildBookFile(
     paths,
     attachmentIds,
     read: async (id) => (await getReceipt(id)) ?? null,
-    settingsText: currentSettingsText(),
+    settingsText: await sealSettings(currentSettingsText(), csvText),
     password: encrypted ? (heldPassword() ?? undefined) : undefined,
     carry: carryFrom(source),
     onAbsent: (key) => {

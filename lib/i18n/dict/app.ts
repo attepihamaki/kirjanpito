@@ -2421,6 +2421,22 @@ export const APP_DICT = {
     pl("Imported 1 voucher.", "Imported {n} vouchers."),
   ],
   "io.newCategories": [" Uusia luokkia: {n}.", " New categories: {n}."],
+  "io.editedTitle": [
+    "Tiedostoa on muokattu sovelluksen ulkopuolella",
+    "The file was changed outside the app",
+  ],
+  "io.edited": [
+    "Tiedoston tarkiste ei täsmää. {parts} Kirjanpito on avattu sellaisenaan. Jos muokkaus oli tarkoituksellinen, tallenna tiedosto, niin tarkiste päivittyy. Muussa tapauksessa tarkista luvut.",
+    "The file's checksum does not match. {parts} The bookkeeping was opened as it is. If you made the change on purpose, save the file to update the checksum. Otherwise check the figures.",
+  ],
+  "io.editedEntries": [
+    "Tositteita (CSV) on muutettu.",
+    "The entries (CSV) were changed.",
+  ],
+  "io.editedSettings": [
+    "Asetuksia (settings.json) on muutettu.",
+    "The settings (settings.json) were changed.",
+  ],
   "io.settingsNewer": [
     " Tiedosto on tehty uudemmalla versiolla, joten kaikkia asetuksia ei ehkä luettu.",
     " The file was made with a newer version, so some settings may not have been read.",

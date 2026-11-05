@@ -672,6 +672,17 @@ The bookkeeping holds a business's figures and its receipts, and the file may si
 - **A plain CSV import is unchanged**, and an unencrypted ZIP opens as before. An encrypted ZIP opened with a password it does not need ignores the password.
 - **Not handled:** recovering a forgotten password, a separate password per receipt, and keeping the old password while the new one is first written. Changing the password in a session and saving reads the old file's missing receipts with the new one, which fails, so those receipts count as lost (§7.5) and the save asks.
 
+### 7.9 Integrity seal
+
+`lib/domain/integrity.ts`. Every save writes `integrity` into `settings.json`: the algorithm (`sha256`) and two lowercase hex hashes, one of the CSV text and one of the settings body without the `integrity` key. Opening a ZIP recomputes both (`checkIntegrity`, called from `importZip`).
+
+- **It catches casual edits and proves nothing.** The hashes have no key, so anyone who edits a file on purpose can recompute them. The landing page's wording about the change log applies here too (§8.11).
+- **Receipts are not covered.** Hashing every receipt on open would be slow on a large book. A swapped receipt file goes unreported.
+- **The settings hash goes through the parser.** The body is parsed and written out compactly before hashing, so white space and indentation in `settings.json` do not count, only values. The CSV is hashed as the text `unpackZip` returns, which is the text `packZip` was given.
+- **A mismatch informs and blocks nothing.** The book opens as it is, then a dialog says whether the entries, the settings or both changed. The change log gets an `external-edit` record, which no view shows. The book stays clean, so the dialog returns on every open until a save writes a fresh seal.
+- **No seal, no report.** An older file, a ZIP without `settings.json`, unparsable settings or a seal this version cannot read give `none`. A plain CSV has no seal.
+- `lib/domain/integrity.test.ts` covers the check.
+
 ## 8. App structure and features
 
 ### 8.1 States and routes
