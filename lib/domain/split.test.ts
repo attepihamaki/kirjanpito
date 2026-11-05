@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest"
 
 import { defaultCategories } from "@/lib/domain/accounts"
-import { sharePayment, splitSiblings } from "@/lib/domain/split"
-import { indexCategories, type Entry } from "@/lib/domain/types"
+import { sharePayment, shareReceipts, splitSiblings } from "@/lib/domain/split"
+import {
+  indexCategories,
+  type Attachment,
+  type Entry,
+} from "@/lib/domain/types"
 
 const cats = indexCategories(defaultCategories())
 const open = { form5Filed: {} }
@@ -106,5 +110,60 @@ describe("sharePayment", () => {
     ]
     const after = [{ ...before[0], paidOn: null }, before[1]]
     expect(share(before, after)[1]).toBe(before[1])
+  })
+})
+
+describe("shareReceipts", () => {
+  const file = (id: string): Attachment => ({
+    id,
+    name: `${id}.pdf`,
+    type: "application/pdf",
+    size: 10,
+  })
+
+  it("adds a file attached to one part to the others, with the same id", () => {
+    const before = [part("a"), part("b")]
+    const after = [{ ...before[0], atts: [file("f1")] }, before[1]]
+    const [, b] = shareReceipts(before, after)
+    expect(b.atts?.map((x) => x.id)).toEqual(["f1"])
+  })
+
+  it("removes a file taken off one part from the others", () => {
+    const before = [
+      part("a", { atts: [file("f1"), file("f2")] }),
+      part("b", { atts: [file("f1"), file("f2")] }),
+    ]
+    const after = [{ ...before[0], atts: [file("f2")] }, before[1]]
+    const [, b] = shareReceipts(before, after)
+    expect(b.atts?.map((x) => x.id)).toEqual(["f2"])
+  })
+
+  it("drops the list when the last file goes", () => {
+    const before = [
+      part("a", { atts: [file("f1")] }),
+      part("b", { atts: [file("f1")] }),
+    ]
+    const after = [{ ...before[0], atts: undefined }, before[1]]
+    expect(shareReceipts(before, after)[1].atts).toBeUndefined()
+  })
+
+  it("keeps a file a sibling holds on its own", () => {
+    const before = [part("a"), part("b", { atts: [file("own")] })]
+    const after = [{ ...before[0], atts: [file("f1")] }, before[1]]
+    const [, b] = shareReceipts(before, after)
+    expect(b.atts?.map((x) => x.id)).toEqual(["own", "f1"])
+  })
+
+  it("leaves everything alone when no receipt changed", () => {
+    const before = [part("a", { atts: [file("f1")] }), part("b")]
+    const after = [{ ...before[0], amount: 1 }, before[1]]
+    expect(shareReceipts(before, after)[1]).toBe(before[1])
+  })
+
+  it("does not touch an ordinary entry", () => {
+    const outsider = part("c", { split: undefined })
+    const before = [part("a"), outsider]
+    const after = [{ ...before[0], atts: [file("f1")] }, outsider]
+    expect(shareReceipts(before, after)[1]).toBe(outsider)
   })
 })

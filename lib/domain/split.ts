@@ -1,7 +1,7 @@
 import { LINE_BY_KEY } from "@/lib/domain/accounts"
 import { canBeUnpaid, paidDate } from "@/lib/domain/open-items"
 import { paidChangeHitsForm5, type LockMarks } from "@/lib/domain/period-lock"
-import type { CategoryMap, Entry } from "@/lib/domain/types"
+import type { Attachment, CategoryMap, Entry } from "@/lib/domain/types"
 
 /**
  * The parts of a receipt that was split across categories or VAT rates (§8.4).
@@ -65,4 +65,68 @@ export function sharePayment(
     if (source.cash && paid !== null) next.cash = true
     return next
   })
+}
+
+/** What identifies an attachment within a split: its stored file, else its listed path. */
+function receiptKey(a: Attachment): string {
+  return a.id ?? a.path ?? a.name
+}
+
+/**
+ * One receipt is one set of files, so a file added to or removed from a part
+ * is added to or removed from the other parts (§8.4). It carries the
+ * difference rather than replacing the list, so a file a sibling holds on its
+ * own survives. The shared file keeps its `id`, so the archive stores it once
+ * (§7.2).
+ */
+export function shareReceipts(
+  before: readonly Entry[],
+  after: readonly Entry[]
+): Entry[] {
+  const was = new Map(before.map((e) => [e.id, e]))
+  const sources = new Map<
+    string,
+    { added: Attachment[]; removed: Set<string> }
+  >()
+  for (const e of after) {
+    const old = was.get(e.id)
+    if (e.split === undefined || !old || sources.has(e.split)) continue
+    const oldKeys = new Set((old.atts ?? []).map(receiptKey))
+    const newKeys = new Set((e.atts ?? []).map(receiptKey))
+    const added = (e.atts ?? []).filter((a) => !oldKeys.has(receiptKey(a)))
+    const removed = new Set([...oldKeys].filter((k) => !newKeys.has(k)))
+    if (added.length || removed.size) sources.set(e.split, { added, removed })
+  }
+  if (sources.size === 0) return [...after]
+
+  const changedIds = new Set(
+    after
+      .filter((e) => {
+        const old = was.get(e.id)
+        return old && receiptsOf(old) !== receiptsOf(e)
+      })
+      .map((e) => e.id)
+  )
+  return after.map((e) => {
+    const source = e.split === undefined ? undefined : sources.get(e.split)
+    if (!source || changedIds.has(e.id)) return e
+    const have = (e.atts ?? []).filter(
+      (a) => !source.removed.has(receiptKey(a))
+    )
+    const keys = new Set(have.map(receiptKey))
+    const atts = [
+      ...have,
+      ...source.added
+        .filter((a) => !keys.has(receiptKey(a)))
+        .map((a) => ({ ...a })),
+    ]
+    const next: Entry = { ...e }
+    if (atts.length) next.atts = atts
+    else delete next.atts
+    return next
+  })
+}
+
+function receiptsOf(e: Entry): string {
+  return (e.atts ?? []).map(receiptKey).join("|")
 }

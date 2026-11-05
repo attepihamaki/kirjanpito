@@ -27,7 +27,7 @@ import {
 } from "@/lib/domain/change-log"
 import type { LoanOpening, YearEnd } from "@/lib/domain/form5-balance"
 import type { PageSize } from "@/lib/domain/settings-file"
-import { sharePayment } from "@/lib/domain/split"
+import { shareReceipts, sharePayment } from "@/lib/domain/split"
 import { indexCategories } from "@/lib/domain/types"
 import type {
   AmountMode,
@@ -143,13 +143,16 @@ function numbered(
   return [...assignVouchers(syncEuPurchase(entries, cats))]
 }
 
-/** `after`, with a changed payment carried across the parts of a split (§8.5). */
+/** `after`, with a changed payment or receipt carried across the parts of a split (§8.4, §8.5). */
 function shared(
   before: readonly Entry[],
   after: readonly Entry[],
   state: Pick<BookState, "cats" | "form5Filed">
 ): Entry[] {
-  return sharePayment(before, after, indexCategories(state.cats), state)
+  return shareReceipts(
+    before,
+    sharePayment(before, after, indexCategories(state.cats), state)
+  )
 }
 
 export type DialogState =
