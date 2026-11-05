@@ -83,6 +83,8 @@ export interface BookSettings {
   form5Filed: Record<string, string>
   overviewLayout: OverviewWidget[]
   autosave: boolean
+  /** The ZIP is written AES-encrypted (§7.8). */
+  encrypted: boolean
   /** The full category list: the defaults as the user left them, plus custom ones. */
   categories: Category[]
   pageSize: { ledger: PageSize; categories: PageSize }
@@ -346,6 +348,7 @@ export function parseSettings(text: string): ParsedSettings {
     out.overviewLayout = normalizeLayout(raw.overview.layout)
   }
   if (typeof raw.autosave === "boolean") out.autosave = raw.autosave
+  if (typeof raw.encrypted === "boolean") out.encrypted = raw.encrypted
   if (Array.isArray(raw.categories)) {
     const cats = raw.categories
       .map(parseCategory)
@@ -443,6 +446,7 @@ export function serializeSettings(s: BookSettings): string {
     ),
     overview: { layout: s.overviewLayout },
     autosave: s.autosave,
+    encrypted: s.encrypted,
     categories: s.categories.map((c) => ({
       id: c.id,
       line: c.line,

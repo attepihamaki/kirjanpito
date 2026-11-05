@@ -36,7 +36,7 @@ There is **no backend, no account and no database**. The user opens their bookke
 - The whole app is **client-side**. Prefer `output: "export"` (static export). No API routes or server actions are needed.
 - Suggested libraries:
   - `papaparse` for CSV parsing. Row validation is hand-written in `lib/domain/csv.ts` rather than done with `zod`: §7.1 requires the import to be _lenient_ — a bad row is skipped and counted, never rejected — and every problem is reported as a machine-readable code the i18n layer translates. A schema validator would have to be unwrapped back into exactly that shape. `zod` was removed from the dependencies.
-  - `jszip` for ZIP import and export.
+  - `@zip.js/zip.js` for ZIP import and export, including AES encryption (§7.8). `lib/domain/zip.ts` imports its `index-native.js` build, which uses the browser's own deflate and needs neither web workers nor wasm, and `configure({ useWebWorkers: false })` keeps it inside the CSP of §11b.
   - `@dnd-kit/core` and `@dnd-kit/sortable` for rearranging the overview's widgets (§8.12). Native HTML drag and drop has no keyboard or touch support, and dnd-kit's keyboard sensor gives both.
   - `pdfjs-dist` for rendering PDFs. **The worker is copied to `public/pdf.worker.min.mjs` by `scripts/copy-pdf-worker.mjs` on `predev`/`prebuild`, and `workerSrc` points at that fixed URL.** The `new URL(..., import.meta.url)` form was rejected: the worker is an ES module bundle, and whether Turbopack copies it as an asset or pulls it into the module graph differs between the dev server and the export — a failure that would surface only in production. pdfjs is still imported dynamically, from `lib/browser/pdf.ts` alone.
   - `pdf-lib` for writing the memo vouchers of calculated entries (§8.8). `lib/browser/memo-pdf.ts` is the only module that imports it, and `lib/commands/memo-commands.ts` imports that module dynamically, so no bundle carries it until an entry is booked.
@@ -50,7 +50,7 @@ There is **no backend, no account and no database**. The user opens their bookke
 ### Things in the artifact that exist only because of claude.ai, and should not be ported
 
 - **`window.claude.use("downloads")`.** The artifact saves files through a claude.ai capability. The app uses a normal Blob plus an `<a download>` link for downloading a copy, and the File System Access API to save back to the opened file where it exists (§7.5).
-- **Loading PDF.js and JSZip from cdnjs with script tags**, and running the PDF.js worker on the main thread (`globalThis.pdfjsWorker`). In the real app, import them from npm.
+- **Loading PDF.js and the ZIP library from cdnjs with script tags**, and running the PDF.js worker on the main thread (`globalThis.pdfjsWorker`). In the real app, import them from npm.
 - **Custom in-app confirmation dialogs** replaced `window.confirm()` because claude.ai's sandbox blocks native dialogs. Keep in-app dialogs anyway (shadcn `AlertDialog`), since they're better UX and translatable. Never use `window.confirm`.
 - The **single-file, hand-rendered HTML** structure. Rebuild it as proper React components.
 
@@ -505,7 +505,7 @@ kirjanpito.zip                  bookkeeping.zip
 - **The round trip is lossless, and the path is a fixed point.** `receiptStem` is idempotent — everything it does either removes a character that could never survive or is a no-op on its own output — so the name a re-import reads off the path is the name the next export writes, and a book can go round any number of times without its receipts drifting or degrading.
 - **No date prefix.** The folder gives the year and month, and a user's own name often carries a date already — prefixing one would read twice.
 - The extension comes from the file name (`jpeg` → `jpg`), otherwise from the MIME type.
-- Receipt files are stored without compression (STORE); the CSV and `settings.json` are DEFLATE-compressed.
+- Receipt files are stored without compression (STORE); the CSV and `settings.json` are DEFLATE-compressed. An encrypted book keeps the same layout and methods (§7.8).
 - **Import:** the user picks a ZIP. Use the shallowest `.csv` in it (ignoring `__MACOSX`), whatever it is called. Paths in `receipts` are resolved relative to the CSV's folder, then at the ZIP root, then by the **path below the top folder**, and last by a **unique file name anywhere in the archive**. The last two are what survive a move: changing the export language renames the folder, so a save asks the file it is replacing for a path that file never held, and a receipt whose bytes this browser no longer holds would be dropped (§7.5, `carryFrom`). Only the folder's own name changes, so the year, the month and the file name under it still identify the receipt — which is what the bare name cannot do, since two receipts of different months may share one. A key two files share is ambiguous, so the fallback refuses it rather than guessing. Files found are stored in IndexedDB. Listed files that aren't found become `missing` attachments that keep their path, so re-exporting doesn't lose the reference. Importing a plain CSV that has `receipts` paths marks those receipts as missing in the same way. A listed path that names neither an image nor a PDF, or that leads outside the archive (`..`, `.` or an empty segment, a leading `/`, a backslash or a drive), is not a receipt at all: it is dropped rather than kept as missing, so it cannot reappear in the next export, and the toast counts it. `isReceiptPath` decides this.
 - **Unpacking is capped** (`ZIP_LIMITS` in `zip.ts`), because a small ZIP can unpack to gigabytes and the size in its header can be forged. The bytes are counted as they come out of the archive. The CSV and `settings.json` may unpack to 64 MiB each; past that the file is refused in a dialog (`io.zipTooLarge`). One receipt may unpack to 512 MiB; past that it reads as missing.
 - Unpacking, decoding and writing every receipt to IndexedDB takes seconds for a real ZIP, so the import raises `importing` in the store and the UI shows progress once it passes 400 ms — see §8.2.
@@ -622,6 +622,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
   "overview": { "layout": [{ "id": "result", "size": "L", "hidden": false }] },
   "categories": [{ "id": "333", "line": "333", "name": "Ostot ja varastojen muutokset", "vatRate": 25.5, "enabled": true, "custom": false }],
   "autosave": false,
+  "encrypted": false,
   "pageSize": { "ledger": 10, "categories": 25 },
   "recurring": [{ "id": "r1", "description": "Vuokra", "type": "expense", "catId": "343", "amount": 45000, "vatRate": 25.5, "amountMode": "gross", "day": 20, "from": "2026-02" }],
   "assetOpening": { "year": 2026, "amount": 300000 },
@@ -639,9 +640,24 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
 - **The overview layout** goes through `normalizeLayout` in `lib/domain/overview-layout.ts`: an unknown widget id is dropped and a missing one goes right after the widget it follows in the default layout, at its default size, so a file from an older or newer version still opens and a new widget does not land at the bottom of the page.
 - **Language and theme** are written from the browser's own keys (§12) at save. Opening a file switches the app to them. They are preferences of the browser as much as of the book, so changing them does not mark the book dirty, and the landing page goes on using the browser's keys. The theme is applied through `Ctx.setTheme`, because only React can reach next-themes.
 - **Page sizes and autosave** are saved the same way: written at save, applied on open, never dirty.
-- **The export language, the business's name and ID, the VAT period, the start month, the filed marks, the archived years, the layout, the categories, the recurring templates, the opening balances, the year-end figures and the bank balance do mark the book dirty**, since the file no longer matches.
+- **The export language, whether the file is encrypted (§7.8), the business's name and ID, the VAT period, the start month, the filed marks, the archived years, the layout, the categories, the recurring templates, the opening balances, the year-end figures and the bank balance do mark the book dirty**, since the file no longer matches.
 - A plain CSV has no settings. Opening one starts with no filed marks and no start month, and keeps the rest as it was.
 - `lib/domain/settings-file.test.ts` covers the round trip and the lenient reading; `lib/commands/io-commands.test.ts` covers opening a ZIP with settings.
+
+### 7.8 Encrypted ZIP
+
+The bookkeeping holds a business's figures and its receipts, and the file may sit in a cloud folder or an email. Encryption is opt-in per book.
+
+- **The format is a standard ZIP with WinZip AES-256 (AE-2).** Every entry is encrypted: the CSV, `settings.json` and the receipts, with the same methods as a plain book (§7.2). 7-Zip, WinRAR and Keka open it with the password, so the file stays readable without the app. `lib/domain/zip.ts` is the only module that knows the library. `lib/domain/zip.test.ts` and `lib/commands/encryption.test.ts` cover the archive and the flows.
+- **File names, sizes and dates are not encrypted.** A ZIP's central directory is readable without the password, so a receipt called `2.11.2026 - HC-Maschinentechnik - Lasku.pdf` shows its name. The setting says so. Hiding the names would take an encrypted ZIP inside another, which no other tool opens in one step.
+- **The password is never stored.** It is held in memory by `lib/commands/book-password.ts`, tied to `bookEpoch`: another book taking over, a closed file and a reload all drop it. It is not in localStorage, IndexedDB or `settings.json`. The `encrypted` flag is (§7.6, §12), and the archive itself is the truth: opening a file sets the flag from what the entries are, not from `settings.json`.
+- **Opening** (`unpackZip`) throws `ZipPasswordRequiredError` for an encrypted archive with no password and `ZipWrongPasswordError` for a wrong one. The import asks through `askPassword` (`lib/ui/password-prompt.ts`, hosted by `components/password-dialog-host.tsx`). The check runs inside the dialog, so a wrong password shows its message and the dialog stays open. Cancelling opens nothing. The import's busy flag is down while the dialog is up.
+- **Saving** needs the password. With none held, `ensurePassword` asks before the file picker, so answering the dialog is the user gesture the picker needs. If the file being replaced is encrypted, the answer is checked against it, because a mistyped password would write a file the user cannot open. With no such file the password is asked twice and must be at least `MIN_PASSWORD_LENGTH` (10) characters. The AES key derivation is the format's own PBKDF2 with 1 000 rounds, which makes a short password the weak point. A downloaded copy follows the same rule.
+- **Autosave never asks.** An encrypted book with no held password pauses autosave like any other question the save would have asked (§7.5), and one manual save starts it again. After a reload it is always paused.
+- **Turning it on or off** is Asetukset, Yleiset, Salaus. Both mark the book dirty and take effect at the next save. Turning it off asks first and keeps the old password in memory, because the file on disk is still encrypted until that save and its receipts have to be read from it (§7.5).
+- **The browser's working copy is not encrypted.** Between saves the entries are in localStorage and the receipts in IndexedDB, as before (§12). The file is protected on disk, in a cloud folder and in transit. It is not protected against someone using the browser profile. "Sulje tiedosto" clears the buffer, and the setting's description says so.
+- **A plain CSV import is unchanged**, and an unencrypted ZIP opens as before. An encrypted ZIP opened with a password it does not need ignores the password.
+- **Not handled:** recovering a forgotten password, a separate password per receipt, and keeping the old password while the new one is first written. Changing the password in a session and saving reads the old file's missing receipts with the new one, which fails, so those receipts count as lost (§7.5) and the save asks.
 
 ## 8. App structure and features
 
@@ -888,6 +904,7 @@ On **Yleiset**:
   - **There is no YTJ lookup.** PRH's open data API leaves out private traders, which is who this app is for, and VIES allows no browser requests, so the name is typed.
 - **"ALV-ilmoitusjakso"**: a segmented Kuukausi / Neljännesvuosi / Vuosi. It sets `vatPeriod` (§6.5), which the overview's due dates and the VAT view follow. Changing it keeps the VAT view on the same part of the year: October becomes Q4.
 - **"Kirjanpidon aloitus"**: the month the business began, as a month select ("Ensimmäisestä tositteesta" or a month) and, once a month is chosen, a year select. It sets `bookStart` (§6.5). Unset, returns are counted from the first entry.
+- **"Salaus"**: the state of the file's encryption (§7.8) and, behind "Muuta", the buttons to turn it on, change the password or turn it off, with a description of what is and is not hidden. It is shown in every browser, since a downloaded copy is encrypted too.
 - **"Tallennus"**, only where the browser can write to a file: the "Tallenna automaattisesti" checkbox (§7.5), with a description that says what can be undone: a delete or an edit of one voucher for 10 seconds (§8.11).
 - **"Poista kirjanpito"**, last in the title row's menu, in the destructive colour (`deleteBook` in `book-commands.ts`). It erases the whole bookkeeping from this browser: entries, settings, the receipts in IndexedDB, the linked file handle and the `bookkeeping` localStorage key, then returns to the landing page. The confirmation says the deletion is permanent and to download the bookkeeping first. It **cannot be undone**, and it is not stopped by locked periods or unsaved changes: it is the user's own decision about the browser's working copy, and a file on disk is untouched. The `lang` and `theme` keys stay.
 
@@ -1301,7 +1318,7 @@ app/
   Finnish and has to find the FI|EN toggle in the header. Seeding from
   `navigator.language` on a first visit would fix it and is safe now that no
   alternate URL exists — deliberately not done, to keep first paint predictable.
-- **The landing bundle must not contain `pdfjs-dist`, `jszip`, `papaparse`,
+- **The landing bundle must not contain `pdfjs-dist`, `@zip.js/zip.js`, `papaparse`,
   `recharts` or `pdf-lib`.** Commands are split into `lib/commands/book-commands.ts` (safe to
   import statically) and `lib/commands/io-commands.ts` (pulled in with
   `await import()` from the landing's file handler). `lib/browser/pdf.ts` is the
@@ -1376,7 +1393,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
 
 - localStorage `bookkeeping` — exported as `BOOK_STORAGE_KEY` from
   `stores/book-store.ts`, so nothing hard-codes the string twice:
-  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, exportLang, businessId, businessName, vatPeriod, bookStart, vatFiled, yearsArchived, overviewLayout, autosave, recurring, assetOpening, bankBalance }`.
+  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, exportLang, businessId, businessName, vatPeriod, bookStart, vatFiled, yearsArchived, overviewLayout, autosave, encrypted, recurring, assetOpening, bankBalance }`.
   The book's settings are kept twice: here, as the working buffer, and in the
   file's `settings.json` (§7.6), as the record. A reload restores them from
   here; opening a file replaces them from there.

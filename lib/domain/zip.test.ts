@@ -21,6 +21,8 @@ import {
   receiptReader,
   unpackZip,
   ZipEntryTooLargeError,
+  ZipPasswordRequiredError,
+  ZipWrongPasswordError,
 } from "@/lib/domain/zip"
 
 const baseCats = defaultCategories()
@@ -158,10 +160,11 @@ describe("packZip", () => {
   })
 
   it("reads an archive without settings.json as having none", async () => {
-    const JSZip = (await import("jszip")).default
-    const zip = new JSZip()
-    zip.file("a.csv", "date;type;amount")
-    const bytes = await zip.generateAsync({ type: "uint8array" })
+    const { ZipWriter, Uint8ArrayWriter, TextReader } =
+      await import("@zip.js/zip.js/index-native.js")
+    const zip = new ZipWriter(new Uint8ArrayWriter())
+    await zip.add("a.csv", new TextReader("date;type;amount"))
+    const bytes = await zip.close()
     expect((await unpackZip(bytes))?.settingsText).toBeNull()
   })
 
@@ -475,5 +478,95 @@ describe("decompression limits", () => {
     expect(await unpacked.readReceipt("liitteet/2026/01/a.pdf")).toEqual(
       receipt
     )
+  })
+})
+
+describe("an encrypted archive (§7.8)", () => {
+  const PASSWORD = "correct horse battery"
+  const secret = "Salainen asiakas Oy"
+  const entries = [
+    entry({
+      description: secret,
+      atts: [att({ id: "a1", name: "lasku.pdf" })],
+    }),
+  ]
+
+  function encrypted(password: string | undefined = PASSWORD) {
+    return packZip({
+      ...packInputs(entries),
+      read: async () => enc.encode("kuitin sisältö"),
+      password,
+    })
+  }
+
+  /** Whether `needle` appears anywhere in the archive's bytes. */
+  function contains(bytes: Uint8Array, needle: string) {
+    return Buffer.from(bytes).includes(Buffer.from(needle))
+  }
+
+  it("keeps the CSV, settings and receipts out of the bytes", async () => {
+    const bytes = await encrypted()
+    expect(contains(bytes, secret)).toBe(false)
+    expect(contains(bytes, "kuitin sisältö")).toBe(false)
+    expect(contains(bytes, "version")).toBe(false)
+  })
+
+  it("is the same archive in plain form when no password is given", async () => {
+    const bytes = await packZip({
+      ...packInputs(entries),
+      read: async () => enc.encode("kuitin sisältö"),
+    })
+    expect(contains(bytes, "kuitin sisältö")).toBe(true)
+    expect((await unpackZip(bytes))?.encrypted).toBe(false)
+  })
+
+  it("opens with the password and reads the same content", async () => {
+    const bytes = await encrypted()
+    const unpacked = (await unpackZip(bytes, undefined, PASSWORD))!
+    expect(unpacked.encrypted).toBe(true)
+    expect(unpacked.csvText).toContain(secret)
+    expect(unpacked.settingsText).toBe(SETTINGS_TEXT)
+    expect(unpacked.otherFiles).toEqual(["liitteet/2026/10/lasku.pdf"])
+    const receipt = await unpacked.readReceipt("liitteet/2026/10/lasku.pdf")
+    expect(new TextDecoder().decode(receipt!)).toBe("kuitin sisältö")
+  })
+
+  it("asks for a password when none is given", async () => {
+    await expect(unpackZip(await encrypted())).rejects.toBeInstanceOf(
+      ZipPasswordRequiredError
+    )
+  })
+
+  it("refuses a wrong password", async () => {
+    await expect(
+      unpackZip(await encrypted(), undefined, "not the password")
+    ).rejects.toBeInstanceOf(ZipWrongPasswordError)
+  })
+
+  it("reads receipts back with the password, for a save that carries them", async () => {
+    const lookup = await receiptReader(await encrypted(), PASSWORD)
+    const receipt = await lookup("liitteet/2026/10/lasku.pdf")
+    expect(new TextDecoder().decode(receipt!)).toBe("kuitin sisältö")
+  })
+
+  it("reads a receipt as missing when the password does not fit it", async () => {
+    const lookup = await receiptReader(await encrypted(), "not the password")
+    expect(await lookup("liitteet/2026/10/lasku.pdf")).toBeNull()
+  })
+
+  it("still caps what an entry may unpack to", async () => {
+    const bytes = await encrypted()
+    await expect(
+      unpackZip(bytes, { textBytes: 4, receiptBytes: 4 }, PASSWORD)
+    ).rejects.toBeInstanceOf(ZipEntryTooLargeError)
+    const lookup = await receiptReader(bytes, PASSWORD)
+    expect(lookup).toBeTypeOf("function")
+  })
+
+  it("is ignored by a plain archive opened with a password", async () => {
+    const bytes = await packZip(packInputs(entries))
+    const unpacked = await unpackZip(bytes, undefined, "anything")
+    expect(unpacked?.encrypted).toBe(false)
+    expect(unpacked?.csvText).toContain(secret)
   })
 })

@@ -68,7 +68,7 @@ function LandingBody() {
   /*
    * §7.5: the picker hands back a handle the bookkeeping can later be saved
    * to, which the hidden input below cannot. Both load io-commands lazily, so
-   * jszip and papaparse stay out of this bundle (§11b).
+   * zip.js and papaparse stay out of this bundle (§11b).
    */
   const pickFile = async () => {
     const io = await import("@/lib/commands/io-commands")
@@ -115,7 +115,7 @@ function LandingBody() {
         onChange={(e) => {
           const file = e.target.files?.[0]
           e.target.value = ""
-          // Lazy: keeps jszip and papaparse out of the landing bundle.
+          // Lazy: keeps zip.js and papaparse out of the landing bundle.
           if (file) {
             void import("@/lib/commands/io-commands").then((m) =>
               m.openFile(ctx, file)

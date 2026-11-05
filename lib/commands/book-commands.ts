@@ -24,7 +24,7 @@ import { useLangStore } from "@/stores/lang-store"
  * Commands that never touch a file format.
  *
  * Kept apart from io-commands so the landing page — which needs "start" and
- * the §8.11 guards — does not drag jszip and papaparse into the statically
+ * the §8.11 guards — does not drag zip.js and papaparse into the statically
  * rendered, SEO-critical bundle.
  */
 

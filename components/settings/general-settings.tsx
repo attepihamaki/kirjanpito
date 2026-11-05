@@ -13,12 +13,17 @@ import {
 import { useFormatters } from "@/components/lang-provider"
 import { BusinessSetting } from "@/components/settings/business-setting"
 import { useRenumberChanges } from "@/components/settings/general-actions"
+import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { useCanSaveToFile } from "@/hooks/use-save-book"
 import { renumberVouchers } from "@/lib/commands/book-commands"
+import {
+  removeBookEncryption,
+  setBookPassword,
+} from "@/lib/commands/encryption-commands"
 import type { Lang } from "@/lib/domain/types"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 import { useBookStore } from "@/stores/book-store"
@@ -37,6 +42,7 @@ export function GeneralSettings() {
       <BookStartSetting />
       <ExportLanguageSetting />
       <AutosaveSetting />
+      <EncryptionSetting />
       <VoucherNumbers />
     </SettingGrid>
   )
@@ -283,6 +289,68 @@ function AutosaveSetting() {
         value={f.t(autosave ? "settings.autosaveOn" : "settings.autosaveOff")}
         note={f.t(
           autosave ? "settings.autosaveOnNote" : "settings.autosaveOffNote"
+        )}
+      />
+    </SettingCard>
+  )
+}
+
+/**
+ * Opt-in encryption of the saved file (§7.8). The password is asked in a
+ * dialog and held in memory, never stored, so there is nothing to show of it
+ * here beyond whether the file will be encrypted.
+ */
+function EncryptionSetting() {
+  const f = useFormatters()
+  const ctx = useCommandCtx()
+  const encrypted = useBookStore((s) => s.encrypted)
+
+  return (
+    <SettingCard
+      label={f.t("settings.encrypt")}
+      editor={
+        <>
+          <div className="flex flex-wrap gap-2">
+            {encrypted ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void setBookPassword(ctx)}
+                >
+                  {f.t("settings.encryptChange")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void removeBookEncryption(ctx)}
+                >
+                  {f.t("settings.encryptDisable")}
+                </Button>
+              </>
+            ) : (
+              <Button size="sm" onClick={() => void setBookPassword(ctx)}>
+                {f.t("settings.encryptEnable")}
+              </Button>
+            )}
+          </div>
+          <SettingHint>{f.t("settings.encryptHint")}</SettingHint>
+        </>
+      }
+    >
+      <SettingValue
+        tone={encrypted ? "ok" : "default"}
+        lead={
+          encrypted ? (
+            <span
+              aria-hidden
+              className="size-2 shrink-0 rounded-full bg-primary"
+            />
+          ) : null
+        }
+        value={f.t(encrypted ? "settings.encryptOn" : "settings.encryptOff")}
+        note={f.t(
+          encrypted ? "settings.encryptOnNote" : "settings.encryptOffNote"
         )}
       />
     </SettingCard>

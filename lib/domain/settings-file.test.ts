@@ -31,6 +31,7 @@ function settings(): BookSettings {
   return {
     language: "en",
     theme: "dark",
+    encrypted: true,
     exportLang: "en",
     businessId: "0112038-9",
     businessName: "Oma Oy",

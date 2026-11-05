@@ -1,5 +1,9 @@
 // @vitest-environment jsdom
-import JSZip from "jszip"
+import {
+  TextReader,
+  Uint8ArrayWriter,
+  ZipWriter,
+} from "@zip.js/zip.js/index-native.js"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { toast } from "@/components/ui/toast"
@@ -128,17 +132,19 @@ describe("settings.json", () => {
   })
 
   async function zipFile(settings: unknown) {
-    const zip = new JSZip()
-    zip.file(
+    const zip = new ZipWriter(new Uint8ArrayWriter())
+    await zip.add(
       "kirjanpito.csv",
-      [
-        "date;description;type;account;category;amount;vat;mode;receipts",
-        "2026-01-08;Lasku 1001;tulo;300;Myynti – Suomi;2510,00;25,5;brutto;",
-        "2026-02-01;Adobe;kulu;334;Ohjelmistot;24,00;25,5;brutto;",
-      ].join("\r\n")
+      new TextReader(
+        [
+          "date;description;type;account;category;amount;vat;mode;receipts",
+          "2026-01-08;Lasku 1001;tulo;300;Myynti – Suomi;2510,00;25,5;brutto;",
+          "2026-02-01;Adobe;kulu;334;Ohjelmistot;24,00;25,5;brutto;",
+        ].join("\r\n")
+      )
     )
-    zip.file("settings.json", JSON.stringify(settings))
-    const bytes = await zip.generateAsync({ type: "uint8array" })
+    await zip.add("settings.json", new TextReader(JSON.stringify(settings)))
+    const bytes = await zip.close()
     return new File([bytes as BlobPart], "kirjanpito.zip", {
       type: "application/zip",
     })

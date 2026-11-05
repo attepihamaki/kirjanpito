@@ -2180,6 +2180,53 @@ export const APP_DICT = {
     "Kirjanpito tallentuu avattuun tiedostoon muutama sekunti jokaisen muutoksen jälkeen. Poiston ja tositteen muokkauksen voi kumota ilmoituksesta 10 sekunnin ajan, ja palautus tallentuu samalla tavalla. Tiedostoon ei jää aiempia versioita. Jos selain kysyisi jotain, tallennus odottaa, kunnes tallennat kerran itse.",
     "The bookkeeping is saved to the opened file a few seconds after each change. You can undo a delete or a voucher edit from its notification for 10 seconds, and the restored voucher is saved the same way. The file keeps no earlier versions. If the browser would have to ask anything, autosave waits until you save once yourself.",
   ],
+  "settings.encrypt": ["Salaus", "Encryption"],
+  "settings.encryptHint": [
+    "Tiedosto tallennetaan ZIP-tiedostona, jonka sisältö on salattu AES-256:lla. 7-Zip ja vastaavat ohjelmat avaavat sen salasanalla. Tiedostojen nimet, koot ja päivämäärät näkyvät ilman salasanaa, joten liitteiden nimet eivät ole salaisia. Salasanaa ei tallenneta selaimeen eikä tiedostoon: se kysytään, kun avaat tiedoston, ja kerran, kun tallennat sen avattuasi selaimen uudelleen. Jos unohdat sen, tiedostoa ei voi avata. Selaimen työkopio kirjanpidosta ei ole salattu, ennen kuin suljet tiedoston.",
+    "The file is saved as a ZIP with its contents encrypted with AES-256. 7-Zip and similar programs open it with the password. File names, sizes and dates are visible without the password, so attachment names are not secret. The password is not stored in the browser or in the file. It is asked when you open the file, and once when you save after reopening the browser. If you forget it, the file can’t be opened. The browser’s working copy of the bookkeeping is not encrypted until you close the file.",
+  ],
+  "settings.encryptOn": ["Salattu", "Encrypted"],
+  "settings.encryptOff": ["Ei salattu", "Not encrypted"],
+  "settings.encryptOnNote": [
+    "AES-256, tallennus kysyy salasanan tarvittaessa",
+    "AES-256, saving asks for the password when needed",
+  ],
+  "settings.encryptOffNote": [
+    "Tiedosto kirjoitetaan ilman salasanaa",
+    "The file is written without a password",
+  ],
+  "settings.encryptEnable": ["Ota salaus käyttöön", "Turn on encryption"],
+  "settings.encryptChange": ["Vaihda salasana", "Change password"],
+  "settings.encryptDisable": ["Poista salaus", "Turn off encryption"],
+  "settings.encryptSetTitle": ["Valitse salasana", "Choose a password"],
+  "settings.encryptSetMessage": [
+    "Jos unohdat salasanan, tiedostoa ei voi avata, eikä salasanaa voi palauttaa. Tallenna se salasanojen hallintaan.",
+    "If you forget the password, the file can’t be opened and the password can’t be recovered. Keep it in a password manager.",
+  ],
+  "settings.encryptRepeatLabel": ["Toista salasana", "Repeat the password"],
+  "settings.encryptMismatch": [
+    "Salasanat eivät täsmää.",
+    "The passwords don’t match.",
+  ],
+  "settings.encryptTooShort": [
+    "Salasanassa pitää olla vähintään {n} merkkiä.",
+    "The password needs at least {n} characters.",
+  ],
+  "settings.encryptSetConfirm": ["Käytä salasanaa", "Use this password"],
+  "settings.encryptEnabled": [
+    "Salaus on päällä. Tiedosto salataan seuraavassa tallennuksessa.",
+    "Encryption is on. The file is encrypted the next time you save.",
+  ],
+  "settings.encryptOffTitle": ["Poistetaanko salaus?", "Turn off encryption?"],
+  "settings.encryptOffMessage": [
+    "Seuraava tallennus kirjoittaa tiedoston ilman salasanaa, ja sen sisällön voi lukea kuka tahansa, jolla on tiedosto.",
+    "The next save writes the file without a password, and anyone with the file can read it.",
+  ],
+  "settings.encryptOffConfirm": ["Poista salaus", "Turn off encryption"],
+  "settings.encryptDisabled": [
+    "Salaus on pois päältä. Tiedosto kirjoitetaan ilman salasanaa seuraavassa tallennuksessa.",
+    "Encryption is off. The file is written without a password the next time you save.",
+  ],
   "settings.addCategory": ["Lisää oma luokka", "Add a category"],
   "settings.newCategory": ["Lisää luokka", "Add category"],
   "settings.euPurchase": [
@@ -2447,6 +2494,29 @@ export const APP_DICT = {
     "ZIP-tiedoston CSV tai settings.json on purettuna liian suuri, joten sitä ei avattu.",
     "The CSV or settings.json in the ZIP file is too large when unpacked, so it wasn’t opened.",
   ],
+  "io.passwordTitle": [
+    "Kirjanpito on salattu",
+    "This bookkeeping is encrypted",
+  ],
+  "io.passwordOpenMessage": [
+    "Anna tiedoston {f} salasana.",
+    "Enter the password for {f}.",
+  ],
+  "io.passwordLabel": ["Salasana", "Password"],
+  "io.passwordOpen": ["Avaa", "Open"],
+  "io.passwordWrong": [
+    "Salasana ei avaa tiedostoa.",
+    "That password doesn’t open the file.",
+  ],
+  "io.passwordSaveTitle": [
+    "Anna salasana tallennusta varten",
+    "Enter the password to save",
+  ],
+  "io.passwordSaveMessage": [
+    "Kirjanpito on salattu. Salasanaa ei säilytetä selaimessa, joten se kysytään kerran jokaisella käyttökerralla. Anna tiedoston nykyinen salasana.",
+    "This bookkeeping is encrypted. The browser doesn’t keep the password, so it is asked once per session. Enter the file’s current password.",
+  ],
+  "io.passwordSave": ["Tallenna", "Save"],
 
   // --- Attachment viewer (§8.6) ---
   "viewer.prevReceipt": ["Edellinen liite", "Previous attachment"],

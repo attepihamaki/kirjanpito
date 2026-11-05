@@ -35,7 +35,14 @@ const FORBIDDEN_ON_LANDING = [
     name: "pdfjs-dist",
     markers: ["GlobalWorkerOptions", "PDFDocumentLoadingTask", "pdf.worker"],
   },
-  { name: "jszip", markers: ["JSZip"] },
+  {
+    name: "@zip.js/zip.js",
+    markers: [
+      "Invalid password",
+      "File contains encrypted entry",
+      "Invalid authentication code",
+    ],
+  },
   {
     name: "papaparse",
     markers: ["MissingQuotes", "__parsed_extra", "TooFewFields"],

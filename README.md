@@ -147,7 +147,7 @@ small context (`t` for translation, `navigate`) so they can live outside React.
 
 They are split in two on purpose. `book-commands.ts` is safe to import
 statically; `io-commands.ts` is loaded with `await import()` because it pulls in
-`jszip` and `papaparse`, which must not land in the landing page's bundle.
+`@zip.js/zip.js` and `papaparse`, which must not land in the landing page's bundle.
 
 **`components` — rendering.** Views select narrow slices of the store and call
 selectors. Tables are hand-composed on shadcn's `Table`: sorting, filtering and
@@ -157,7 +157,7 @@ nothing.
 
 A few deliberate choices worth knowing before changing things:
 
-- **`pdfjs-dist`, `jszip`, `papaparse` and `recharts` must stay out of the
+- **`pdfjs-dist`, `@zip.js/zip.js`, `papaparse` and `recharts` must stay out of the
   landing bundle.** Each is reachable only through a dynamic import, and
   `scripts/verify-export.mjs` fails the build if one gets in.
 - **The pdf.js worker is copied to `public/` by a script**, not resolved
@@ -225,7 +225,7 @@ if the three SEO files stop agreeing with the flag.
 [shadcn/ui](https://ui.shadcn.com) on [Base UI](https://base-ui.com) ·
 [Zustand](https://zustand.docs.pmnd.rs) ·
 [Recharts](https://recharts.org) · [pdf.js](https://mozilla.github.io/pdf.js/) ·
-[JSZip](https://stuk.github.io/jszip/) ·
+[zip.js](https://gildas-lormeau.github.io/zip.js/) ·
 [Papa Parse](https://www.papaparse.com) · [Vitest](https://vitest.dev)
 
 ## Background

@@ -1,4 +1,15 @@
-import JSZip from "jszip"
+import {
+  BlobReader,
+  ERR_INVALID_AUTHENTICATION_CODE,
+  ERR_INVALID_PASSWORD,
+  TextReader,
+  Uint8ArrayReader,
+  Uint8ArrayWriter,
+  ZipReader,
+  ZipWriter,
+  configure,
+  type FileEntry,
+} from "@zip.js/zip.js/index-native.js"
 
 import { decodeCsv } from "@/lib/domain/csv"
 import { SETTINGS_FILE_NAME } from "@/lib/domain/settings-file"
@@ -7,10 +18,20 @@ import { SETTINGS_FILE_NAME } from "@/lib/domain/settings-file"
  * ZIP packing and unpacking (§7.2).
  *
  * Bytes in and out, so this module can be unit-tested in plain Node. The one
- * exception is a receipt `ReceiptReader` hands over as a `Blob`, which JSZip
+ * exception is a receipt `ReceiptReader` hands over as a `Blob`, which zip.js
  * reads as it writes the archive, so that a year's receipts do not all have to
  * be in memory at once.
+ *
+ * A book may be encrypted (§7.8): every entry is then AES-256 encrypted with
+ * one password, in the WinZip AE-2 form that 7-Zip and similar tools read.
  */
+
+/*
+ * The CSP allows no blob: workers (§11b), and the wasm build would need
+ * `wasm-unsafe-eval`, so zip.js runs in the main thread on the native
+ * CompressionStream.
+ */
+configure({ useWebWorkers: false })
 
 /** Reads a receipt's bytes out of storage. Returns null when unavailable. */
 export type ReceiptReader = (
@@ -35,16 +56,38 @@ export interface PackInput {
   carry?: (path: string) => Promise<Uint8Array | null>
   /** Told about each listed receipt that ended up with no bytes in the ZIP. */
   onAbsent?: (key: string) => void
+  /** Encrypts every entry with this password (§7.8). Unset writes a plain ZIP. */
+  password?: string
+}
+
+/**
+ * A Blob is streamed from disk as the archive is written. One without
+ * `arrayBuffer` (an engine that predates it) is read whole through FileReader.
+ */
+async function readerFor(bytes: Uint8Array | Blob) {
+  if (ArrayBuffer.isView(bytes))
+    return new Uint8ArrayReader(bytes as Uint8Array)
+  if (typeof bytes.arrayBuffer === "function") return new BlobReader(bytes)
+  const buffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+    const reading = new FileReader()
+    reading.onload = () => resolve(reading.result as ArrayBuffer)
+    reading.onerror = () => reject(reading.error)
+    reading.readAsArrayBuffer(bytes)
+  })
+  return new Uint8ArrayReader(new Uint8Array(buffer))
 }
 
 export async function packZip(input: PackInput): Promise<Uint8Array> {
-  const zip = new JSZip()
+  const zip = new ZipWriter(
+    new Uint8ArrayWriter(),
+    input.password ? { password: input.password, encryptionStrength: 3 } : {}
+  )
   /*
    * The CSV compresses well; receipts are already compressed formats, so
    * deflating them costs time for nothing.
    */
-  zip.file(input.csvName, input.csvText, { compression: "DEFLATE" })
-  zip.file(SETTINGS_FILE_NAME, input.settingsText, { compression: "DEFLATE" })
+  await zip.add(input.csvName, new TextReader(input.csvText))
+  await zip.add(SETTINGS_FILE_NAME, new TextReader(input.settingsText))
 
   /* Whether each path got its bytes, so a path several entries list is read once. */
   const written = new Map<string, boolean>()
@@ -58,11 +101,11 @@ export async function packZip(input: PackInput): Promise<Uint8Array> {
     const bytes =
       (id ? await input.read(id) : null) ?? (await input.carry?.(path)) ?? null
     written.set(path, bytes !== null)
-    if (bytes) zip.file(path, bytes, { compression: "STORE" })
+    if (bytes) await zip.add(path, await readerFor(bytes), { level: 0 })
     else input.onAbsent?.(key)
   }
 
-  return zip.generateAsync({ type: "uint8array" })
+  return zip.close()
 }
 
 export interface UnpackedZip {
@@ -72,6 +115,8 @@ export interface UnpackedZip {
   settingsText: string | null
   /** The path of every other file: the receipts. */
   otherFiles: readonly string[]
+  /** Whether the archive's entries are encrypted (§7.8). */
+  encrypted: boolean
   /**
    * A receipt's bytes by the path the CSV lists it under (§7.2). Read on demand,
    * so unpacking a large archive does not hold all of it twice, and a file no
@@ -101,6 +146,22 @@ export const ZIP_LIMITS: ZipLimits = {
   receiptBytes: 512 * MEBIBYTE,
 }
 
+/** The archive is encrypted and no password was given (§7.8). */
+export class ZipPasswordRequiredError extends Error {
+  constructor() {
+    super("The ZIP is encrypted and needs a password")
+    this.name = "ZipPasswordRequiredError"
+  }
+}
+
+/** The password does not open the archive (§7.8). */
+export class ZipWrongPasswordError extends Error {
+  constructor() {
+    super("The password does not open the ZIP")
+    this.name = "ZipWrongPasswordError"
+  }
+}
+
 /** The CSV or `settings.json` unpacks to more than `ZipLimits.textBytes`. */
 export class ZipEntryTooLargeError extends Error {
   constructor() {
@@ -109,55 +170,77 @@ export class ZipEntryTooLargeError extends Error {
   }
 }
 
-/* The part of JSZip's documented StreamHelper used here; its types leave it out. */
-interface EntryStream {
-  on(event: "data", listener: (chunk: Uint8Array) => void): EntryStream
-  on(event: "error", listener: (error: Error) => void): EntryStream
-  on(event: "end", listener: () => void): EntryStream
-  pause(): EntryStream
-  resume(): EntryStream
+/**
+ * A wrong password as zip.js reports it. AES keeps a two byte check value, so
+ * one password in 65 536 passes it and fails the MAC instead.
+ */
+function isPasswordFailure(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message === ERR_INVALID_PASSWORD ||
+      error.message === ERR_INVALID_AUTHENTICATION_CODE)
+  )
 }
 
 /** The entry's bytes, or null as soon as they pass `limit`. */
-function readCapped(
-  file: JSZip.JSZipObject,
-  limit: number
+async function readCapped(
+  file: FileEntry,
+  limit: number,
+  password: string | undefined
 ): Promise<Uint8Array | null> {
-  const stream = (
-    file as unknown as { internalStream(type: "uint8array"): EntryStream }
-  ).internalStream("uint8array")
-  return new Promise((resolve, reject) => {
-    const chunks: Uint8Array[] = []
-    let total = 0
-    stream
-      .on("data", (chunk) => {
-        total += chunk.length
-        if (total > limit) {
-          stream.pause()
-          chunks.length = 0
-          resolve(null)
-        } else {
-          chunks.push(chunk)
-        }
-      })
-      .on("error", reject)
-      .on("end", () => {
-        const bytes = new Uint8Array(total)
-        let at = 0
-        for (const chunk of chunks) {
-          bytes.set(chunk, at)
-          at += chunk.length
-        }
-        resolve(bytes)
-      })
-      .resume()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  let capped = false
+  const sink = new WritableStream<Uint8Array>({
+    write(chunk) {
+      total += chunk.length
+      if (total > limit) {
+        capped = true
+        chunks.length = 0
+        throw new Error("capped")
+      }
+      chunks.push(chunk)
+    },
   })
+  try {
+    await file.getData(sink, password ? { password } : undefined)
+  } catch (error) {
+    if (capped) return null
+    throw error
+  }
+  const bytes = new Uint8Array(total)
+  let at = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, at)
+    at += chunk.length
+  }
+  return bytes
 }
 
-async function readText(file: JSZip.JSZipObject, limits: ZipLimits) {
-  const bytes = await readCapped(file, limits.textBytes)
+async function readText(
+  file: FileEntry,
+  limits: ZipLimits,
+  password: string | undefined
+) {
+  let bytes: Uint8Array | null
+  try {
+    bytes = await readCapped(file, limits.textBytes, password)
+  } catch (error) {
+    if (isPasswordFailure(error)) throw new ZipWrongPasswordError()
+    throw error
+  }
   if (!bytes) throw new ZipEntryTooLargeError()
   return bytes
+}
+
+/** The archive's files by name, folders left out. */
+async function openFiles(data: Uint8Array): Promise<Map<string, FileEntry>> {
+  const entries = await new ZipReader(new Uint8ArrayReader(data)).getEntries()
+  const files = new Map<string, FileEntry>()
+  for (const entry of entries) {
+    if (!entry.directory) files.set(entry.filename, entry)
+  }
+  return files
 }
 
 /**
@@ -175,9 +258,10 @@ async function readText(file: JSZip.JSZipObject, limits: ZipLimits) {
  * name shared by two files is ambiguous, so it refuses rather than guessing.
  */
 function lookupIn(
-  zip: JSZip,
+  files: ReadonlyMap<string, FileEntry>,
   csvDir: string,
-  limits: ZipLimits
+  limits: ZipLimits,
+  password: string | undefined
 ): ReceiptLookup {
   let byTail: Map<string, string | null> | undefined
   let byBase: Map<string, string | null> | undefined
@@ -193,8 +277,7 @@ function lookupIn(
 
   const indexBy = (key: (name: string) => string) => {
     const map = new Map<string, string | null>()
-    for (const name of Object.keys(zip.files)) {
-      if (zip.files[name].dir) continue
+    for (const name of files.keys()) {
       const k = key(name)
       // Null marks a key that more than one file has.
       if (k) map.set(k, map.has(k) ? null : name)
@@ -203,19 +286,26 @@ function lookupIn(
   }
 
   return async (path) => {
-    let file = zip.file(csvDir + path) ?? zip.file(path)
+    let file = files.get(csvDir + path) ?? files.get(path)
     const tail = tailOf(path)
     if (!file && tail) {
       byTail ??= indexBy(tailOf)
       const match = byTail.get(tail)
-      if (match) file = zip.file(match)
+      if (match) file = files.get(match)
     }
     if (!file) {
       byBase ??= indexBy(baseOf)
       const match = byBase.get(baseOf(path))
-      if (match) file = zip.file(match)
+      if (match) file = files.get(match)
     }
-    return file ? readCapped(file, limits.receiptBytes) : null
+    if (!file) return null
+    try {
+      return await readCapped(file, limits.receiptBytes, password)
+    } catch (error) {
+      /* A receipt that fails its check reads as missing; the book still opens. */
+      if (isPasswordFailure(error)) return null
+      throw error
+    }
   }
 }
 
@@ -234,24 +324,33 @@ export function findCsvEntry(names: readonly string[]): string | null {
 
 /**
  * Throws `ZipEntryTooLargeError` when the CSV or `settings.json` unpacks past
- * the limit. Returns null for an archive with no CSV.
+ * the limit, `ZipPasswordRequiredError` for an encrypted archive opened with no
+ * password and `ZipWrongPasswordError` when the password does not fit. Returns
+ * null for an archive with no CSV.
  */
 export async function unpackZip(
   data: Uint8Array,
-  limits: ZipLimits = ZIP_LIMITS
+  limits: ZipLimits = ZIP_LIMITS,
+  password?: string
 ): Promise<UnpackedZip | null> {
-  const zip = await JSZip.loadAsync(data)
-  const names = Object.keys(zip.files).filter((n) => !zip.files[n].dir)
+  const files = await openFiles(data)
+  const names = [...files.keys()]
   const csvPath = findCsvEntry(names)
   if (!csvPath) return null
+  const encrypted = [...files.values()].some((f) => f.encrypted)
+  if (encrypted && !password) throw new ZipPasswordRequiredError()
 
-  const csvText = decodeCsv(await readText(zip.files[csvPath], limits))
+  const csvText = decodeCsv(
+    await readText(files.get(csvPath)!, limits, password)
+  )
   const csvDir = dirOf(csvPath)
   const settingsPath = [csvDir + SETTINGS_FILE_NAME, SETTINGS_FILE_NAME].find(
-    (p) => names.includes(p)
+    (p) => files.has(p)
   )
   const settingsText = settingsPath
-    ? new TextDecoder().decode(await readText(zip.files[settingsPath], limits))
+    ? new TextDecoder().decode(
+        await readText(files.get(settingsPath)!, limits, password)
+      )
     : null
 
   const otherFiles = names.filter(
@@ -266,7 +365,8 @@ export async function unpackZip(
     csvText,
     settingsText,
     otherFiles,
-    readReceipt: lookupIn(zip, csvDir, limits),
+    encrypted,
+    readReceipt: lookupIn(files, csvDir, limits, password),
   }
 }
 
@@ -274,11 +374,13 @@ export async function unpackZip(
  * Look up receipts in an existing ZIP by the path its CSV lists them under,
  * relative to the CSV's folder or the archive root (§7.2).
  */
-export async function receiptReader(data: Uint8Array): Promise<ReceiptLookup> {
-  const zip = await JSZip.loadAsync(data)
-  const names = Object.keys(zip.files).filter((n) => !zip.files[n].dir)
-  const csvPath = findCsvEntry(names)
-  return lookupIn(zip, csvPath ? dirOf(csvPath) : "", ZIP_LIMITS)
+export async function receiptReader(
+  data: Uint8Array,
+  password?: string
+): Promise<ReceiptLookup> {
+  const files = await openFiles(data)
+  const csvPath = findCsvEntry([...files.keys()])
+  return lookupIn(files, csvPath ? dirOf(csvPath) : "", ZIP_LIMITS, password)
 }
 
 /** The folder the CSV sits in, with a trailing slash — "" at the root. */

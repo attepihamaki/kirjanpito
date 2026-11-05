@@ -3,6 +3,7 @@ import { Geist } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toast"
 import { ConfirmDialogHost } from "@/components/confirm-dialog-host"
+import { PasswordDialogHost } from "@/components/password-dialog-host"
 import { CONTENT_SECURITY_POLICY } from "@/lib/site"
 import { cn } from "@/lib/utils"
 
@@ -41,6 +42,7 @@ export function HtmlShell({ children }: { children: React.ReactNode }) {
           <Toaster>
             {children}
             <ConfirmDialogHost />
+            <PasswordDialogHost />
           </Toaster>
         </ThemeProvider>
       </body>

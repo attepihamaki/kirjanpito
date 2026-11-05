@@ -238,6 +238,8 @@ export interface BookState {
   overviewLayout: OverviewWidget[]
   /** Save to the linked file a moment after each change (§7.5). Opt-in. */
   autosave: boolean
+  /** The file is written as an AES-encrypted ZIP (§7.8). Saved in settings.json. */
+  encrypted: boolean
   /** Monthly templates (§8.5). Saved in settings.json. */
   recurring: RecurringEntry[]
   /** The balance the asset register starts from (§8.8). Saved in settings.json. */
@@ -352,6 +354,8 @@ export interface BookActions {
     dirty: boolean
     fileHandle: FileSystemFileHandle | null
     savedAt: number | null
+    /** Whether the archive was encrypted when it was read (§7.8). */
+    encrypted?: boolean
     /**
      * What the file's `settings.json` carried. A plain CSV has none: its
      * filed marks start empty and everything else stays as it was.
@@ -432,6 +436,8 @@ export interface BookActions {
   setForm5Filed(year: number, date: string | null): void
   setOverviewLayout(layout: OverviewWidget[]): void
   setAutosave(on: boolean): void
+  /** Turn encryption on or off. The file no longer matches, so the book is dirty (§7.8). */
+  setEncrypted(on: boolean): void
   setAutosavePaused(paused: boolean): void
   upsertRecurring(template: RecurringEntry): void
   removeRecurring(id: string): void
@@ -494,6 +500,7 @@ function initialState(): BookState {
     form5Filed: {},
     overviewLayout: DEFAULT_LAYOUT.map((w) => ({ ...w })),
     autosave: false,
+    encrypted: false,
     recurring: [],
     assetOpening: null,
     bankBalance: null,
@@ -553,6 +560,7 @@ type PersistedBook = Pick<
   | "form5Filed"
   | "overviewLayout"
   | "autosave"
+  | "encrypted"
   | "recurring"
   | "assetOpening"
   | "bankBalance"
@@ -656,6 +664,7 @@ const unlinked = {
   fileName: null,
   fileHandle: null,
   savedAt: null,
+  encrypted: false,
 }
 
 /** Reset the filters that would otherwise survive a file switch (§8.11). */
@@ -807,6 +816,7 @@ export const useBookStore = create<BookStore>()(
           savedAt: next.savedAt,
           year: next.year,
           dirty: next.dirty,
+          encrypted: next.encrypted ?? false,
           /*
            * Book data, so it comes from the file or falls back to the default
            * rather than carrying over from the bookkeeping being replaced.
@@ -1031,6 +1041,8 @@ export const useBookStore = create<BookStore>()(
        * turning it on or off does not change the bookkeeping.
        */
       setAutosave: (autosave) => set({ autosave, autosavePaused: false }),
+      setEncrypted: (encrypted) =>
+        set({ encrypted, dirty: true, autosavePaused: false }),
       setAutosavePaused: (autosavePaused) => set({ autosavePaused }),
 
       /*
@@ -1136,6 +1148,7 @@ export const useBookStore = create<BookStore>()(
         form5Filed: s.form5Filed,
         overviewLayout: s.overviewLayout,
         autosave: s.autosave,
+        encrypted: s.encrypted,
         recurring: s.recurring,
         assetOpening: s.assetOpening,
         bankBalance: s.bankBalance,

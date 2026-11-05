@@ -49,13 +49,19 @@ import {
 import { normalizeLayout } from "@/lib/domain/overview-layout"
 import {
   ZipEntryTooLargeError,
+  ZipPasswordRequiredError,
+  ZipWrongPasswordError,
   packZip,
   receiptReader,
   unpackZip,
+  type UnpackedZip,
 } from "@/lib/domain/zip"
 import { SKIP_CODE_KEYS } from "@/lib/i18n/messages"
 import { APP_ROUTES } from "@/lib/site"
 import { alertDialog, confirm } from "@/lib/ui/confirm"
+import { askPassword } from "@/lib/ui/password-prompt"
+import { heldPassword, holdPassword } from "@/lib/commands/book-password"
+import { askNewPassword } from "@/lib/commands/encryption-commands"
 import type { Ctx } from "@/lib/commands/ctx"
 import { guardDirty, refuseIfOpenElsewhere } from "@/lib/commands/book-commands"
 import { useBookStore } from "@/stores/book-store"
@@ -234,7 +240,8 @@ async function importCsv(
     result,
     entries,
     { imported: 0, missing },
-    null
+    null,
+    { encrypted: false }
   )
   return true
 }
@@ -244,13 +251,22 @@ async function importZip(
   file: File,
   handle: FileSystemFileHandle | null
 ): Promise<boolean> {
-  let unpacked: Awaited<ReturnType<typeof unpackZip>>
+  const data = await fileToUint8Array(file)
+  let unpacked: UnpackedZip | null
+  let password: string | undefined
   try {
-    unpacked = await unpackZip(await fileToUint8Array(file))
+    unpacked = await unpackZip(data)
   } catch (error) {
-    if (!(error instanceof ZipEntryTooLargeError)) throw error
-    await refuseFile(ctx, ctx.t("io.zipTooLarge"))
-    return false
+    if (error instanceof ZipPasswordRequiredError) {
+      const unlocked = await unlockZip(ctx, file.name, data)
+      // Cancelling is a normal outcome and opens nothing.
+      if (!unlocked) return false
+      unpacked = unlocked.unpacked
+      password = unlocked.password
+    } else if (error instanceof ZipEntryTooLargeError) {
+      await refuseFile(ctx, ctx.t("io.zipTooLarge"))
+      return false
+    } else throw error
   }
   if (!unpacked) {
     await refuseFile(ctx, ctx.t("io.zipNoCsv"))
@@ -325,9 +341,56 @@ async function importZip(
     result,
     entries,
     { imported, missing },
-    settings
+    settings,
+    { encrypted: unpacked.encrypted, password }
   )
   return true
+}
+
+/**
+ * Ask for the password of an encrypted archive until it fits or the user gives
+ * up (§7.8). The check runs inside the dialog, so a wrong password shows its
+ * message and keeps the dialog open. Returns null when the user cancels.
+ */
+async function unlockZip(
+  ctx: Ctx,
+  name: string,
+  data: Uint8Array
+): Promise<{ unpacked: UnpackedZip | null; password: string } | null> {
+  let unpacked: UnpackedZip | null = null
+  /*
+   * The import overlay would sit over the dialog and the user is deciding, not
+   * waiting, so the busy flag is down while the question is open.
+   */
+  const store = useBookStore.getState()
+  store.setImporting(false)
+  try {
+    const password = await askPassword({
+      title: ctx.t("io.passwordTitle"),
+      message: ctx.t("io.passwordOpenMessage", { f: name }),
+      fieldLabel: ctx.t("io.passwordLabel"),
+      confirmLabel: ctx.t("io.passwordOpen"),
+      cancelLabel: ctx.t("common.cancel"),
+      verify: async (candidate) => {
+        try {
+          unpacked = await unpackZip(data, undefined, candidate)
+          return null
+        } catch (error) {
+          if (error instanceof ZipWrongPasswordError) {
+            return ctx.t("io.passwordWrong")
+          }
+          if (error instanceof ZipEntryTooLargeError) {
+            return ctx.t("io.zipTooLarge")
+          }
+          console.error(error)
+          return ctx.t("io.readFailed")
+        }
+      },
+    })
+    return password === null ? null : { unpacked, password }
+  } finally {
+    useBookStore.getState().setImporting(true)
+  }
 }
 
 function missingAttachment(path: string): Attachment {
@@ -384,10 +447,12 @@ function applyImport(
   result: ImportSuccess,
   entries: Entry[],
   receipts: { imported: number; missing: number },
-  settings: ParsedSettings | null
+  settings: ParsedSettings | null,
+  archive: { encrypted: boolean; password?: string }
 ): void {
   releaseAllObjectUrls()
   useBookStore.getState().replaceBook({
+    encrypted: archive.encrypted,
     entries,
     cats: result.categories,
     // The name carries its extension (§7.3).
@@ -425,6 +490,8 @@ function applyImport(
         }
       : undefined,
   })
+  /* The password belongs to the book just opened, so it is held after the swap. */
+  if (archive.password) holdPassword(archive.password)
   /*
    * The language and theme are preferences of the browser as much as of the
    * book (§12), so opening a file switches to them but they never mark it
@@ -476,6 +543,7 @@ function bookVersion() {
     s.loanOpening,
     s.yearEnd,
     s.changeLog,
+    s.encrypted,
   ] as const
 }
 
@@ -506,6 +574,7 @@ function currentSettingsText(): string {
     form5Filed: s.form5Filed,
     overviewLayout: normalizeLayout(s.overviewLayout),
     autosave: s.autosave,
+    encrypted: s.encrypted,
     categories: s.cats,
     pageSize: { ledger: s.ledgerSize, categories: s.ctSize },
     recurring: s.recurring,
@@ -531,7 +600,7 @@ function carryFrom(
     reader ??= source
       .getFile()
       .then(fileToUint8Array)
-      .then(receiptReader)
+      .then((bytes) => receiptReader(bytes, heldPassword() ?? undefined))
       .catch((error: unknown) => {
         // Gone, unreadable or not a ZIP: there is nothing in it to keep.
         console.warn("Could not read the file being replaced", error)
@@ -551,8 +620,13 @@ async function buildBookFile(
   baseName: string,
   source: FileSystemFileHandle | null = null
 ): Promise<BookFile> {
-  const { entries, cats, exportLang } = useBookStore.getState()
+  const { entries, cats, exportLang, encrypted } = useBookStore.getState()
   const version = bookVersion()
+  /*
+   * An encrypted book is never written plain because a password is missing:
+   * the callers ask first, and this stops anything that did not.
+   */
+  if (encrypted && !heldPassword()) throw new Error("No password for the book")
   const paths = buildReceiptPaths(entries, exportLang)
   /*
    * Paths are always written, so a CSV taken out of the ZIP still records
@@ -588,6 +662,7 @@ async function buildBookFile(
     attachmentIds,
     read: async (id) => (await getReceipt(id)) ?? null,
     settingsText: currentSettingsText(),
+    password: encrypted ? (heldPassword() ?? undefined) : undefined,
     carry: carryFrom(source),
     onAbsent: (key) => {
       absentReceipts += 1
@@ -601,6 +676,66 @@ async function buildBookFile(
     absentReceipts,
     lostReceipts,
   }
+}
+
+/**
+ * An encrypted book needs its password before it can be written (§7.8). When
+ * this session has none, because the file was opened in an earlier one, it is
+ * asked for here. Returns false when the user cancels.
+ *
+ * Writing with a mistyped password would lock the user out of their own file,
+ * so the answer is checked against the file being replaced when that file is
+ * encrypted. With no such file there is nothing to check against, so the
+ * password is asked twice instead.
+ */
+async function ensurePassword(
+  ctx: Ctx,
+  source: FileSystemFileHandle | null
+): Promise<boolean> {
+  const state = useBookStore.getState()
+  if (!state.encrypted || heldPassword()) return true
+
+  let onDisk: Uint8Array | null = null
+  if (source?.name.toLowerCase().endsWith(".zip")) {
+    try {
+      const bytes = await fileToUint8Array(await source.getFile())
+      await unpackZip(bytes)
+    } catch (error) {
+      // Only an encrypted file gives a password to check against.
+      if (error instanceof ZipPasswordRequiredError) {
+        onDisk = await fileToUint8Array(await source.getFile())
+      }
+    }
+  }
+
+  let password: string | null
+  if (onDisk) {
+    const data = onDisk
+    password = await askPassword({
+      title: ctx.t("io.passwordSaveTitle"),
+      message: ctx.t("io.passwordSaveMessage"),
+      fieldLabel: ctx.t("io.passwordLabel"),
+      confirmLabel: ctx.t("io.passwordSave"),
+      cancelLabel: ctx.t("common.cancel"),
+      verify: async (candidate) => {
+        try {
+          await unpackZip(data, undefined, candidate)
+          return null
+        } catch (error) {
+          if (error instanceof ZipWrongPasswordError) {
+            return ctx.t("io.passwordWrong")
+          }
+          console.error(error)
+          return ctx.t("io.readFailed")
+        }
+      },
+    })
+  } else {
+    password = await askNewPassword(ctx)
+  }
+  if (!password || replacedSince(state.bookEpoch)) return false
+  holdPassword(password)
+  return true
 }
 
 /** The name without its extension, for seeding a picker or a dialog. */
@@ -621,6 +756,7 @@ export async function exportBook(ctx: Ctx, baseName: string): Promise<void> {
   }
 
   try {
+    if (!(await ensurePassword(ctx, fileHandle))) return
     const file = await buildBookFile(baseName, fileHandle)
     if (file.absentReceipts) {
       toast.add({ title: ctx.t("io.receiptsLost", { n: file.absentReceipts }) })
@@ -670,7 +806,12 @@ export async function saveBook(ctx: Ctx, suggestedBase: string): Promise<void> {
   useBookStore.getState().setSaving(true)
   try {
     /*
-     * The handle comes first. The permission prompt and the save picker both
+     * The password comes before the picker: answering the dialog is a fresh
+     * user gesture, so the permission prompt and the picker still work.
+     */
+    if (!(await ensurePassword(ctx, state.fileHandle))) return
+    /*
+     * The handle comes next. The permission prompt and the save picker both
      * need a recent user gesture, which packing a ZIP of receipts can outlast,
      * and a user who backs out should not have to wait for the packing.
      */
@@ -787,6 +928,8 @@ export async function autosaveBook(ctx: Ctx): Promise<boolean> {
   }
   if (!handle || !handle.name.toLowerCase().endsWith(".zip")) return pause()
   if (!(await hasWritePermission(handle))) return pause()
+  // Nothing unattended asks for a password.
+  if (state.encrypted && !heldPassword()) return pause()
 
   useBookStore.getState().setSaving(true)
   try {
