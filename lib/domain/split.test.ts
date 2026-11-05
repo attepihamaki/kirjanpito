@@ -4,6 +4,7 @@ import { defaultCategories } from "@/lib/domain/accounts"
 import {
   canSplitLine,
   carveSplit,
+  mergeSplitPart,
   sharePayment,
   shareReceipts,
   splitSiblings,
@@ -300,5 +301,32 @@ describe("canSplitLine", () => {
     expect(canSplitLine("owner-withdrawal", cats)).toBe(false)
     expect(canSplitLine("loan-repayment", cats)).toBe(false)
     expect(canSplitLine("333", cats, "goods")).toBe(false)
+  })
+})
+
+describe("mergeSplitPart", () => {
+  it("adds the amount to the lowest-numbered sibling and ends a pair", () => {
+    const a = part("a", { voucher: 4, amount: 7_500 })
+    const b = part("b", { voucher: 5, amount: 2_500, catId: "344-meeting" })
+    const merged = mergeSplitPart(b, [a, b])!
+    expect(merged.target).toBe(a)
+    expect(merged.result.amount).toBe(10_000)
+    expect(merged.result.catId).toBe("333")
+    expect(merged.result.split).toBeUndefined()
+  })
+
+  it("keeps the split while other parts remain", () => {
+    const a = part("a", { voucher: 4 })
+    const b = part("b", { voucher: 5 })
+    const c = part("c", { voucher: 6 })
+    const merged = mergeSplitPart(c, [a, b, c])!
+    expect(merged.target.id).toBe("a")
+    expect(merged.result.split).toBe("g1")
+  })
+
+  it("is null for an entry with no siblings", () => {
+    const a = part("a", { split: undefined })
+    expect(mergeSplitPart(a, [a])).toBeNull()
+    expect(mergeSplitPart(part("b"), [part("b")])).toBeNull()
   })
 })

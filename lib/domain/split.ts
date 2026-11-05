@@ -131,6 +131,26 @@ function receiptsOf(e: Entry): string {
   return (e.atts ?? []).map(receiptKey).join("|")
 }
 
+/**
+ * Fold `entry` into the sibling with the lowest voucher number (§8.4). The
+ * amounts add in their shared mode, so the receipt's total is unchanged, and the
+ * sibling keeps its category and rate. When only two parts were left the
+ * survivor stops being a split. Null when `entry` has no siblings.
+ */
+export function mergeSplitPart(
+  entry: Entry,
+  entries: readonly Entry[]
+): { target: Entry; result: Entry } | null {
+  const siblings = splitSiblings(entry, entries)
+  if (siblings.length === 0) return null
+  const target = [...siblings].sort(
+    (a, b) => (a.voucher ?? Infinity) - (b.voucher ?? Infinity)
+  )[0]
+  const result: Entry = { ...target, amount: target.amount + entry.amount }
+  if (siblings.length === 1) delete result.split
+  return { target, result }
+}
+
 /** The fields of a part carved off an entry. */
 export interface SplitPart {
   amount: number

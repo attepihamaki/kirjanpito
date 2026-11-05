@@ -24,6 +24,7 @@ const FIELD_LABEL = {
   euPurchase: "entry.logFieldEuPurchase",
   voucher: "entry.logFieldVoucher",
   atts: "entry.logFieldReceipts",
+  split: "entry.logFieldSplit",
 } as const satisfies Record<LoggedField, string>
 
 /** A field's value as a person reads it. */
@@ -50,6 +51,8 @@ function formatValue(
       return value === "income" ? f.t("common.income") : f.t("common.expense")
     case "cash":
       return f.t("entry.cash")
+    case "split":
+      return f.t("entry.logSplitValue")
     case "euPurchase":
       return f.t(
         value === "goods"

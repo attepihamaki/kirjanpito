@@ -12,6 +12,7 @@ import type { Entry } from "@/lib/domain/types"
 import {
   deleteEntries,
   recategorizeEntries,
+  mergeSplit,
   splitEntry,
 } from "@/lib/commands/bulk-commands"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
@@ -239,6 +240,53 @@ describe("splitEntry", () => {
       })
     ).toBe(false)
     expect(useBookStore.getState().entries).toHaveLength(16)
+  })
+})
+
+describe("mergeSplit", () => {
+  async function split() {
+    const before = useBookStore.getState().entries[0]
+    await splitEntry(ctx, before, { amount: 1_000, catId: "301", vatRate: 0 })
+    const entries = useBookStore.getState().entries
+    const original = entries.find((e) => e.id === before.id)!
+    const part = entries.find(
+      (e) => e.split === original.split && e.id !== before.id
+    )!
+    return { before, original, part }
+  }
+
+  it("folds the part back into the original and ends the split", async () => {
+    const { before, part } = await split()
+    expect(await mergeSplit(ctx, part)).toBe(true)
+
+    const entries = useBookStore.getState().entries
+    expect(entries).toHaveLength(16)
+    const back = entries.find((e) => e.id === before.id)!
+    expect(back.amount).toBe(before.amount)
+    expect(back.split).toBeUndefined()
+  })
+
+  it("brings the part back on undo", async () => {
+    const { part } = await split()
+    await mergeSplit(ctx, part)
+    clickUndo()
+
+    const entries = useBookStore.getState().entries
+    expect(entries).toHaveLength(17)
+    expect(entries.find((e) => e.id === part.id)?.amount).toBe(1_000)
+  })
+
+  it("does nothing when the user declines", async () => {
+    const { part } = await split()
+    vi.mocked(confirm).mockResolvedValueOnce(false)
+    expect(await mergeSplit(ctx, part)).toBe(false)
+    expect(useBookStore.getState().entries).toHaveLength(17)
+  })
+
+  it("does nothing for an entry that is not split", async () => {
+    expect(await mergeSplit(ctx, useBookStore.getState().entries[0])).toBe(
+      false
+    )
   })
 })
 

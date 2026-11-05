@@ -47,6 +47,7 @@ export const LOGGED_FIELDS = [
   "euPurchase",
   "voucher",
   "atts",
+  "split",
 ] as const
 export type LoggedField = (typeof LOGGED_FIELDS)[number]
 
@@ -57,6 +58,8 @@ function logged(e: Entry, field: LoggedField): string | number | null {
     return names.length ? names.join(", ") : null
   }
   if (field === "cash") return e.cash ? "cash" : null
+  // The link is an opaque id; the log records only that the voucher is a part.
+  if (field === "split") return e.split ? "split" : null
   return e[field] ?? null
 }
 

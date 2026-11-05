@@ -93,6 +93,30 @@ describe("Jaa tosite in the entry dialog", () => {
     )
   })
 
+  it("tells a part that payment and files are shared, and offers to merge", () => {
+    load([
+      { ...receipt, split: "g1" },
+      { ...receipt, id: "b", voucher: 2, split: "g1", description: "Lounas" },
+    ])
+    useBookStore.setState({
+      dialog: { kind: "entry", mode: "edit", entryId: "a" },
+    })
+    ui(<EntryDialog registerDropTarget={() => {}} />)
+    expect(
+      screen.getByText(/Maksupäivä, avoin-tila ja käteismaksu/)
+    ).toBeVisible()
+    expect(screen.getByText(/Liitteet ovat yhteisiä/)).toBeVisible()
+    expect(screen.getByRole("button", { name: "Yhdistä osa" })).toBeVisible()
+  })
+
+  it("says nothing of the kind on an ordinary voucher", () => {
+    open(receipt)
+    expect(screen.queryByText(/Liitteet ovat yhteisiä/)).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Yhdistä osa" })
+    ).not.toBeInTheDocument()
+  })
+
   it("is not offered on an EU purchase or a VAT payment", () => {
     open({
       ...receipt,

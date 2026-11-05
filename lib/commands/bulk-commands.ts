@@ -8,7 +8,7 @@ import {
 import type { Ctx } from "@/lib/commands/ctx"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
 import { uid } from "@/lib/domain/id"
-import { carveSplit, type SplitPart } from "@/lib/domain/split"
+import { carveSplit, mergeSplitPart, type SplitPart } from "@/lib/domain/split"
 import { indexCategories, type Entry } from "@/lib/domain/types"
 import { confirm } from "@/lib/ui/confirm"
 import { useBookStore } from "@/stores/book-store"
@@ -146,6 +146,73 @@ export async function splitEntry(
         toast.add({ title: ctx.t("entry.splitUndone") })
       },
     },
+  })
+  return true
+}
+
+/**
+ * Fold one part of a split back into another (§8.4): its amount is added to
+ * the part with the lowest voucher number, which keeps its category and rate,
+ * and the part is deleted. It asks first, since the folded part's own category
+ * and rate are lost, asks about a filed period like any change (§8.11) and can
+ * be undone from the toast, unless the part it went into was edited since.
+ */
+export async function mergeSplit(ctx: Ctx, entry: Entry): Promise<boolean> {
+  const state = useBookStore.getState()
+  const merged = mergeSplitPart(entry, state.entries)
+  if (!merged) return false
+  const { target, result } = merged
+  if (refuseLocked(ctx, [entry, target])) return false
+
+  const confirmed = await confirm({
+    title: ctx.t("confirm.mergeSplitTitle"),
+    message: ctx.t("confirm.mergeSplitMessage", {
+      a: entry.voucher ?? "",
+      b: target.voucher ?? "",
+    }),
+    confirmLabel: ctx.t("confirm.mergeSplitConfirm"),
+    cancelLabel: ctx.t("common.cancel"),
+    destructive: false,
+  })
+  if (!confirmed) return false
+
+  const after = state.entries
+    .filter((e) => e.id !== entry.id)
+    .map((e) => (e.id === target.id ? result : e))
+  if (!(await confirmFiledChange(after))) return false
+
+  const store = useBookStore.getState()
+  const epoch = store.bookEpoch
+  const held = (entry.atts ?? []).flatMap((a) => (a.id ? [a.id] : []))
+  store.holdUndoAttachments(held)
+  store.updateEntries([result])
+  store.removeEntry(entry.id)
+  const saved = useBookStore.getState().entries.find((e) => e.id === target.id)
+  const id = toast.add({
+    title: ctx.t("entry.splitMerged"),
+    timeout: UNDO_TIMEOUT_MS,
+    actionProps: {
+      children: ctx.t("common.undo"),
+      onClick: () => {
+        toast.close(id)
+        const now = useBookStore.getState()
+        if (now.bookEpoch !== epoch) return
+        const current = now.entries.find((e) => e.id === target.id)
+        if (
+          !current ||
+          !saved ||
+          JSON.stringify(current) !== JSON.stringify(saved)
+        ) {
+          toast.add({ title: ctx.t("entry.editUndoChanged") })
+          return
+        }
+        if (refuseLocked(ctx, [current])) return
+        now.updateEntries([target])
+        now.restoreEntries([entry])
+        toast.add({ title: ctx.t("entry.splitMergeUndone") })
+      },
+    },
+    onRemove: () => useBookStore.getState().releaseUndoAttachments(held),
   })
   return true
 }

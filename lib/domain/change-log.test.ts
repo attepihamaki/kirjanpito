@@ -55,6 +55,22 @@ describe("entryChanges", () => {
     ])
   })
 
+  it("records that a voucher became part of a split, not the link's id", () => {
+    const [joined] = entryChanges(
+      [entry()],
+      [entry({ amount: 40_000, split: "g-7f3a" })],
+      AT
+    )
+    expect(joined.changes).toContainEqual({
+      field: "split",
+      from: null,
+      to: "split",
+    })
+    expect(
+      entryChanges([entry({ split: "g1" })], [entry({ split: "g2" })], AT)
+    ).toEqual([])
+  })
+
   it("records nothing when nothing changed", () => {
     expect(entryChanges([entry()], [entry()], AT)).toEqual([])
   })

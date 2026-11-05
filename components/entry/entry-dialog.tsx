@@ -1,7 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { CopyIcon, LockIcon, SplitIcon, Trash2Icon } from "lucide-react"
+import {
+  CopyIcon,
+  LockIcon,
+  MergeIcon,
+  SplitIcon,
+  Trash2Icon,
+} from "lucide-react"
 
 import { EntryTypeToggle } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
@@ -68,7 +74,7 @@ import {
 } from "@/lib/domain/entry-checks"
 import { isPdf } from "@/lib/domain/receipt-path"
 import { isoDate, monthOf, todayIso, yearOf } from "@/lib/domain/dates"
-import { canSplitLine } from "@/lib/domain/split"
+import { canSplitLine, splitSiblings } from "@/lib/domain/split"
 import { rateMismatch, rateOnDate } from "@/lib/domain/vat-rates"
 import { uid } from "@/lib/domain/id"
 import { periodFromKey, vatPeriods } from "@/lib/domain/vat-deadline"
@@ -76,6 +82,7 @@ import { defaultSettledKey } from "@/lib/domain/vat-settlement"
 import { periodLabel } from "@/lib/i18n/period-label"
 import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
 import { deleteEntry, offerEditUndo } from "@/lib/commands/book-commands"
+import { mergeSplit } from "@/lib/commands/bulk-commands"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
 import { categorySide, compareCategories } from "@/stores/selectors"
 import type {
@@ -557,6 +564,8 @@ function EntryDialogForm({
   const mismatch = rateMismatch(form.vatRate, form.date)
   const noDeduction = vatNotDeductible({ ...form, euPurchase }, catMap)
   const formAmount = parseAmount(form.amount)
+  const splitMates =
+    mode === "edit" && editing ? splitSiblings(editing, entries).length : 0
   const duplicate =
     formAmount && form.date
       ? duplicateOf(
@@ -1025,6 +1034,11 @@ function EntryDialogForm({
                   ) : null}
                 </div>
                 <FieldDescription>{f.t("entry.paidHint")}</FieldDescription>
+                {splitMates > 0 ? (
+                  <FieldDescription>
+                    {f.t("entry.splitPaidHint")}
+                  </FieldDescription>
+                ) : null}
               </Field>
             ) : null}
 
@@ -1207,6 +1221,11 @@ function EntryDialogForm({
               }
               readOnly={!!lock}
             />
+            {splitMates > 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {f.t("entry.splitFilesHint")}
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -1277,6 +1296,19 @@ function EntryDialogForm({
                 >
                   <SplitIcon data-icon="inline-start" />
                   {f.t("entry.splitAction")}
+                </Button>
+              ) : null}
+              {!lock && splitMates > 0 ? (
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    // Merging works on the saved voucher, not what is typed here.
+                    if (!(await confirmDiscard())) return
+                    if (await mergeSplit(ctx, editing)) closeDialog()
+                  }}
+                >
+                  <MergeIcon data-icon="inline-start" />
+                  {f.t("entry.splitMergeAction")}
                 </Button>
               ) : null}
             </>

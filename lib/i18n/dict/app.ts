@@ -734,6 +734,28 @@ export const APP_DICT = {
   "entry.logFieldEuPurchase": ["Veron ilmoitus itse", "Self-reported tax"],
   "entry.logFieldVoucher": ["Tositenumero", "Voucher number"],
   "entry.logFieldReceipts": ["Liitteet", "Attachments"],
+  "entry.logFieldSplit": ["Jaettu kuitti", "Split receipt"],
+  "entry.logSplitValue": ["osa", "part"],
+  "entry.splitMergeAction": ["Yhdistä osa", "Merge part"],
+  "entry.splitMerged": ["Osa yhdistetty.", "Part merged."],
+  "entry.splitMergeUndone": ["Yhdistäminen kumottu.", "Merge undone."],
+  "confirm.mergeSplitTitle": [
+    "Yhdistetäänkö osa toiseen?",
+    "Merge this part into another?",
+  ],
+  "confirm.mergeSplitMessage": [
+    "Tosite {a} poistetaan ja sen summa lisätään tositteeseen {b}. Tosite {b} säilyttää luokkansa ja verokantansa. Voit perua yhdistämisen heti sen jälkeen.",
+    "Voucher {a} is deleted and its amount added to voucher {b}. Voucher {b} keeps its category and VAT rate. You can undo it right after.",
+  ],
+  "confirm.mergeSplitConfirm": ["Yhdistä", "Merge"],
+  "entry.splitPaidHint": [
+    "Tämä tosite on osa jaettua kuittia. Maksupäivä, avoin-tila ja käteismaksu koskevat kaikkia osia.",
+    "This voucher is part of a split receipt. The payment date, open state and cash payment apply to every part.",
+  ],
+  "entry.splitFilesHint": [
+    "Liitteet ovat yhteisiä kaikille jaetun kuitin osille.",
+    "The attachments are shared by every part of the split receipt.",
+  ],
   "ledger.chartTab": ["Tililuettelo", "Account list"],
   "ledger.chartTitle": ["Tililuettelo {y}", "Account list {y}"],
   "ledger.chartSub": [
