@@ -8,13 +8,17 @@ import { cn } from "@/lib/utils"
 
 /**
  * A bordered grid of `SettingCard`s: three across from 1100 px, one below.
- * The rules between cards are borders on the cards themselves, so a last row
- * that is not full leaves no filled cell behind.
+ * The rules between cards are borders on the cards themselves. A last row that
+ * is not full is padded with empty cells that carry the same rules, so the
+ * cards above them keep their bottom edge.
  */
 export function SettingGrid({
   className,
+  children,
   ...props
 }: React.ComponentProps<"div">) {
+  const count = React.Children.toArray(children).length
+  const fillers = (3 - (count % 3)) % 3
   return (
     <Surface
       className={cn(
@@ -22,7 +26,19 @@ export function SettingGrid({
         className
       )}
       {...props}
-    />
+    >
+      {children}
+      {Array.from({ length: fillers }, (_, i) => (
+        <div
+          key={i}
+          aria-hidden
+          className={cn(
+            "hidden min-[1100px]:block min-[1100px]:border-t",
+            i < fillers - 1 && "min-[1100px]:border-r"
+          )}
+        />
+      ))}
+    </Surface>
   )
 }
 
