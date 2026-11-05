@@ -48,4 +48,7 @@ next-env.d.ts
 # and the HTML prototype. CLAUDE.md §3 and §11 describe both in enough detail
 # to work from without them. Keep your copies — they are the reference for the
 # calculations and the palette.
-/docs/
+/docs/*
+# Verohallinto's published specifications are the reference the tax logic
+# is built against, so they travel with the repository.
+!/docs/specs/
