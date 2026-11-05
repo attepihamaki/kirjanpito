@@ -881,6 +881,8 @@ The view has two sub-pages, as tabs shaped like the settings tabs (`SubPageTabs`
 
 Presented as a printable **sheet**: the `--sheet` surface (warm paper in light, the card tone in dark — see §11), a thin border, and a soft shadow. It has the title, the period, sections with totals, greyed group headings, lines with muted account numbers, and a double-ruled result line. A "Tulosta" button calls `window.print()`, and the print styles hide the chrome: `.print-hidden`, which the top bar carries, and the sidebar by its `data-slot`.
 
+Every view prints through the browser's print dialog, which also saves a PDF. `PrintButton` (`components/common/print-button.tsx`) is the one button, and `PageHeader` hides its actions on paper, so a view that prints keeps its title and period. The VAT return (`Laskelma`) and the summary print as they are. The ledger prints every row its filters leave, not the page on screen: the button renders them all, then calls `window.print()`. The checkbox and action columns drop out, and the type, net, VAT and category columns show whatever the screen width. Tables stop scrolling on paper (`globals.css`).
+
 The view has four sub-pages, as tabs shaped like the settings tabs (§8.10, `SubPageTabs` in `components/common/sub-page-tabs.tsx`). `StatementShell` holds the title, "Tulosta" and the tabs, so every page prints. The routes are `STATEMENT_ROUTES` in `lib/site.ts`.
 
 - **Laskelma** at `/app/statement`: the sheet above, and the way into the year-end dialog.

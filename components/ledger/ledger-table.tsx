@@ -86,7 +86,7 @@ export function LedgerTable({
       <TableHeader>
         <TableRow>
           {/* Bulk actions are a desk job; on a phone a row opens on tap. */}
-          <TableHead className="hidden w-px min-[560px]:table-cell">
+          <TableHead className="hidden w-px min-[560px]:table-cell print:hidden">
             <Checkbox
               checked={rows.length > 0 && rows.every((r) => selected.has(r.id))}
               aria-label={f.t("ledger.selectPage")}
@@ -102,36 +102,36 @@ export function LedgerTable({
             "voucher",
             f.t("ledger.colVoucher"),
             "right",
-            "hidden w-px min-[560px]:table-cell"
+            "hidden w-px min-[560px]:table-cell print:table-cell"
           )}
           {header("date", f.t("ledger.colDate"))}
           {header(
             "type",
             f.t("common.type"),
             "left",
-            "hidden min-[560px]:table-cell"
+            "hidden min-[560px]:table-cell print:table-cell"
           )}
           {header("description", f.t("ledger.colDescription"))}
           {header(
             "category",
             f.t("ledger.colCategory"),
             "left",
-            "hidden min-[1240px]:table-cell"
+            "hidden min-[1240px]:table-cell print:table-cell"
           )}
           {header(
             "net",
             f.t("ledger.colNet"),
             "right",
-            "hidden min-[560px]:table-cell"
+            "hidden min-[560px]:table-cell print:table-cell"
           )}
           {header(
             "vat",
             f.t("ledger.colVat"),
             "right",
-            "hidden min-[560px]:table-cell"
+            "hidden min-[560px]:table-cell print:table-cell"
           )}
           {header("gross", f.t("ledger.colGross"), "right")}
-          <TableHead className="hidden w-px min-[560px]:table-cell">
+          <TableHead className="hidden w-px min-[560px]:table-cell print:hidden">
             <span className="sr-only">{f.t("common.actions")}</span>
           </TableHead>
         </TableRow>
@@ -256,7 +256,7 @@ function LedgerRow({
     >
       {/* Its own cell, so a click on the box does not open the entry. */}
       <TableCell
-        className="hidden min-[560px]:table-cell"
+        className="hidden min-[560px]:table-cell print:hidden"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
@@ -269,7 +269,7 @@ function LedgerRow({
         />
       </TableCell>
 
-      <TableCell className="tabular hidden text-right text-muted-foreground min-[560px]:table-cell">
+      <TableCell className="tabular hidden text-right text-muted-foreground min-[560px]:table-cell print:table-cell">
         {entry.voucher}
       </TableCell>
 
@@ -278,7 +278,7 @@ function LedgerRow({
       </TableCell>
 
       {/* The same badge as the categories table, so the two read alike. */}
-      <TableCell className="hidden min-[560px]:table-cell">
+      <TableCell className="hidden min-[560px]:table-cell print:table-cell">
         <Pill tone={income ? "income" : "expense"} className="font-medium">
           {income ? f.t("common.income") : f.t("common.expense")}
         </Pill>
@@ -341,6 +341,7 @@ function LedgerRow({
               <Button
                 variant="ghost"
                 size="icon-xs"
+                className="print:hidden"
                 aria-label={f.t("receipt.count", { n: attachments.length })}
                 title={f.t("receipt.count", { n: attachments.length })}
                 onClick={(e) => {
@@ -359,7 +360,7 @@ function LedgerRow({
             <Button
               variant="ghost"
               size="icon-xs"
-              className="opacity-0 group-hover/desc:opacity-100 focus-visible:opacity-100"
+              className="opacity-0 group-hover/desc:opacity-100 focus-visible:opacity-100 print:hidden"
               aria-label={f.t("ledger.editDescription")}
               title={f.t("ledger.editDescription")}
               onClick={(e) => {
@@ -375,7 +376,7 @@ function LedgerRow({
 
       {/* Its own cell for clicks, so picking a category does not open the entry. */}
       <TableCell
-        className="hidden max-w-[16rem] min-[1240px]:table-cell"
+        className="hidden max-w-[16rem] min-[1240px]:table-cell print:table-cell"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
@@ -384,16 +385,19 @@ function LedgerRow({
           value={entry.catId}
           label={f.t("ledger.colCategory")}
           size="sm"
-          className="w-full border-transparent bg-transparent text-muted-foreground shadow-none hover:border-input"
+          className="w-full border-transparent bg-transparent text-muted-foreground shadow-none hover:border-input print:hidden"
           onChange={onRecategorize}
         />
+        <span className="hidden print:inline">
+          {categoryOptions.find((o) => o.value === entry.catId)?.label}
+        </span>
       </TableCell>
 
-      <TableCell className="hidden text-right min-[560px]:table-cell">
+      <TableCell className="hidden text-right min-[560px]:table-cell print:table-cell">
         <Money cents={net} />
       </TableCell>
 
-      <TableCell className="hidden text-right min-[560px]:table-cell">
+      <TableCell className="hidden text-right min-[560px]:table-cell print:table-cell">
         {entry.vatRate ? (
           <span className="flex flex-col items-end leading-tight">
             <Money cents={vat} />
@@ -410,7 +414,7 @@ function LedgerRow({
         <Money cents={gross} signed={!income} />
       </TableCell>
 
-      <TableCell className="hidden min-[560px]:table-cell">
+      <TableCell className="hidden min-[560px]:table-cell print:hidden">
         <div className="flex justify-end gap-0.5">
           <Button
             variant="ghost"

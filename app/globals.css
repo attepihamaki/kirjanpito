@@ -291,6 +291,13 @@
   body {
     background: white;
   }
+  /* A scrolling table would clip on paper; let it run to full width. */
+  [data-slot="table-container"] {
+    overflow: visible !important;
+  }
+  [data-slot="table-container"] .sticky {
+    position: static !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

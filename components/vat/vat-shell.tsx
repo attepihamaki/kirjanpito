@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation"
 
 import { PageHeader } from "@/components/common/page-header"
+import { PrintButton } from "@/components/common/print-button"
 import { SubPageTabs } from "@/components/common/sub-page-tabs"
 import { useFormatters } from "@/components/lang-provider"
 import { VatPeriodStrip } from "@/components/vat/vat-period-strip"
@@ -27,6 +28,7 @@ export function VatShell({ children }: { children: React.ReactNode }) {
       <PageHeader
         title={f.t("nav.vat")}
         subtitle={monthlyList ? String(year) : label}
+        actions={<PrintButton />}
       />
       <div className="print-hidden">
         <SubPageTabs

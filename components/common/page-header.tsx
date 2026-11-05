@@ -17,7 +17,9 @@ export function PageHeader({
           <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>
         ) : null}
       </div>
-      {actions ? <div className="flex gap-2">{actions}</div> : null}
+      {actions ? (
+        <div className="print-hidden flex gap-2">{actions}</div>
+      ) : null}
     </div>
   )
 }

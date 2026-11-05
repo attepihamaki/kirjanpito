@@ -246,6 +246,7 @@ export const APP_DICT = {
   "common.expensePlural": ["Kulut", "Expenses"],
   "common.gross": ["Verollinen", "Incl. VAT"],
   "common.net": ["Veroton", "Excl. VAT"],
+  "common.print": ["Tulosta", "Print"],
   "common.rate": ["Verokanta", "Rate"],
   "common.vat": ["Vero", "VAT"],
   "common.total": ["Yhteensä", "Total"],

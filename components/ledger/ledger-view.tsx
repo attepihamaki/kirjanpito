@@ -11,6 +11,7 @@ import { OptionSelect } from "@/components/common/option-select"
 import { BankImportButton } from "@/components/bank/bank-import-button"
 import { NewEntryButton } from "@/components/common/new-entry-button"
 import { PageHeader } from "@/components/common/page-header"
+import { PrintButton } from "@/components/common/print-button"
 import { Surface } from "@/components/common/surface"
 import { TablePagination } from "@/components/common/table-pagination"
 import { BulkBar } from "@/components/ledger/bulk-bar"
@@ -235,6 +236,17 @@ export function LedgerView() {
     [selectionKey]
   )
 
+  /*
+   * Paper gets every filtered row, not the page on screen. The flag renders
+   * them all, and the effect prints once they are in the DOM.
+   */
+  const [printAll, setPrintAll] = React.useState(false)
+  React.useEffect(() => {
+    if (!printAll) return
+    window.print()
+    setPrintAll(false)
+  }, [printAll])
+
   const view = paginate(filtered, page, size)
   const hasFilters =
     query.trim() !== "" ||
@@ -279,16 +291,21 @@ export function LedgerView() {
         subtitle={periodLabel}
         actions={
           <>
+            <PrintButton onPrint={() => setPrintAll(true)} />
             <BankImportButton />
             <NewEntryButton />
           </>
         }
       />
-      <LedgerTabs />
+      <div className="print-hidden">
+        <LedgerTabs />
+      </div>
 
       <div className="flex flex-col gap-4">
-        <MonthChips />
-        <RecurringNotice />
+        <div className="print-hidden flex flex-col gap-4 empty:hidden">
+          <MonthChips />
+          <RecurringNotice />
+        </div>
         <TotalsCards totals={totals} />
 
         {periodEmpty ? (
@@ -301,7 +318,7 @@ export function LedgerView() {
           </Empty>
         ) : (
           <>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="print-hidden flex flex-wrap items-center gap-2">
               <SearchInput
                 value={query}
                 onChange={setQuery}
@@ -342,7 +359,7 @@ export function LedgerView() {
             </div>
 
             {hitsElsewhere.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <div className="print-hidden flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                 <span>{f.t("ledger.hitsElsewhere")}</span>
                 {hitsElsewhere.map((hit) => (
                   <Button
@@ -379,25 +396,29 @@ export function LedgerView() {
               // `overflow-hidden` so the table's square corners stay inside the card's.
               <>
                 {selectedEntries.length > 0 ? (
-                  <BulkBar selected={selectedEntries} onDone={clearPicked} />
+                  <div className="print-hidden">
+                    <BulkBar selected={selectedEntries} onDone={clearPicked} />
+                  </div>
                 ) : null}
                 <Surface className="overflow-hidden">
                   <LedgerTable
-                    rows={view.rows}
+                    rows={printAll ? filtered : view.rows}
                     selected={picked}
                     onSelect={select}
                   />
                   {/* Always shown, as in the categories table: the rows-per-page
                     control is how the page length is set, so it cannot appear
                     only once the list has outgrown the current length. */}
-                  <TablePagination
-                    page={view.page}
-                    pages={view.pages}
-                    size={size}
-                    count={f.t("ledger.entryCount", { n: view.total })}
-                    onPageChange={setPage}
-                    onSizeChange={setSize}
-                  />
+                  <div className="print-hidden">
+                    <TablePagination
+                      page={view.page}
+                      pages={view.pages}
+                      size={size}
+                      count={f.t("ledger.entryCount", { n: view.total })}
+                      onPageChange={setPage}
+                      onSizeChange={setSize}
+                    />
+                  </div>
                 </Surface>
               </>
             )}

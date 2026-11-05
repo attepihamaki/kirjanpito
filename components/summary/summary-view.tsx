@@ -8,6 +8,7 @@ import {
 } from "@/components/common/income-expense-chart"
 import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
+import { PrintButton } from "@/components/common/print-button"
 import { Money } from "@/components/common/money"
 import {
   Table,
@@ -55,6 +56,7 @@ export function SummaryView() {
       <PageHeader
         title={f.t("nav.summary")}
         subtitle={f.t("summary.subtitle", { y: year })}
+        actions={<PrintButton />}
       />
 
       <div className="flex flex-col gap-6">
