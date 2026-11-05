@@ -5,7 +5,8 @@ import { CheckIcon, FileTextIcon, LockIcon } from "lucide-react"
 
 import { EuroInput } from "@/components/common/euro-input"
 import { Money } from "@/components/common/money"
-import { Panel } from "@/components/common/panel"
+import { cn } from "@/lib/utils"
+import { PANEL_ROWS, Panel } from "@/components/common/panel"
 import { Pill } from "@/components/common/pill"
 import { StatStrip } from "@/components/common/stat-strip"
 import { useFormatters } from "@/components/lang-provider"
@@ -116,7 +117,7 @@ export function BalanceView() {
         ]}
       />
 
-      <div className="grid items-start gap-6 lg:grid-cols-2">
+      <div className={cn("grid gap-x-6 lg:grid-cols-2", PANEL_ROWS)}>
         <AssetsPanel key={`assets-${year}`} year={year} filed={filed} />
         <DebtsPanel key={`debts-${year}`} year={year} filed={filed} />
       </div>

@@ -4,7 +4,8 @@ import * as React from "react"
 
 import { EuroInput } from "@/components/common/euro-input"
 import { Money } from "@/components/common/money"
-import { Panel } from "@/components/common/panel"
+import { cn } from "@/lib/utils"
+import { PANEL_ROWS, Panel } from "@/components/common/panel"
 import { StatStrip } from "@/components/common/stat-strip"
 import { useFormatters } from "@/components/lang-provider"
 import { useMemoVoucher } from "@/components/statement/use-memo-voucher"
@@ -83,7 +84,7 @@ export function DeductionsView() {
       />
 
       {rates ? (
-        <div className="grid items-start gap-6 xl:grid-cols-2">
+        <div className={cn("grid gap-x-6 xl:grid-cols-2", PANEL_ROWS)}>
           <MileageForm rates={rates} />
           <PerDiemForm rates={rates} />
         </div>

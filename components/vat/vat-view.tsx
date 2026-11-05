@@ -1,7 +1,8 @@
 "use client"
 
 import { Money } from "@/components/common/money"
-import { Panel } from "@/components/common/panel"
+import { PANEL_ROWS, Panel } from "@/components/common/panel"
+import { cn } from "@/lib/utils"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Table,
@@ -51,7 +52,7 @@ export function VatView() {
 
       <VatAnomalyAlert report={report} />
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className={cn("grid gap-x-6 lg:grid-cols-2", PANEL_ROWS)}>
         <RateTable title={f.t("vat.salesTable")} side={report.sales} />
         <RateTable
           title={f.t("vat.purchaseTable")}
@@ -149,7 +150,10 @@ function RateTable({
   )
 
   return (
-    <Panel title={title}>
+    <Panel
+      title={title}
+      bodyClassName="[&_[data-slot=table-container]]:h-full [&_table]:h-full"
+    >
       <Table>
         <TableHeader>
           <TableRow>
@@ -188,6 +192,13 @@ function RateTable({
               </TableCell>
             </TableRow>
           ) : null}
+          {/* Takes the spare height, which keeps the total row at the panel's foot. */}
+          <TableRow
+            aria-hidden
+            className="h-full border-0 hover:bg-transparent"
+          >
+            <TableCell colSpan={4} className="p-0" />
+          </TableRow>
         </TableBody>
         <TableFooter>
           <TableRow>
