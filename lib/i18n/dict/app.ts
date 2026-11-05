@@ -982,6 +982,7 @@ export const APP_DICT = {
     "Numero alkaa yleensä maakoodilla, esim. SE. Tarkista se VIES-palvelusta.",
     "A number usually starts with a country code, such as SE. Check it in VIES.",
   ],
+  "entry.moreOptions": ["Lisää asetuksia", "More options"],
   "entry.paid": ["Maksettu", "Paid"],
   "entry.paidInfo": [
     "Miksi maksupäivä kysytään?",

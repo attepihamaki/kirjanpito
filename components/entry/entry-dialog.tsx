@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import {
+  ChevronDownIcon,
   CopyIcon,
   LockIcon,
   MergeIcon,
@@ -298,6 +299,7 @@ function EntryDialogForm({
    * reads a complaint with nothing attached to it.
    */
   const [error, setError] = React.useState<FieldErrorState>(null)
+  const [moreOpen, setMoreOpen] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
   // The receipt open in the viewer on top of this dialog, if any (§8.6).
   const [viewing, setViewing] = React.useState<number | null>(null)
@@ -988,82 +990,6 @@ function EntryDialogForm({
               ) : null}
             </fieldset>
 
-            {unpayable ? (
-              <Field>
-                <div className="flex items-center gap-1">
-                  <FieldLabel>{f.t("entry.paid")}</FieldLabel>
-                  <InfoPopover label={f.t("entry.paidInfo")}>
-                    {f.t("entry.paidInfoText")}
-                  </InfoPopover>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <OptionSelect
-                    options={[
-                      { value: "same", label: f.t("entry.paidSame") },
-                      { value: "later", label: f.t("entry.paidLater") },
-                      { value: "open", label: f.t("entry.paidOpen") },
-                    ]}
-                    value={
-                      form.paid === ""
-                        ? "same"
-                        : form.paid === "open"
-                          ? "open"
-                          : "later"
-                    }
-                    onChange={(value) =>
-                      update({
-                        paid:
-                          value === "same"
-                            ? ""
-                            : value === "open"
-                              ? "open"
-                              : form.date,
-                      })
-                    }
-                    label={f.t("entry.paid")}
-                    className="w-48"
-                  />
-                  {form.paid && form.paid !== "open" ? (
-                    <Input
-                      type="date"
-                      aria-label={f.t("entry.paidDate")}
-                      value={form.paid}
-                      onChange={(e) => update({ paid: e.target.value })}
-                      className="w-44"
-                    />
-                  ) : null}
-                </div>
-                <FieldDescription>{f.t("entry.paidHint")}</FieldDescription>
-                {splitMates > 0 ? (
-                  <FieldDescription>
-                    {f.t("entry.splitPaidHint")}
-                  </FieldDescription>
-                ) : null}
-              </Field>
-            ) : null}
-
-            {unpayable && form.paid !== "open" ? (
-              <fieldset disabled={!!lock} className="contents">
-                <Field orientation="horizontal">
-                  <Checkbox
-                    id="entry-cash"
-                    checked={form.cash}
-                    onCheckedChange={(checked) =>
-                      update({ cash: checked === true })
-                    }
-                  />
-                  <div className="flex items-center gap-1">
-                    <FieldLabel htmlFor="entry-cash" className="font-normal">
-                      {f.t("entry.cashLabel")}
-                    </FieldLabel>
-                    <InfoPopover label={f.t("entry.cashInfo")}>
-                      {f.t("entry.cashInfoText", { d: CASH_BOOKING_DAYS })}
-                    </InfoPopover>
-                  </div>
-                </Field>
-              </fieldset>
-            ) : null}
-
             <fieldset disabled={!!lock} className="contents">
               {selectedCat?.line === "313" ||
               selectedCat?.line === "314" ||
@@ -1174,23 +1100,132 @@ function EntryDialogForm({
                 </Field>
               )}
 
-              <Field orientation="horizontal">
-                <Checkbox
-                  id="entry-repeat"
-                  checked={form.repeat}
-                  onCheckedChange={(checked) =>
-                    update({ repeat: checked === true })
-                  }
-                />
-                <div className="flex items-center gap-1">
-                  <FieldLabel htmlFor="entry-repeat" className="font-normal">
-                    {f.t("recurring.repeat")}
-                  </FieldLabel>
-                  <InfoPopover label={f.t("recurring.repeatInfo")}>
-                    {f.t("recurring.repeatHint")}
-                  </InfoPopover>
+              {/* A new voucher keeps these behind a toggle; the defaults
+                  fit most. Editing shows them, since they hold values. */}
+              {mode === "edit" ? null : (
+                <button
+                  type="button"
+                  aria-expanded={moreOpen}
+                  aria-controls="entry-more"
+                  onClick={() => setMoreOpen((open) => !open)}
+                  className="flex w-fit items-center gap-1 rounded-md text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                  <ChevronDownIcon
+                    className={
+                      moreOpen
+                        ? "size-4 transition-transform"
+                        : "size-4 -rotate-90 transition-transform"
+                    }
+                  />
+                  {f.t("entry.moreOptions")}
+                </button>
+              )}
+
+              {mode === "edit" || moreOpen ? (
+                <div id="entry-more" className="flex flex-col gap-5">
+                  {unpayable ? (
+                    <Field>
+                      <div className="flex items-center gap-1">
+                        <FieldLabel>{f.t("entry.paid")}</FieldLabel>
+                        <InfoPopover label={f.t("entry.paidInfo")}>
+                          {f.t("entry.paidInfoText")}
+                        </InfoPopover>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <OptionSelect
+                          options={[
+                            { value: "same", label: f.t("entry.paidSame") },
+                            { value: "later", label: f.t("entry.paidLater") },
+                            { value: "open", label: f.t("entry.paidOpen") },
+                          ]}
+                          value={
+                            form.paid === ""
+                              ? "same"
+                              : form.paid === "open"
+                                ? "open"
+                                : "later"
+                          }
+                          onChange={(value) =>
+                            update({
+                              paid:
+                                value === "same"
+                                  ? ""
+                                  : value === "open"
+                                    ? "open"
+                                    : form.date,
+                            })
+                          }
+                          label={f.t("entry.paid")}
+                          className="w-48"
+                        />
+                        {form.paid && form.paid !== "open" ? (
+                          <Input
+                            type="date"
+                            aria-label={f.t("entry.paidDate")}
+                            value={form.paid}
+                            onChange={(e) => update({ paid: e.target.value })}
+                            className="w-44"
+                          />
+                        ) : null}
+                      </div>
+                      <FieldDescription>
+                        {f.t("entry.paidHint")}
+                      </FieldDescription>
+                      {splitMates > 0 ? (
+                        <FieldDescription>
+                          {f.t("entry.splitPaidHint")}
+                        </FieldDescription>
+                      ) : null}
+                    </Field>
+                  ) : null}
+
+                  {unpayable && form.paid !== "open" ? (
+                    <Field orientation="horizontal">
+                      <Checkbox
+                        id="entry-cash"
+                        checked={form.cash}
+                        onCheckedChange={(checked) =>
+                          update({ cash: checked === true })
+                        }
+                      />
+                      <div className="flex items-center gap-1">
+                        <FieldLabel
+                          htmlFor="entry-cash"
+                          className="font-normal"
+                        >
+                          {f.t("entry.cashLabel")}
+                        </FieldLabel>
+                        <InfoPopover label={f.t("entry.cashInfo")}>
+                          {f.t("entry.cashInfoText", {
+                            d: CASH_BOOKING_DAYS,
+                          })}
+                        </InfoPopover>
+                      </div>
+                    </Field>
+                  ) : null}
+
+                  <Field orientation="horizontal">
+                    <Checkbox
+                      id="entry-repeat"
+                      checked={form.repeat}
+                      onCheckedChange={(checked) =>
+                        update({ repeat: checked === true })
+                      }
+                    />
+                    <div className="flex items-center gap-1">
+                      <FieldLabel
+                        htmlFor="entry-repeat"
+                        className="font-normal"
+                      >
+                        {f.t("recurring.repeat")}
+                      </FieldLabel>
+                      <InfoPopover label={f.t("recurring.repeatInfo")}>
+                        {f.t("recurring.repeatHint")}
+                      </InfoPopover>
+                    </div>
+                  </Field>
                 </div>
-              </Field>
+              ) : null}
             </fieldset>
 
             <FieldError>{error?.message}</FieldError>
