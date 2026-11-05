@@ -31,11 +31,11 @@ import { VatAnomalyAlert } from "@/components/vat/vat-view"
 import { useToday } from "@/hooks/use-today"
 import { useVatPeriod } from "@/hooks/use-vat-period"
 import { indexCategories } from "@/lib/domain/types"
+import type { RuleSeverity } from "@/lib/domain/rules/engine"
 import {
   canMarkFiled,
-  vatCheckItems,
-  type VatCheckItem,
-  type VatCheckSeverity,
+  vatCheckFindings,
+  type VatCheckFinding,
 } from "@/lib/domain/vat-checks"
 import { filedKeys, filedOn, periodFromKey } from "@/lib/domain/vat-deadline"
 import { vatReturnSections } from "@/lib/domain/vat-return"
@@ -84,7 +84,7 @@ function VatReturnForm() {
 
   const items = React.useMemo(
     () =>
-      vatCheckItems({
+      vatCheckFindings({
         entries,
         cats: indexCategories(cats),
         period: current,
@@ -135,12 +135,12 @@ function VatReturnForm() {
     router.push(APP_ROUTES.ledger)
   }
 
-  function describe(item: VatCheckItem): {
+  function describe(item: VatCheckFinding): {
     title: string
     sub: string
     action?: React.ReactNode
   } {
-    switch (item.id) {
+    switch (item.ruleId) {
       case "periodOngoing":
         return {
           title: f.t("vat.returnOngoing", { p: label }),
@@ -157,15 +157,15 @@ function VatReturnForm() {
           sub: f.t("vat.returnUnsavedSub"),
         }
       case "entryCheck": {
-        const text = CHECK_TEXT[item.check]
+        const text = CHECK_TEXT[item.data.check]
         return {
-          title: f.t(text.title, { n: item.n }),
+          title: f.t(text.title, { n: item.data.n }),
           sub: f.t(text.sub),
           action: (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => showInLedger(item.check)}
+              onClick={() => showInLedger(item.data.check)}
             >
               {f.t("overview.showThem")}
             </Button>
@@ -174,11 +174,11 @@ function VatReturnForm() {
       }
       case "missingFiles":
         return {
-          title: f.t("overview.missingFiles", { n: item.n }),
+          title: f.t("overview.missingFiles", { n: item.data.n }),
           sub: f.t("overview.missingFilesSub"),
         }
       case "earlierUnfiled": {
-        const names = item.keys.map((key) => {
+        const names = item.data.keys.map((key) => {
           const p = periodFromKey(key)
           return p ? periodLabel(f, p) : key
         })
@@ -230,7 +230,7 @@ function VatReturnForm() {
                   const d = describe(item)
                   return (
                     <CheckRow
-                      key={item.id === "entryCheck" ? item.check : item.id}
+                      key={item.ruleId === "entryCheck" ? item.data.check : item.ruleId}
                       severity={item.severity}
                       title={d.title}
                       sub={d.sub}
@@ -353,7 +353,7 @@ function VatReturnForm() {
   )
 }
 
-const SEVERITY: Record<VatCheckSeverity, { icon: LucideIcon; tone: string }> = {
+const SEVERITY: Record<RuleSeverity, { icon: LucideIcon; tone: string }> = {
   blocker: { icon: AlertCircleIcon, tone: "bg-expense-subtle text-expense" },
   warn: { icon: AlertCircleIcon, tone: "bg-warning/15 text-warning" },
   info: { icon: InfoIcon, tone: "bg-muted text-muted-foreground" },
@@ -365,7 +365,7 @@ function CheckRow({
   sub,
   action,
 }: {
-  severity: VatCheckSeverity
+  severity: RuleSeverity
   title: string
   sub: string
   action?: React.ReactNode

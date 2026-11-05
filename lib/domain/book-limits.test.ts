@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest"
 
 import { defaultCategories } from "@/lib/domain/accounts"
-import { bookLimits } from "@/lib/domain/book-limits"
+import { BOOK_LIMIT_RULES, bookLimits } from "@/lib/domain/book-limits"
+import { evaluate } from "@/lib/domain/rules/engine"
 import { indexCategories, type Entry } from "@/lib/domain/types"
 
 const cats = indexCategories(defaultCategories())
@@ -51,5 +52,33 @@ describe("bookLimits", () => {
   it("requires financial statements only above the micro limits", () => {
     const out = bookLimits(both(1_000_000), cats, () => 50_000_000, TODAY)
     expect(out.statements).toBe("over")
+  })
+})
+
+describe("BOOK_LIMIT_RULES", () => {
+  const run = (entries: Entry[], assets: number) =>
+    evaluate(BOOK_LIMIT_RULES, {
+      entries,
+      cats,
+      assetsOf: () => assets,
+      today: TODAY,
+    }).map((f) => [f.ruleId, f.severity, f.data.year])
+
+  it("has no breach below the limits", () => {
+    expect(run(both(50_000), 0)).toEqual([])
+  })
+
+  it("reports one limit over as information on staff", () => {
+    expect(run(both(250_000), 0)).toEqual([
+      ["singleEntryStaff", "info", 2025],
+    ])
+  })
+
+  it("reports two limits over as a blocker", () => {
+    expect(run(both(250_000), 15_000_000)).toContainEqual([
+      "singleEntryOver",
+      "blocker",
+      2025,
+    ])
   })
 })

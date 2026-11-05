@@ -5,7 +5,7 @@ import { indexCategories, type Entry } from "@/lib/domain/types"
 import { periodFromKey } from "@/lib/domain/vat-deadline"
 import {
   canMarkFiled,
-  vatCheckItems,
+  vatCheckFindings,
   type VatCheckInput,
 } from "@/lib/domain/vat-checks"
 
@@ -49,18 +49,21 @@ const input = (over: Partial<VatCheckInput> = {}): VatCheckInput => ({
 })
 
 const ids = (over?: Partial<VatCheckInput>) =>
-  vatCheckItems(input(over)).map((i) => i.id)
+  vatCheckFindings(input(over)).map((i) => i.ruleId)
 
-describe("vatCheckItems", () => {
+describe("vatCheckFindings", () => {
   it("has nothing to say about a closed, tidy period", () => {
-    const items = vatCheckItems(input())
+    const items = vatCheckFindings(input())
     expect(items).toEqual([])
     expect(canMarkFiled(items)).toBe(true)
   })
 
   it("blocks a period that has not closed", () => {
-    const items = vatCheckItems(input({ status: "open", today: "2026-09-25" }))
-    expect(items[0]).toEqual({ id: "periodOngoing", severity: "blocker" })
+    const items = vatCheckFindings(input({ status: "open", today: "2026-09-25" }))
+    expect(items[0]).toMatchObject({
+      ruleId: "periodOngoing",
+      severity: "blocker",
+    })
     expect(canMarkFiled(items)).toBe(false)
   })
 
@@ -71,8 +74,8 @@ describe("vatCheckItems", () => {
   })
 
   it("notes a nil return", () => {
-    const items = vatCheckItems(input({ entries: [] }))
-    expect(items.map((i) => i.id)).toEqual(["noEntries"])
+    const items = vatCheckFindings(input({ entries: [] }))
+    expect(items.map((i) => i.ruleId)).toEqual(["noEntries"])
     expect(canMarkFiled(items)).toBe(true)
   })
 
@@ -85,10 +88,10 @@ describe("vatCheckItems", () => {
       entry({ date: "2026-09-10", atts: [] }),
       entry({ id: "b", date: "2026-08-10", amount: 9_900, atts: [] }),
     ]
-    const item = vatCheckItems(input({ entries })).find(
-      (i) => i.id === "entryCheck"
+    const item = vatCheckFindings(input({ entries })).find(
+      (i) => i.ruleId === "entryCheck"
     )
-    expect(item).toMatchObject({ check: "noReceipt", n: 1 })
+    expect(item?.data).toEqual({ check: "noReceipt", n: 1 })
   })
 
   it("counts receipt files missing from the period", () => {
@@ -98,22 +101,22 @@ describe("vatCheckItems", () => {
       }),
     ]
     expect(
-      vatCheckItems(input({ entries })).find((i) => i.id === "missingFiles")
-    ).toMatchObject({ n: 1 })
+      vatCheckFindings(input({ entries })).find((i) => i.ruleId === "missingFiles")?.data
+    ).toEqual({ n: 1 })
   })
 
   it("lists earlier closed periods that are not marked as filed", () => {
-    const item = vatCheckItems(
+    const item = vatCheckFindings(
       input({
         entries: [entry({ date: "2026-08-10" }), entry({ id: "b", date: "2026-09-10", amount: 9_900 })],
         bookStart: "2026-07",
         vatFiled: { "2026-07": "2026-09-01" },
       })
-    ).find((i) => i.id === "earlierUnfiled")
-    expect(item).toEqual({
-      id: "earlierUnfiled",
+    ).find((i) => i.ruleId === "earlierUnfiled")
+    expect(item).toMatchObject({
+      ruleId: "earlierUnfiled",
       severity: "warn",
-      keys: ["2026-08"],
+      data: { keys: ["2026-08"] },
     })
   })
 
@@ -122,7 +125,7 @@ describe("vatCheckItems", () => {
   })
 
   it("puts blockers before warnings before information", () => {
-    const items = vatCheckItems(
+    const items = vatCheckFindings(
       input({ entries: [], dirty: true, status: "open", today: "2026-09-25" })
     )
     expect(items.map((i) => i.severity)).toEqual(["blocker", "warn", "info"])

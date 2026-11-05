@@ -1,6 +1,7 @@
 import { calcEntry } from "@/lib/domain/calc"
 import { yearOf } from "@/lib/domain/dates"
 import { limitOn, startOf } from "@/lib/domain/rule-tables"
+import { defineRules, type Rule } from "@/lib/domain/rules/engine"
 import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 
@@ -135,3 +136,55 @@ export function vatPeriodOverLimit(
   const limit = vatPeriodLimit(period, today)
   return turnover > limit ? { year, turnover, limit } : null
 }
+
+/** What the VAT limit rules look at. */
+export interface VatLimitContext {
+  entries: readonly Entry[]
+  cats: CategoryMap
+  vatPeriod: VatPeriodKind
+  today: string
+}
+
+type VatLimitData = VatThreshold | VatPeriodOverLimit
+
+function thresholdRule(
+  id: string,
+  severity: "blocker" | "warn" | "info",
+  level: VatThreshold["level"]
+): Rule<VatLimitContext, VatLimitData> {
+  return {
+    id,
+    severity,
+    source: "AVL 3 §",
+    check: (ctx) => {
+      const t = vatThreshold(ctx.entries, ctx.cats, ctx.today)
+      return t && t.level === level ? [t] : []
+    },
+  }
+}
+
+/**
+ * The registration limit and the filing period's limit. The tracker says
+ * where turnover stands against the limit, so "below" is a breach of nothing
+ * and is information; "near" asks for a look; "over" is an error. The filing
+ * period limit warns and never blocks (vero.fi, "Tax period").
+ */
+export const VAT_LIMIT_RULES = defineRules<VatLimitContext, VatLimitData>([
+  thresholdRule("vatThresholdOver", "blocker", "over"),
+  thresholdRule("vatThresholdNear", "warn", "near"),
+  thresholdRule("vatThresholdBelow", "info", "below"),
+  {
+    id: "vatPeriodLimit",
+    severity: "warn",
+    source: "vero.fi, Tax period",
+    check: (ctx) => {
+      const over = vatPeriodOverLimit(
+        ctx.entries,
+        ctx.cats,
+        ctx.vatPeriod,
+        ctx.today
+      )
+      return over ? [over] : []
+    },
+  },
+])

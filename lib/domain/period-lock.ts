@@ -1,4 +1,5 @@
 import { paidDate, type TraderType } from "@/lib/domain/open-items"
+import { defineRules, evaluate } from "@/lib/domain/rules/engine"
 import type { CategoryMap, Entry } from "@/lib/domain/types"
 import { countsOnVatReturn } from "@/lib/domain/vat"
 
@@ -30,20 +31,84 @@ export interface LockMarks {
   traderType?: TraderType
 }
 
-/** Whichever mark holds this date, the stored year first. */
+/** What the lock rules look at: one voucher's dates against the marks. */
+export interface LockContext {
+  /** The entry's own date. */
+  date: string
+  /** The date it was paid, null while open. */
+  paid: string | null
+  /** Whether the VAT return counts the entry. A filed period holds only these. */
+  countsOnVat: boolean
+  marks: LockMarks
+}
+
+/**
+ * KPL 2:7, one rule per mark. A breach is the lock that holds the voucher.
+ * The order is the precedence: a stored year, then Form 5, then a filed VAT
+ * period, then Form 5 by the year of payment.
+ */
+export const LOCK_RULES = defineRules<LockContext, PeriodLock>([
+  {
+    id: "year",
+    severity: "blocker",
+    source: "KPL 2:7",
+    check: ({ date, marks }) => {
+      const key = date.slice(0, 4)
+      const since = marks.yearsArchived[key]
+      return since ? [{ kind: "year", key, since }] : []
+    },
+  },
+  {
+    id: "form5",
+    severity: "blocker",
+    source: "KPL 2:7",
+    check: ({ date, marks }) => {
+      const key = date.slice(0, 4)
+      const since = marks.form5Filed[key]
+      return since ? [{ kind: "form5", key, since }] : []
+    },
+  },
+  {
+    id: "filed",
+    severity: "blocker",
+    source: "KPL 2:7",
+    check: ({ date, countsOnVat, marks }) => {
+      if (!countsOnVat) return []
+      const year = date.slice(0, 4)
+      const month = date.slice(0, 7)
+      const quarter = `${year}-Q${Math.ceil(Number(date.slice(5, 7)) / 3)}`
+      for (const key of [month, quarter, year]) {
+        const since = marks.vatFiled[key]
+        if (since) return [{ kind: "filed", key, since }]
+      }
+      return []
+    },
+  },
+  {
+    id: "form5Paid",
+    severity: "blocker",
+    source: "KPL 2:7, EVL 27 a §",
+    check: ({ paid, marks }) => {
+      // A liikkeenharjoittaja is read by the entry's own date (§6.3).
+      if (marks.traderType === "business") return []
+      const key = paid?.slice(0, 4)
+      const since = key ? marks.form5Filed[key] : undefined
+      return key && since ? [{ kind: "form5Paid", key, since }] : []
+    },
+  },
+])
+
+/** The first lock that holds the voucher, or null. */
+function firstLock(ctx: LockContext): PeriodLock | null {
+  return evaluate(LOCK_RULES, ctx)[0]?.data ?? null
+}
+
+/**
+ * Whichever mark holds this date, the stored year first. A date alone has no
+ * payment, so the payment-year lock never applies.
+ */
 export function lockOn(date: string, marks: LockMarks): PeriodLock | null {
-  const year = date.slice(0, 4)
-  const month = date.slice(0, 7)
-  const quarter = `${year}-Q${Math.ceil(Number(date.slice(5, 7)) / 3)}`
-  const stored = marks.yearsArchived[year]
-  if (stored) return { kind: "year", key: year, since: stored }
-  const form5 = marks.form5Filed[year]
-  if (form5) return { kind: "form5", key: year, since: form5 }
-  for (const key of [month, quarter, year]) {
-    const since = marks.vatFiled[key]
-    if (since) return { kind: "filed", key, since }
-  }
-  return null
+  return firstLock({ date, paid: null, countsOnVat: true, marks })
 }
 
 /**
@@ -75,16 +140,12 @@ export function entryLock(
   marks: LockMarks,
   cats: CategoryMap
 ): PeriodLock | null {
-  const lock = lockOn(entry.date, marks)
-  if (lock && !(lock.kind === "filed" && !countsOnVatReturn(entry, cats))) {
-    return lock
-  }
-  if (marks.traderType === "business") return null
-  const paidYear = paidDate(entry)?.slice(0, 4)
-  const form5 = paidYear && marks.form5Filed[paidYear]
-  if (paidYear && form5)
-    return { kind: "form5Paid", key: paidYear, since: form5 }
-  return null
+  return firstLock({
+    date: entry.date,
+    paid: paidDate(entry),
+    countsOnVat: countsOnVatReturn(entry, cats),
+    marks,
+  })
 }
 
 export function lockedEntries(

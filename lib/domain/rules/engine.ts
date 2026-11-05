@@ -54,6 +54,26 @@ export function defineRules<C, D = undefined>(
   }
 }
 
+const SEVERITY_RANK: Record<RuleSeverity, number> = {
+  blocker: 0,
+  warn: 1,
+  info: 2,
+}
+
+/** Blockers first, then warnings, then info. Findings of one severity keep their order. */
+export function sortBySeverity<T extends { severity: RuleSeverity }>(
+  findings: readonly T[]
+): T[] {
+  return [...findings].sort(
+    (a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]
+  )
+}
+
+/** Whether any finding is a blocker. */
+export function hasBlocker(findings: readonly { severity: RuleSeverity }[]) {
+  return findings.some((f) => f.severity === "blocker")
+}
+
 /** Every breach of the rules, in the order the rules are listed. */
 export function evaluate<C, D>(
   set: RuleSet<C, D>,

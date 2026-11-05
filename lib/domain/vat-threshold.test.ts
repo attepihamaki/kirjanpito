@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest"
 
 import { defaultCategories } from "@/lib/domain/accounts"
 import { indexCategories, type Entry } from "@/lib/domain/types"
-import { vatPeriodOverLimit, vatThreshold } from "@/lib/domain/vat-threshold"
+import { evaluate } from "@/lib/domain/rules/engine"
+import {
+  VAT_LIMIT_RULES,
+  vatPeriodOverLimit,
+  vatThreshold,
+} from "@/lib/domain/vat-threshold"
 
 /* The 20 000 € turnover limit of VAT liability (§8.12). */
 
@@ -104,5 +109,37 @@ describe("vatPeriodOverLimit", () => {
 
   it("has no limit on monthly filing", () => {
     expect(over("month", 500_000)).toBeNull()
+  })
+})
+
+describe("VAT_LIMIT_RULES", () => {
+  const run = (entries: Entry[], vatPeriod: "month" | "quarter" | "year" = "month") =>
+    evaluate(VAT_LIMIT_RULES, {
+      entries,
+      cats,
+      vatPeriod,
+      today: TODAY,
+    }).map((f) => [f.ruleId, f.severity])
+
+  it("puts the registration limit on three levels", () => {
+    expect(run([sale("2026-02-01", 1000)])).toEqual([
+      ["vatThresholdBelow", "info"],
+    ])
+    expect(run([sale("2026-02-01", 16_000)])).toEqual([
+      ["vatThresholdNear", "warn"],
+    ])
+    expect(run([sale("2026-02-01", 21_000)])).toEqual([
+      ["vatThresholdOver", "blocker"],
+    ])
+  })
+
+  it("stays quiet for a business that charges VAT", () => {
+    expect(run([sale("2026-02-01", 21_000, { vatRate: 25.5 })])).toEqual([])
+  })
+
+  it("warns when last year's turnover is above the filing period's limit", () => {
+    const entries = [sale("2025-05-01", 40_000, { vatRate: 25.5 })]
+    expect(run(entries, "year")).toEqual([["vatPeriodLimit", "warn"]])
+    expect(run(entries, "month")).toEqual([])
   })
 })

@@ -27,11 +27,11 @@ import { toast } from "@/components/ui/toast"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useToday } from "@/hooks/use-today"
 import { periodFromKey } from "@/lib/domain/vat-deadline"
+import type { RuleSeverity } from "@/lib/domain/rules/engine"
 import {
   canLockYear,
-  yearEndItems,
-  type YearEndItem,
-  type YearEndSeverity,
+  yearEndFindings,
+  type YearEndFinding,
 } from "@/lib/domain/year-end"
 import { periodLabel } from "@/lib/i18n/period-label"
 import { APP_ROUTES, STATEMENT_ROUTES } from "@/lib/site"
@@ -83,7 +83,7 @@ function YearEndForm() {
 
   const items = React.useMemo(
     () =>
-      yearEndItems({
+      yearEndFindings({
         entries,
         cats: indexCategories(cats),
         year,
@@ -143,7 +143,7 @@ function YearEndForm() {
     })
   }
 
-  function describe(item: YearEndItem): {
+  function describe(item: YearEndFinding): {
     title: string
     sub: string
     action?: React.ReactNode
@@ -153,7 +153,7 @@ function YearEndForm() {
         {label}
       </Button>
     )
-    switch (item.id) {
+    switch (item.ruleId) {
       case "yearOngoing":
         return {
           title: f.t("statement.yearEndOngoing", { y: year }),
@@ -170,22 +170,22 @@ function YearEndForm() {
           sub: f.t("statement.yearEndUnsavedSub"),
         }
       case "entryCheck": {
-        const text = CHECK_TEXT[item.check]
+        const text = CHECK_TEXT[item.data.check]
         return {
-          title: f.t(text.title, { n: item.n }),
+          title: f.t(text.title, { n: item.data.n }),
           sub: f.t(text.sub),
           action: link(f.t("overview.showThem"), () =>
-            showInLedger(item.check)
+            showInLedger(item.data.check)
           ),
         }
       }
       case "missingFiles":
         return {
-          title: f.t("overview.missingFiles", { n: item.n }),
+          title: f.t("overview.missingFiles", { n: item.data.n }),
           sub: f.t("overview.missingFilesSub"),
         }
       case "vatUnfiled": {
-        const names = item.keys.map((key) => {
+        const names = item.data.keys.map((key) => {
           const p = periodFromKey(key)
           return p ? periodLabel(f, p) : key
         })
@@ -199,7 +199,7 @@ function YearEndForm() {
         return {
           title: f.t("statement.yearEndDepreciation"),
           sub: f.t("statement.yearEndDepreciationSub", {
-            a: f.money(item.maximum),
+            a: f.money(item.data.maximum),
           }),
           action: link(f.t("statement.yearEndOpen"), () =>
             go(STATEMENT_ROUTES.assets)
@@ -208,7 +208,7 @@ function YearEndForm() {
       case "privateCar":
         return {
           title: f.t("statement.yearEndPrivateCar", {
-            a: f.money(item.amount),
+            a: f.money(item.data.amount),
           }),
           sub: f.t("statement.yearEndPrivateCarSub"),
         }
@@ -222,16 +222,16 @@ function YearEndForm() {
         }
       case "openItems":
         return {
-          title: f.t("overview.openItems", { n: item.n }),
+          title: f.t("overview.openItems", { n: item.data.n }),
           sub: f.t("overview.openItemsSub", {
-            r: f.money(item.receivables),
-            p: f.money(item.payables),
+            r: f.money(item.data.receivables),
+            p: f.money(item.data.payables),
           }),
         }
       case "emptyMonths":
         return {
           title: f.t("overview.emptyMonths", {
-            m: item.months
+            m: item.data.months
               .map((m) => f.month(m - 1, true).toLowerCase())
               .join(", "),
           }),
@@ -281,7 +281,7 @@ function YearEndForm() {
                   const d = describe(item)
                   return (
                     <CheckRow
-                      key={item.id === "entryCheck" ? item.check : item.id}
+                      key={item.ruleId === "entryCheck" ? item.data.check : item.ruleId}
                       severity={item.severity}
                       title={d.title}
                       sub={d.sub}
@@ -387,7 +387,7 @@ function YearEndForm() {
   )
 }
 
-const SEVERITY: Record<YearEndSeverity, { icon: LucideIcon; tone: string }> = {
+const SEVERITY: Record<RuleSeverity, { icon: LucideIcon; tone: string }> = {
   blocker: { icon: AlertCircleIcon, tone: "bg-expense-subtle text-expense" },
   warn: { icon: AlertCircleIcon, tone: "bg-warning/15 text-warning" },
   info: { icon: InfoIcon, tone: "bg-muted text-muted-foreground" },
@@ -399,7 +399,7 @@ function CheckRow({
   sub,
   action,
 }: {
-  severity: YearEndSeverity
+  severity: RuleSeverity
   title: string
   sub: string
   action?: React.ReactNode

@@ -5,7 +5,7 @@ import { EMPTY_YEAR_END } from "@/lib/domain/form5-balance"
 import { indexCategories, type Entry } from "@/lib/domain/types"
 import {
   canLockYear,
-  yearEndItems,
+  yearEndFindings,
   type YearEndInput,
 } from "@/lib/domain/year-end"
 
@@ -50,18 +50,21 @@ const input = (over: Partial<YearEndInput> = {}): YearEndInput => ({
 })
 
 const ids = (over?: Partial<YearEndInput>) =>
-  yearEndItems(input(over)).map((i) => i.id)
+  yearEndFindings(input(over)).map((i) => i.ruleId)
 
-describe("yearEndItems", () => {
+describe("yearEndFindings", () => {
   it("has nothing to say about a finished, tidy year", () => {
-    const items = yearEndItems(input({ bookStart: "2025-03" }))
+    const items = yearEndFindings(input({ bookStart: "2025-03" }))
     expect(items.filter((i) => i.severity !== "info")).toEqual([])
     expect(canLockYear(items)).toBe(true)
   })
 
   it("blocks locking a year that has not ended", () => {
-    const items = yearEndItems(input({ year: 2026, today: "2026-10-04" }))
-    expect(items[0]).toEqual({ id: "yearOngoing", severity: "blocker" })
+    const items = yearEndFindings(input({ year: 2026, today: "2026-10-04" }))
+    expect(items[0]).toMatchObject({
+      ruleId: "yearOngoing",
+      severity: "blocker",
+    })
     expect(canLockYear(items)).toBe(false)
   })
 
@@ -72,17 +75,17 @@ describe("yearEndItems", () => {
   it("counts the entries a check flags, within the year only", () => {
     const noReceipt = entry({ date: "2025-05-05", atts: undefined })
     const lastYear = entry({ date: "2024-05-05", atts: undefined })
-    const found = yearEndItems(
+    const found = yearEndFindings(
       input({ entries: [entry({}), noReceipt, lastYear] })
-    ).find((i) => i.id === "entryCheck" && i.check === "noReceipt")
-    expect(found).toMatchObject({ n: 1, severity: "warn" })
+    ).find((i) => i.ruleId === "entryCheck" && i.data.check === "noReceipt")
+    expect(found).toMatchObject({ data: { n: 1 }, severity: "warn" })
   })
 
   it("lists closed VAT periods that are not marked as filed", () => {
-    const found = yearEndItems(input({ vatFiled: {} })).find(
-      (i) => i.id === "vatUnfiled"
+    const found = yearEndFindings(input({ vatFiled: {} })).find(
+      (i) => i.ruleId === "vatUnfiled"
     )
-    expect(found).toMatchObject({ keys: ["2025"] })
+    expect(found).toMatchObject({ data: { keys: ["2025"] } })
   })
 
   it("warns about a depreciation allowance left unused", () => {
@@ -92,11 +95,11 @@ describe("yearEndItems", () => {
       amount: 200_000,
       vatRate: 0,
     })
-    const found = yearEndItems(input({ entries: [purchase] })).find(
-      (i) => i.id === "depreciation"
+    const found = yearEndFindings(input({ entries: [purchase] })).find(
+      (i) => i.ruleId === "depreciation"
     )
     // A quarter of the 2 000 € base (EVL 30 §).
-    expect(found).toMatchObject({ maximum: 50_000 })
+    expect(found).toMatchObject({ data: { maximum: 50_000 } })
   })
 
   it("warns that private use of a car needs the driving details (#1882)", () => {
@@ -107,10 +110,10 @@ describe("yearEndItems", () => {
       amount: 80_000,
       vatRate: 0,
     })
-    const found = yearEndItems(input({ entries: [use] })).find(
-      (i) => i.id === "privateCar"
+    const found = yearEndFindings(input({ entries: [use] })).find(
+      (i) => i.ruleId === "privateCar"
     )
-    expect(found).toMatchObject({ severity: "warn", amount: 80_000 })
+    expect(found).toMatchObject({ severity: "warn", data: { amount: 80_000 } })
     expect(ids()).not.toContain("privateCar")
   })
 
@@ -124,17 +127,17 @@ describe("yearEndItems", () => {
   })
 
   it("reports a nil year as information", () => {
-    const items = yearEndItems(input({ entries: [] }))
-    expect(items.map((i) => i.id)).toContain("noEntries")
+    const items = yearEndFindings(input({ entries: [] }))
+    expect(items.map((i) => i.ruleId)).toContain("noEntries")
     expect(canLockYear(items)).toBe(true)
   })
 
   it("lists empty months after the first entry, from the start month on", () => {
-    const found = yearEndItems(
+    const found = yearEndFindings(
       input({
         entries: [entry({ date: "2025-10-01" }), entry({ date: "2025-12-01" })],
       })
-    ).find((i) => i.id === "emptyMonths")
-    expect(found).toMatchObject({ months: [11] })
+    ).find((i) => i.ruleId === "emptyMonths")
+    expect(found).toMatchObject({ data: { months: [11] } })
   })
 })

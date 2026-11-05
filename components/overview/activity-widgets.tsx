@@ -40,18 +40,43 @@ import { cn } from "@/lib/utils"
 import { toast } from "@/components/ui/toast"
 import { newYearDue, newYearTarget } from "@/lib/domain/new-year"
 import { retentionDates, yearsToArchive } from "@/lib/domain/retention"
-import { bookLimits } from "@/lib/domain/book-limits"
+import { BOOK_LIMIT_RULES } from "@/lib/domain/book-limits"
+import { evaluate, type RuleSeverity } from "@/lib/domain/rules/engine"
 import { EMPTY_YEAR_END, form5Balance } from "@/lib/domain/form5-balance"
 import { balancesAt } from "@/lib/domain/open-items"
 import { RULES, ruleGaps } from "@/lib/domain/rule-tables"
 import { form5Reminder } from "@/lib/domain/tax-return-deadline"
 import {
-  vatPeriodOverLimit,
-  vatThreshold,
+  VAT_LIMIT_RULES,
   vatThresholdIn,
+  type VatPeriodOverLimit,
+  type VatThreshold,
 } from "@/lib/domain/vat-threshold"
 import { useBookStore, type CheckFilter } from "@/stores/book-store"
 import { hasReceipt } from "@/stores/selectors"
+
+const BOOK_LIMIT_TEXT = {
+  singleEntryOver: {
+    key: "singleEntryLimit",
+    title: "overview.singleEntryLimit",
+    sub: "overview.singleEntryLimitOver",
+  },
+  singleEntryStaff: {
+    key: "singleEntryLimit",
+    title: "overview.singleEntryLimit",
+    sub: "overview.singleEntryLimitStaff",
+  },
+  statementsOver: {
+    key: "statementLimit",
+    title: "overview.statementLimit",
+    sub: "overview.statementLimitOver",
+  },
+  statementsStaff: {
+    key: "statementLimit",
+    title: "overview.statementLimit",
+    sub: "overview.statementLimitStaff",
+  },
+} as const
 
 const RULE_GAP_TEXT = {
   travel: "overview.rulesTravel",
@@ -329,8 +354,20 @@ export function ChecksWidget() {
   const yearEnds = useBookStore((s) => s.yearEnd)
   const assetOpening = useBookStore((s) => s.assetOpening)
   const loanOpening = useBookStore((s) => s.loanOpening)
-  const threshold = vatThreshold(data.entries, data.catMap, data.today)
-  if (threshold) {
+  const tone = (severity: RuleSeverity): CheckTone =>
+    severity === "blocker" ? "crit" : severity
+  const limitCtx = {
+    entries: data.entries,
+    cats: data.catMap,
+    vatPeriod,
+    today: data.today,
+  }
+  for (const found of evaluate(VAT_LIMIT_RULES, limitCtx, [
+    "vatThresholdOver",
+    "vatThresholdNear",
+    "vatThresholdBelow",
+  ])) {
+    const threshold = found.data as VatThreshold
     const figures = {
       a: f.money(threshold.turnover),
       l: f.money(vatThresholdIn(threshold.year)),
@@ -340,7 +377,7 @@ export function ChecksWidget() {
       threshold.exceededOn
         ? {
             key: "vatThreshold",
-            tone: "crit",
+            tone: tone(found.severity),
             title: f.t("overview.thresholdOver", {
               d: f.date(threshold.exceededOn),
             }),
@@ -348,7 +385,7 @@ export function ChecksWidget() {
           }
         : {
             key: "vatThreshold",
-            tone: threshold.level === "near" ? "warn" : "info",
+            tone: tone(found.severity),
             title: f.t("overview.threshold", figures),
             sub: f.t(
               threshold.level === "near"
@@ -378,28 +415,23 @@ export function ChecksWidget() {
     })
   }
 
-  const overPeriod = vatPeriodOverLimit(
-    data.entries,
-    data.catMap,
-    vatPeriod,
-    data.today
-  )
-  if (overPeriod) {
+  for (const found of evaluate(VAT_LIMIT_RULES, limitCtx, ["vatPeriodLimit"])) {
+    const over = found.data as VatPeriodOverLimit
     items.push({
       key: "vatPeriodLimit",
-      tone: "warn",
+      tone: tone(found.severity),
       title: f.t("overview.vatPeriodLimit", {
-        y: overPeriod.year,
-        a: f.money(overPeriod.turnover),
+        y: over.year,
+        a: f.money(over.turnover),
       }),
-      sub: f.t("overview.vatPeriodLimitSub", { l: f.money(overPeriod.limit) }),
+      sub: f.t("overview.vatPeriodLimitSub", { l: f.money(over.limit) }),
     })
   }
 
-  const limits = bookLimits(
-    data.entries,
-    data.catMap,
-    (y) =>
+  const bookLimitCtx = {
+    entries: data.entries,
+    cats: data.catMap,
+    assetsOf: (y: number) =>
       form5Balance({
         entries: data.entries,
         cats: data.catMap,
@@ -408,30 +440,15 @@ export function ChecksWidget() {
         assetOpening,
         loanOpening,
       }).assets,
-    data.today
-  )
-  if (limits.singleEntry) {
-    items.push({
-      key: "singleEntryLimit",
-      tone: limits.singleEntry === "over" ? "crit" : "info",
-      title: f.t("overview.singleEntryLimit", { y: limits.year }),
-      sub: f.t(
-        limits.singleEntry === "over"
-          ? "overview.singleEntryLimitOver"
-          : "overview.singleEntryLimitStaff"
-      ),
-    })
+    today: data.today,
   }
-  if (limits.statements) {
+  for (const found of evaluate(BOOK_LIMIT_RULES, bookLimitCtx)) {
+    const text = BOOK_LIMIT_TEXT[found.ruleId as keyof typeof BOOK_LIMIT_TEXT]
     items.push({
-      key: "statementLimit",
-      tone: limits.statements === "over" ? "crit" : "info",
-      title: f.t("overview.statementLimit", { y: limits.year }),
-      sub: f.t(
-        limits.statements === "over"
-          ? "overview.statementLimitOver"
-          : "overview.statementLimitStaff"
-      ),
+      key: text.key,
+      tone: tone(found.severity),
+      title: f.t(text.title, { y: found.data.year }),
+      sub: f.t(text.sub),
     })
   }
 

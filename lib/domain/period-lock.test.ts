@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest"
 
 import { LINE_BY_KEY, defaultCategories } from "@/lib/domain/accounts"
+import { evaluate } from "@/lib/domain/rules/engine"
 import {
+  LOCK_RULES,
   entryLock,
   lockOn,
   paidChangeHitsForm5,
@@ -176,5 +178,36 @@ describe("paidChangeHitsForm5", () => {
 
   it("ignores a date that did not change", () => {
     expect(paidChangeHitsForm5("2026-12-20", "2026-12-20", marks)).toBe(false)
+  })
+})
+
+describe("LOCK_RULES", () => {
+  const marks = {
+    vatFiled: { "2026-03": "2026-05-12" },
+    yearsArchived: {},
+    form5Filed: { "2026": "2027-03-01" },
+  }
+  const ctx = { date: "2026-03-10", paid: null, countsOnVat: true, marks }
+
+  it("lists every lock that holds, in precedence order", () => {
+    expect(evaluate(LOCK_RULES, ctx).map((f) => f.ruleId)).toEqual([
+      "form5",
+      "filed",
+    ])
+  })
+
+  it("lets a filed period hold only what the return counts", () => {
+    expect(
+      evaluate(LOCK_RULES, { ...ctx, countsOnVat: false }).map((f) => f.ruleId)
+    ).toEqual(["form5"])
+  })
+
+  it("locks by the year of payment unless the trader is a business", () => {
+    const paid = { ...ctx, date: "2025-12-20", paid: "2026-01-05" }
+    expect(evaluate(LOCK_RULES, paid).map((f) => f.ruleId)).toEqual([
+      "form5Paid",
+    ])
+    const business = { ...paid, marks: { ...marks, traderType: "business" as const } }
+    expect(evaluate(LOCK_RULES, business)).toEqual([])
   })
 })

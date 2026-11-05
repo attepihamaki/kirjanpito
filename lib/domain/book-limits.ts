@@ -1,6 +1,7 @@
 import { calcEntry } from "@/lib/domain/calc"
 import { yearOf } from "@/lib/domain/dates"
 import { limitOn } from "@/lib/domain/rule-tables"
+import { defineRules, type Rule } from "@/lib/domain/rules/engine"
 import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
 
 /**
@@ -88,3 +89,61 @@ export function bookLimits(
     statements: status(microLimits(year), years),
   }
 }
+
+/** What the limit rules look at. */
+export interface BookLimitsContext {
+  entries: readonly Entry[]
+  cats: CategoryMap
+  /** A year's balance sheet total as far as the book knows it. */
+  assetsOf: (year: number) => Cents
+  today: string
+}
+
+/** The closed year a limit breach is about. */
+export interface BookLimitBreach {
+  year: number
+}
+
+/** The four rules share one calculation per context. */
+const computed = new WeakMap<BookLimitsContext, BookLimits>()
+
+function limitsOf(ctx: BookLimitsContext): BookLimits {
+  let out = computed.get(ctx)
+  if (!out) {
+    out = bookLimits(ctx.entries, ctx.cats, ctx.assetsOf, ctx.today)
+    computed.set(ctx, out)
+  }
+  return out
+}
+
+type LimitRule = Rule<BookLimitsContext, BookLimitBreach>
+
+function limitRule(
+  id: string,
+  severity: LimitRule["severity"],
+  source: string,
+  which: "singleEntry" | "statements",
+  status: Exclude<LimitStatus, null>
+): LimitRule {
+  return {
+    id,
+    severity,
+    source,
+    check: (ctx) => {
+      const limits = limitsOf(ctx)
+      return limits[which] === status ? [{ year: limits.year }] : []
+    },
+  }
+}
+
+/**
+ * KPL 1:1a and 1:4b. Two limits over means the kind of books no longer fits,
+ * which is an error; one over leaves staff to decide, which the book does not
+ * record, so it is information.
+ */
+export const BOOK_LIMIT_RULES = defineRules<BookLimitsContext, BookLimitBreach>([
+  limitRule("singleEntryOver", "blocker", "KPL 1:1a", "singleEntry", "over"),
+  limitRule("singleEntryStaff", "info", "KPL 1:1a", "singleEntry", "staff"),
+  limitRule("statementsOver", "blocker", "KPL 1:4b", "statements", "over"),
+  limitRule("statementsStaff", "info", "KPL 1:4b", "statements", "staff"),
+])
