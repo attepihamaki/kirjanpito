@@ -150,19 +150,34 @@ export function refuseLocked(ctx: Ctx, entries: readonly Entry[]): boolean {
   return true
 }
 
-export async function clearAllEntries(ctx: Ctx): Promise<void> {
-  if (refuseLocked(ctx, useBookStore.getState().entries)) return
+/**
+ * Erase the whole bookkeeping from this browser (§8.10): the entries, the
+ * settings, the receipts in IndexedDB and the stored blob, then back to the
+ * landing page. It cannot be undone, so the confirmation says so and says to
+ * export first. Only the browser's copy goes; a file on disk is untouched.
+ * It is the user's own decision about their working buffer, so locked periods
+ * do not stop it, and unsaved changes need no second prompt.
+ */
+export async function deleteBook(ctx: Ctx): Promise<void> {
+  if (await refuseIfOpenElsewhere(ctx)) return
   const confirmed = await confirm({
-    title: ctx.t("confirm.clearTitle"),
-    message: ctx.t("confirm.clearMessage"),
-    confirmLabel: ctx.t("confirm.clearConfirm"),
+    title: ctx.t("confirm.deleteBookTitle"),
+    message: ctx.t("confirm.deleteBookMessage"),
+    confirmLabel: ctx.t("confirm.deleteBookConfirm"),
     cancelLabel: ctx.t("common.cancel"),
   })
   if (!confirmed) return
-  const removed = useBookStore.getState().entries
   releaseAllObjectUrls()
-  useBookStore.getState().clearEntries()
-  offerUndo(ctx, removed, ctx.t("settings.cleared"), ctx.t("settings.restored"))
+  await unlinkFile()
+  useBookStore.getState().closeBook()
+  /*
+   * With no entries and no open book every stored receipt is unreferenced, and
+   * the store refuses to recreate its key while there is no bookkeeping.
+   */
+  await sweepReceipts()
+  useBookStore.persist.clearStorage()
+  toast.add({ title: ctx.t("settings.bookDeleted") })
+  ctx.navigate(LANDING)
 }
 
 /** How long a deletion can be undone. Long enough to read and reach the button. */

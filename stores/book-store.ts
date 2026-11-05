@@ -365,7 +365,6 @@ export interface BookActions {
    * takes the next free number.
    */
   setVouchers(numbers: ReadonlyMap<string, number>): void
-  clearEntries(): void
   /** Put deleted entries back. Ids already present are skipped. */
   restoreEntries(entries: readonly Entry[]): void
   holdUndoAttachments(ids: readonly string[]): void
@@ -873,14 +872,6 @@ export const useBookStore = create<BookStore>()(
           dirty: true,
         })
       },
-
-      clearEntries: () =>
-        set({
-          ...withLog(get(), []),
-          dirty: true,
-          ledgerPage: 1,
-          gcTick: get().gcTick + 1,
-        }),
 
       restoreEntries: (restored) => {
         const present = new Set(get().entries.map((e) => e.id))

@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { useToday } from "@/hooks/use-today"
-import { clearAllEntries, renumberVouchers } from "@/lib/commands/book-commands"
+import { deleteBook, renumberVouchers } from "@/lib/commands/book-commands"
 import { newYearTarget } from "@/lib/domain/new-year"
 import { renumberYear } from "@/lib/domain/voucher"
 import { useBookStore } from "@/stores/book-store"
@@ -36,8 +36,8 @@ export function useRenumberChanges(): number {
 /**
  * What the general settings page does rather than holds, on the title row:
  * the way into opening a year (§8.14), for the year `newYearTarget` names, and
- * a menu of the less common actions. Clearing the entries erases the
- * bookkeeping from this browser, so it is last and in the destructive colour.
+ * a menu of the less common actions. Deleting the bookkeeping erases it from
+ * this browser, so it is last and in the destructive colour.
  */
 export function GeneralActions() {
   const f = useFormatters()
@@ -81,9 +81,9 @@ export function GeneralActions() {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
-            onClick={() => void clearAllEntries(ctx)}
+            onClick={() => void deleteBook(ctx)}
           >
-            {f.t("settings.clearEntries")}…
+            {f.t("settings.deleteBook")}…
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

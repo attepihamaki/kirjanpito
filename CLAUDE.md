@@ -852,7 +852,7 @@ See §6.4. Wide tables scroll horizontally with a sticky first column. The chart
 
 Every section is a `Panel` (§11). The page is split into two sub-pages, so the categories table does not bury the handful of book-wide settings:
 
-- **Yleiset** at `/app/settings`: the VAT period, the start month, saving, the voucher numbers (§4), and clearing the entries.
+- **Yleiset** at `/app/settings`: the VAT period, the start month, saving, the voucher numbers (§4), and deleting the bookkeeping.
 - **Luokat** at `/app/settings/categories`: the add form, the categories table, and restoring the defaults.
 - **Toistuvat** at `/app/settings/recurring`: the monthly templates (§8.5).
 
@@ -866,7 +866,7 @@ On **Yleiset**:
 - **"ALV-ilmoitusjakso"**: a segmented Kuukausi / Neljännesvuosi / Vuosi. It sets `vatPeriod` (§6.5), which the overview's due dates and the VAT view follow. Changing it keeps the VAT view on the same part of the year: October becomes Q4.
 - **"Kirjanpidon aloitus"**: the month the business began, as a month select ("Ensimmäisestä tositteesta" or a month) and, once a month is chosen, a year select. It sets `bookStart` (§6.5). Unset, returns are counted from the first entry.
 - **"Tallennus"**, only where the browser can write to a file: the "Tallenna automaattisesti" checkbox (§7.5), with a description that says what can be undone: a delete for 10 seconds (§8.11), an edit not at all.
-- **"Tyhjennä tositteet"**, last, as a `variant="destructive"` panel with "Tyhjennä" (`destructive`) on the footer. It deletes all entries (with a confirmation) and leaves the bookkeeping open but empty.
+- **"Poista kirjanpito"**, last in the title row's menu, in the destructive colour (`deleteBook` in `book-commands.ts`). It erases the whole bookkeeping from this browser: entries, settings, the receipts in IndexedDB, the linked file handle and the `bookkeeping` localStorage key, then returns to the landing page. The confirmation says the deletion is permanent and to download the bookkeeping first. It **cannot be undone**, and it is not stopped by locked periods or unsaved changes: it is the user's own decision about the browser's working copy, and a file on disk is untouched. The `lang` and `theme` keys stay.
 
 On **Luokat**:
 
@@ -888,7 +888,7 @@ On **Luokat**:
   - **A name is unique on its account and side**, in the add form and the edit dialog alike (`categoryNameTaken`), a default's English and former names included. The CSV finds a category by these, so two with one name would merge when the file is next opened.
   - **Delete** (`lib/commands/category-commands.ts`) removes an unused category at once. One with entries or templates opens a dialog that asks where they move, among the enabled categories the bulk bar would offer (`categoriesToMoveTo`, §8.4). Each entry keeps its VAT rate and voucher number. A locked entry on the category refuses the delete (§8.11), and a change to a filed return asks first. Both kinds can be undone from the toast for 10 seconds, and only what still sits on the target goes back.
   - Pagination with a default of 25 rows, laid out as on the ledger (§8.4).
-- **"Oletusluokat"**, under the table: a description of what restoring does, and "Palauta oletusluokat" (`outline`) on the footer. It restores the defaults and keeps custom categories that an entry or a recurring template uses. It is reversible and routine, so it sits beside the table it changes; clearing the entries is not, so it is on the other page in its own destructive panel.
+- **"Oletusluokat"**, under the table: a description of what restoring does, and "Palauta oletusluokat" (`outline`) on the footer. It restores the defaults and keeps custom categories that an entry or a recurring template uses. It is reversible and routine, so it sits beside the table it changes; deleting the bookkeeping is not, so it is on the other page, in the title row's menu.
 
 ### 8.11 Confirmations and unsaved-change rules (apply everywhere)
 
@@ -906,7 +906,7 @@ Cases:
 | Save over a file edited elsewhere      | its timestamp moved since we read it | "Korvataanko tiedosto?" / "Korvaa"                                      |
 | Delete an entry (row or dialog)        | not in a locked period             | "Poistetaanko tosite?" / "Poista" |
 | Save an entry                          | it adds to a period marked as filed | "Muutetaanko ilmoitettua kautta?" / "Tallenna silti"                     |
-| Clear all entries                      | always                             | "Tyhjennetäänkö tositteet?" / "Tyhjennä"                                 |
+| Delete the whole bookkeeping           | always                             | "Poistetaanko kirjanpito?" / "Poista kirjanpito"                         |
 | Close the entry dialog (Peruuta / Esc) | form differs from its snapshot     | "Hylätäänkö muutokset?" / "Hylkää muutokset", cancel = "Jatka muokkausta" |
 | Navigate away from Settings            | the new-category name is filled    | same as above, with the category message                                  |
 | Browser tab close (`beforeunload`)     | any of the above dirty states      | the browser's native prompt                                               |
@@ -923,7 +923,7 @@ Closing a file clears entries, the file name and filters, puts the categories ba
 
 **A change that adds to a filed return says how to correct it.** `filedPeriodChanges` in `lib/domain/filed-changes.ts` builds each touched period's return before and after the change and compares the fields, so an entry no field counts (a 0 % grant) asks nothing. For each period that does change, the confirmation names it, the date it was marked, and how much the tax payable goes up or down. It then gives Vero's fix (vero.fi, "Miten arvonlisäveroilmoituksen tietoja korjataan?"): a replacement return (korvaava ilmoitus) for the period in OmaVero, or, when only the tax fields change and by at most 500 €, the next return instead (`fitsNextReturn`). A change to EU, reverse-charge or 0 % sales always needs the replacement. The filed mark stays as it was, since the user decides when the correction is made. `lib/commands/filed-commands.ts` holds the wording and is loaded on demand by `deleteEntry`, because `book-commands.ts` is in the landing bundle.
 
-**Deleting can be undone.** Deleting an entry and clearing the entries both still ask first, then raise a toast with "Kumoa" for 10 seconds (`offerUndo` in `lib/commands/book-commands.ts`). An undo also brings back a custom category deleted in the meantime, and undoing a bulk category change only moves the category back, so an edit made since stays. The deleted entries' receipts stay in IndexedDB while the toast is up (`undoAttachmentIds`, which the GC sweep counts as live), or an undo would bring back entries whose files were already gone. An undo after a new, closed or opened bookkeeping has taken over does nothing (`bookEpoch`). Undo marks the book dirty, since autosave may already have written the deletion. `lib/commands/book-commands.test.ts` covers it.
+**Deleting can be undone.** Deleting an entry still asks first, then raises a toast with "Kumoa" for 10 seconds (`offerUndo` in `lib/commands/book-commands.ts`). An undo also brings back a custom category deleted in the meantime, and undoing a bulk category change only moves the category back, so an edit made since stays. The deleted entries' receipts stay in IndexedDB while the toast is up (`undoAttachmentIds`, which the GC sweep counts as live), or an undo would bring back entries whose files were already gone. An undo after a new, closed or opened bookkeeping has taken over does nothing (`bookEpoch`). Undo marks the book dirty, since autosave may already have written the deletion. `lib/commands/book-commands.test.ts` covers it.
 
 ### 8.12 Overview (Yleiskatsaus)
 

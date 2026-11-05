@@ -127,12 +127,12 @@ export const APP_DICT = {
     "The open bookkeeping has changes that haven’t been saved. The file you open will replace them.",
   ],
   "confirm.replaceConfirm": ["Korvaa", "Replace"],
-  "confirm.clearTitle": ["Tyhjennetäänkö tositteet?", "Clear all vouchers?"],
-  "confirm.clearMessage": [
-    "Kaikki tositteet poistetaan tästä selaimesta. Tallenna ne ensin tiedostoon, jos haluat säilyttää ne.",
-    "All vouchers will be removed from this browser. Save them to a file first if you want to keep them.",
+  "confirm.deleteBookTitle": ["Poistetaanko kirjanpito?", "Delete the bookkeeping?"],
+  "confirm.deleteBookMessage": [
+    "Tositteet, liitteet ja asetukset poistetaan tästä selaimesta pysyvästi, eikä poistoa voi perua. Lataa kirjanpito tiedostoksi ensin, jos haluat säilyttää sen.",
+    "The vouchers, attachments and settings are removed from this browser for good, and there is no undoing it. Download the bookkeeping as a file first if you want to keep it.",
   ],
-  "confirm.clearConfirm": ["Tyhjennä", "Clear"],
+  "confirm.deleteBookConfirm": ["Poista kirjanpito", "Delete bookkeeping"],
   "confirm.renumberTitle": [
     "Numeroidaanko vuoden {year} tositteet uudelleen?",
     "Renumber the vouchers of {year}?",
@@ -2044,8 +2044,8 @@ export const APP_DICT = {
     "Tositenumerot palautettu.",
     "Voucher numbers restored.",
   ],
-  "settings.clearEntries": ["Tyhjennä tositteet", "Clear all vouchers"],
-  "settings.cleared": ["Tositteet tyhjennetty.", "Vouchers cleared."],
+  "settings.deleteBook": ["Poista kirjanpito", "Delete bookkeeping"],
+  "settings.bookDeleted": ["Kirjanpito poistettu.", "Bookkeeping deleted."],
   "settings.restored": ["Tositteet palautettu.", "Vouchers restored."],
 
   // --- Import and export (§7) ---

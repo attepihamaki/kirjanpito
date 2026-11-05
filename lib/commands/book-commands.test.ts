@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { toast } from "@/components/ui/toast"
 import {
-  clearAllEntries,
+  deleteBook,
   deleteEntry,
   renumberVouchers,
 } from "@/lib/commands/book-commands"
@@ -19,8 +19,9 @@ import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { collectLiveIds } from "@/lib/domain/gc"
 import { assignVouchers } from "@/lib/domain/voucher"
 import { createAppT } from "@/lib/i18n/messages"
+import { LANDING } from "@/lib/site"
 import { confirm } from "@/lib/ui/confirm"
-import { useBookStore } from "@/stores/book-store"
+import { BOOK_STORAGE_KEY, useBookStore } from "@/stores/book-store"
 
 /** Intl puts no-break spaces in money; the expectations use plain ones. */
 const flat = (s: string | undefined) => (s ?? "").replace(/[  ]/g, " ")
@@ -111,20 +112,50 @@ describe("deleteEntry", () => {
   })
 })
 
-describe("clearAllEntries", () => {
-  it("brings every entry back on undo", async () => {
-    const before = useBookStore.getState().entries
-    await clearAllEntries(ctx)
-    expect(useBookStore.getState().entries).toEqual([])
-
-    clickUndo()
-    expect(useBookStore.getState().entries).toEqual(before)
+describe("deleteBook", () => {
+  beforeEach(() => {
+    vi.mocked(confirm).mockClear()
+    vi.mocked(ctx.navigate).mockClear()
+    localStorage.setItem(BOOK_STORAGE_KEY, "{}")
   })
 
-  it("offers no undo when there was nothing to clear", async () => {
-    useBookStore.setState({ entries: [] })
-    await clearAllEntries(ctx)
-    expect(raised.every((o) => !o.actionProps)).toBe(true)
+  it("warns that it is permanent before doing anything", async () => {
+    await deleteBook(ctx)
+    const options = vi.mocked(confirm).mock.calls[0][0]
+    expect(options.message).toContain("eikä poistoa voi perua")
+    expect(options.message).toContain("Lataa kirjanpito tiedostoksi ensin")
+  })
+
+  it("empties the book, drops the stored blob and goes to the landing page", async () => {
+    await deleteBook(ctx)
+
+    const s = useBookStore.getState()
+    expect(s.open).toBe(false)
+    expect(s.entries).toEqual([])
+    expect(s.dirty).toBe(false)
+    expect(localStorage.getItem(BOOK_STORAGE_KEY)).toBeNull()
+    expect(ctx.navigate).toHaveBeenCalledWith(LANDING)
+  })
+
+  it("leaves everything alone when the user cancels", async () => {
+    vi.mocked(confirm).mockResolvedValueOnce(false)
+    const before = useBookStore.getState().entries
+
+    await deleteBook(ctx)
+
+    expect(useBookStore.getState().entries).toEqual(before)
+    expect(useBookStore.getState().open).toBe(true)
+    expect(localStorage.getItem(BOOK_STORAGE_KEY)).toBe("{}")
+    expect(ctx.navigate).not.toHaveBeenCalled()
+  })
+
+  it("deletes a book with filed periods and unsaved changes", async () => {
+    useBookStore.setState({ vatFiled: { "2026-10": "2026-12-14" }, dirty: true })
+
+    await deleteBook(ctx)
+
+    expect(useBookStore.getState().entries).toEqual([])
+    expect(useBookStore.getState().vatFiled).toEqual({})
   })
 })
 
@@ -155,14 +186,6 @@ describe("changes to a filed period", () => {
 
     expect(await deleteEntry(ctx, fee)).toBe(true)
     clickUndo()
-  })
-
-  it("refuses to clear a book with an entry in a filed period", async () => {
-    useBookStore.setState({ vatFiled: { "2026-10": "2026-12-14" } })
-    const before = useBookStore.getState().entries.length
-
-    await clearAllEntries(ctx)
-    expect(useBookStore.getState().entries).toHaveLength(before)
   })
 
   it("says how to correct a return when a new entry goes into its period", async () => {
