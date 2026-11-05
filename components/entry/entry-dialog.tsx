@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { CopyIcon, LockIcon, Trash2Icon } from "lucide-react"
+import { CopyIcon, LockIcon, SplitIcon, Trash2Icon } from "lucide-react"
 
 import { EntryTypeToggle } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
@@ -68,6 +68,7 @@ import {
 } from "@/lib/domain/entry-checks"
 import { isPdf } from "@/lib/domain/receipt-path"
 import { isoDate, monthOf, todayIso, yearOf } from "@/lib/domain/dates"
+import { canSplitLine } from "@/lib/domain/split"
 import { rateMismatch, rateOnDate } from "@/lib/domain/vat-rates"
 import { uid } from "@/lib/domain/id"
 import { periodFromKey, vatPeriods } from "@/lib/domain/vat-deadline"
@@ -1263,6 +1264,21 @@ function EntryDialogForm({
                 <CopyIcon data-icon="inline-start" />
                 {f.t("ledger.copyAsNew")}
               </Button>
+              {!lock &&
+              canSplitLine(editing.catId, catMap, editing.euPurchase) ? (
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    // A split is of the saved voucher, not of what is typed here.
+                    if (await confirmDiscard()) {
+                      openDialog({ kind: "split", entryId: editing.id })
+                    }
+                  }}
+                >
+                  <SplitIcon data-icon="inline-start" />
+                  {f.t("entry.splitAction")}
+                </Button>
+              ) : null}
             </>
           ) : null}
 

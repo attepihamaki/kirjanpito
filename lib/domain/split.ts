@@ -130,3 +130,90 @@ export function shareReceipts(
 function receiptsOf(e: Entry): string {
   return (e.atts ?? []).map(receiptKey).join("|")
 }
+
+/** The fields of a part carved off an entry. */
+export interface SplitPart {
+  amount: number
+  catId: string
+  vatRate: number
+}
+
+export type CarveResult =
+  | { ok: true; original: Entry; part: Entry }
+  | { ok: false; error: "amount" | "category" }
+
+/**
+ * Whether an entry on `catId` can be split, or be split into it (§8.4). An EU
+ * purchase has no VAT in its amount, and a VAT payment, an owner's transfer or a loan movement is
+ * one sum with nothing to divide.
+ */
+export function canSplitLine(
+  catId: string,
+  cats: CategoryMap,
+  euPurchase?: Entry["euPurchase"]
+): boolean {
+  if (euPurchase || cats.get(catId)?.euPurchase) return false
+  const line = LINE_BY_KEY.get(cats.get(catId)?.line ?? "")
+  return !!line && !line.settlement && !line.owner && !line.loan
+}
+
+/**
+ * Carve `part` off `entry` (§8.4). The original keeps what is left of its
+ * amount, in the same mode, and both take the split link. The new part is the
+ * same receipt: same date, side, description, mode, files and payment, so the
+ * rule that parts share a payment already holds when it is made. `ids` are the
+ * part's own id and the link, used when the entry is not split yet.
+ *
+ * The part must be smaller than the entry and have its sign, so the two always
+ * add up to what the receipt said.
+ */
+export function carveSplit(
+  entry: Entry,
+  part: SplitPart,
+  cats: CategoryMap,
+  ids: { part: string; split: string }
+): CarveResult {
+  const amount = part.amount
+  if (
+    !Number.isInteger(amount) ||
+    amount === 0 ||
+    Math.sign(amount) !== Math.sign(entry.amount) ||
+    Math.abs(amount) >= Math.abs(entry.amount)
+  ) {
+    return { ok: false, error: "amount" }
+  }
+  const cat = cats.get(part.catId)
+  const line = cat && LINE_BY_KEY.get(cat.line)
+  if (
+    !cat ||
+    !line ||
+    line.side !== entry.type ||
+    !canSplitLine(part.catId, cats) ||
+    !canSplitLine(entry.catId, cats, entry.euPurchase)
+  ) {
+    return { ok: false, error: "category" }
+  }
+
+  const split = entry.split ?? ids.split
+  const next: Entry = {
+    id: ids.part,
+    date: entry.date,
+    description: entry.description,
+    type: entry.type,
+    catId: part.catId,
+    amount,
+    vatRate: part.vatRate,
+    amountMode: entry.amountMode,
+    split,
+  }
+  if (entry.atts) next.atts = entry.atts.map((a) => ({ ...a }))
+  if (canBeUnpaid(line)) {
+    if (entry.paidOn !== undefined) next.paidOn = entry.paidOn
+    if (entry.cash) next.cash = true
+  }
+  return {
+    ok: true,
+    original: { ...entry, amount: entry.amount - amount, split },
+    part: next,
+  }
+}

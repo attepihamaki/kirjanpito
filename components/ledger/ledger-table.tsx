@@ -54,6 +54,11 @@ export function LedgerTable({
   const sort = useBookStore((s) => s.ledgerSort)
   const toggleSort = useBookStore((s) => s.toggleLedgerSort)
   const openDialog = useBookStore((s) => s.openDialog)
+  const allEntries = useBookStore((s) => s.entries)
+  const splitVouchers = React.useMemo(
+    () => splitVoucherLabels(allEntries),
+    [allEntries]
+  )
 
   const header = (
     key: LedgerSortKey,
@@ -135,6 +140,7 @@ export function LedgerTable({
             key={entry.id}
             entry={entry}
             cat={cats.get(entry.catId)}
+            splitWith={splitVouchers.get(entry.id)}
             selected={selected.has(entry.id)}
             onSelect={(on) => onSelect([entry.id], on)}
             onEdit={() =>
@@ -154,9 +160,36 @@ export function LedgerTable({
   )
 }
 
+/**
+ * The voucher numbers of each part of a split receipt, by entry id, for the
+ * pill (§8.4). Only a group of two or more has one, and it counts parts on
+ * every page and in every month, not just the rows on screen.
+ */
+function splitVoucherLabels(entries: readonly Entry[]): Map<string, string> {
+  const groups = new Map<string, Entry[]>()
+  for (const e of entries) {
+    if (e.split === undefined) continue
+    const parts = groups.get(e.split)
+    if (parts) parts.push(e)
+    else groups.set(e.split, [e])
+  }
+  const out = new Map<string, string>()
+  for (const parts of groups.values()) {
+    if (parts.length < 2) continue
+    const label = parts
+      .map((e) => e.voucher)
+      .filter((v): v is number => v !== undefined)
+      .sort((a, b) => a - b)
+      .join(", ")
+    for (const e of parts) out.set(e.id, label)
+  }
+  return out
+}
+
 function LedgerRow({
   entry,
   cat,
+  splitWith,
   selected,
   onSelect,
   onEdit,
@@ -166,6 +199,8 @@ function LedgerRow({
 }: {
   entry: Entry
   cat: Category | undefined
+  /** The voucher numbers of the whole split this entry is part of, if any. */
+  splitWith: string | undefined
   selected: boolean
   onSelect: (on: boolean) => void
   onEdit: () => void
@@ -233,6 +268,11 @@ function LedgerRow({
             {entry.paidOn === null ? (
               <Pill size="sm" className="ml-2">
                 {f.t("ledger.openPill")}
+              </Pill>
+            ) : null}
+            {splitWith ? (
+              <Pill size="sm" className="ml-2">
+                {f.t("ledger.splitPill", { v: splitWith })}
               </Pill>
             ) : null}
             {entry.euPurchase ? (

@@ -7,7 +7,9 @@ import {
 } from "@/lib/commands/book-commands"
 import type { Ctx } from "@/lib/commands/ctx"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
-import type { Entry } from "@/lib/domain/types"
+import { uid } from "@/lib/domain/id"
+import { carveSplit, type SplitPart } from "@/lib/domain/split"
+import { indexCategories, type Entry } from "@/lib/domain/types"
 import { confirm } from "@/lib/ui/confirm"
 import { useBookStore } from "@/stores/book-store"
 
@@ -75,6 +77,73 @@ export async function addEntriesWithUndo(
         if (now.bookEpoch !== epoch) return
         now.removeEntries(added.map((e) => e.id))
         toast.add({ title: ctx.t("entry.addUndone") })
+      },
+    },
+  })
+  return true
+}
+
+/**
+ * Carve a part off an entry (§8.4): the original keeps what is left, the new
+ * part takes the next voucher number, and both are linked as one receipt. It
+ * asks about a filed period like any other change (§8.11) and can be undone
+ * from the toast, which puts the original back as it was.
+ */
+export async function splitEntry(
+  ctx: Ctx,
+  entry: Entry,
+  part: SplitPart
+): Promise<boolean> {
+  if (refuseLocked(ctx, [entry])) return false
+  const state = useBookStore.getState()
+  const carved = carveSplit(entry, part, indexCategories(state.cats), {
+    part: uid(),
+    split: uid(),
+  })
+  if (!carved.ok) {
+    toast.add({
+      title: ctx.t(
+        carved.error === "amount"
+          ? "entry.splitAmountRefused"
+          : "entry.splitCategoryRefused"
+      ),
+    })
+    return false
+  }
+  const { original, part: added } = carved
+  const after = [
+    ...state.entries.map((e) => (e.id === entry.id ? original : e)),
+    added,
+  ]
+  if (!(await confirmFiledChange(after))) return false
+
+  const store = useBookStore.getState()
+  const epoch = store.bookEpoch
+  store.updateEntries([original])
+  store.addEntries([added])
+  const saved = useBookStore.getState().entries.find((e) => e.id === entry.id)
+  const id = toast.add({
+    title: ctx.t("entry.splitDone"),
+    timeout: UNDO_TIMEOUT_MS,
+    actionProps: {
+      children: ctx.t("common.undo"),
+      onClick: () => {
+        toast.close(id)
+        const now = useBookStore.getState()
+        if (now.bookEpoch !== epoch) return
+        const current = now.entries.find((e) => e.id === entry.id)
+        if (
+          !current ||
+          !saved ||
+          JSON.stringify(current) !== JSON.stringify(saved)
+        ) {
+          toast.add({ title: ctx.t("entry.editUndoChanged") })
+          return
+        }
+        if (refuseLocked(ctx, [current])) return
+        now.removeEntries([added.id])
+        now.updateEntries([entry])
+        toast.add({ title: ctx.t("entry.splitUndone") })
       },
     },
   })

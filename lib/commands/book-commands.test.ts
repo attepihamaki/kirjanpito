@@ -12,6 +12,7 @@ import type { Entry } from "@/lib/domain/types"
 import {
   deleteEntries,
   recategorizeEntries,
+  splitEntry,
 } from "@/lib/commands/bulk-commands"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
 import type { Ctx } from "@/lib/commands/ctx"
@@ -172,6 +173,72 @@ describe("deleteEntry on a split receipt", () => {
     )
     expect(choose).not.toHaveBeenCalled()
     expect(useBookStore.getState().entries).toHaveLength(15)
+  })
+})
+
+describe("splitEntry", () => {
+  const first = () => useBookStore.getState().entries[0]
+
+  it("leaves the rest on the original and adds a linked part", async () => {
+    const before = first()
+    expect(
+      await splitEntry(ctx, before, {
+        amount: 1_000,
+        catId: "301",
+        vatRate: 0,
+      })
+    ).toBe(true)
+
+    const entries = useBookStore.getState().entries
+    expect(entries).toHaveLength(17)
+    const original = entries.find((e) => e.id === before.id)!
+    const part = entries.find(
+      (e) => e.split === original.split && e.id !== before.id
+    )!
+    expect(original.amount).toBe(before.amount - 1_000)
+    expect(part.amount).toBe(1_000)
+    expect(part.voucher).toBeDefined()
+    expect(part.atts?.map((a) => a.id)).toEqual(before.atts?.map((a) => a.id))
+  })
+
+  it("puts the original back and removes the part on undo", async () => {
+    const before = first()
+    await splitEntry(ctx, before, {
+      amount: 1_000,
+      catId: "301",
+      vatRate: 0,
+    })
+    clickUndo()
+    const entries = useBookStore.getState().entries
+    expect(entries).toHaveLength(16)
+    expect(entries.find((e) => e.id === before.id)).toEqual(before)
+  })
+
+  it("will not undo once the original has been edited", async () => {
+    const before = first()
+    await splitEntry(ctx, before, {
+      amount: 1_000,
+      catId: "301",
+      vatRate: 0,
+    })
+    const edited = useBookStore
+      .getState()
+      .entries.find((e) => e.id === before.id)!
+    useBookStore.getState().upsertEntry({ ...edited, description: "Muutettu" })
+    clickUndo()
+    expect(useBookStore.getState().entries).toHaveLength(17)
+  })
+
+  it("refuses an amount that is not smaller than the entry", async () => {
+    const before = first()
+    expect(
+      await splitEntry(ctx, before, {
+        amount: before.amount,
+        catId: "301",
+        vatRate: 0,
+      })
+    ).toBe(false)
+    expect(useBookStore.getState().entries).toHaveLength(16)
   })
 })
 

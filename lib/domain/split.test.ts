@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest"
 
 import { defaultCategories } from "@/lib/domain/accounts"
-import { sharePayment, shareReceipts, splitSiblings } from "@/lib/domain/split"
+import {
+  canSplitLine,
+  carveSplit,
+  sharePayment,
+  shareReceipts,
+  splitSiblings,
+} from "@/lib/domain/split"
 import {
   indexCategories,
   type Attachment,
@@ -165,5 +171,134 @@ describe("shareReceipts", () => {
     const before = [part("a"), outsider]
     const after = [{ ...before[0], atts: [file("f1")] }, outsider]
     expect(shareReceipts(before, after)[1]).toBe(outsider)
+  })
+})
+
+describe("carveSplit", () => {
+  const ids = { part: "new", split: "g9" }
+  const base = () =>
+    part("a", {
+      split: undefined,
+      amount: 10_000,
+      paidOn: "2026-11-02",
+      cash: true,
+      atts: [{ id: "f1", name: "f1.pdf", type: "application/pdf", size: 10 }],
+    })
+
+  it("leaves the rest on the original and links both", () => {
+    const result = carveSplit(
+      base(),
+      { amount: 2_500, catId: "344-meeting", vatRate: 13.5 },
+      cats,
+      ids
+    )
+    if (!result.ok) throw new Error(result.error)
+    expect(result.original.amount).toBe(7_500)
+    expect(result.original.split).toBe("g9")
+    expect(result.part).toMatchObject({
+      id: "new",
+      amount: 2_500,
+      catId: "344-meeting",
+      vatRate: 13.5,
+      date: "2026-10-10",
+      description: "Kuitti",
+      type: "expense",
+      amountMode: "gross",
+      split: "g9",
+      paidOn: "2026-11-02",
+      cash: true,
+    })
+  })
+
+  it("gives the part the same files, with the same ids", () => {
+    const result = carveSplit(
+      base(),
+      { amount: 1, catId: "333", vatRate: 0 },
+      cats,
+      ids
+    )
+    if (!result.ok) throw new Error(result.error)
+    expect(result.part.atts?.map((a) => a.id)).toEqual(["f1"])
+    expect(result.part.atts?.[0]).not.toBe(result.original.atts?.[0])
+  })
+
+  it("keeps an existing split id", () => {
+    const result = carveSplit(
+      { ...base(), split: "old" },
+      { amount: 1, catId: "333", vatRate: 0 },
+      cats,
+      ids
+    )
+    if (!result.ok) throw new Error(result.error)
+    expect(result.original.split).toBe("old")
+    expect(result.part.split).toBe("old")
+  })
+
+  it("takes the sign of a credit note", () => {
+    const result = carveSplit(
+      { ...base(), amount: -10_000 },
+      { amount: -4_000, catId: "333", vatRate: 25.5 },
+      cats,
+      ids
+    )
+    if (!result.ok) throw new Error(result.error)
+    expect(result.original.amount).toBe(-6_000)
+  })
+
+  it.each([
+    ["zero", 0],
+    ["the whole amount", 10_000],
+    ["more than the amount", 20_000],
+    ["the wrong sign", -1_000],
+    ["a fraction of a cent", 12.5],
+  ])("refuses %s", (_name, amount) => {
+    expect(
+      carveSplit(base(), { amount, catId: "333", vatRate: 0 }, cats, ids)
+    ).toEqual({ ok: false, error: "amount" })
+  })
+
+  it.each([
+    ["an unknown category", "nope"],
+    ["the other side", "300-domestic"],
+    ["a settlement", "vat-payment"],
+    ["an EU purchase category", "333-eu-goods"],
+  ])("refuses %s", (_name, catId) => {
+    const result = carveSplit(
+      base(),
+      { amount: 1, catId, vatRate: 0 },
+      cats,
+      ids
+    )
+    expect(result).toMatchObject({ ok: false })
+  })
+
+  it("refuses to split an EU purchase", () => {
+    const eu = { ...base(), euPurchase: "goods" as const }
+    expect(
+      carveSplit(eu, { amount: 1, catId: "333", vatRate: 0 }, cats, ids)
+    ).toEqual({ ok: false, error: "category" })
+  })
+
+  it("drops the payment on a line that cannot be unpaid", () => {
+    const result = carveSplit(
+      base(),
+      { amount: 1, catId: "337", vatRate: 0 },
+      cats,
+      ids
+    )
+    if (!result.ok) throw new Error(result.error)
+    expect(result.part.paidOn).toBeUndefined()
+    expect(result.part.cash).toBeUndefined()
+  })
+})
+
+describe("canSplitLine", () => {
+  it("allows ordinary lines and refuses money-only ones", () => {
+    expect(canSplitLine("333", cats)).toBe(true)
+    expect(canSplitLine("300-domestic", cats)).toBe(true)
+    expect(canSplitLine("vat-payment", cats)).toBe(false)
+    expect(canSplitLine("owner-withdrawal", cats)).toBe(false)
+    expect(canSplitLine("loan-repayment", cats)).toBe(false)
+    expect(canSplitLine("333", cats, "goods")).toBe(false)
   })
 })

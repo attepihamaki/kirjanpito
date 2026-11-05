@@ -114,6 +114,33 @@ export const APP_DICT = {
     "Valitut tositteet poistetaan. Voit perua poiston heti sen jälkeen.",
     "The selected vouchers will be deleted. You can undo it right after.",
   ],
+  "entry.splitAction": ["Jaa tosite", "Split voucher"],
+  "entry.splitTitle": ["Jaa tosite", "Split voucher"],
+  "entry.splitHint": [
+    "Siirrä osa summasta toiselle luokalle tai verokannalle. Osat ovat omia tositteitaan, mutta jakavat maksun ja liitteet.",
+    "Move part of the amount to another category or VAT rate. The parts are vouchers of their own, but share the payment and the attachments.",
+  ],
+  "entry.splitAmount": ["Uuden osan summa", "Amount of the new part"],
+  "entry.splitCategory": ["Uuden osan luokka", "Category of the new part"],
+  "entry.splitVatRate": ["Uuden osan ALV %", "VAT % of the new part"],
+  "entry.splitLeft": [
+    "Alkuperäiseen osaan jää {a}. Summat ovat {m}.",
+    "{a} stays on the original. Amounts are {m}.",
+  ],
+  "entry.splitGross": ["verollisia", "including VAT"],
+  "entry.splitNet": ["verottomia", "excluding VAT"],
+  "entry.splitSubmit": ["Jaa", "Split"],
+  "entry.splitDone": ["Tosite jaettu.", "Voucher split."],
+  "entry.splitUndone": ["Jako kumottu.", "Split undone."],
+  "entry.splitAmountRefused": [
+    "Uuden osan summa on oltava nollaa suurempi ja alkuperäistä pienempi.",
+    "The new part’s amount must be above zero and smaller than the original.",
+  ],
+  "entry.splitCategoryRefused": [
+    "Tätä tositetta ei voi jakaa tähän luokkaan.",
+    "This voucher cannot be split into that category.",
+  ],
+  "ledger.splitPill": ["Jaettu {v}", "Split {v}"],
   "confirm.deleteSplitTitle": [
     "Poistetaanko jaetun kuitin osa?",
     "Delete a part of a split receipt?",

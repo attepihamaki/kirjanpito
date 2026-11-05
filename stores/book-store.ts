@@ -175,6 +175,8 @@ export type DialogState =
   | { kind: "vat-return" }
   /** The year-end figures typed in on Varat ja velat (§8.8). */
   | { kind: "year-end-figures" }
+  /** Carve a part off an entry, as another category or VAT rate (§8.4). */
+  | { kind: "split"; entryId: string }
   | { kind: "deduction"; which: "mileage" | "per-diem" | "home-office" }
   /** What carries into `year`, its starting figures and templates (§8.14). */
   | { kind: "new-year"; year: number }
