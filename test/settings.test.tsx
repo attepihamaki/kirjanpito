@@ -83,7 +83,8 @@ describe("settings sub-pages", () => {
       "aria-current",
       "page"
     )
-    expect(screen.getByText("Lisää oma luokka")).toBeVisible()
+    expect(screen.getByRole("button", { name: "Lisää luokka" })).toBeVisible()
+    expect(screen.queryByText("Lisää oma luokka")).toBeNull()
     expect(
       screen.getByRole("button", { name: "Palauta oletusluokat" })
     ).toBeVisible()
@@ -162,12 +163,54 @@ describe("editing and deleting a custom category", () => {
     vi.useFakeTimers({ now: new Date("2026-11-04"), toFake: ["Date"] })
     const user = userEvent.setup()
     setup()
-    await user.click(screen.getByRole("combobox", { name: "Oletus ALV %" }))
+    act(() => useBookStore.getState().openDialog({ kind: "category-add" }))
+    await user.click(
+      (await screen.findAllByRole("combobox", { name: "Oletus ALV %" })).at(-1)!
+    )
     const rates = (await screen.findAllByRole("option")).map((o) =>
       o.textContent?.replace(/\s/g, " ")
     )
     vi.useRealTimers()
     expect(rates).toEqual(["25,5 %", "13,5 %", "10 %", "0 %"])
+  })
+
+  it("adds a category from the dialog the header button opens", async () => {
+    path.current = "/app/settings/categories/"
+    useBookStore.setState({ dialog: { kind: "none" } })
+    const user = userEvent.setup()
+    mount(
+      <ToastProvider>
+        <SettingsShell>
+          <CategorySettings />
+        </SettingsShell>
+        <CategoryDialogs />
+      </ToastProvider>
+    )
+    await user.click(screen.getByRole("button", { name: "Lisää luokka" }))
+    expect(useBookStore.getState().dialog.kind).toBe("category-add")
+
+    await user.type(document.getElementById("cat-name")!, "Ohjelmistot")
+    await user.click(screen.getByRole("button", { name: "Tallenna" }))
+
+    const added = useBookStore
+      .getState()
+      .cats.find((c) => c.name === "Ohjelmistot")
+    expect(added).toMatchObject({ custom: true, enabled: true })
+    expect(useBookStore.getState().dirty).toBe(true)
+    expect(useBookStore.getState().dialog.kind).toBe("none")
+  })
+
+  it("keeps the add dialog open on an empty name", async () => {
+    const user = userEvent.setup()
+    setup()
+    act(() => useBookStore.getState().openDialog({ kind: "category-add" }))
+    await user.click(await screen.findByRole("button", { name: "Tallenna" }))
+
+    expect(useBookStore.getState().dialog.kind).toBe("category-add")
+    expect(document.getElementById("cat-name")).toHaveAttribute(
+      "aria-invalid",
+      "true"
+    )
   })
 
   it("keeps an older rate on the list when editing", async () => {
@@ -210,7 +253,7 @@ describe("editing and deleting a custom category", () => {
     await user.click(
       screen.getByRole("button", { name: "Muokkaa luokkaa Työkalut" })
     )
-    const name = document.getElementById("cat-edit-name") as HTMLInputElement
+    const name = document.getElementById("cat-name") as HTMLInputElement
     await user.clear(name)
     await user.type(name, "Koneet")
     await user.click(screen.getByRole("button", { name: "Tallenna" }))
@@ -226,7 +269,7 @@ describe("editing and deleting a custom category", () => {
     await user.click(
       screen.getByRole("button", { name: "Muokkaa luokkaa Työkalut" })
     )
-    const name = document.getElementById("cat-edit-name") as HTMLInputElement
+    const name = document.getElementById("cat-name") as HTMLInputElement
     await user.clear(name)
     await user.type(name, "ostot ja varastojen muutokset")
     await user.click(screen.getByRole("button", { name: "Tallenna" }))

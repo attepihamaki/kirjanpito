@@ -1,14 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
+import { PencilIcon, Trash2Icon } from "lucide-react"
 
 import {
-  EntryTypeToggle,
   SearchInput,
   TypeFilterSelect,
 } from "@/components/common/filter-controls"
-import { OptionSelect } from "@/components/common/option-select"
 import { DefaultVatSelect } from "@/components/settings/category-dialogs"
 import { Panel } from "@/components/common/panel"
 import { Pill } from "@/components/common/pill"
@@ -16,13 +14,6 @@ import { SortableHeader } from "@/components/common/sortable-header"
 import { TablePagination } from "@/components/common/table-pagination"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -36,15 +27,8 @@ import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { resetCategories } from "@/lib/commands/book-commands"
 import { startDeleteCategory } from "@/lib/commands/category-commands"
-import {
-  GENERAL_RATE,
-  LINE_BY_KEY,
-  LINES,
-  categoryName,
-} from "@/lib/domain/accounts"
-import { categoryNameTaken } from "@/lib/domain/category-names"
-import { uid } from "@/lib/domain/id"
-import type { Category, EntryType, EuPurchase } from "@/lib/domain/types"
+import { categoryName } from "@/lib/domain/accounts"
+import type { Category } from "@/lib/domain/types"
 import {
   categoryAccount,
   compareCategories,
@@ -61,146 +45,9 @@ import {
 export function CategorySettings() {
   return (
     <div className="flex flex-col gap-6">
-      <AddCategoryForm />
       <CategoryTable />
       <ResetCategories />
     </div>
-  )
-}
-
-function AddCategoryForm() {
-  const f = useFormatters()
-  const upsertCategory = useBookStore((s) => s.upsertCategory)
-  const name = useBookStore((s) => s.catFormName)
-  const setName = useBookStore((s) => s.setCatFormName)
-
-  const [side, setSide] = React.useState<EntryType>("expense")
-  const [lineChoice, setLine] = React.useState<string | null>(null)
-  // Null until picked, so the starting rate can follow the EU choice below.
-  const [rateChoice, setRate] = React.useState<number | null>(null)
-  const [eu, setEu] = React.useState<EuPurchase | "">("")
-  const [error, setError] = React.useState<string | null>(null)
-
-  const lineOptions = React.useMemo(
-    () => LINES.filter((l) => l.side === side),
-    [side]
-  )
-
-  /*
-   * Derived, not stored: switching side changes which lines are valid, and
-   * resetting the choice in an effect would render once with a stale line.
-   */
-  const line =
-    lineChoice && lineOptions.some((l) => l.key === lineChoice)
-      ? lineChoice
-      : (lineOptions[0]?.key ?? "")
-
-  const euPurchase = side === "expense" && eu ? eu : undefined
-  const rate = rateChoice ?? (euPurchase ? GENERAL_RATE : 0)
-
-  const submit = () => {
-    if (!name.trim()) {
-      setError(f.t("settings.nameRequired"))
-      return
-    }
-    if (categoryNameTaken(useBookStore.getState().cats, name, line)) {
-      setError(
-        f.t("settings.nameTaken", {
-          a: LINE_BY_KEY.get(line)?.account ?? "",
-        })
-      )
-      return
-    }
-    const category: Category = {
-      id: `c-${uid()}`,
-      line,
-      name: name.trim(),
-      vatRate: rate,
-      ...(side === "income" ? { kind: "domestic" as const } : {}),
-      ...(euPurchase ? { euPurchase } : {}),
-      enabled: true,
-      custom: true,
-    }
-    upsertCategory(category)
-    toast.add({ title: f.t("settings.categoryAdded", { c: category.name }) })
-    setName("")
-    setRate(null)
-    setEu("")
-    setError(null)
-  }
-
-  return (
-    <Panel
-      title={f.t("settings.addCategory")}
-      bodyClassName="p-4"
-      // The submit sits on the footer strip, not in the grid (§8.10).
-      footer={
-        <Button onClick={submit}>
-          <PlusIcon data-icon="inline-start" />
-          {f.t("common.add")}
-        </Button>
-      }
-    >
-      <FieldGroup className="sm:grid sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-        <Field>
-          <FieldLabel>{f.t("common.type")}</FieldLabel>
-          <EntryTypeToggle value={side} onChange={setSide} />
-        </Field>
-
-        <Field>
-          <FieldLabel>{f.t("settings.line")}</FieldLabel>
-          <OptionSelect
-            options={lineOptions.map((l) => ({
-              value: l.key,
-              label: `${l.account} ${f.lineName(l)}`,
-            }))}
-            value={line}
-            onChange={setLine}
-            label={f.t("settings.line")}
-          />
-        </Field>
-
-        <Field data-invalid={error ? true : undefined}>
-          <FieldLabel htmlFor="cat-name">{f.t("common.name")}</FieldLabel>
-          <Input
-            id="cat-name"
-            value={name}
-            placeholder={f.t("settings.namePlaceholder")}
-            aria-invalid={error ? true : undefined}
-            onChange={(e) => {
-              setName(e.target.value)
-              setError(null)
-            }}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-          />
-        </Field>
-
-        <Field>
-          <FieldLabel>{f.t("settings.defaultVat")}</FieldLabel>
-          <DefaultVatSelect value={rate} onChange={setRate} />
-        </Field>
-
-        {side === "expense" ? (
-          <Field>
-            <FieldLabel>{f.t("settings.euPurchase")}</FieldLabel>
-            <OptionSelect
-              options={[
-                { value: "no", label: f.t("settings.euPurchaseNo") },
-                { value: "goods", label: f.t("entry.euPurchaseGoods") },
-                { value: "services", label: f.t("entry.euPurchaseServices") },
-              ]}
-              value={eu || "no"}
-              onChange={(value) =>
-                setEu(value === "no" ? "" : (value as EuPurchase))
-              }
-              label={f.t("settings.euPurchase")}
-            />
-          </Field>
-        ) : null}
-      </FieldGroup>
-
-      <FieldError className="mt-3">{error}</FieldError>
-    </Panel>
   )
 }
 

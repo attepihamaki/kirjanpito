@@ -17,11 +17,10 @@ import { useBookStore } from "@/stores/book-store"
  */
 export function useBeforeUnload() {
   const dirty = useBookStore((s) => s.dirty)
-  const catFormName = useBookStore((s) => s.catFormName)
 
   const behind = useStorageBehind()
 
-  const shouldWarn = dirty || behind || catFormName.trim() !== ""
+  const shouldWarn = dirty || behind
 
   React.useEffect(() => {
     if (!shouldWarn) return

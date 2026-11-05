@@ -2,6 +2,7 @@
 
 import * as React from "react"
 
+import { EntryTypeToggle } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,10 +24,11 @@ import { toast } from "@/components/ui/toast"
 import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { deleteCategory } from "@/lib/commands/category-commands"
-import { LINE_BY_KEY, LINES } from "@/lib/domain/accounts"
+import { GENERAL_RATE, LINE_BY_KEY, LINES } from "@/lib/domain/accounts"
 import { categoryNameTaken } from "@/lib/domain/category-names"
 import { todayIso } from "@/lib/domain/dates"
-import type { Category } from "@/lib/domain/types"
+import { uid } from "@/lib/domain/id"
+import type { Category, EntryType, EuPurchase } from "@/lib/domain/types"
 import { validRates } from "@/lib/domain/vat-rates"
 import { useBookStore } from "@/stores/book-store"
 import {
@@ -71,7 +73,7 @@ export function DefaultVatSelect({
   )
 }
 
-/** The dialogs of a custom category's row on Asetukset, Luokat (§8.10). */
+/** The dialogs of Asetukset, Luokat (§8.10): add, edit and delete. */
 export function CategoryDialogs() {
   const dialog = useBookStore((s) => s.dialog)
   const closeDialog = useBookStore((s) => s.closeDialog)
@@ -80,19 +82,27 @@ export function CategoryDialogs() {
       ? s.cats.find((c) => c.id === dialog.id)
       : undefined
   )
+  if (dialog.kind === "category-add") {
+    return <CategoryFormDialog onClose={closeDialog} />
+  }
   if (!cat) return null
   return dialog.kind === "category-edit" ? (
-    <EditCategoryDialog key={cat.id} cat={cat} onClose={closeDialog} />
+    <CategoryFormDialog key={cat.id} cat={cat} onClose={closeDialog} />
   ) : (
     <DeleteCategoryDialog key={cat.id} cat={cat} onClose={closeDialog} />
   )
 }
 
-function EditCategoryDialog({
+/**
+ * One form for adding and editing a category, so the two read alike (§8.10).
+ * Without `cat` it adds. Editing fixes the side, and the line too once a
+ * voucher uses the category.
+ */
+function CategoryFormDialog({
   cat,
   onClose,
 }: {
-  cat: Category
+  cat?: Category
   onClose: () => void
 }) {
   const f = useFormatters()
@@ -103,19 +113,37 @@ function EditCategoryDialog({
    * moves its vouchers through those checks instead.
    */
   const lineFixed = useBookStore((s) =>
-    s.entries.some((e) => e.catId === cat.id)
+    cat ? s.entries.some((e) => e.catId === cat.id) : false
   )
 
-  const [name, setName] = React.useState(cat.name)
-  const [line, setLine] = React.useState(cat.line)
-  const [rate, setRate] = React.useState(cat.vatRate)
+  const [side, setSide] = React.useState<EntryType>(
+    (cat && categorySide(cat)) || "expense"
+  )
+  const [lineChoice, setLine] = React.useState<string | null>(cat?.line ?? null)
+  const [name, setName] = React.useState(cat?.name ?? "")
+  // Null until picked, so a new category's rate can follow the EU choice below.
+  const [rateChoice, setRate] = React.useState<number | null>(
+    cat ? cat.vatRate : null
+  )
+  const [eu, setEu] = React.useState<EuPurchase | "">("")
   const [error, setError] = React.useState<string | null>(null)
 
-  const side = categorySide(cat)
-  const lineOptions = LINES.filter((l) => l.side === side).map((l) => ({
-    value: l.key,
-    label: `${l.account} ${f.lineName(l)}`,
-  }))
+  const lineOptions = React.useMemo(
+    () => LINES.filter((l) => l.side === side),
+    [side]
+  )
+
+  /*
+   * Derived, not stored: switching side changes which lines are valid, and
+   * resetting the choice in an effect would render once with a stale line.
+   */
+  const line =
+    lineChoice && lineOptions.some((l) => l.key === lineChoice)
+      ? lineChoice
+      : (lineOptions[0]?.key ?? "")
+
+  const euPurchase = !cat && side === "expense" && eu ? eu : undefined
+  const rate = rateChoice ?? (euPurchase ? GENERAL_RATE : 0)
 
   const submit = () => {
     const trimmed = name.trim()
@@ -124,7 +152,7 @@ function EditCategoryDialog({
       return
     }
     const cats = useBookStore.getState().cats
-    if (categoryNameTaken(cats, trimmed, line, cat.id)) {
+    if (categoryNameTaken(cats, trimmed, line, cat?.id)) {
       setError(
         f.t("settings.nameTaken", {
           a: LINE_BY_KEY.get(line)?.account ?? "",
@@ -132,8 +160,22 @@ function EditCategoryDialog({
       )
       return
     }
-    upsertCategory({ ...cat, name: trimmed, line, vatRate: rate })
-    toast.add({ title: f.t("settings.categoryUpdated", { c: trimmed }) })
+    if (cat) {
+      upsertCategory({ ...cat, name: trimmed, line, vatRate: rate })
+      toast.add({ title: f.t("settings.categoryUpdated", { c: trimmed }) })
+    } else {
+      upsertCategory({
+        id: `c-${uid()}`,
+        line,
+        name: trimmed,
+        vatRate: rate,
+        ...(side === "income" ? { kind: "domestic" as const } : {}),
+        ...(euPurchase ? { euPurchase } : {}),
+        enabled: true,
+        custom: true,
+      })
+      toast.add({ title: f.t("settings.categoryAdded", { c: trimmed }) })
+    }
     onClose()
   }
 
@@ -141,17 +183,25 @@ function EditCategoryDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{f.t("settings.editCategoryTitle")}</DialogTitle>
+          <DialogTitle>
+            {f.t(cat ? "settings.editCategoryTitle" : "settings.addCategory")}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-5">
+          {cat ? null : (
+            <Field>
+              <FieldLabel>{f.t("common.type")}</FieldLabel>
+              <EntryTypeToggle value={side} onChange={setSide} />
+            </Field>
+          )}
+
           <Field data-invalid={error ? true : undefined}>
-            <FieldLabel htmlFor="cat-edit-name">
-              {f.t("common.name")}
-            </FieldLabel>
+            <FieldLabel htmlFor="cat-name">{f.t("common.name")}</FieldLabel>
             <Input
-              id="cat-edit-name"
+              id="cat-name"
               value={name}
+              placeholder={f.t("settings.namePlaceholder")}
               aria-invalid={error ? true : undefined}
               onChange={(e) => {
                 setName(e.target.value)
@@ -164,7 +214,10 @@ function EditCategoryDialog({
           <Field>
             <FieldLabel>{f.t("settings.line")}</FieldLabel>
             <OptionSelect
-              options={lineOptions}
+              options={lineOptions.map((l) => ({
+                value: l.key,
+                label: `${l.account} ${f.lineName(l)}`,
+              }))}
               value={line}
               onChange={setLine}
               label={f.t("settings.line")}
@@ -179,6 +232,24 @@ function EditCategoryDialog({
             <FieldLabel>{f.t("settings.defaultVat")}</FieldLabel>
             <DefaultVatSelect value={rate} onChange={setRate} />
           </Field>
+
+          {!cat && side === "expense" ? (
+            <Field>
+              <FieldLabel>{f.t("settings.euPurchase")}</FieldLabel>
+              <OptionSelect
+                options={[
+                  { value: "no", label: f.t("settings.euPurchaseNo") },
+                  { value: "goods", label: f.t("entry.euPurchaseGoods") },
+                  { value: "services", label: f.t("entry.euPurchaseServices") },
+                ]}
+                value={eu || "no"}
+                onChange={(value) =>
+                  setEu(value === "no" ? "" : (value as EuPurchase))
+                }
+                label={f.t("settings.euPurchase")}
+              />
+            </Field>
+          ) : null}
 
           <FieldError>{error}</FieldError>
         </div>

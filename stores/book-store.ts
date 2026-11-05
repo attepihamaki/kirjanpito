@@ -163,6 +163,8 @@ export type DialogState =
   | { kind: "new-year"; year: number }
   /** Add a month's recurring entries (§8.5). `month` is `"2026-10"`. */
   | { kind: "recurring"; month: string }
+  /** Add a custom category (§8.10). */
+  | { kind: "category-add" }
   /** Change a custom category's name, line or default VAT (§8.10). */
   | { kind: "category-edit"; id: string }
   /** Choose where a custom category's vouchers move before it goes (§8.10). */
@@ -295,8 +297,6 @@ export interface BookState {
   bookEpoch: number
   /** Bumped by every §7.4 trigger; the GC hook watches it. */
   gcTick: number
-  /** The settings page's half-filled category name, for the §8.11 guard. */
-  catFormName: string
 }
 
 export interface BookActions {
@@ -415,7 +415,6 @@ export interface BookActions {
   removeCategory(id: string): void
   setCategories(cats: Category[]): void
   resetCategories(): void
-  setCatFormName(name: string): void
 
   setMonth(month: MonthFilter): void
   setLedgerQuery(q: string): void
@@ -496,7 +495,6 @@ function initialState(): BookState {
     undoAttachmentIds: [],
     bookEpoch: 0,
     gcTick: 0,
-    catFormName: "",
   }
 }
 
@@ -640,7 +638,6 @@ const clearedFilters = {
   ledgerPage: 1,
   catQuery: "",
   catPage: 1,
-  catFormName: "",
 }
 
 /** The new entries and the log with what took them there (§8.11). */
@@ -1025,7 +1022,6 @@ export const useBookStore = create<BookStore>()(
           catPage: 1,
         })
       },
-      setCatFormName: (catFormName) => set({ catFormName }),
 
       setMonth: (month) => set({ month, ledgerPage: 1 }),
       setLedgerQuery: (ledgerQuery) => set({ ledgerQuery, ledgerPage: 1 }),

@@ -853,10 +853,10 @@ See §6.4. Wide tables scroll horizontally with a sticky first column. The chart
 Every section is a `Panel` (§11). The page is split into two sub-pages, so the categories table does not bury the handful of book-wide settings:
 
 - **Yleiset** at `/app/settings`: the VAT period, the start month, saving, the voucher numbers (§4), and deleting the bookkeeping.
-- **Luokat** at `/app/settings/categories`: the add form, the categories table, and restoring the defaults.
+- **Luokat** at `/app/settings/categories`: the categories table, with adding in a dialog, and restoring the defaults.
 - **Toistuvat** at `/app/settings/recurring`: the monthly templates (§8.5).
 
-`app/app/settings/layout.tsx` renders `SettingsShell` (`components/settings/settings-shell.tsx`): the page title and a row of tab links shaped like the month chips (§8.4). The current tab is `bg-muted` with `aria-current="page"`, not filled with the primary colour, because it marks a place rather than a filter. The routes are `SETTINGS_ROUTES` in `lib/site.ts`. The sidebar keeps Asetukset lit on any path below it. The new-category name lives in the store (`catFormName`), so it survives switching tabs.
+`app/app/settings/layout.tsx` renders `SettingsShell` (`components/settings/settings-shell.tsx`): the page title and a row of tab links shaped like the month chips (§8.4). The current tab is `bg-muted` with `aria-current="page"`, not filled with the primary colour, because it marks a place rather than a filter. The routes are `SETTINGS_ROUTES` in `lib/site.ts`. The sidebar keeps Asetukset lit on any path below it.
 
 On **Yleiset**:
 
@@ -870,22 +870,20 @@ On **Yleiset**:
 
 On **Luokat**:
 
-- **"Lisää oma luokka" form:**
-  - Type — the same `EntryTypeToggle` the entry dialog uses, so the two controls read alike: Tulo before Kulu, coloured when selected.
-  - Income statement line, filtered by type.
-  - Name (required).
-  - Default VAT %, a select of the rates in force today (`validRates`, §5). It starts at 0, or 25,5 on an EU purchase.
-  - "Osto muusta EU-maasta" (Ei / Kyllä, tavara / Kyllä, palvelu), on the expense side only (§6.9). It is fixed once the category exists.
-  - **"Lisää" sits on the panel's footer strip**, not in the grid. It used to share the fourth cell with the VAT input, which cramped both.
+- **"Lisää luokka"** is a primary button in the page header, the counterpart of "Uusi tosite" on the ledger (§8.4). It opens the same dialog that Edit does (`CategoryFormDialog`), so adding, editing and deleting all look alike. Fields:
+  - Type, adding only: the same `EntryTypeToggle` the entry dialog uses, Tulo before Kulu, coloured when selected. Editing fixes the side.
+  - Name (required), focused first.
+  - Income statement line, filtered by type. Fixed once an entry uses the category (below).
+  - Default VAT %, a select of the rates in force today (`validRates`, §5), plus the rate the category already holds. A new category starts at 0, or 25,5 on an EU purchase.
+  - "Osto muusta EU-maasta" (Ei / Kyllä, tavara / Kyllä, palvelu), adding on the expense side only (§6.9). It is fixed once the category exists.
   - New income categories get `kind: "domestic"`.
-  - One error line (`FieldError`) under the grid, and **the field it is about carries `aria-invalid`** — the error is stored as `{ field, message }`. A bad VAT rate used to light up the name input, because the message was a bare string with nowhere to point. Typing in the offending field clears it.
-  - The typed values survive re-renders. Leaving the page with a typed but unadded name asks first.
+  - One error line (`FieldError`) under the fields, and **the name input carries `aria-invalid`**. Typing clears it. Cancelling discards what was typed.
 - **Categories table:**
   - Search and a type filter in the panel's heading row; the category count sits at the left of the pagination strip, as the entry count does on the ledger (§8.4).
-  - Sortable columns: Käytössä (checkbox), Tyyppi (badge), Tili, Nimi, and Oletus ALV % (the same select as the add form, which commits on change and shows a toast). They cycle in three states as on the ledger (§8.4); with none chosen the rows are in Tili order.
+  - Sortable columns: Käytössä (checkbox), Tyyppi (badge), Tili, Nimi, and Oletus ALV % (the same select as the dialog, which commits on change and shows a toast). They cycle in three states as on the ledger (§8.4); with none chosen the rows are in Tili order.
   - Edit and delete are offered on custom categories only. A default keeps its name and line from the chart of accounts (§7.6), and unticking "Käytössä" takes it out of the dropdowns.
-  - **Edit** opens a dialog with the name, the line and the default VAT, the same select as the add form plus the rate the category already holds. The side and the EU status stay fixed. The line is fixed too once an entry uses the category, since entries report through it and the locks of §8.11 would not see the change. A recurring template does not fix it. Renaming changes no figures.
-  - **A name is unique on its account and side**, in the add form and the edit dialog alike (`categoryNameTaken`), a default's English and former names included. The CSV finds a category by these, so two with one name would merge when the file is next opened.
+  - **Edit** opens a dialog with the name, the line and the default VAT. The side and the EU status stay fixed. The line is fixed too once an entry uses the category, since entries report through it and the locks of §8.11 would not see the change. A recurring template does not fix it. Renaming changes no figures.
+  - **A name is unique on its account and side**, in the dialog, adding or editing (`categoryNameTaken`), a default's English and former names included. The CSV finds a category by these, so two with one name would merge when the file is next opened.
   - **Delete** (`lib/commands/category-commands.ts`) removes an unused category at once. One with entries or templates opens a dialog that asks where they move, among the enabled categories the bulk bar would offer (`categoriesToMoveTo`, §8.4). Each entry keeps its VAT rate and voucher number. A locked entry on the category refuses the delete (§8.11), and a change to a filed return asks first. Both kinds can be undone from the toast for 10 seconds, and only what still sits on the target goes back.
   - Pagination with a default of 25 rows, laid out as on the ledger (§8.4).
 - **"Oletusluokat"**, under the table: a description of what restoring does, and "Palauta oletusluokat" (`outline`) on the footer. It restores the defaults and keeps custom categories that an entry or a recurring template uses. It is reversible and routine, so it sits beside the table it changes; deleting the bookkeeping is not, so it is on the other page, in the title row's menu.
@@ -908,7 +906,6 @@ Cases:
 | Save an entry                          | it adds to a period marked as filed | "Muutetaanko ilmoitettua kautta?" / "Tallenna silti"                     |
 | Delete the whole bookkeeping           | always                             | "Poistetaanko kirjanpito?" / "Poista kirjanpito"                         |
 | Close the entry dialog (Peruuta / Esc) | form differs from its snapshot     | "Hylätäänkö muutokset?" / "Hylkää muutokset", cancel = "Jatka muokkausta" |
-| Navigate away from Settings            | the new-category name is filled    | same as above, with the category message                                  |
 | Browser tab close (`beforeunload`)     | any of the above dirty states      | the browser's native prompt                                               |
 
 **Dirty bookkeeping** means the entries or the book's settings changed since the last read or write of a file. It is set by any add, edit or delete, by a category change, and by the VAT period, a filed mark, an archived year or the overview layout (§7.6), and cleared by opening a file, by saving to the linked one, and by downloading a ZIP **only when no file is linked** (§7.5). A book with no entries asks too: deleting the last one still left the file behind.

@@ -1958,6 +1958,7 @@ export const APP_DICT = {
     "The bookkeeping is saved to the opened file a few seconds after each change. You can undo a delete from its notification for 10 seconds, and the restored voucher is saved the same way. Edits to a voucher can’t be undone, and the file keeps no earlier versions. If the browser would have to ask anything, autosave waits until you save once yourself.",
   ],
   "settings.addCategory": ["Lisää oma luokka", "Add a category"],
+  "settings.newCategory": ["Lisää luokka", "Add category"],
   "settings.euPurchase": [
     "Osto muusta EU-maasta",
     "Purchase from another EU country",
