@@ -43,14 +43,21 @@ import { retentionDates, yearsToArchive } from "@/lib/domain/retention"
 import { bookLimits } from "@/lib/domain/book-limits"
 import { EMPTY_YEAR_END, form5Balance } from "@/lib/domain/form5-balance"
 import { balancesAt } from "@/lib/domain/open-items"
+import { RULES, ruleGaps } from "@/lib/domain/rule-tables"
 import { form5Reminder } from "@/lib/domain/tax-return-deadline"
 import {
-  VAT_THRESHOLD,
   vatPeriodOverLimit,
   vatThreshold,
+  vatThresholdIn,
 } from "@/lib/domain/vat-threshold"
 import { useBookStore, type CheckFilter } from "@/stores/book-store"
 import { hasReceipt } from "@/stores/selectors"
+
+const RULE_GAP_TEXT = {
+  travel: "overview.rulesTravel",
+  homeOffice: "overview.rulesHomeOffice",
+  form5Due: "overview.rulesForm5Due",
+} as const
 
 /** The newest entries of the year. A row opens the entry dialog. */
 export function RecentWidget() {
@@ -326,7 +333,7 @@ export function ChecksWidget() {
   if (threshold) {
     const figures = {
       a: f.money(threshold.turnover),
-      l: f.money(VAT_THRESHOLD),
+      l: f.money(vatThresholdIn(threshold.year)),
       y: threshold.year,
     }
     items.push(
@@ -437,6 +444,19 @@ export function ChecksWidget() {
       sub: form5.due
         ? f.t("overview.form5DueOn", { d: f.date(form5.due) })
         : f.t("overview.form5DueUnknown"),
+    })
+  }
+
+  const gaps = ruleGaps(data.today)
+  if (gaps.length) {
+    items.push({
+      key: "rulesStale",
+      tone: "info",
+      title: f.t("overview.rulesStale", { y: data.today.slice(0, 4) }),
+      sub: f.t("overview.rulesStaleSub", {
+        what: gaps.map((g) => f.t(RULE_GAP_TEXT[g])).join(", "),
+        d: f.date(RULES.checkedOn),
+      }),
     })
   }
 

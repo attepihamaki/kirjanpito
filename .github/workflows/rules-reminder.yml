@@ -1,0 +1,31 @@
+# Opens an issue every December asking for next year's figures in
+# data/rules.json. Vero publishes its travel decision in late November, and
+# the tables are empty for the new year on 1 January otherwise (§6.11).
+name: Rule tables reminder
+
+on:
+  schedule:
+    - cron: "0 7 15 12 *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Open the issue unless one is already open
+        run: |
+          year=$(( $(date -u +%Y) + 1 ))
+          title="Update the rule tables for ${year}"
+          open=$(gh issue list --state open --search "\"${title}\" in:title" --json number --jq length)
+          if [ "$open" = "0" ]; then
+            node scripts/rules-issue.mjs > body.md
+            gh issue create --title "$title" --body-file body.md
+          fi

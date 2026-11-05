@@ -3,8 +3,9 @@ import { calcEntry } from "@/lib/domain/calc"
 import type { ChangeRecord } from "@/lib/domain/change-log"
 import { todayIso } from "@/lib/domain/dates"
 import { paidDate } from "@/lib/domain/open-items"
-import type { Attachment, Cents, CategoryMap, Entry } from "@/lib/domain/types"
+import { limitOn } from "@/lib/domain/rule-tables"
 import { defineRules, type Rule } from "@/lib/domain/rules/engine"
+import type { Attachment, CategoryMap, Entry } from "@/lib/domain/types"
 import { rateMismatch } from "@/lib/domain/vat-rates"
 
 /**
@@ -143,12 +144,6 @@ export function vatNotDeductible(
   )
 }
 
-/**
- * What a natural person may take into private use in a year before it carries
- * VAT, excluding VAT (AVL 21 §, Vero's guidance on own use of 17.3.2020).
- */
-export const PRIVATE_USE_FREE: Cents = 85_000
-
 /** How many times the type's median an amount has to be to stand out. */
 const LARGE_FACTOR = 10
 /** Below this the median says too little about what is usual. */
@@ -285,8 +280,11 @@ export const ENTRY_RULES = defineRules<EntryCheckContext, string>([
     const goods = ctx.entries.filter(
       (e) => ctx.cats.get(e.catId)?.line === "314"
     )
+    if (goods.length === 0) return []
+    // What a natural person may take into private use in a year before it carries VAT.
+    const free = limitOn("privateUseFree", goods[0].date)
     const total = goods.reduce((sum, e) => sum + calcEntry(e).net, 0)
-    if (total <= PRIVATE_USE_FREE) return []
+    if (total <= free) return []
     return idsWhere(
       ctx,
       (e) => ctx.cats.get(e.catId)?.line === "314" && e.vatRate === 0

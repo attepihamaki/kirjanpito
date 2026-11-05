@@ -1,6 +1,7 @@
 import { LINE_BY_KEY } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
 import { yearOf } from "@/lib/domain/dates"
+import { limitOn, startOf } from "@/lib/domain/rule-tables"
 import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
 
 /**
@@ -15,10 +16,6 @@ import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
  * add up to. Line 337 is read as this pool's, so a year with none simply
  * carries the whole balance forward.
  */
-
-export const DEPRECIATION_PERCENT = 25
-/** At or below this, the whole balance may be depreciated at once. */
-export const SMALL_BALANCE: Cents = 120_000
 
 /** The undepreciated balance when the register starts. */
 export interface AssetOpening {
@@ -62,10 +59,11 @@ export function assetEntries(
     .sort((a, b) => a.date.localeCompare(b.date))
 }
 
-/** The maximum for a balance: a quarter of it, or all of a small one. */
-export function maximumDepreciation(base: Cents): Cents {
-  if (base <= SMALL_BALANCE) return base
-  return Math.trunc((base * DEPRECIATION_PERCENT) / 100)
+/** The maximum for a balance in a year: a quarter of it, or all of a small one. */
+export function maximumDepreciation(base: Cents, year: number): Cents {
+  const on = startOf(year)
+  if (base <= limitOn("depreciationSmallBalance", on)) return base
+  return Math.trunc((base * limitOn("depreciationPercent", on)) / 100)
 }
 
 /**
@@ -100,7 +98,7 @@ export function assetSchedule(
       .reduce((sum, e) => sum + calcEntry(e).net, 0)
     const raw = openingNow + additions - disposals
     const base = Math.max(0, raw)
-    const maximum = maximumDepreciation(base)
+    const maximum = maximumDepreciation(base, year)
     // Depreciation above the maximum is not deductible, so it leaves the pool alone.
     const closing = Math.max(0, base - Math.min(taken, maximum))
     out.push({

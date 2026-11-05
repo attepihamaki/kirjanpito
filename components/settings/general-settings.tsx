@@ -24,6 +24,7 @@ import {
   removeBookEncryption,
   setBookPassword,
 } from "@/lib/commands/encryption-commands"
+import { RULES } from "@/lib/domain/rule-tables"
 import type { Lang } from "@/lib/domain/types"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 import { useBookStore } from "@/stores/book-store"
@@ -36,15 +37,28 @@ import { LANGS, LANG_NAMES } from "@/stores/lang-store"
  */
 export function GeneralSettings() {
   return (
-    <SettingGrid>
-      <BusinessSetting />
-      <VatPeriodSetting />
-      <BookStartSetting />
-      <ExportLanguageSetting />
-      <AutosaveSetting />
-      <EncryptionSetting />
-      <VoucherNumbers />
-    </SettingGrid>
+    <>
+      <SettingGrid>
+        <BusinessSetting />
+        <VatPeriodSetting />
+        <BookStartSetting />
+        <ExportLanguageSetting />
+        <AutosaveSetting />
+        <EncryptionSetting />
+        <VoucherNumbers />
+      </SettingGrid>
+      <RulesChecked />
+    </>
+  )
+}
+
+/** When the rate and limit tables were last compared with their sources (§6.11). */
+function RulesChecked() {
+  const f = useFormatters()
+  return (
+    <p className="mt-4 text-sm text-muted-foreground">
+      {f.t("settings.rulesChecked", { d: f.date(RULES.checkedOn) })}
+    </p>
   )
 }
 

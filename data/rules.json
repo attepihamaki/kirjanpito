@@ -1,0 +1,133 @@
+{
+  "checkedOn": "2026-11-03",
+  "vatRateChanges": [
+    {
+      "from": "2024-09-01",
+      "before": 24,
+      "after": 25.5,
+      "source": "vero.fi, VAT rates: the general rate"
+    },
+    {
+      "from": "2026-01-01",
+      "before": 14,
+      "after": 13.5,
+      "source": "vero.fi, VAT rates: the reduced rate for food, restaurants, transport and accommodation"
+    }
+  ],
+  "form5Due": [
+    {
+      "taxYear": 2025,
+      "due": "2026-04-01",
+      "source": "vero.fi, Instructions for filing, Form 5"
+    }
+  ],
+  "travel": [
+    {
+      "year": 2024,
+      "km": 57,
+      "fullPerDiem": 5100,
+      "partialPerDiem": 2400,
+      "source": "https://www.vero.fi/henkiloasiakkaat/auto/kilometrikorvaus_ja_paivaraha/"
+    },
+    {
+      "year": 2025,
+      "km": 59,
+      "fullPerDiem": 5300,
+      "partialPerDiem": 2400,
+      "source": "https://www.vero.fi/henkiloasiakkaat/auto/kilometrikorvaus_ja_paivaraha/"
+    },
+    {
+      "year": 2026,
+      "km": 55,
+      "fullPerDiem": 5400,
+      "partialPerDiem": 2500,
+      "source": "https://www.vero.fi/henkiloasiakkaat/auto/kilometrikorvaus_ja_paivaraha/"
+    },
+    {
+      "year": 2027,
+      "km": 58,
+      "fullPerDiem": 5500,
+      "partialPerDiem": 2500,
+      "source": "https://vero.fi/syventavat-vero-ohjeet/paatokset/47405/verohallinnon-paatos-verovapaista-matkakustannusten-korvauksista-vuonna-2027/"
+    }
+  ],
+  "homeOffice": [
+    {
+      "year": 2025,
+      "full": 98000,
+      "part": 49000,
+      "occasional": 24500,
+      "source": "vero.fi, Vero's confirmed amounts for the home office deduction"
+    },
+    {
+      "year": 2026,
+      "full": 98000,
+      "part": 49000,
+      "occasional": 24500,
+      "source": "vero.fi, Vero's confirmed amounts for the home office deduction"
+    }
+  ],
+  "limits": {
+    "vatThreshold": [
+      {
+        "from": "2025-01-01",
+        "value": 2000000,
+        "source": "AVL 3 §; vero.fi, VAT exemption for small businesses"
+      }
+    ],
+    "vatThresholdNear": [
+      {
+        "from": null,
+        "value": 1500000,
+        "source": "app: where the overview starts to warn"
+      }
+    ],
+    "vatPeriodLimitQuarter": [
+      {
+        "from": null,
+        "value": 10000000,
+        "source": "vero.fi, Tax period"
+      }
+    ],
+    "vatPeriodLimitYear": [
+      {
+        "from": null,
+        "value": 3000000,
+        "source": "vero.fi, Tax period"
+      }
+    ],
+    "privateUseFree": [
+      {
+        "from": null,
+        "value": 85000,
+        "source": "AVL 21 §; Vero's guidance on own use of 17.3.2020"
+      }
+    ],
+    "singleEntryAssets": [
+      { "from": null, "value": 10000000, "source": "KPL 1:1a" }
+    ],
+    "singleEntryTurnover": [
+      { "from": null, "value": 20000000, "source": "KPL 1:1a" }
+    ],
+    "microAssets": [
+      { "from": null, "value": 45000000, "source": "KPL 1:4b" }
+    ],
+    "microTurnover": [
+      { "from": null, "value": 90000000, "source": "KPL 1:4b" }
+    ],
+    "depreciationPercent": [
+      {
+        "from": null,
+        "value": 25,
+        "source": "EVL 30 §; vero.fi, Poistot ja pienhankinnat"
+      }
+    ],
+    "depreciationSmallBalance": [
+      {
+        "from": null,
+        "value": 120000,
+        "source": "EVL 30 §; vero.fi, Poistot ja pienhankinnat"
+      }
+    ]
+  }
+}

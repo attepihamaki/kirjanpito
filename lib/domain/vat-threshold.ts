@@ -1,18 +1,23 @@
 import { calcEntry } from "@/lib/domain/calc"
 import { yearOf } from "@/lib/domain/dates"
+import { limitOn, startOf } from "@/lib/domain/rule-tables"
 import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 
 /**
- * The turnover limit of VAT liability, per calendar year and excluding VAT
- * (AVL 3 §, vero.fi, "VAT exemption for small businesses"). A seller is liable
- * from the day the current year's turnover exceeds it, and also while the
- * previous year's turnover did.
+ * The turnover limit of VAT liability in a calendar year, excluding VAT (AVL 3 §,
+ * vero.fi, "VAT exemption for small businesses"). A seller is liable from the
+ * day the current year's turnover exceeds it, and also while the previous
+ * year's turnover did.
  */
-export const VAT_THRESHOLD: Cents = 2_000_000
+export function vatThresholdIn(year: number): Cents {
+  return limitOn("vatThreshold", startOf(year))
+}
 
 /** From here on the overview warns, so that registering is not a surprise. */
-export const VAT_THRESHOLD_NEAR: Cents = 1_500_000
+function vatThresholdNearIn(year: number): Cents {
+  return limitOn("vatThresholdNear", startOf(year))
+}
 
 export interface VatThreshold {
   year: number
@@ -33,12 +38,13 @@ function counts(e: Entry, cats: CategoryMap): boolean {
   return cats.get(e.catId)?.kind !== "euServices"
 }
 
-/** The date `sales`, in date order, first add up to more than the limit. */
-function dateExceeded(sales: readonly Entry[]): string | null {
+/** The date `sales`, in date order, first add up to more than `year`'s limit. */
+function dateExceeded(sales: readonly Entry[], year: number): string | null {
+  const limit = vatThresholdIn(year)
   let sum = 0
   for (const e of sales) {
     sum += calcEntry(e).net
-    if (sum > VAT_THRESHOLD) return e.date
+    if (sum > limit) return e.date
   }
   return null
 }
@@ -72,24 +78,30 @@ export function vatThreshold(
     recent.filter((e) => yearOf(e.date) === y && counts(e, cats))
   const current = ofYear(year)
   const turnover = current.reduce((sum, e) => sum + calcEntry(e).net, 0)
-  const exceededOn = dateExceeded(ofYear(year - 1)) ?? dateExceeded(current)
+  const exceededOn =
+    dateExceeded(ofYear(year - 1), year - 1) ?? dateExceeded(current, year)
   return {
     year,
     turnover,
     exceededOn,
     level: exceededOn
       ? "over"
-      : turnover >= VAT_THRESHOLD_NEAR
+      : turnover >= vatThresholdNearIn(year)
         ? "near"
         : "below",
   }
 }
 
 /** The most a year's turnover may be for quarterly and yearly filing (vero.fi, "Tax period"). */
-export const VAT_PERIOD_LIMIT = {
-  quarter: 10_000_000,
-  year: 3_000_000,
-} as const satisfies Partial<Record<VatPeriodKind, Cents>>
+export function vatPeriodLimit(
+  period: Exclude<VatPeriodKind, "month">,
+  today: string
+): Cents {
+  return limitOn(
+    period === "quarter" ? "vatPeriodLimitQuarter" : "vatPeriodLimitYear",
+    today
+  )
+}
 
 export interface VatPeriodOverLimit {
   /** The closed year the turnover is from. */
@@ -120,6 +132,6 @@ export function vatPeriodOverLimit(
         counts(e, cats)
     )
     .reduce((sum, e) => sum + calcEntry(e).net, 0)
-  const limit = VAT_PERIOD_LIMIT[period]
+  const limit = vatPeriodLimit(period, today)
   return turnover > limit ? { year, turnover, limit } : null
 }

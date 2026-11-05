@@ -1,17 +1,13 @@
 import { yearOf } from "@/lib/domain/dates"
+import { RULES } from "@/lib/domain/rule-tables"
 import type { Entry } from "@/lib/domain/types"
 
 /**
- * When Form 5 is due, by tax year, added by hand from Verohallinto's yearly
- * announcement (vero.fi, "Instructions for filing"). A year not listed has no
- * date here rather than a guessed one.
+ * When Form 5 is due, by tax year, from Verohallinto's yearly announcement
+ * (`data/rules.json`). A year not listed has no date rather than a guessed one.
  */
-const FORM5_DUE: Readonly<Record<number, string>> = {
-  2025: "2026-04-01",
-}
-
 export function form5Due(taxYear: number): string | null {
-  return FORM5_DUE[taxYear] ?? null
+  return RULES.form5Due.find((r) => r.taxYear === taxYear)?.due ?? null
 }
 
 export interface Form5Reminder {

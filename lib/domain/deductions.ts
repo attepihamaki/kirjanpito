@@ -1,3 +1,4 @@
+import { RULES } from "@/lib/domain/rule-tables"
 import type { Cents } from "@/lib/domain/types"
 
 /**
@@ -20,12 +21,12 @@ export interface TravelRates {
 }
 
 /** Vero's yearly decisions on tax-exempt allowances for business travel. */
-const TRAVEL: Readonly<Record<number, TravelRates>> = {
-  2024: { km: 57, fullPerDiem: 5100, partialPerDiem: 2400 },
-  2025: { km: 59, fullPerDiem: 5300, partialPerDiem: 2400 },
-  2026: { km: 55, fullPerDiem: 5400, partialPerDiem: 2500 },
-  2027: { km: 58, fullPerDiem: 5500, partialPerDiem: 2500 },
-}
+const TRAVEL: ReadonlyMap<number, TravelRates> = new Map(
+  RULES.travel.map(({ year, km, fullPerDiem, partialPerDiem }) => [
+    year,
+    { km, fullPerDiem, partialPerDiem },
+  ])
+)
 
 export type HomeOfficeTier = "full" | "part" | "occasional"
 
@@ -36,21 +37,23 @@ export const HOME_OFFICE_TIERS: readonly HomeOfficeTier[] = [
 ]
 
 /** The home office deduction, from Vero's confirmed amounts for each year. */
-const HOME_OFFICE: Readonly<Record<number, Record<HomeOfficeTier, Cents>>> = {
-  2025: { full: 98_000, part: 49_000, occasional: 24_500 },
-  2026: { full: 98_000, part: 49_000, occasional: 24_500 },
-}
+const HOME_OFFICE: ReadonlyMap<number, Record<HomeOfficeTier, Cents>> = new Map(
+  RULES.homeOffice.map(({ year, full, part, occasional }) => [
+    year,
+    { full, part, occasional },
+  ])
+)
 
 /** Null for a year whose decision the app does not have. */
 export function travelRates(year: number): TravelRates | null {
-  return TRAVEL[year] ?? null
+  return TRAVEL.get(year) ?? null
 }
 
 /** Null for a year whose decision the app does not have. */
 export function homeOfficeAmounts(
   year: number
 ): Readonly<Record<HomeOfficeTier, Cents>> | null {
-  return HOME_OFFICE[year] ?? null
+  return HOME_OFFICE.get(year) ?? null
 }
 
 /** What the allowance leaves after the costs already in the books. */

@@ -69,8 +69,8 @@ describe("asset schedule", () => {
   })
 
   it("allows all of a balance of 1 200 € or less", () => {
-    expect(maximumDepreciation(120_000)).toBe(120_000)
-    expect(maximumDepreciation(120_001)).toBe(30_000)
+    expect(maximumDepreciation(120_000, 2026)).toBe(120_000)
+    expect(maximumDepreciation(120_001, 2026)).toBe(30_000)
   })
 
   it("keeps depreciation above the maximum out of the pool", () => {

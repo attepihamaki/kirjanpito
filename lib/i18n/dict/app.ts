@@ -585,6 +585,24 @@ export const APP_DICT = {
     "Määräpäivä on keväällä. Tarkista se OmaVerosta.",
     "It is due in the spring. Check the date in OmaVero.",
   ],
+  "overview.rulesStale": [
+    "Vuoden {y} sääntötaulukot ovat vajaat",
+    "The rule tables for {y} are incomplete",
+  ],
+  "overview.rulesStaleSub": [
+    "Puuttuu: {what}. Taulukot tarkistettiin {d}. Laskelma ei arvaa puuttuvia lukuja.",
+    "Missing: {what}. The tables were checked on {d}. The app does not guess missing figures.",
+  ],
+  "overview.rulesTravel": ["matkakorvaukset", "travel allowances"],
+  "overview.rulesHomeOffice": ["kotitoimistovähennys", "home office deduction"],
+  "overview.rulesForm5Due": [
+    "lomakkeen 5 määräpäivä",
+    "Form 5 due date",
+  ],
+  "settings.rulesChecked": [
+    "Verosäännöt ja -rajat tarkistettu {d}.",
+    "Tax rules and limits checked on {d}.",
+  ],
   "overview.yearClosed": [
     "Tilikausi {y} on päättynyt",
     "Financial year {y} has ended",

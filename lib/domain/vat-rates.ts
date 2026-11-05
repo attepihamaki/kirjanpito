@@ -1,4 +1,5 @@
 import { RATES } from "@/lib/domain/accounts"
+import { RULES } from "@/lib/domain/rule-tables"
 
 /**
  * When Finland's VAT rates changed (§5), so an entry's rate can be checked
@@ -17,12 +18,7 @@ export interface RateChange {
   after: number
 }
 
-export const RATE_CHANGES: readonly RateChange[] = [
-  // The general rate.
-  { from: "2024-09-01", before: 24, after: 25.5 },
-  // The reduced rate for food, restaurants, transport and accommodation.
-  { from: "2026-01-01", before: 14, after: 13.5 },
-]
+export const RATE_CHANGES: readonly RateChange[] = RULES.vatRateChanges
 
 /**
  * The rate in force on `date` that corresponds to `rate`: 25,5 % becomes

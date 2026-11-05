@@ -1,24 +1,33 @@
 import { calcEntry } from "@/lib/domain/calc"
 import { yearOf } from "@/lib/domain/dates"
+import { limitOn } from "@/lib/domain/rule-tables"
 import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
 
 /**
  * The limits of KPL 1:1a that decide what kind of books a sole trader keeps.
  * Each counts as met only when it holds in both the closed year and the one
- * before it. Staff is the third limit of each, and the book does not record it.
+ * before it. Staff, more than 3, is the third limit, and the book does not
+ * record it.
  */
-export const SINGLE_ENTRY_LIMITS = {
-  assets: 10_000_000,
-  turnover: 20_000_000,
-  staff: 3,
-} as const
+function singleEntryLimits(year: number) {
+  const on = `${year}-12-31`
+  return {
+    assets: limitOn("singleEntryAssets", on),
+    turnover: limitOn("singleEntryTurnover", on),
+  }
+}
 
-/** The micro limits of KPL 1:4b, above which financial statements are required. */
-export const MICRO_LIMITS = {
-  assets: 45_000_000,
-  turnover: 90_000_000,
-  staff: 10,
-} as const
+/**
+ * The micro limits of KPL 1:4b, above which financial statements are required.
+ * Staff, 10 or more, is the third limit.
+ */
+function microLimits(year: number) {
+  const on = `${year}-12-31`
+  return {
+    assets: limitOn("microAssets", on),
+    turnover: limitOn("microTurnover", on),
+  }
+}
 
 /** "over": two limits are exceeded in both years. "staff": staff decides it. */
 export type LimitStatus = "over" | "staff" | null
@@ -75,7 +84,7 @@ export function bookLimits(
   }))
   return {
     year,
-    singleEntry: status(SINGLE_ENTRY_LIMITS, years),
-    statements: status(MICRO_LIMITS, years),
+    singleEntry: status(singleEntryLimits(year), years),
+    statements: status(microLimits(year), years),
   }
 }
