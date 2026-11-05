@@ -55,6 +55,16 @@ describe("a locked entry in the dialog", () => {
     expect(await screen.findByText(/Kirjanpitolaki/)).toBeVisible()
   })
 
+  it("still opens the extra options", () => {
+    mount({ "2026-03": "2026-04-12" })
+
+    fireEvent.click(screen.getByRole("button", { name: "Lisää asetuksia" }))
+
+    expect(
+      screen.getByRole("checkbox", { name: "Toista joka kuukausi" })
+    ).toBeVisible()
+  })
+
   it("shows no lock on an open entry", () => {
     mount({})
 

@@ -1,5 +1,11 @@
 // @vitest-environment jsdom
-import { render, screen, waitFor, within } from "@testing-library/react"
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -102,6 +108,7 @@ describe("Jaa tosite in the entry dialog", () => {
       dialog: { kind: "entry", mode: "edit", entryId: "a" },
     })
     ui(<EntryDialog registerDropTarget={() => {}} />)
+    fireEvent.click(screen.getByRole("button", { name: "Lisää asetuksia" }))
     expect(
       screen.getByText(/Maksupäivä, avoin-tila ja käteismaksu/)
     ).toBeVisible()

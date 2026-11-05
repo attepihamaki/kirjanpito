@@ -299,7 +299,9 @@ function EntryDialogForm({
    * reads a complaint with nothing attached to it.
    */
   const [error, setError] = React.useState<FieldErrorState>(null)
-  const [moreOpen, setMoreOpen] = React.useState(false)
+  const [moreOpen, setMoreOpen] = React.useState(
+    mode === "edit" && (initial.paid !== "" || initial.cash || initial.repeat)
+  )
   const [busy, setBusy] = React.useState(false)
   // The receipt open in the viewer on top of this dialog, if any (§8.6).
   const [viewing, setViewing] = React.useState<number | null>(null)
@@ -1106,29 +1108,32 @@ function EntryDialogForm({
                   </ToggleGroup>
                 </Field>
               )}
+            </fieldset>
 
-              {/* A new voucher keeps these behind a toggle; the defaults
-                  fit most. Editing shows them, since they hold values. */}
-              {mode === "edit" ? null : (
-                <button
-                  type="button"
-                  aria-expanded={moreOpen}
-                  aria-controls="entry-more"
-                  onClick={() => setMoreOpen((open) => !open)}
-                  className="flex w-fit items-center gap-1 rounded-md text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-                >
-                  <ChevronDownIcon
-                    className={
-                      moreOpen
-                        ? "size-4 transition-transform"
-                        : "size-4 -rotate-90 transition-transform"
-                    }
-                  />
-                  {f.t("entry.moreOptions")}
-                </button>
-              )}
+            {/* The payment and repeat options sit behind a toggle. An
+                edited voucher opens it when any of them is not at its
+                default, so a set value is never hidden. The toggle sits
+                outside the locked fieldset so a locked voucher still opens
+                it; the options inside stay disabled. */}
+            <button
+              type="button"
+              aria-expanded={moreOpen}
+              aria-controls="entry-more"
+              onClick={() => setMoreOpen((open) => !open)}
+              className="flex w-fit items-center gap-1 rounded-md text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <ChevronDownIcon
+                className={
+                  moreOpen
+                    ? "size-4 transition-transform"
+                    : "size-4 -rotate-90 transition-transform"
+                }
+              />
+              {f.t("entry.moreOptions")}
+            </button>
 
-              {mode === "edit" || moreOpen ? (
+            <fieldset disabled={!!lock} className="contents">
+              {moreOpen ? (
                 <div id="entry-more" className="flex flex-col gap-5">
                   {unpayable ? (
                     <Field>
