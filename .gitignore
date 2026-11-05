@@ -52,3 +52,7 @@ next-env.d.ts
 # Verohallinto's published specifications are the reference the tax logic
 # is built against, so they travel with the repository.
 !/docs/specs/
+
+# Playwright output
+/test-results/
+/playwright-report/

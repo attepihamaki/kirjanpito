@@ -59,7 +59,7 @@ export function ReceiptPreview({
         : f.t("receipt.purchaseBadge")
 
   return (
-    <ReceiptPaper>
+    <ReceiptPaper data-visual="receipt-preview">
       <ReceiptHead
         label={income ? f.t("receipt.income") : f.t("receipt.expense")}
         date={date ? f.date(date) : "—"}

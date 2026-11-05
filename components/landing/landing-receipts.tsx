@@ -28,6 +28,7 @@ export function LandingReceipts() {
      */
     <div
       aria-hidden="true"
+      data-visual="landing-receipts"
       className="relative hidden min-h-[26rem] rounded-xl bg-primary/10 p-6 sm:block"
     >
       {/* Expense receipt: hidden on small screens, per §8.3. */}

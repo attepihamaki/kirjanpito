@@ -1,0 +1,59 @@
+# Screenshot tests for the receipt motif and the printed sheets.
+#
+# Baselines are Linux renders, committed in e2e/__screenshots__. A pull request
+# or push compares against them. To create or refresh them, run this workflow
+# by hand with "update" ticked, download the `visual-baselines` artifact and
+# commit its contents to e2e/__screenshots__.
+name: Visual regression
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      update:
+        description: Regenerate the baselines instead of comparing
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  visual:
+    # A fixed image, so a new ubuntu-latest does not move the fonts.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+
+      - name: Compare
+        if: ${{ !inputs.update }}
+        run: npm run test:visual
+
+      - name: Regenerate
+        if: ${{ inputs.update }}
+        run: npm run test:visual:update
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        if: ${{ inputs.update }}
+        with:
+          name: visual-baselines
+          path: e2e/__screenshots__
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        if: ${{ failure() }}
+        with:
+          name: visual-diff
+          path: |
+            test-results
+            playwright-report
