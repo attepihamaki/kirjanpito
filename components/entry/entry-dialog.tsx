@@ -539,6 +539,9 @@ function EntryDialogForm({
   const ownerTransfer = !!(
     selectedCat && LINE_BY_KEY.get(selectedCat.line)?.owner
   )
+  const capitalAsset = !!(
+    selectedCat && LINE_BY_KEY.get(selectedCat.line)?.capital
+  )
   /*
    * A payment or refund names the return it settles (§6.6). Unchosen, it goes
    * by the date, and the periods offered are those of this year and the last.
@@ -954,6 +957,10 @@ function EntryDialogForm({
 
               {ownerTransfer ? (
                 <FieldDescription>{f.t("entry.ownerHint")}</FieldDescription>
+              ) : null}
+
+              {capitalAsset ? (
+                <FieldDescription>{f.t("entry.assetHint")}</FieldDescription>
               ) : null}
 
               {euSale ? (

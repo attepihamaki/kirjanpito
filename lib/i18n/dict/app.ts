@@ -1012,6 +1012,10 @@ export const APP_DICT = {
     "Oma raha yrityksen ja oman tilisi välillä ei ole tuloa eikä kulua. Se ei vaikuta tulokseen eikä arvonlisäveroon. Liitä tiliote liitteeksi.",
     "Your own money moving between the business and your personal account is neither income nor an expense. It doesn’t affect the result or VAT. Attach the bank statement.",
   ],
+  "entry.assetHint": [
+    "Ei kulua tuloslaskelmassa. Hankinta ja myynti muodostavat Lomake 5:n kohdan 704 (Koneet ja kalusto) poistopohjan, ja kulu syntyy poistoina. Katso Tuloslaskelma, Poistot.",
+    "Not an expense on the income statement. Purchases and sales make up the depreciation base behind Form 5 field 704 (machinery and equipment), and the cost reaches the result as depreciation. See Income statement, Depreciation.",
+  ],
   "entry.settles": ["Verokausi", "Tax period"],
   "entry.settlesHint": [
     "Arvonlisäveroilmoitus, jonka maksu tai palautus tämä on.",
