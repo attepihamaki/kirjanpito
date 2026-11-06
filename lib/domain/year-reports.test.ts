@@ -13,6 +13,9 @@ import {
   packageFileName,
   reportFileName,
 } from "@/lib/domain/retention-package"
+import { indexCategories } from "@/lib/domain/types"
+import { vatReport } from "@/lib/domain/vat"
+import { filingFigures } from "@/lib/domain/vat-filing"
 import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { assignVouchers } from "@/lib/domain/voucher"
 import {
@@ -143,6 +146,7 @@ describe("VAT return reports", () => {
     vatPeriod: "year",
     bookStart: null,
     vatFiled: {},
+    vatFiledFigures: {},
   }
 
   /** The table of vouchers: rows after the field table, flattened. */
@@ -219,6 +223,38 @@ describe("VAT return reports", () => {
       vatFiled: { "2026": "2027-01-20" },
     })
     expect(doc.header.join("\n")).toContain("Merkitty ilmoitetuksi 20.1.2027")
+  })
+
+  it("lists what changed since the return was filed", () => {
+    const [unchanged] = vatReturnReports(fi, vatInput)
+    const sales = unchanged.blocks
+      .flatMap((b) => (b.kind === "table" ? b.rows : []))
+      .flatMap((r) => (r.kind === "data" ? [r.cells] : []))
+      .find((c) => c[0] === "301")
+    expect(sales).toBeTruthy()
+
+    const filed = { vatFiled: { "2026": "2027-01-20" } }
+    const [changed] = vatReturnReports(fi, {
+      ...vatInput,
+      ...filed,
+      vatFiledFigures: { "2026": { "301": 1 } },
+    })
+    const text = cells(changed).map(plain).join("\n")
+    expect(text).toContain("Muutokset ilmoittamisen jälkeen")
+
+    const [same] = vatReturnReports(fi, {
+      ...vatInput,
+      ...filed,
+      vatFiledFigures: {
+        "2026": filingFigures(
+          vatReport(
+            entries.filter((e) => e.date.startsWith("2026-")),
+            indexCategories(defaultCategories())
+          )
+        ),
+      },
+    })
+    expect(cells(same).join("\n")).not.toContain("Muutokset")
   })
 
   it("renders to a PDF", async () => {

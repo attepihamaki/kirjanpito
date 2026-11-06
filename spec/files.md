@@ -209,6 +209,8 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
   "traderType": "professional",
   "bookStart": "2026-10",
   "vatFiled": { "2026-08": "2026-10-12" },
+  "vatFiledFigures": { "2026-08": { "301": 12000, "308": 4500 } },
+  "taxPayment": { "iban": "", "reference": "" },
   "yearsArchived": { "2025": "2026-01-20" },
   "form5Filed": { "2025": "2026-03-20" },
   "archives": { "2024": { "file": "kirjanpito-2024.zip", "on": "2025-03-01", "entries": 42 } },

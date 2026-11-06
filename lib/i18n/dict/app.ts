@@ -1359,6 +1359,38 @@ export const APP_DICT = {
     "{a} vanhalla luokalla Myynti – EU. Vaihda luokka.",
     "{a} on the old category Sales – EU. Change the category.",
   ],
+  "vat.settlementOverdue": [
+    "Eräpäivä {d} on mennyt. Maksa vero mahdollisimman pian.",
+    "The due date {d} has passed. Pay the tax as soon as you can.",
+  ],
+  "vat.filingDate": ["Ilmoituspäivä", "Filing date"],
+  "vat.filingDateHint": [
+    "Päivä, jona annoit ilmoituksen OmaVerossa. Oletuksena tämä päivä.",
+    "The day you gave the return in OmaVero. Today by default.",
+  ],
+  "vat.changedTitle": [
+    "Luvut ovat muuttuneet ilmoittamisen jälkeen",
+    "The figures have changed since the return was filed",
+  ],
+  "vat.changedNow": ["Nyt", "Now"],
+  "vat.matchesFiled": [
+    "Luvut vastaavat ilmoitettuja lukuja.",
+    "The figures match what was filed.",
+  ],
+  "vat.stepDone": ["valmis", "done"],
+  "vat.stepAttention": ["vaatii huomiota", "needs attention"],
+  "vat.payTitle": ["Maksutiedot", "Payment details"],
+  "vat.payIban": ["Verotilin IBAN", "Tax account IBAN"],
+  "vat.payReference": ["Viitenumero", "Reference number"],
+  "vat.payEdit": ["Muokkaa", "Edit"],
+  "vat.payHint": [
+    "Hae tiedot OmaVerosta. Ne tallentuvat kirjanpidon asetuksiin, eikä sovellus lähetä niitä mihinkään.",
+    "Copy them from OmaVero. They are saved in the book's settings, and the app sends them nowhere.",
+  ],
+  "vat.payNone": ["Ei tallennettu.", "Not saved."],
+  "vat.payCopy": ["Kopioi", "Copy"],
+  "vat.downloadPdf": ["Lataa PDF", "Download PDF"],
+  "vat.pdfFailed": ["PDF:n teko epäonnistui.", "Making the PDF failed."],
   "vat.settlementHint": [
     "Kirjanpito ei näe pankkia. Kirjaa maksu tai palautus, kun raha on liikkunut, ja liitä tiliote. Tosite saa tositenumeron, mutta se ei ole tulo eikä kulu eikä muuta ilmoitusta.",
     "The bookkeeping cannot see your bank. Book the payment or refund once the money has moved, and attach the bank statement. It gets a voucher number, but it is neither income nor an expense and does not change the return.",
@@ -1465,7 +1497,7 @@ export const APP_DICT = {
     "The bookkeeping cannot see MyTax. Mark the period as filed once you have sent the return. The mark locks the period’s vouchers, because the Accounting Act (2:7) does not allow changing them after a return.",
   ],
   "vat.returnButton": ["Ilmoita OmaVerossa", "Report in OmaVero"],
-  "vat.returnOpenFiled": ["Ilmoitettu", "Filed"],
+  "vat.returnViewFiled": ["Näytä ilmoitus", "View return"],
   "vat.returnDialogTitle": ["Arvonlisäveroilmoitus: {p}", "VAT return: {p}"],
   "vat.returnDialogIntro": [
     "Käy läpi tarkistukset, kopioi summat OmaVeroon ja merkitse kausi ilmoitetuksi.",
@@ -2714,6 +2746,18 @@ export const APP_DICT = {
   "ledger.packVatNote": [
     "Jokaisen kentän alla ovat tositteet, joista sen summa koostuu. Kenttä 308 on veron saldo, joten palautukseen oikeuttavan veron tositteiden summa on miinusmerkkinen.",
     "Under each field are the vouchers its amount is made of. Field 308 is the balance of the tax, so the vouchers of a refund add up to a negative amount.",
+  ],
+  "ledger.packVatChanged": [
+    "Muutokset ilmoittamisen jälkeen",
+    "Changes since filing",
+  ],
+  "ledger.packVatChangedIntro": [
+    "Kirjanpidon luvut poikkeavat luvuista, joilla ilmoitus merkittiin annetuksi. Tämä sivu näyttää kentät, joissa ero on.",
+    "The book's figures differ from those the return was marked filed with. This page lists the fields that differ.",
+  ],
+  "ledger.packVatMatches": [
+    "Luvut vastaavat lukuja, joilla ilmoitus merkittiin annetuksi.",
+    "The figures match those the return was marked filed with.",
   ],
   "ledger.packVatAmount": ["Summaan", "To the field"],
   "ledger.packReadmeEncrypted": [

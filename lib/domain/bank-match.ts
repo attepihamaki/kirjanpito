@@ -6,6 +6,8 @@ import {
   type CategoryRule,
 } from "@/lib/domain/category-rules"
 import { canBeUnpaid, paidDate } from "@/lib/domain/open-items"
+import { periodFromKey } from "@/lib/domain/vat-deadline"
+import type { UnsettledDue } from "@/lib/domain/vat-settlement"
 import type { CategoryMap, Cents, Entry, EntryType } from "@/lib/domain/types"
 
 /**
@@ -37,6 +39,8 @@ export interface NewEntryDraft {
   /** From the book's history, or null when the counterparty is new. */
   catId: string | null
   vatRate: number | null
+  /** The VAT period this payment or refund settles (§6.6), when it equals one. */
+  settles?: string
 }
 
 /* -------------------------------------------------------------------------
@@ -104,6 +108,8 @@ export interface BankContext {
   cats: CategoryMap
   /** The user's own category rules (§8.17). Tried before the book's history. */
   rules?: readonly CategoryRule[]
+  /** Closed periods with a payment or refund still to book (§6.6). */
+  dues?: readonly UnsettledDue[]
 }
 
 /** An entry that already records this payment: same side, amount and payment day. */
@@ -149,9 +155,44 @@ export function suggestFromHistory(
   return { catId, vatRate: newest.vatRate }
 }
 
-function draftFor(row: BankRow, ctx: BankContext): NewEntryDraft {
+/**
+ * The VAT period a row pays or refunds: money out equal to a period's tax, or
+ * money in equal to its refund, arriving after that period closed. Each
+ * period is used once, oldest first.
+ */
+function settlementFor(
+  row: BankRow,
+  ctx: BankContext,
+  claimed: Set<string>
+): UnsettledDue | undefined {
+  const due = (ctx.dues ?? []).find(
+    (d) =>
+      !claimed.has(d.key) &&
+      d.due === -row.amount &&
+      (periodFromKey(d.key)?.to ?? "9999") < row.date
+  )
+  if (due) claimed.add(due.key)
+  return due
+}
+
+function draftFor(
+  row: BankRow,
+  ctx: BankContext,
+  claimedDues: Set<string>
+): NewEntryDraft {
   const type = signedType(row)
   const parts = [row.counterparty, row.message].filter(Boolean)
+  const settlement = settlementFor(row, ctx, claimedDues)
+  if (settlement) {
+    return {
+      type,
+      description: parts.join(" – "),
+      amount: Math.abs(row.amount),
+      catId: settlement.due > 0 ? "vat-payment" : "vat-refund",
+      vatRate: 0,
+      settles: settlement.key,
+    }
+  }
   const hit = findCategoryRule(ctx.rules ?? [], parts.join(" "), ctx.cats, type)
   const suggestion = hit
     ? { catId: hit.catId, vatRate: hit.vatRate }
@@ -174,6 +215,7 @@ export function proposeForRows(
   ctx: BankContext
 ): BankProposal[] {
   const claimed = new Set<string>()
+  const claimedDues = new Set<string>()
   return rows.map((row): BankProposal => {
     const booked = alreadyBooked(row, ctx)
     if (booked) return { kind: "booked", entryId: booked.id }
@@ -189,7 +231,7 @@ export function proposeForRows(
     )
 
     if (candidates.length === 0)
-      return { kind: "new", draft: draftFor(row, ctx) }
+      return { kind: "new", draft: draftFor(row, ctx, claimedDues) }
 
     const agreeing = candidates.filter((e) => textAgrees(row, e))
     if (agreeing.length === 1) {

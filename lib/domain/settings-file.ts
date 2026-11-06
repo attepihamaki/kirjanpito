@@ -1,3 +1,4 @@
+import { type TaxPayment } from "@/lib/domain/vat-filing"
 import {
   LINE_BY_KEY,
   RETIRED_CATEGORY_ID,
@@ -89,6 +90,10 @@ export interface BookSettings {
   bookStart: string | null
   /** Period key (`"2026-09"`, `"2026-Q3"`, `"2026"`) → ISO date it was marked. */
   vatFiled: Record<string, string>
+  /** Period key → the return's figures on the day it was marked (§6.5). */
+  vatFiledFigures: Record<string, Record<string, number>>
+  /** Where VAT is paid: the tax account and its reference (§8.7). */
+  taxPayment: TaxPayment
   /** Year (`"2025"`) → ISO date its material was marked as stored away. */
   yearsArchived: Record<string, string>
   /** Year (`"2025"`) → ISO date its Form 5 was marked as filed (§8.8). */
@@ -141,6 +146,8 @@ export type ParsedSettings = Partial<BookSettings> & {
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/
 const YEAR = /^[0-9]{4}$/
+/** A VAT return field: "301", or "311/312" for the unsplit EU sales. */
+const FIELD_CODE = /^\d{3}(\/\d{3})?$/
 const PERIOD_KEY = /^\d{4}(-(0[1-9]|1[0-2])|-Q[1-4])?$/
 const SALES_KINDS: readonly SalesKind[] = [
   "domestic",
@@ -372,6 +379,33 @@ export function parseSettings(text: string): ParsedSettings {
     }
     out.vatFiled = filed
   }
+  if (isRecord(raw.vatFiledFigures)) {
+    const figures: Record<string, Record<string, number>> = {}
+    for (const [key, fields] of Object.entries(raw.vatFiledFigures)) {
+      if (!PERIOD_KEY.test(key) || !isRecord(fields)) continue
+      const kept: Record<string, number> = {}
+      for (const [code, cents] of Object.entries(fields)) {
+        if (
+          FIELD_CODE.test(code) &&
+          typeof cents === "number" &&
+          Number.isInteger(cents) &&
+          cents !== 0
+        ) {
+          kept[code] = cents
+        }
+      }
+      figures[key] = kept
+    }
+    out.vatFiledFigures = figures
+  }
+  if (isRecord(raw.taxPayment)) {
+    const text = (v: unknown) =>
+      typeof v === "string" ? v.trim().slice(0, 64) : ""
+    out.taxPayment = {
+      iban: text(raw.taxPayment.iban),
+      reference: text(raw.taxPayment.reference),
+    }
+  }
   if (isRecord(raw.yearsArchived)) {
     const archived: Record<string, string> = {}
     for (const [key, date] of Object.entries(raw.yearsArchived)) {
@@ -554,6 +588,10 @@ export function serializeSettings(s: BookSettings): string {
     vatFiled: Object.fromEntries(
       Object.entries(s.vatFiled).sort(([a], [b]) => a.localeCompare(b))
     ),
+    vatFiledFigures: Object.fromEntries(
+      Object.entries(s.vatFiledFigures).sort(([a], [b]) => a.localeCompare(b))
+    ),
+    taxPayment: s.taxPayment,
     yearsArchived: Object.fromEntries(
       Object.entries(s.yearsArchived).sort(([a], [b]) => a.localeCompare(b))
     ),

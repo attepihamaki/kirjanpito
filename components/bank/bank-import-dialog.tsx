@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { bookBankRows } from "@/lib/commands/bank-commands"
+import { storeReport } from "@/lib/commands/memo-commands"
 import { LINE_BY_KEY, categoryLabel } from "@/lib/domain/accounts"
 import {
   mappingComplete,
@@ -35,7 +36,11 @@ import {
   type BankRow,
 } from "@/lib/domain/bank-csv"
 import { proposeForRows, type BankProposal } from "@/lib/domain/bank-match"
+import { todayIso } from "@/lib/domain/dates"
 import { uid } from "@/lib/domain/id"
+import { periodFromKey } from "@/lib/domain/vat-deadline"
+import { unsettledDues } from "@/lib/domain/vat-settlement"
+import { vatReturnReport } from "@/lib/domain/year-reports"
 import { rateOnDate } from "@/lib/domain/vat-rates"
 import { indexCategories, type Category, type Entry } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
@@ -239,6 +244,12 @@ function Review({
       entries,
       cats: catMap,
       rules: categoryRules,
+      dues: unsettledDues(
+        entries,
+        catMap,
+        useBookStore.getState().vatPeriod,
+        todayIso()
+      ),
     })
   )
   const [plans, setPlans] = React.useState<Plan[]>(() =>
@@ -285,6 +296,8 @@ function Review({
           draft && draft.catId === plan.catId && draft.vatRate != null
             ? draft.vatRate
             : rateOnDate(cat.vatRate, row.date)
+        const settles =
+          draft && draft.catId === plan.catId ? draft.settles : undefined
         added.push({
           id: `e-${uid()}`,
           date: row.date,
@@ -294,11 +307,47 @@ function Review({
           amount: Math.abs(row.amount),
           vatRate,
           amountMode: "gross",
+          ...(settles ? { settles } : {}),
         })
       }
     })
     setBusy(true)
+    /*
+     * A row booked as the payment or refund of a VAT return carries that
+     * return as its receipt, as the return dialog's button does (§6.6).
+     */
+    const held: string[] = []
+    const state = useBookStore.getState()
+    for (const [i, entry] of added.entries()) {
+      const period = entry.settles ? periodFromKey(entry.settles) : null
+      if (!period) continue
+      const att = await storeReport(
+        ctx,
+        vatReturnReport(
+          f,
+          {
+            entries: state.entries,
+            cats: state.cats,
+            businessName: state.businessName ?? "",
+            businessId: state.businessId ?? "",
+            vatFiled: state.vatFiled,
+            vatFiledFigures: state.vatFiledFigures,
+          },
+          period
+        )
+      )
+      if (att) {
+        added[i] = { ...entry, atts: [att] }
+        if (att.id) held.push(att.id)
+      }
+    }
     const done = await bookBankRows(ctx, { paid, added })
+    if (held.length) {
+      const store = useBookStore.getState()
+      store.setDraftAttachmentIds(
+        store.draftAttachmentIds.filter((d) => !held.includes(d))
+      )
+    }
     setBusy(false)
     if (done) closeDialog()
   }

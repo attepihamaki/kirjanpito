@@ -466,6 +466,101 @@ describe("VatReturnDialog", () => {
     expect(useBookStore.getState().vatFiled["2026-10"]).toBeUndefined()
   })
 
+  it("opens a filed period on the payment still to book", () => {
+    useBookStore.setState({ vatFiled: { "2026-10": "2026-11-12" } })
+    openDialog()
+    expect(screen.getByText("Ilmoitettu 12.11.2026")).toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", { name: "Kirjaa maksu tai palautus" })
+    ).toBeInTheDocument()
+    /* The checks stay one click away. */
+    expect(screen.getByRole("button", { name: /Tarkistukset/ })).toBeVisible()
+  })
+
+  it("opens an unfiled period on the checks, without the chip", () => {
+    openDialog()
+    expect(screen.queryByText(/^Ilmoitettu /)).toBeNull()
+    expect(
+      screen.queryByRole("heading", { name: "Kirjaa maksu tai palautus" })
+    ).toBeNull()
+  })
+
+  it("shows the due date of the payment, and says when it has passed", () => {
+    useBookStore.setState({ vatFiled: { "2026-10": "2026-11-12" } })
+    const { unmount } = openDialog()
+    expect(screen.getByText("Eräpäivä 14.12.2026")).toBeInTheDocument()
+    unmount()
+
+    vi.setSystemTime(new Date(2027, 0, 5, 9, 0))
+    openDialog()
+    expect(
+      screen.getByText(/Eräpäivä 14.12.2026 on mennyt/)
+    ).toBeInTheDocument()
+  })
+
+  it("marks the period on the date chosen and keeps the figures it had", () => {
+    openDialog()
+    fireEvent.click(screen.getByRole("button", { name: /Merkintä/ }))
+    fireEvent.change(screen.getByLabelText("Ilmoituspäivä"), {
+      target: { value: "2026-11-12" },
+    })
+    fireEvent.click(
+      screen.getByRole("button", { name: "Merkitse ilmoitetuksi" })
+    )
+    const state = useBookStore.getState()
+    expect(state.vatFiled["2026-10"]).toBe("2026-11-12")
+    expect(
+      Object.keys(state.vatFiledFigures["2026-10"]).length
+    ).toBeGreaterThan(0)
+
+    fireEvent.click(screen.getByRole("button", { name: "Poista merkintä" }))
+    expect(useBookStore.getState().vatFiledFigures["2026-10"]).toBeUndefined()
+  })
+
+  it("refuses a filing date before the period ended or after today", () => {
+    openDialog()
+    fireEvent.click(screen.getByRole("button", { name: /Merkintä/ }))
+    const mark = screen.getByRole("button", { name: "Merkitse ilmoitetuksi" })
+    for (const value of ["2026-10-15", "2026-11-21"]) {
+      fireEvent.change(screen.getByLabelText("Ilmoituspäivä"), {
+        target: { value },
+      })
+      expect(mark).toBeDisabled()
+    }
+  })
+
+  it("shows what changed since the return was filed", () => {
+    useBookStore.setState({
+      vatFiled: { "2026-10": "2026-11-12" },
+      vatFiledFigures: { "2026-10": { "301": 1 } },
+    })
+    openDialog()
+    fireEvent.click(screen.getByRole("button", { name: /Merkintä/ }))
+    expect(
+      screen.getByText("Luvut ovat muuttuneet ilmoittamisen jälkeen")
+    ).toBeInTheDocument()
+  })
+
+  it("keeps the payment details in the book and offers them to copy", () => {
+    openDialog()
+    fireEvent.click(screen.getByRole("button", { name: /Maksu/ }))
+    fireEvent.click(screen.getByRole("button", { name: "Muokkaa" }))
+    fireEvent.change(screen.getByLabelText("Verotilin IBAN"), {
+      target: { value: "FI21 1234 5600 0007 85" },
+    })
+    fireEvent.change(screen.getByLabelText("Viitenumero"), {
+      target: { value: "1234567" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Tallenna" }))
+    expect(useBookStore.getState().taxPayment).toEqual({
+      iban: "FI21 1234 5600 0007 85",
+      reference: "1234567",
+    })
+    expect(
+      screen.getByRole("button", { name: /Kopioi: Viitenumero/ })
+    ).toBeInTheDocument()
+  })
+
   it("disables the filed button on a period still to come, and says why", () => {
     useBookStore.setState({ year: 2999, vatIndex: 1 })
     openDialog()
@@ -515,7 +610,7 @@ describe("the way into the VAT return dialog", () => {
     useBookStore.setState({ vatFiled: { "2026-10": "2026-11-12" } })
     mount(<VatView />)
     expect(
-      screen.getByRole("button", { name: "Ilmoitettu" })
+      screen.getByRole("button", { name: "Kirjaa maksu" })
     ).toBeInTheDocument()
     expect(screen.getByText(/Merkitty ilmoitetuksi/)).toBeInTheDocument()
   })

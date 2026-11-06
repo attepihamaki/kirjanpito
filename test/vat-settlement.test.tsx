@@ -72,7 +72,7 @@ function mount(view: React.ReactNode = <VatView />) {
 /** Opens the return dialog on its payment step, where the money is booked. */
 function openPayStep() {
   act(() => useBookStore.setState({ dialog: { kind: "vat-return" } }))
-  fireEvent.click(screen.getByRole("button", { name: /Maksu$/ }))
+  fireEvent.click(screen.getByRole("button", { name: /Maksu/ }))
 }
 
 beforeEach(() => {
@@ -149,7 +149,7 @@ describe("VAT settlement", () => {
     mount()
     act(() => useBookStore.setState({ dialog: { kind: "vat-return" } }))
 
-    expect(screen.queryByRole("button", { name: /Maksu$/ })).toBeNull()
+    expect(screen.queryByRole("button", { name: /Maksu/ })).toBeNull()
   })
 
   it("counts a month's payment towards its quarter", () => {

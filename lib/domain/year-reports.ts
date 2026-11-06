@@ -50,6 +50,7 @@ import {
   type VatPeriod,
   type VatPeriodKind,
 } from "@/lib/domain/vat-deadline"
+import { figureChanges } from "@/lib/domain/vat-filing"
 import { vatReturnSections } from "@/lib/domain/vat-return"
 import type { Formatters } from "@/lib/i18n/create-formatters"
 import { periodLabel } from "@/lib/i18n/period-label"
@@ -681,6 +682,8 @@ export interface VatReturnBook {
   businessName: string
   businessId: string
   vatFiled: Readonly<Record<string, string>>
+  /** Period key → the figures the return had when it was marked filed. */
+  vatFiledFigures: Readonly<Record<string, Readonly<Record<string, number>>>>
 }
 
 /** What the year's VAT return reports read besides the year's reports. */
@@ -749,6 +752,42 @@ export function vatReturnReport(
   if (filed) lines.push(f.t("vat.filedOn", { d: f.date(filed) }))
 
   const blocks: ReportBlock[] = formTable(f, sections)
+  const filedFigures = input.vatFiledFigures[period.key]
+  if (filed && filedFigures) {
+    const changes = figureChanges(
+      filedFigures,
+      vatReport(inPeriodEntries, cats)
+    )
+    if (changes.length) {
+      blocks.push(
+        { kind: "text", text: f.t("ledger.packVatChanged"), style: "heading" },
+        {
+          kind: "text",
+          text: f.t("ledger.packVatChangedIntro"),
+          style: "note",
+        },
+        {
+          kind: "table",
+          columns: [
+            { head: "", align: "left", weight: 7 },
+            { head: "", align: "left", weight: 36 },
+            { head: f.t("vat.filed"), align: "right", weight: 14 },
+            { head: f.t("vat.changedNow"), align: "right", weight: 14 },
+          ],
+          rows: changes.map((c) => ({
+            kind: "data" as const,
+            cells: [c.code, c.label[f.lang], f.money(c.filed), f.money(c.now)],
+          })),
+        }
+      )
+    } else {
+      blocks.push({
+        kind: "text",
+        text: f.t("ledger.packVatMatches"),
+        style: "note",
+      })
+    }
+  }
   if (rows.length) {
     blocks.push(
       { kind: "text", text: f.t("ledger.packVatVouchers"), style: "heading" },

@@ -1,4 +1,5 @@
 import { toast } from "@/components/ui/toast"
+import { saveBlob } from "@/lib/browser/download"
 import {
   isReceiptStorageSupported,
   putReceipt,
@@ -71,6 +72,21 @@ export function storeReport(
     const { renderReportPdf } = await import("@/lib/browser/report-pdf")
     return renderReportPdf(doc)
   })
+}
+
+/** Download a report as a PDF, with a toast when it cannot be made. */
+export async function downloadReport(ctx: Ctx, doc: ReportDoc): Promise<void> {
+  try {
+    const { renderReportPdf } = await import("@/lib/browser/report-pdf")
+    const bytes = await renderReportPdf(doc)
+    saveBlob(
+      new Blob([bytes as BlobPart], { type: "application/pdf" }),
+      `${receiptStem(doc.title)}.pdf`
+    )
+  } catch (error) {
+    console.warn("Report could not be made", error)
+    toast.add({ title: ctx.t("vat.pdfFailed") })
+  }
 }
 
 /**

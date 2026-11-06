@@ -39,6 +39,10 @@ function settings(): BookSettings {
     traderType: "business",
     bookStart: "2025-10",
     vatFiled: { "2026-Q2": "2026-08-10", "2026-Q1": "2026-05-11" },
+    vatFiledFigures: {
+      "2026-Q1": { "301": 12_000, "308": -4_500, "311/312": 800 },
+    },
+    taxPayment: { iban: "FI21 1234 5600 0007 85", reference: "1234567" },
     yearsArchived: { "2025": "2026-01-20" },
     form5Filed: { "2025": "2026-03-20" },
     archives: {
@@ -121,6 +125,23 @@ describe("settings.json", () => {
       theme: "dark",
       vatFiled: { "2026-09": "2026-11-10" },
       yearsArchived: { "2025": "2026-01-20" },
+    })
+  })
+
+  it("keeps only whole-cent amounts under real field codes for the filed figures", () => {
+    const parsed = parseSettings(
+      JSON.stringify({
+        vatFiledFigures: {
+          "2026-09": { "301": 100, "308": -50, "9": 5, "303": 1.5, "302": 0 },
+          "2026-13": { "301": 1 },
+          x: { "301": 1 },
+        },
+        taxPayment: { iban: "  FI21  ", reference: 7 },
+      })
+    )
+    expect(parsed).toEqual({
+      vatFiledFigures: { "2026-09": { "301": 100, "308": -50 } },
+      taxPayment: { iban: "FI21", reference: "" },
     })
   })
 

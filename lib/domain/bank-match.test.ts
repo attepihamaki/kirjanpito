@@ -188,3 +188,57 @@ describe("proposeForRows, new entries", () => {
     expect(suggestFromHistory("", "expense", ctx(history))).toBeNull()
   })
 })
+
+describe("proposeForRows, VAT payments and refunds", () => {
+  const dues = [
+    { key: "2026-09", due: 36_218 },
+    { key: "2026-10", due: -5_000 },
+  ]
+  const withDues = { entries: [], cats, dues }
+
+  it("proposes the tax payment of a closed period for money out of that amount", () => {
+    const [p] = proposeForRows(
+      [
+        row({
+          date: "2026-11-12",
+          amount: -36_218,
+          counterparty: "Verohallinto",
+        }),
+      ],
+      withDues
+    )
+    expect(p).toMatchObject({
+      kind: "new",
+      draft: { catId: "vat-payment", vatRate: 0, settles: "2026-09" },
+    })
+  })
+
+  it("proposes the refund of a period for money in of that amount", () => {
+    const [p] = proposeForRows(
+      [row({ date: "2026-12-20", amount: 5_000 })],
+      withDues
+    )
+    expect(p).toMatchObject({
+      kind: "new",
+      draft: { catId: "vat-refund", settles: "2026-10" },
+    })
+  })
+
+  it("leaves a row alone that arrived before the period closed", () => {
+    const [p] = proposeForRows(
+      [row({ date: "2026-09-20", amount: -36_218 })],
+      withDues
+    )
+    expect(p.kind === "new" && p.draft.settles).toBeFalsy()
+  })
+
+  it("uses each period once", () => {
+    const rows = [
+      row({ date: "2026-11-12", amount: -36_218 }),
+      row({ date: "2026-11-13", amount: -36_218 }),
+    ]
+    const [a, b] = proposeForRows(rows, withDues)
+    expect(a).toMatchObject({ draft: { settles: "2026-09" } })
+    expect(b.kind === "new" && b.draft.settles).toBeFalsy()
+  })
+})

@@ -1,9 +1,14 @@
 import { LINE_BY_KEY } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
+import { yearOf } from "@/lib/domain/dates"
+import { filterPeriod } from "@/lib/domain/period"
 import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
+import { vatReport } from "@/lib/domain/vat"
 import {
+  asPeriod,
   periodContaining,
   periodFromKey,
+  vatPeriods,
   type VatPeriod,
   type VatPeriodKind,
 } from "@/lib/domain/vat-deadline"
@@ -91,4 +96,37 @@ export function settlementSummary(
       ? null
       : rows.reduce((sum, r) => sum + r.amount, 0) - due + 0
   return { rows, wider, difference }
+}
+
+/** A closed period whose tax or refund has no entry yet. */
+export interface UnsettledDue {
+  key: string
+  /** Signed like a report's `due`: positive to pay, negative to receive. */
+  due: Cents
+}
+
+/**
+ * The closed periods with tax to pay or a refund to receive and no settlement
+ * entry (§6.6), oldest first. A bank statement row that equals one of these
+ * is most likely that payment (§8.16).
+ */
+export function unsettledDues(
+  entries: readonly Entry[],
+  cats: CategoryMap,
+  kind: VatPeriodKind,
+  today: string
+): UnsettledDue[] {
+  if (entries.length === 0) return []
+  const years = entries.map((e) => yearOf(e.date))
+  const out: UnsettledDue[] = []
+  for (let y = Math.min(...years); y <= Math.max(...years); y++) {
+    for (const p of vatPeriods(kind, y)) {
+      if (p.to >= today) continue
+      const { due } = vatReport(filterPeriod(entries, asPeriod(p)), cats)
+      if (due === 0) continue
+      if (settlementSummary(p, entries, cats, kind, due).rows.length) continue
+      out.push({ key: p.key, due })
+    }
+  }
+  return out
 }

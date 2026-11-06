@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import {
   AlertCircleIcon,
   CheckIcon,
+  DownloadIcon,
   InfoIcon,
   type LucideIcon,
 } from "lucide-react"
@@ -15,6 +16,7 @@ import { TaxForm } from "@/components/common/tax-form"
 import { useFormatters } from "@/components/lang-provider"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   Dialog,
   DialogContent,
@@ -25,13 +27,18 @@ import {
 } from "@/components/ui/dialog"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
+  useSettlementPending,
   useSettlementVisible,
   VatSettlementControl,
 } from "@/components/vat/vat-settlement-control"
+import { TaxPaymentDetails } from "@/components/vat/tax-payment-details"
 import { VatAnomalyAlert } from "@/components/vat/vat-view"
 import { useVatDrill } from "@/hooks/use-figure-drill"
+import { useCommandCtx } from "@/hooks/use-commands"
 import { useToday } from "@/hooks/use-today"
 import { useVatPeriod } from "@/hooks/use-vat-period"
+import { useVatReturnReport } from "@/hooks/use-vat-return-report"
+import { downloadReport } from "@/lib/commands/memo-commands"
 import { indexCategories } from "@/lib/domain/types"
 import type { RuleSeverity } from "@/lib/domain/rules/engine"
 import {
@@ -40,6 +47,7 @@ import {
   type VatCheckFinding,
 } from "@/lib/domain/vat-checks"
 import { filedKeys, filedOn, periodFromKey } from "@/lib/domain/vat-deadline"
+import { figureChanges } from "@/lib/domain/vat-filing"
 import { vatReturnSections } from "@/lib/domain/vat-return"
 import { periodLabel } from "@/lib/i18n/period-label"
 import { APP_ROUTES } from "@/lib/site"
@@ -75,7 +83,9 @@ function VatReturnForm() {
   const { label, report, current, currentStatus } = useVatPeriod()
   const settlementVisible = useSettlementVisible()
   const { fieldDrill } = useVatDrill()
-  const [step, setStep] = React.useState<Step>("checks")
+  const ctx = useCommandCtx()
+  const makeReport = useVatReturnReport()
+  const pending = useSettlementPending()
 
   const entries = useBookStore((s) => s.entries)
   const cats = useBookStore((s) => s.cats)
@@ -83,6 +93,7 @@ function VatReturnForm() {
   const vatPeriod = useBookStore((s) => s.vatPeriod)
   const bookStart = useBookStore((s) => s.bookStart)
   const vatFiled = useBookStore((s) => s.vatFiled)
+  const vatFiledFigures = useBookStore((s) => s.vatFiledFigures)
   const changeLog = useBookStore((s) => s.changeLog)
 
   const items = React.useMemo(
@@ -116,10 +127,48 @@ function VatReturnForm() {
   const canMark = canMarkFiled(items)
   const setVatFiled = useBookStore((s) => s.setVatFiled)
   const filed = filedOn(current, vatFiled)
+  const [filingDate, setFilingDate] = React.useState(today)
+  const filingDateOk =
+    /^\d{4}-\d{2}-\d{2}$/.test(filingDate) &&
+    filingDate >= current.to &&
+    filingDate <= today
+
+  /*
+   * The figures the return had when it was marked, against the book now. Only
+   * a mark made on this very period has them (§6.5).
+   */
+  const filedFigures = filed ? vatFiledFigures[current.key] : undefined
+  const changes = React.useMemo(
+    () => (filedFigures ? figureChanges(filedFigures, report) : []),
+    [filedFigures, report]
+  )
+
+  /*
+   * A filed return has its checks and amounts behind it, so the dialog opens
+   * on what is left: the payment or refund still to book, else the filed mark.
+   * All steps stay reachable.
+   */
+  const [step, setStep] = React.useState<Step>(
+    filed ? (settlementVisible && pending ? "pay" : "file") : "checks"
+  )
 
   function unmarkFiled() {
     // The mark may have been made in another filing period (§6.5).
     for (const key of filedKeys(current, vatFiled)) setVatFiled(key, null)
+  }
+
+  /* What each step has to show for itself: done, or something to look at. */
+  function stepState(s: Step): "done" | "attention" | null {
+    switch (s) {
+      case "checks":
+        return items.some((i) => i.severity !== "info") ? "attention" : "done"
+      case "values":
+        return filed ? "done" : null
+      case "file":
+        return filed ? (changes.length ? "attention" : "done") : null
+      case "pay":
+        return settlementVisible && !pending ? "done" : null
+    }
   }
 
   const steps: readonly Step[] = settlementVisible
@@ -197,8 +246,14 @@ function VatReturnForm() {
     <Dialog open onOpenChange={(open) => !open && closeDialog()}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="flex flex-wrap items-center gap-x-3 gap-y-1">
             {f.t("vat.returnDialogTitle", { p: label })}
+            {filed ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-income-subtle px-2 py-0.5 text-xs font-medium text-income">
+                <CheckIcon aria-hidden className="size-3" strokeWidth={3} />
+                {f.t("vat.filed")} {f.date(filed)}
+              </span>
+            ) : null}
           </DialogTitle>
           <DialogDescription>{f.t("vat.returnDialogIntro")}</DialogDescription>
         </DialogHeader>
@@ -223,6 +278,7 @@ function VatReturnForm() {
             >
               <span className="tabular text-muted-foreground">{i + 1}</span>
               {f.t(STEP_LABEL[s])}
+              <StepMark state={stepState(s)} />
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
@@ -301,17 +357,82 @@ function VatReturnForm() {
                   {f.t("vat.beforeStartHint")}
                 </p>
               ) : filed ? (
-                <p className="text-sm font-medium text-income">
-                  {f.t("vat.filedOn", { d: f.date(filed) })}
-                </p>
+                <>
+                  <p className="text-sm font-medium text-income">
+                    {f.t("vat.filedOn", { d: f.date(filed) })}
+                  </p>
+                  {changes.length ? (
+                    <Alert>
+                      <AlertCircleIcon />
+                      <AlertDescription className="flex flex-col gap-2">
+                        <span className="font-medium text-foreground">
+                          {f.t("vat.changedTitle")}
+                        </span>
+                        <table className="w-full text-xs tabular-nums">
+                          <thead className="text-muted-foreground">
+                            <tr>
+                              <th className="text-left font-normal" />
+                              <th className="text-right font-normal">
+                                {f.t("vat.filed")}
+                              </th>
+                              <th className="text-right font-normal">
+                                {f.t("vat.changedNow")}
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {changes.map((c) => (
+                              <tr key={c.code}>
+                                <td className="py-0.5 pr-2 text-left">
+                                  {c.code} {c.label[f.lang]}
+                                </td>
+                                <td className="text-right">
+                                  {f.money(c.filed)}
+                                </td>
+                                <td className="text-right">{f.money(c.now)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        <span>{f.t("vat.filedChangeFixReplace")}</span>
+                      </AlertDescription>
+                    </Alert>
+                  ) : filedFigures ? (
+                    <p className="text-sm text-muted-foreground">
+                      {f.t("vat.matchesFiled")}
+                    </p>
+                  ) : null}
+                </>
               ) : !canMark ? (
                 <p className="text-sm text-expense">
                   {f.t("vat.returnOngoing", { p: label })}
                 </p>
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  {f.t("vat.dueDate", { d: f.date(current.due) })}
-                </p>
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    {f.t("vat.dueDate", { d: f.date(current.due) })}
+                  </p>
+                  <div className="flex max-w-xs flex-col gap-1.5">
+                    <label
+                      htmlFor="vat-filing-date"
+                      className="text-sm font-medium"
+                    >
+                      {f.t("vat.filingDate")}
+                    </label>
+                    <Input
+                      id="vat-filing-date"
+                      type="date"
+                      min={current.to}
+                      max={today}
+                      value={filingDate}
+                      aria-invalid={!filingDateOk}
+                      onChange={(event) => setFilingDate(event.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {f.t("vat.filingDateHint")}
+                    </p>
+                  </div>
+                </>
               )}
             </div>
           ) : null}
@@ -322,11 +443,20 @@ function VatReturnForm() {
                 {f.t("vat.returnStepSettle")}
               </h3>
               <VatSettlementControl />
+              <TaxPaymentDetails due={report.due} />
             </div>
           ) : null}
         </div>
 
         <DialogFooter>
+          <Button
+            variant="ghost"
+            className="sm:mr-auto"
+            onClick={() => void downloadReport(ctx, makeReport())}
+          >
+            <DownloadIcon data-icon="inline-start" />
+            {f.t("vat.downloadPdf")}
+          </Button>
           {stepIndex > 0 ? (
             <Button
               variant="outline"
@@ -343,8 +473,8 @@ function VatReturnForm() {
             ) : (
               <Button
                 variant={lastStep ? "default" : "outline"}
-                disabled={!canMark}
-                onClick={() => setVatFiled(current.key, today)}
+                disabled={!canMark || !filingDateOk}
+                onClick={() => setVatFiled(current.key, filingDate)}
               >
                 <CheckIcon data-icon="inline-start" />
                 {f.t("vat.markFiled")}
@@ -399,5 +529,27 @@ function CheckRow({
       </div>
       {action ?? <span />}
     </li>
+  )
+}
+
+/** A check or a warning beside a step's name, for a screen reader as well. */
+function StepMark({ state }: { state: "done" | "attention" | null }) {
+  const f = useFormatters()
+  if (!state) return null
+  const Icon = state === "done" ? CheckIcon : AlertCircleIcon
+  return (
+    <>
+      <Icon
+        aria-hidden
+        className={cn(
+          "size-3.5",
+          state === "done" ? "text-income" : "text-warning"
+        )}
+        strokeWidth={3}
+      />
+      <span className="sr-only">
+        {f.t(state === "done" ? "vat.stepDone" : "vat.stepAttention")}
+      </span>
+    </>
   )
 }

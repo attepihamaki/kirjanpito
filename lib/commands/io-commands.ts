@@ -543,6 +543,8 @@ function applyImport(
           traderType: settings.traderType,
           bookStart: settings.bookStart,
           vatFiled: settings.vatFiled,
+          vatFiledFigures: settings.vatFiledFigures,
+          taxPayment: settings.taxPayment,
           yearsArchived: settings.yearsArchived,
           form5Filed: settings.form5Filed,
           archives: settings.archives,
@@ -606,6 +608,8 @@ function bookVersion() {
     s.traderType,
     s.bookStart,
     s.vatFiled,
+    s.vatFiledFigures,
+    s.taxPayment,
     s.yearsArchived,
     s.form5Filed,
     s.archives,
@@ -646,6 +650,8 @@ function currentSettingsText(over: Partial<BookSettings> = {}): string {
     traderType: s.traderType,
     bookStart: s.bookStart,
     vatFiled: s.vatFiled,
+    vatFiledFigures: s.vatFiledFigures,
+    taxPayment: s.taxPayment,
     yearsArchived: s.yearsArchived,
     form5Filed: s.form5Filed,
     archives: s.archives,
@@ -1118,6 +1124,10 @@ export function archiveSettings(
     vatFiled: Object.fromEntries(
       Object.entries(state.vatFiled).filter(([k]) => k.startsWith(key))
     ),
+    vatFiledFigures: Object.fromEntries(
+      Object.entries(state.vatFiledFigures).filter(([k]) => k.startsWith(key))
+    ),
+    taxPayment: state.taxPayment,
     yearsArchived: { [key]: today },
     form5Filed: state.form5Filed[key] ? { [key]: state.form5Filed[key] } : {},
     recurring: [],

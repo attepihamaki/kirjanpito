@@ -41,7 +41,18 @@ import type {
   Lang,
 } from "@/lib/domain/types"
 import type { TraderType } from "@/lib/domain/open-items"
-import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
+import { filterPeriod } from "@/lib/domain/period"
+import { vatReport } from "@/lib/domain/vat"
+import {
+  asPeriod,
+  periodFromKey,
+  type VatPeriodKind,
+} from "@/lib/domain/vat-deadline"
+import {
+  filingFigures,
+  NO_TAX_PAYMENT,
+  type TaxPayment,
+} from "@/lib/domain/vat-filing"
 import type { ArchiveStub } from "@/lib/domain/year-archive"
 import { LANG_STORAGE_KEY, writeLang } from "@/stores/lang-store"
 
@@ -258,6 +269,13 @@ export interface BookState {
   /** Period key → ISO date the return was marked as filed (§6.5). */
   vatFiled: Record<string, string>
   /**
+   * Period key → the return's figures on the day it was marked filed (§6.5).
+   * Saved in settings.json.
+   */
+  vatFiledFigures: Record<string, Record<string, number>>
+  /** Where VAT is paid (§8.7). Saved in settings.json. */
+  taxPayment: TaxPayment
+  /**
    * Year (`"2025"`) → ISO date the user marked its material as stored away
    * (§8.12). Saved in settings.json.
    */
@@ -424,6 +442,8 @@ export interface BookActions {
       traderType?: TraderType
       bookStart?: string | null
       vatFiled?: Record<string, string>
+      vatFiledFigures?: Record<string, Record<string, number>>
+      taxPayment?: TaxPayment
       yearsArchived?: Record<string, string>
       form5Filed?: Record<string, string>
       archives?: Record<string, ArchiveStub>
@@ -500,6 +520,7 @@ export interface BookActions {
   setBookStart(month: string | null): void
   /** Mark a period as filed on `date`, or clear the mark with null. */
   setVatFiled(key: string, date: string | null): void
+  setTaxPayment(payment: TaxPayment): void
   /** Mark a closed year as stored away on `date`, or clear it with null. */
   setYearArchived(year: number, date: string | null): void
   setForm5Filed(year: number, date: string | null): void
@@ -587,6 +608,8 @@ function initialState(): BookState {
     traderType: "professional",
     bookStart: null,
     vatFiled: {},
+    vatFiledFigures: {},
+    taxPayment: NO_TAX_PAYMENT,
     yearsArchived: {},
     form5Filed: {},
     archives: {},
@@ -654,6 +677,8 @@ type PersistedBook = Pick<
   | "traderType"
   | "bookStart"
   | "vatFiled"
+  | "vatFiledFigures"
+  | "taxPayment"
   | "yearsArchived"
   | "form5Filed"
   | "archives"
@@ -823,6 +848,8 @@ const BOOK_DATA_KEYS: readonly (keyof BookState)[] = [
   "traderType",
   "bookStart",
   "vatFiled",
+  "vatFiledFigures",
+  "taxPayment",
   "yearsArchived",
   "form5Filed",
   "archives",
@@ -912,6 +939,8 @@ export const useBookStore = create<BookStore>()(
           businessName: null,
           bookStart: null,
           vatFiled: {},
+          vatFiledFigures: {},
+          taxPayment: NO_TAX_PAYMENT,
           yearsArchived: {},
           form5Filed: {},
           archives: {},
@@ -959,6 +988,8 @@ export const useBookStore = create<BookStore>()(
           businessName: null,
           bookStart: null,
           vatFiled: {},
+          vatFiledFigures: {},
+          taxPayment: NO_TAX_PAYMENT,
           yearsArchived: {},
           form5Filed: {},
           archives: {},
@@ -1015,6 +1046,8 @@ export const useBookStore = create<BookStore>()(
           traderType: s.traderType ?? "professional",
           bookStart: s.bookStart ?? null,
           vatFiled: s.vatFiled ?? {},
+          vatFiledFigures: s.vatFiledFigures ?? {},
+          taxPayment: { ...NO_TAX_PAYMENT, ...s.taxPayment },
           yearsArchived: s.yearsArchived ?? {},
           form5Filed: s.form5Filed ?? {},
           archives: s.archives ?? {},
@@ -1187,10 +1220,28 @@ export const useBookStore = create<BookStore>()(
       setBookStart: (bookStart) => set({ bookStart, dirty: true }),
       setVatFiled: (key, date) => {
         const vatFiled = { ...get().vatFiled }
-        if (date) vatFiled[key] = date
-        else delete vatFiled[key]
+        const vatFiledFigures = { ...get().vatFiledFigures }
+        if (date) {
+          vatFiled[key] = date
+          /* The figures are those of the book on the day it is marked. */
+          const period = periodFromKey(key)
+          if (period) {
+            vatFiledFigures[key] = {
+              ...filingFigures(
+                vatReport(
+                  filterPeriod(get().entries, asPeriod(period)),
+                  indexCategories(get().cats)
+                )
+              ),
+            }
+          }
+        } else {
+          delete vatFiled[key]
+          delete vatFiledFigures[key]
+        }
         set({
           vatFiled,
+          vatFiledFigures,
           changeLog: [...get().changeLog, lockRecord(key, date)],
           dirty: true,
         })
@@ -1276,6 +1327,7 @@ export const useBookStore = create<BookStore>()(
       setAssetOpening: (assetOpening) => set({ assetOpening, dirty: true }),
       setBankBalance: (bankBalance) => set({ bankBalance, dirty: true }),
       setPayMonths: (payMonths) => set({ payMonths, dirty: true }),
+      setTaxPayment: (taxPayment) => set({ taxPayment, dirty: true }),
       setLoanOpening: (loanOpening) => set({ loanOpening, dirty: true }),
       setYearEnd: (year, values) =>
         set((s) => ({
@@ -1403,6 +1455,8 @@ export const useBookStore = create<BookStore>()(
         traderType: s.traderType,
         bookStart: s.bookStart,
         vatFiled: s.vatFiled,
+        vatFiledFigures: s.vatFiledFigures,
+        taxPayment: s.taxPayment,
         yearsArchived: s.yearsArchived,
         form5Filed: s.form5Filed,
         archives: s.archives,
@@ -1430,6 +1484,7 @@ export const useBookStore = create<BookStore>()(
           ...current,
           ...stored,
           payMonths: { ...NO_PAY_MONTHS, ...stored.payMonths },
+          taxPayment: { ...NO_TAX_PAYMENT, ...stored.taxPayment },
         }
       },
       migrate: (persisted) => {
