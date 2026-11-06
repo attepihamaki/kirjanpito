@@ -9,7 +9,11 @@ import {
 import { defaultFileBaseName } from "@/lib/domain/receipt-path"
 import { todayIso } from "@/lib/domain/dates"
 import type { Entry } from "@/lib/domain/types"
-import { yearReports, type YearReportInput } from "@/lib/domain/year-reports"
+import {
+  vatReturnReports,
+  yearReports,
+  type VatReturnInput,
+} from "@/lib/domain/year-reports"
 import { archiveContents } from "@/lib/domain/year-archive"
 import { packFiles, unpackZip } from "@/lib/domain/zip"
 import { createFormatters } from "@/lib/i18n/create-formatters"
@@ -38,9 +42,12 @@ export interface RetentionPackage {
   missingReceipts: number
 }
 
-/** What the five reports read, taken from the store as it stands. */
-function reportInput(state: BookState, year: number): YearReportInput {
+/** What the reports read, taken from the store as it stands. */
+function reportInput(state: BookState, year: number): VatReturnInput {
   return {
+    vatPeriod: state.vatPeriod,
+    bookStart: state.bookStart,
+    vatFiled: state.vatFiled,
     year,
     entries: state.entries,
     cats: state.cats,
@@ -69,7 +76,8 @@ export async function makeRetentionPackage(opts: {
 }): Promise<RetentionPackage> {
   const { state, year, book } = opts
   const f = createFormatters(state.exportLang)
-  const docs = yearReports(f, reportInput(state, year))
+  const input = reportInput(state, year)
+  const docs = [...yearReports(f, input), ...vatReturnReports(f, input)]
 
   /* pdf-lib stays out of every bundle until a package is made. */
   const { renderReportPdf } = await import("@/lib/browser/report-pdf")

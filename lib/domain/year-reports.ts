@@ -24,6 +24,13 @@ import {
   taxBasisEntries,
   type TraderType,
 } from "@/lib/domain/open-items"
+import {
+  figureRows,
+  rowsTotal,
+  vatContribution,
+  vatFieldSelector,
+} from "@/lib/domain/figure-vouchers"
+import { filterPeriod } from "@/lib/domain/period"
 import { receiptFolder } from "@/lib/domain/receipt-path"
 import { retentionDates } from "@/lib/domain/retention"
 import type { TaxFormSection } from "@/lib/domain/tax-form"
@@ -34,7 +41,18 @@ import {
   type Entry,
   type Lang,
 } from "@/lib/domain/types"
+import { countsOnVatReturn, vatReport } from "@/lib/domain/vat"
+import {
+  asPeriod,
+  bookStartDate,
+  filedOn,
+  vatPeriods,
+  type VatPeriod,
+  type VatPeriodKind,
+} from "@/lib/domain/vat-deadline"
+import { vatReturnSections } from "@/lib/domain/vat-return"
 import type { Formatters } from "@/lib/i18n/create-formatters"
+import { periodLabel } from "@/lib/i18n/period-label"
 
 /**
  * The year's reports as documents (§8.21): the journal, the general ledger,
@@ -83,7 +101,7 @@ export type ReportBlock =
 
 export interface ReportDoc {
   /** Stable key for the file: the order in the package and its name. */
-  id: "journal" | "ledger" | "accounts" | "statement" | "form5"
+  id: "journal" | "ledger" | "accounts" | "statement" | "form5" | "vat"
   /** The document title, also the PDF's title. */
   title: string
   /** Lines under the title: the business, the period. */
@@ -650,6 +668,142 @@ function form5Report(f: ReportText, input: YearReportInput): ReportDoc {
     blocks: formTable(f, sections),
     footer: f.t("landing.footer"),
   }
+}
+
+/* -------------------------------------------------------------------------
+ * VAT returns
+ * ---------------------------------------------------------------------- */
+
+/** What one VAT return report reads. */
+export interface VatReturnBook {
+  entries: readonly Entry[]
+  cats: readonly Category[]
+  businessName: string
+  businessId: string
+  vatFiled: Readonly<Record<string, string>>
+}
+
+/** What the year's VAT return reports read besides the year's reports. */
+export interface VatReturnInput extends YearReportInput, VatReturnBook {
+  vatPeriod: VatPeriodKind
+  bookStart: string | null
+}
+
+/**
+ * One VAT return of the year as a document (§8.21): its fields as OmaVero asks
+ * for them, then under each non-zero field the vouchers it is made of. This is
+ * the click-through of §8.18 on paper, since KPL 2:6 asks for a trace from a
+ * return to its vouchers and the click-through exists only inside the app.
+ */
+export function vatReturnReport(
+  f: ReportText,
+  input: VatReturnBook,
+  period: VatPeriod
+): ReportDoc {
+  const cats = indexCategories(input.cats)
+  const inPeriodEntries = filterPeriod(input.entries, asPeriod(period))
+  const byId = new Map(inPeriodEntries.map((e) => [e.id, e]))
+  const sections = vatReturnSections(vatReport(inPeriodEntries, cats))
+
+  const rows: ReportRow[] = []
+  for (const section of sections) {
+    for (const row of section.rows) {
+      if (row.kind !== "field" || row.value === 0) continue
+      const vouchers = figureRows(
+        inPeriodEntries,
+        vatContribution(cats, vatFieldSelector(row.code))
+      )
+      if (!vouchers.length) continue
+      rows.push({ kind: "heading", text: `${row.code} ${row.label[f.lang]}` })
+      for (const { entryId, amount } of vouchers) {
+        const entry = byId.get(entryId)
+        if (!entry) continue
+        rows.push({
+          kind: "data",
+          cells: [
+            entry.voucher === undefined ? "" : String(entry.voucher),
+            f.date(entry.date),
+            entry.description || f.t("ledger.noDescription"),
+            f.money(amount),
+          ],
+        })
+      }
+      rows.push({
+        kind: "total",
+        label: f.t("common.total"),
+        from: 3,
+        cells: [f.money(rowsTotal(vouchers))],
+      })
+    }
+  }
+
+  const who = [
+    input.businessName,
+    input.businessId ? `${f.t("common.businessId")} ${input.businessId}` : "",
+  ].filter(Boolean)
+  const filed = filedOn(period, input.vatFiled)
+  const lines = [
+    f.t("overview.range", { a: f.date(period.from), b: f.date(period.to) }),
+    f.t("vat.dueDate", { d: f.date(period.due) }),
+  ]
+  if (filed) lines.push(f.t("vat.filedOn", { d: f.date(filed) }))
+
+  const blocks: ReportBlock[] = formTable(f, sections)
+  if (rows.length) {
+    blocks.push(
+      { kind: "text", text: f.t("ledger.packVatVouchers"), style: "heading" },
+      { kind: "text", text: f.t("ledger.packVatNote"), style: "note" },
+      {
+        kind: "table",
+        columns: [
+          { head: f.t("ledger.colVoucher"), align: "right", weight: 5 },
+          { head: f.t("ledger.colDate"), align: "left", weight: 10 },
+          { head: f.t("ledger.colDescription"), align: "left", weight: 36 },
+          { head: f.t("ledger.packVatAmount"), align: "right", weight: 14 },
+        ],
+        rows,
+      }
+    )
+  }
+
+  return {
+    id: "vat",
+    title: `${f.t("vat.returnTitle")} ${periodLabel(f, period)}`,
+    header: [...(who.length ? [who.join(" · ")] : []), ...lines],
+    blocks,
+    footer: f.t("landing.footer"),
+  }
+}
+
+/**
+ * The year's VAT returns, one document per filing period (§6.5) in the order of
+ * the year. A period is left out when it ended before the book began, and when
+ * it has neither a voucher on the return nor a filed mark, so a quiet month
+ * does not add a page of zeros.
+ */
+export function vatReturnReports(
+  f: ReportText,
+  input: VatReturnInput
+): ReportDoc[] {
+  const cats = indexCategories(input.cats)
+  const start = bookStartDate(
+    input.bookStart,
+    input.entries.reduce<string | null>(
+      (min, e) => (min === null || e.date < min ? e.date : min),
+      null
+    )
+  )
+  if (!start) return []
+  return vatPeriods(input.vatPeriod, input.year)
+    .filter((p) => p.to >= start)
+    .filter(
+      (p) =>
+        filedOn(p, input.vatFiled) !== null ||
+        filterPeriod(input.entries, asPeriod(p)).some((e) =>
+          countsOnVatReturn(e, cats)
+        )
+    )
+    .map((p) => vatReturnReport(f, input, p))
 }
 
 /** The five reports, in the order the package lists them. */

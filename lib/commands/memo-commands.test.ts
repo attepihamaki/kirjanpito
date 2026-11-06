@@ -5,11 +5,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { toast } from "@/components/ui/toast"
 import { renderMemoPdf } from "@/lib/browser/memo-pdf"
 import type { Ctx } from "@/lib/commands/ctx"
-import { bookWithMemo, storeMemo } from "@/lib/commands/memo-commands"
+import {
+  bookWithMemo,
+  storeMemo,
+  storeReport,
+} from "@/lib/commands/memo-commands"
 import { defaultCategories } from "@/lib/domain/accounts"
 import { flaggedEntryIds } from "@/lib/domain/entry-checks"
 import type { MemoVoucher } from "@/lib/domain/memo-voucher"
 import { indexCategories, type Entry } from "@/lib/domain/types"
+import type { ReportDoc } from "@/lib/domain/year-reports"
 import { createAppT } from "@/lib/i18n/messages"
 import { useBookStore } from "@/stores/book-store"
 
@@ -96,7 +101,7 @@ describe("storeMemo", () => {
       type: "application/pdf",
     })
     expect((await getReceipt(att!.id!))?.size).toBe(att!.size)
-    expect(useBookStore.getState().draftAttachmentIds).toContain(att!.id)
+    expect(useBookStore.getState().draftAttachmentIds).toContain(att?.id)
   })
 })
 
@@ -133,5 +138,31 @@ describe("bookWithMemo", () => {
     expect(
       flaggedEntryIds("noReceipt", [entry], cats, "2026-11-04").has(entry.id)
     ).toBe(true)
+  })
+})
+
+describe("storeReport", () => {
+  const doc: ReportDoc = {
+    id: "vat",
+    title: "Arvonlisäveroilmoitus Marraskuu 2026",
+    header: ["Oma Yritys"],
+    blocks: [{ kind: "text", text: "Tositteet" }],
+    footer: "Ei verotusneuvontaa.",
+  }
+
+  it("stores the VAT return as a PDF attachment and keeps its id held", async () => {
+    const att = await storeReport(ctx, doc)
+    expect(att?.type).toBe("application/pdf")
+    expect(att?.name).toBe("Arvonlisäveroilmoitus Marraskuu 2026.pdf")
+    const blob = await getReceipt(att?.id ?? "")
+    expect(blob?.size).toBe(att?.size)
+    expect(useBookStore.getState().draftAttachmentIds).toContain(att?.id)
+  })
+
+  it("returns null and says so when the write fails", async () => {
+    failing = true
+    expect(await storeReport(ctx, doc)).toBeNull()
+    expect(toast.add).toHaveBeenCalled()
+    expect(useBookStore.getState().draftAttachmentIds).toEqual([])
   })
 })

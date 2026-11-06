@@ -5,9 +5,12 @@ import * as React from "react"
 import { Money } from "@/components/common/money"
 import { useFormatters } from "@/components/lang-provider"
 import { Button } from "@/components/ui/button"
+import { useCommandCtx } from "@/hooks/use-commands"
 import { useVatPeriod } from "@/hooks/use-vat-period"
+import { storeReport } from "@/lib/commands/memo-commands"
 import { todayIso } from "@/lib/domain/dates"
 import { indexCategories } from "@/lib/domain/types"
+import { vatReturnReport } from "@/lib/domain/year-reports"
 import {
   settlementSummary,
   type SettlementRow,
@@ -50,16 +53,46 @@ export function useSettlementVisible(): boolean {
  * The tax paid or the refund received for the selected period (§6.6), checked
  * against what the calculation says. Each is an entry with its own voucher
  * number, booked through the entry dialog so the bank statement can be
- * attached. The app cannot see the bank, so it never assumes the money moved.
+ * attached. The period's VAT return, with the vouchers behind each field
+ * (§8.21), comes attached already. The app cannot see the bank, so it never
+ * assumes the money moved.
  */
 export function VatSettlementControl() {
   const f = useFormatters()
   const { current, due, summary } = useSettlement()
   const openDialog = useBookStore((s) => s.openDialog)
+  const entries = useBookStore((s) => s.entries)
+  const cats = useBookStore((s) => s.cats)
+  const businessName = useBookStore((s) => s.businessName)
+  const businessId = useBookStore((s) => s.businessId)
+  const vatFiled = useBookStore((s) => s.vatFiled)
+  const ctx = useCommandCtx()
+  const [busy, setBusy] = React.useState(false)
 
-  const book = () => {
+  const book = async () => {
     const refund = due < 0
     const p = periodLabel(f, current)
+    /*
+     * The return is made before the dialog opens, which then holds it like any
+     * attached receipt. When it cannot be stored the dialog still opens, and
+     * the "no receipt" check flags the entry.
+     */
+    setBusy(true)
+    const att = await storeReport(
+      ctx,
+      vatReturnReport(
+        f,
+        {
+          entries,
+          cats,
+          businessName: businessName ?? "",
+          businessId: businessId ?? "",
+          vatFiled,
+        },
+        current
+      )
+    )
+    setBusy(false)
     openDialog({
       kind: "entry",
       mode: "new",
@@ -74,6 +107,7 @@ export function VatSettlementControl() {
         vatRate: 0,
         amountMode: "gross",
         settles: current.key,
+        ...(att ? { atts: [att] } : {}),
       },
     })
   }
@@ -118,7 +152,7 @@ export function VatSettlementControl() {
               {f.t("vat.settlementHint")}
             </p>
           ) : null}
-          <Button variant="outline" size="sm" onClick={book}>
+          <Button variant="outline" size="sm" disabled={busy} onClick={book}>
             {due < 0
               ? f.t("vat.settlementAddRefund")
               : f.t("vat.settlementAddPayment")}

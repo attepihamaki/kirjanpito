@@ -92,7 +92,7 @@ describe("VAT settlement", () => {
     openPayStep()
     fireEvent.click(screen.getByRole("button", { name: "Kirjaa maksu" }))
 
-    expect(screen.getByLabelText("Summa (€)")).toHaveValue("362,18")
+    expect(await screen.findByLabelText("Summa (€)")).toHaveValue("362,18")
     expect(screen.getByLabelText("Kuvaus")).toHaveValue(
       "Arvonlisävero, Lokakuu 2026"
     )

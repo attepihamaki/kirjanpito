@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import * as React from "react"
-import { fireEvent, render, screen, within } from "@testing-library/react"
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { LangProvider } from "@/components/lang-provider"
@@ -473,14 +479,16 @@ describe("VatReturnDialog", () => {
     expect(useBookStore.getState().vatFiled).toEqual({})
   })
 
-  it("books the payment from the last step", () => {
+  it("books the payment from the last step", async () => {
     openDialog()
     fireEvent.click(screen.getByRole("button", { name: /Maksu/ }))
     fireEvent.click(screen.getByRole("button", { name: "Kirjaa maksu" }))
-    expect(useBookStore.getState().dialog).toMatchObject({
-      kind: "entry",
-      prefill: { catId: "vat-payment", settles: "2026-10" },
-    })
+    await waitFor(() =>
+      expect(useBookStore.getState().dialog).toMatchObject({
+        kind: "entry",
+        prefill: { catId: "vat-payment", settles: "2026-10" },
+      })
+    )
   })
 
   it("has no payment step for a nil return", () => {

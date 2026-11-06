@@ -16,9 +16,11 @@ import {
 import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { assignVouchers } from "@/lib/domain/voucher"
 import {
+  vatReturnReports,
   yearReports,
   type ReportDoc,
   type ReportRow,
+  type VatReturnInput,
   type YearReportInput,
 } from "@/lib/domain/year-reports"
 import { packFiles, unpackZip } from "@/lib/domain/zip"
@@ -132,6 +134,97 @@ describe("year reports", () => {
   it("keeps a year with no vouchers readable", () => {
     const empty = yearReports(fi, { ...input, year: 2020 })
     expect(cells(empty[0])).toEqual(["Ei tositteita vuonna 2020."])
+  })
+})
+
+describe("VAT return reports", () => {
+  const vatInput: VatReturnInput = {
+    ...input,
+    vatPeriod: "year",
+    bookStart: null,
+    vatFiled: {},
+  }
+
+  /** The table of vouchers: rows after the field table, flattened. */
+  function voucherRows(doc: ReportDoc): ReportRow[] {
+    const tables = doc.blocks.filter((b) => b.kind === "table")
+    return tables.at(-1)?.kind === "table" ? tables.at(-1)!.rows : []
+  }
+
+  it("makes one document for a yearly filer", () => {
+    const docs = vatReturnReports(fi, vatInput)
+    expect(docs.map((d) => d.title)).toEqual([
+      "Arvonlisäveroilmoitus Vuosi 2026",
+    ])
+    expect(docs[0].id).toBe("vat")
+  })
+
+  it("has the vouchers of each field add up to the field", () => {
+    const [doc] = vatReturnReports(fi, vatInput)
+    const fields = new Map<string, string>()
+    for (const b of doc.blocks) {
+      if (b.kind !== "table") continue
+      for (const r of b.rows) {
+        if (r.kind === "data" && /^\d{3}$/.test(r.cells[0])) {
+          fields.set(r.cells[0], plain(r.cells[2]))
+        }
+      }
+    }
+    const rows = voucherRows(doc)
+    let code = ""
+    let checked = 0
+    for (const r of rows) {
+      if (r.kind === "heading") code = r.text.slice(0, 3)
+      if (r.kind === "total") {
+        checked += 1
+        /* 308 is the signed balance and the field holds its size. */
+        if (code !== "308") {
+          expect(plain(r.cells[0]), code).toBe(fields.get(code))
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(0)
+  })
+
+  it("lists only vouchers that exist in the book", () => {
+    const [doc] = vatReturnReports(fi, vatInput)
+    const known = new Set(entries.map((e) => String(e.voucher)))
+    const used = voucherRows(doc).flatMap((r) =>
+      r.kind === "data" ? [r.cells[0]] : []
+    )
+    expect(used.length).toBeGreaterThan(0)
+    for (const v of used) expect(known.has(v), v).toBe(true)
+  })
+
+  it("makes a document per period that has something on the return", () => {
+    const monthly = vatReturnReports(fi, { ...vatInput, vatPeriod: "month" })
+    expect(monthly.length).toBeGreaterThan(0)
+    expect(monthly.length).toBeLessThanOrEqual(12)
+    expect(monthly[0].title).toMatch(/^Arvonlisäveroilmoitus \S+ 2026$/)
+  })
+
+  it("leaves out periods that ended before the book began", () => {
+    const all = vatReturnReports(fi, { ...vatInput, vatPeriod: "quarter" })
+    const late = vatReturnReports(fi, {
+      ...vatInput,
+      vatPeriod: "quarter",
+      bookStart: "2026-07",
+    })
+    expect(late.length).toBeLessThan(all.length)
+  })
+
+  it("says when the return was marked filed", () => {
+    const [doc] = vatReturnReports(fi, {
+      ...vatInput,
+      vatFiled: { "2026": "2027-01-20" },
+    })
+    expect(doc.header.join("\n")).toContain("Merkitty ilmoitetuksi 20.1.2027")
+  })
+
+  it("renders to a PDF", async () => {
+    const [doc] = vatReturnReports(fi, vatInput)
+    const bytes = await renderReportPdf(doc)
+    expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-")
   })
 })
 
