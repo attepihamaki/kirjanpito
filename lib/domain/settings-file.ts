@@ -8,6 +8,7 @@ import { parseBusinessId } from "@/lib/domain/business-id"
 import { isVatRate } from "@/lib/domain/money"
 import type { AssetOpening } from "@/lib/domain/assets"
 import type { BankBalance } from "@/lib/domain/bank-balance"
+import type { PayMonths } from "@/lib/domain/tax-calendar"
 import {
   LOGGED_FIELDS,
   type ChangeAction,
@@ -112,6 +113,8 @@ export interface BookSettings {
   assetOpening: AssetOpening | null
   /** The bank balance as last read, or null (§8.12). */
   bankBalance: BankBalance | null
+  /** The months YEL and advance tax fall in (§8.22). */
+  payMonths: PayMonths
   /** The loans outstanding when the book starts, or null (§6.8). */
   loanOpening: LoanOpening | null
   /** Year (`"2026"`) → what the book cannot supply for Form 5 (§8.8). */
@@ -485,6 +488,18 @@ export function parseSettings(text: string): ParsedSettings {
       date: raw.bankBalance.date,
     }
   }
+  if (isRecord(raw.payMonths)) {
+    const months = (v: unknown): number[] =>
+      Array.isArray(v)
+        ? [...new Set(v)]
+            .filter((m): m is number => Number.isInteger(m) && m >= 1 && m <= 12)
+            .sort((a, b) => a - b)
+        : []
+    out.payMonths = {
+      yel: months(raw.payMonths.yel),
+      advanceTax: months(raw.payMonths.advanceTax),
+    }
+  }
   if (isRecord(raw.pageSize)) {
     const ledger = pageSize(raw.pageSize.ledger)
     const categories = pageSize(raw.pageSize.categories)
@@ -536,6 +551,7 @@ export function serializeSettings(s: BookSettings): string {
     categoryRules: s.categoryRules,
     assetOpening: s.assetOpening,
     bankBalance: s.bankBalance,
+    payMonths: s.payMonths,
     loanOpening: s.loanOpening,
     yearEnd: s.yearEnd,
     changeLog: s.changeLog,

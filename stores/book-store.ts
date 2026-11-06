@@ -6,6 +6,7 @@ import { persist, type PersistStorage } from "zustand/middleware"
 import { defaultCategories } from "@/lib/domain/accounts"
 import type { AssetOpening } from "@/lib/domain/assets"
 import type { BankBalance } from "@/lib/domain/bank-balance"
+import { NO_PAY_MONTHS, type PayMonths } from "@/lib/domain/tax-calendar"
 import type { EntryCheck } from "@/lib/domain/entry-checks"
 import type { CategoryRule } from "@/lib/domain/category-rules"
 import type { RecurringEntry } from "@/lib/domain/recurring"
@@ -286,6 +287,8 @@ export interface BookState {
   assetOpening: AssetOpening | null
   /** The bank balance as last read (§8.12). Saved in settings.json. */
   bankBalance: BankBalance | null
+  /** The months YEL and advance tax instalments fall in (§8.22). Saved in settings.json. */
+  payMonths: PayMonths
   /** The loans outstanding when the book starts (§6.8). Saved in settings.json. */
   loanOpening: LoanOpening | null
   /** Year → what the book cannot supply for Form 5 (§8.8). Saved in settings.json. */
@@ -420,6 +423,7 @@ export interface BookActions {
       categoryRules?: CategoryRule[]
       assetOpening?: AssetOpening | null
       bankBalance?: BankBalance | null
+      payMonths?: PayMonths
       loanOpening?: LoanOpening | null
       yearEnd?: Record<string, YearEnd>
       changeLog?: ChangeRecord[]
@@ -519,6 +523,7 @@ export interface BookActions {
   setYearEnd(year: number, values: YearEnd): void
   setAssetOpening(opening: AssetOpening | null): void
   setBankBalance(balance: BankBalance | null): void
+  setPayMonths(months: PayMonths): void
 
   upsertCategory(category: Category): void
   removeCategory(id: string): void
@@ -584,6 +589,7 @@ function initialState(): BookState {
     categoryRules: [],
     assetOpening: null,
     bankBalance: null,
+    payMonths: NO_PAY_MONTHS,
     loanOpening: null,
     yearEnd: {},
     changeLog: [],
@@ -649,6 +655,7 @@ type PersistedBook = Pick<
   | "categoryRules"
   | "assetOpening"
   | "bankBalance"
+  | "payMonths"
   | "loanOpening"
   | "yearEnd"
   | "changeLog"
@@ -813,6 +820,7 @@ const BOOK_DATA_KEYS: readonly (keyof BookState)[] = [
   "categoryRules",
   "assetOpening",
   "bankBalance",
+  "payMonths",
   "loanOpening",
   "yearEnd",
   "changeLog",
@@ -900,6 +908,7 @@ export const useBookStore = create<BookStore>()(
           categoryRules: [],
           assetOpening: null,
           bankBalance: null,
+          payMonths: NO_PAY_MONTHS,
           loanOpening: null,
           yearEnd: {},
           changeLog: [],
@@ -945,6 +954,7 @@ export const useBookStore = create<BookStore>()(
           categoryRules: [],
           assetOpening: null,
           bankBalance: null,
+          payMonths: NO_PAY_MONTHS,
           loanOpening: null,
           yearEnd: {},
           changeLog: [],
@@ -1001,6 +1011,7 @@ export const useBookStore = create<BookStore>()(
           categoryRules: s.categoryRules ?? [],
           assetOpening: s.assetOpening ?? null,
           bankBalance: s.bankBalance ?? null,
+          payMonths: s.payMonths ?? NO_PAY_MONTHS,
           loanOpening: s.loanOpening ?? null,
           yearEnd: s.yearEnd ?? {},
           changeLog: s.changeLog
@@ -1247,6 +1258,7 @@ export const useBookStore = create<BookStore>()(
       },
       setAssetOpening: (assetOpening) => set({ assetOpening, dirty: true }),
       setBankBalance: (bankBalance) => set({ bankBalance, dirty: true }),
+      setPayMonths: (payMonths) => set({ payMonths, dirty: true }),
       setLoanOpening: (loanOpening) => set({ loanOpening, dirty: true }),
       setYearEnd: (year, values) =>
         set((s) => ({
@@ -1379,6 +1391,7 @@ export const useBookStore = create<BookStore>()(
         categoryRules: s.categoryRules,
         assetOpening: s.assetOpening,
         bankBalance: s.bankBalance,
+        payMonths: s.payMonths,
         loanOpening: s.loanOpening,
         yearEnd: s.yearEnd,
         changeLog: s.changeLog,

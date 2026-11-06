@@ -28,6 +28,7 @@ import {
 import { RULES } from "@/lib/domain/rule-tables"
 import type { TraderType } from "@/lib/domain/open-items"
 import type { Lang } from "@/lib/domain/types"
+import type { PayMonths } from "@/lib/domain/tax-calendar"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 import { useBookStore } from "@/stores/book-store"
 import { LANGS, LANG_NAMES } from "@/stores/lang-store"
@@ -45,6 +46,8 @@ export function GeneralSettings() {
         <TraderTypeSetting />
         <VatPeriodSetting />
         <BookStartSetting />
+        <PayMonthsSetting kind="yel" />
+        <PayMonthsSetting kind="advanceTax" />
         <ExportLanguageSetting />
         <AutosaveSetting />
         <EncryptionSetting />
@@ -236,6 +239,58 @@ function TraderTypeSetting() {
             ? "settings.traderBusinessNote"
             : "settings.traderProfessionalNote"
         )}
+      />
+    </SettingCard>
+  )
+}
+
+/**
+ * The months a YEL or advance tax instalment falls due in (§8.22). The days
+ * are fixed, the 20th and the 23rd, but the months come from the pension
+ * company's invoice and the advance tax decision, which the app cannot see.
+ */
+function PayMonthsSetting({ kind }: { kind: keyof PayMonths }) {
+  const f = useFormatters()
+  const payMonths = useBookStore((s) => s.payMonths)
+  const setPayMonths = useBookStore((s) => s.setPayMonths)
+  const label = f.t(kind === "yel" ? "calendar.yelMonths" : "calendar.taxMonths")
+  const months = payMonths[kind]
+
+  return (
+    <SettingCard
+      label={label}
+      editor={
+        <>
+          <ToggleGroup
+            multiple
+            spacing={1}
+            aria-label={label}
+            className="flex-wrap"
+            value={months.map(String)}
+            onValueChange={(next) =>
+              setPayMonths({
+                ...payMonths,
+                [kind]: next.map(Number).sort((a, b) => a - b),
+              })
+            }
+          >
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+              <ToggleGroupItem key={m} value={String(m)} variant="outline">
+                {f.month(m - 1, true)}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          <SettingHint>{f.t("calendar.payIntro")}</SettingHint>
+        </>
+      }
+    >
+      <SettingValue
+        value={
+          months.length
+            ? months.map((m) => f.month(m - 1, true)).join(", ")
+            : f.t("calendar.noMonths")
+        }
+        note={f.t("calendar.note")}
       />
     </SettingCard>
   )

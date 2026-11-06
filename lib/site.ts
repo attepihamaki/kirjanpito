@@ -90,6 +90,7 @@ export const APP_ROUTES = {
   vat: "/app/vat",
   statement: "/app/statement",
   summary: "/app/summary",
+  calendar: "/app/calendar",
   settings: "/app/settings",
 } as const
 

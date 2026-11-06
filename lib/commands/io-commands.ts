@@ -1,4 +1,5 @@
 import { toast } from "@/components/ui/toast"
+import { NO_PAY_MONTHS } from "@/lib/domain/tax-calendar"
 
 import { releaseAllObjectUrls } from "@/lib/browser/object-urls"
 import { fileToUint8Array, saveBlob } from "@/lib/browser/download"
@@ -549,6 +550,7 @@ function applyImport(
           categoryRules: settings.categoryRules,
           assetOpening: settings.assetOpening,
           bankBalance: settings.bankBalance,
+          payMonths: settings.payMonths,
           loanOpening: settings.loanOpening,
           yearEnd: settings.yearEnd,
           changeLog: settings.changeLog,
@@ -612,6 +614,7 @@ function bookVersion() {
     s.categoryRules,
     s.assetOpening,
     s.bankBalance,
+    s.payMonths,
     s.loanOpening,
     s.yearEnd,
     s.changeLog,
@@ -656,6 +659,7 @@ function currentSettingsText(over: Partial<BookSettings> = {}): string {
     categoryRules: s.categoryRules,
     assetOpening: s.assetOpening,
     bankBalance: s.bankBalance,
+    payMonths: s.payMonths,
     loanOpening: s.loanOpening,
     yearEnd: s.yearEnd,
     changeLog: s.changeLog,
@@ -1097,6 +1101,7 @@ export function archiveSettings(
     recurring: [],
     categoryRules: [],
     bankBalance: null,
+    payMonths: NO_PAY_MONTHS,
     yearEnd: Object.fromEntries(
       Object.entries(state.yearEnd).filter(
         ([k]) => k === key || k === String(year - 1)

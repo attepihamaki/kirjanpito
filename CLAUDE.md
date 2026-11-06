@@ -643,6 +643,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
   "categoryRules": [{ "id": "rule-1", "contains": "Elisa", "catId": "344-other", "vatRate": 25.5 }],
   "assetOpening": { "year": 2026, "amount": 300000 },
   "bankBalance": { "amount": 125000, "date": "2026-10-31" },
+  "payMonths": { "yel": [1, 7], "advanceTax": [2, 4, 6, 8, 10, 12] },
   "loanOpening": { "year": 2026, "amount": 800000 },
   "changeLog": [{ "at": "2026-11-03T10:00:00.000Z", "action": "add", "voucher": 1, "date": "2026-10-10", "description": "Osto" }],
   "yearEnd": { "2026": { "goods": 120000, "otherCurrent": 0, "otherFixed": 0, "cash": 3500, "otherFinancial": 0, "loanCurrent": 0, "otherCurrentDebt": 0, "otherLongDebt": 0 } }
@@ -656,7 +657,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
 - **The overview layout** goes through `normalizeLayout` in `lib/domain/overview-layout.ts`: an unknown widget id is dropped and a missing one goes right after the widget it follows in the default layout, at its default size, so a file from an older or newer version still opens and a new widget does not land at the bottom of the page.
 - **Language and theme** are written from the browser's own keys (§12) at save. Opening a file switches the app to them. They are preferences of the browser as much as of the book, so changing them does not mark the book dirty, and the landing page goes on using the browser's keys. The theme is applied through `Ctx.setTheme`, because only React can reach next-themes.
 - **Page sizes and autosave** are saved the same way: written at save, applied on open, never dirty.
-- **The export language, whether the file is encrypted (§7.8), the business's name and ID, the VAT period, the trader type, the start month, the filed marks, the archived years, the layout, the categories, the recurring templates, the category rules, the opening balances, the year-end figures and the bank balance do mark the book dirty**, since the file no longer matches.
+- **The export language, whether the file is encrypted (§7.8), the business's name and ID, the VAT period, the trader type, the start month, the filed marks, the archived years, the layout, the categories, the recurring templates, the category rules, the opening balances, the year-end figures, the bank balance and the payment months do mark the book dirty**, since the file no longer matches.
 - A plain CSV has no settings. Opening one starts with no filed marks and no start month, and keeps the rest as it was.
 - `lib/domain/settings-file.test.ts` covers the round trip and the lenient reading; `lib/commands/io-commands.test.ts` covers opening a ZIP with settings.
 
@@ -692,7 +693,7 @@ The bookkeeping holds a business's figures and its receipts, and the file may si
 
 - An **open/closed** flag: whether a bookkeeping is open. It is persisted. On load, if it isn't stored, it is true when entries exist.
 - When **no bookkeeping is open**, every route shows the **landing page**.
-- Views: landing, overview, ledger, VAT return, income statement, summary, settings. The prototype used Finnish hash routes (`etusivu`, `kirjanpito`, `alv`, `tulos`, `yhteenveto`, `asetukset`); the real app uses **English** Next.js routes — see §11b. Only the visible labels are translated.
+- Views: landing, overview, ledger, VAT return, income statement, summary, calendar, settings. The prototype used Finnish hash routes (`etusivu`, `kirjanpito`, `alv`, `tulos`, `yhteenveto`, `asetukset`); the real app uses **English** Next.js routes — see §11b. Only the visible labels are translated.
 - The app logo / brand links to the landing page.
 - Persisted UI preferences: language, theme, selected year, last amount mode and type used in the entry dialog, rows per page for each table, and whether the sidebar is collapsed. Language and theme each have their own localStorage key; the rest live with the bookkeeping (§12).
 
@@ -709,8 +710,8 @@ row of nav tabs — is gone.
 - **Sidebar** (`components/app/app-sidebar.tsx`, shadcn `Sidebar`,
   `collapsible="icon"`), top to bottom:
   - Brand: a "K" mark, "Kirjanpito", and the subtitle "Yhdenkertainen kirjanpito" — shortened from the prototype's "Toiminimen yhdenkertainen kirjanpito", which could not fit the button without truncating. The two lines need `leading-tight`: at the default leading they are 36 px and the `size="lg"` button's content box is 32. Links to the landing page.
-  - Navigation with icons: Yleiskatsaus, Kirjanpito, ALV-laskelma, Tuloslaskelma, Yhteenveto, Asetukset.
-  - **Nothing below the navigation.** The sidebar is the brand and the six views; the §1 disclaimer lives on the landing page and in the report notes, and the brand row is the route back to the landing page and its FAQ.
+  - Navigation with icons: Yleiskatsaus, Kirjanpito, ALV-laskelma, Tuloslaskelma, Yhteenveto, Kalenteri, Asetukset.
+  - **Nothing below the navigation.** The sidebar is the brand and the seven views; the §1 disclaimer lives on the landing page and in the report notes, and the brand row is the route back to the landing page and its FAQ.
   - **15 rem wide**, one step under shadcn's 16 rem, which the six short labels do not need. `app-skeleton.tsx` draws the same width, so nothing shifts on rehydrate. The mobile sheet keeps its own 18 rem: it is an overlay on a phone, not a column beside the content.
   - ≥ 900 px it collapses to a 3 rem icon rail; below 900 px it is a sheet, and tapping a link closes it. **Everything in it is a menu row**, so collapsing loses only the words — there is nothing here that needs a second rendering to survive the rail.
   - The expanded / collapsed state is `sidebarOpen` in the store (§12), **not** shadcn's `sidebar_state` cookie: nothing is server-rendered, so a cookie could never be read back. `SidebarProvider` writes no cookie at all, and the app always passes it `open` and `onOpenChange`.
@@ -936,6 +937,7 @@ On **Yleiset**:
 - **"Elinkeinonharjoittajan tyyppi"**: a segmented Ammatinharjoittaja / Liikkeenharjoittaja that sets `traderType` (§6.3). The hint explains cash against accrual basis and says to ask Verohallinto or an accountant when unsure.
 - **"ALV-ilmoitusjakso"**: a segmented Kuukausi / Neljännesvuosi / Vuosi. It sets `vatPeriod` (§6.5), which the overview's due dates and the VAT view follow. Changing it keeps the VAT view on the same part of the year: October becomes Q4.
 - **"Kirjanpidon aloitus"**: the month the business began, as a month select ("Ensimmäisestä tositteesta" or a month) and, once a month is chosen, a year select. It sets `bookStart` (§6.5). Unset, returns are counted from the first entry.
+- **"YEL-maksun kuukaudet" and "Ennakkoveron kuukaudet"**: month toggles that set `payMonths` (§8.22), which the calendar reads.
 - **"Salaus"**: the state of the file's encryption (§7.8) and, behind "Muuta", the buttons to turn it on, change the password or turn it off, with a description of what is and is not hidden. It is shown in every browser, since a downloaded copy is encrypted too.
 - **"Tallennus"**, only where the browser can write to a file: the "Tallenna automaattisesti" checkbox (§7.5), with a description that says what can be undone: a delete or an edit of one voucher for 10 seconds (§8.11).
 - **"Poista kirjanpito"**, last in the title row's menu, in the destructive colour (`deleteBook` in `book-commands.ts`). It erases the whole bookkeeping from this browser: entries, settings, the receipts in IndexedDB, the linked file handle and the `bookkeeping` localStorage key, then returns to the landing page. The confirmation says the deletion is permanent and to download the bookkeeping first. It **cannot be undone**, and it is not stopped by locked periods or unsaved changes: it is the user's own decision about the browser's working copy, and a file on disk is untouched. The `lang` and `theme` keys stay.
@@ -1140,6 +1142,16 @@ kirjanpito-2026-sailytyspaketti.zip      books-2026-retention-package.zip
 - **A receipt the browser and the file being replaced both lack** stops the standalone export, as it stops the archive (`io.archiveLost`).
 - **Not handled:** a month's receipts stamped with voucher numbers for an accountant (a separate idea), encrypting the reports, signing the hash list, and a package for several years at once.
 - `lib/domain/year-reports.test.ts` covers the §10 figures in the reports, the PDF render, the hash lists and the ZIP.
+
+### 8.22 Tax calendar (Kalenteri)
+
+`lib/domain/tax-calendar.ts` (pure, tested), `lib/i18n/calendar-label.ts` and `components/calendar/calendar-view.tsx`, at `/app/calendar`. One list of the selected year's due dates, oldest first, and an `.ics` file of them. The last periods of the year before are in it when they fall due in this one.
+
+- **Dates the app works out itself.** The VAT returns of the filing period (§6.5), from the period that holds the book's start; a return marked as filed shows "Ilmoitettu". The EC Sales List (§8.7), for the months that have EU sales only, due on the 20th of the next month. Form 5 of the year before, on Verohallinto's date in `data/rules.json` (§6.11), "Ilmoitettu" once the year is marked (§8.8). A year with no row in that table lists no Form 5 date.
+- **Dates the user picks the months for.** The YEL contribution and advance tax depend on the pension company's invoice and on the advance tax decision, which the app cannot see. `payMonths` (`settings.json`, dirty like any setting) holds the months of each, chosen in Asetukset, Yleiset, and the calendar links there. YEL falls due on the 20th (Elo; Varma's July date is the 20th too) and advance tax on the 23rd (vero.fi), both moved to the next working day (`nextWorkingDay`, §6.5). Pension companies allow 1, 2, 3, 4, 6 or 12 instalments a year. Verohallinto sets 2, 3, 6 or 12 advance tax instalments by its size (170 to 500 €: March and September; over 500 to 1 700 €: February, July and November; over 1 700 to 10 000 €: every second month from February; over 10 000 €: monthly). The app suggests none of this and tells the user to check the dates.
+- **The export** (`toIcs`) is an iCalendar file of all-day events with a stable `UID` per date, so importing it again updates the events instead of doubling them, and a reminder the day before. It has no network part and no link back to the app.
+- **Not handled:** instalments of tax after assessment, payroll dates, and a due date moved by a decision on one user's case.
+- `lib/domain/tax-calendar.test.ts` and `test/calendar-view.test.tsx` cover it.
 
 ---
 
@@ -1384,7 +1396,7 @@ app/
   app/
     layout.tsx                   AppShell + metadata.robots = noindex, nofollow
     page.tsx                     /app → /app/overview
-    overview/  summary/
+    overview/  summary/  calendar/
     ledger/                      page.tsx = Tositteet
       journal/  accounts/  chart/  Päiväkirja, Pääkirja, Tililuettelo (§8.4)
     vat/                         layout.tsx = VatShell; page.tsx = Laskelma
@@ -1527,7 +1539,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
 
 - localStorage `bookkeeping` — exported as `BOOK_STORAGE_KEY` from
   `stores/book-store.ts`, so nothing hard-codes the string twice:
-  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, exportLang, businessId, businessName, vatPeriod, traderType, bookStart, vatFiled, yearsArchived, archives, archiveYear, overviewLayout, autosave, encrypted, recurring, categoryRules, assetOpening, bankBalance }`.
+  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, exportLang, businessId, businessName, vatPeriod, traderType, bookStart, vatFiled, yearsArchived, archives, archiveYear, overviewLayout, autosave, encrypted, recurring, categoryRules, assetOpening, bankBalance, payMonths }`.
   The book's settings are kept twice: here, as the working buffer, and in the
   file's `settings.json` (§7.6), as the record. A reload restores them from
   here; opening a file replaces them from there.

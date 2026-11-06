@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   BookOpenIcon,
+  CalendarDaysIcon,
   CalculatorIcon,
   FileTextIcon,
   BarChart3Icon,
@@ -29,6 +30,7 @@ export const NAV_ITEMS = [
   { href: APP_ROUTES.vat, key: "nav.vat", icon: CalculatorIcon },
   { href: APP_ROUTES.statement, key: "nav.statement", icon: FileTextIcon },
   { href: APP_ROUTES.summary, key: "nav.summary", icon: BarChart3Icon },
+  { href: APP_ROUTES.calendar, key: "nav.calendar", icon: CalendarDaysIcon },
   { href: APP_ROUTES.settings, key: "nav.settings", icon: SettingsIcon },
 ] as const satisfies ReadonlyArray<{
   href: string

@@ -33,6 +33,7 @@ export const APP_DICT = {
   "nav.ledger": ["Kirjanpito", "Bookkeeping"],
   "nav.statement": ["Tuloslaskelma", "Income statement"],
   "nav.summary": ["Yhteenveto", "Summary"],
+  "nav.calendar": ["Kalenteri", "Calendar"],
   "nav.settings": ["Asetukset", "Settings"],
 
   /*
@@ -2959,5 +2960,44 @@ export const APP_DICT = {
   "bank.paidInFiledYear": [
     "Maksupäivä osuisi vuoteen, jonka lomake 5 on merkitty ilmoitetuksi.",
     "A payment date would fall in a year whose Form 5 is marked as filed.",
+  ],
+  // --- Tax calendar (§8.22) ---
+  "calendar.subtitle": [
+    "Verojen ja maksujen eräpäivät vuonna {y}.",
+    "Tax and payment due dates in {y}.",
+  ],
+  "calendar.export": ["Vie kalenteriin", "Export to calendar"],
+  "calendar.icsName": [
+    "Kirjanpito: verokalenteri {y}",
+    "Kirjanpito: tax calendar {y}",
+  ],
+  "calendar.icsFile": ["verokalenteri-{y}.ics", "tax-calendar-{y}.ics"],
+  "calendar.empty": [
+    "Tälle vuodelle ei ole eräpäiviä. ALV-päivät tulevat näkyviin, kun kirjanpidolla on aloituskuukausi tai ensimmäinen tosite.",
+    "There are no due dates for this year. VAT dates appear once the book has a start month or a first voucher.",
+  ],
+  "calendar.vat": ["ALV-ilmoitus, {p}", "VAT return, {p}"],
+  "calendar.ec": ["Yhteenvetoilmoitus, {m}", "EC Sales List, {m}"],
+  "calendar.form5": ["Lomake 5, verovuosi {y}", "Form 5, tax year {y}"],
+  "calendar.yel": ["YEL-maksu", "YEL contribution"],
+  "calendar.advanceTax": ["Ennakkovero", "Advance tax"],
+  "calendar.done": ["Ilmoitettu", "Filed"],
+  "calendar.today": ["Tänään", "Today"],
+  "calendar.inDays": ["{n} pv päästä", "in {n} days"],
+  "calendar.daysAgo": ["{n} pv sitten", "{n} days ago"],
+  "calendar.setMonths": [
+    "Valitse YEL-maksun ja ennakkoveron kuukaudet asetuksissa.",
+    "Pick the YEL and advance tax months in settings.",
+  ],
+  "calendar.noMonths": ["Ei valittu", "None chosen"],
+  "calendar.payIntro": [
+    "YEL-maksun ja ennakkoveron kuukaudet riippuvat eläkeyhtiön laskusta ja OmaVeron ennakkoveropäätöksestä, joten valitse ne itse. YEL erääntyy yleensä kuun 20. päivänä ja ennakkovero 23. päivänä. Viikonloppuna tai pyhänä päivä siirtyy seuraavaan arkipäivään.",
+    "The months of the YEL contribution and advance tax depend on your pension company's invoice and your advance tax decision in OmaVero, so pick them yourself. YEL usually falls due on the 20th and advance tax on the 23rd. On a weekend or holiday the date moves to the next working day.",
+  ],
+  "calendar.yelMonths": ["YEL-maksun kuukaudet", "YEL months"],
+  "calendar.taxMonths": ["Ennakkoveron kuukaudet", "Advance tax months"],
+  "calendar.note": [
+    "Päivät ovat ohjeellisia. Tarkista ne OmaVerosta ja eläkeyhtiöltäsi.",
+    "The dates are a guide. Check them in OmaVero and with your pension company.",
   ],
 } as const satisfies Dict
