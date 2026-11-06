@@ -2660,42 +2660,12 @@ export const APP_DICT = {
     "fields in the order they are entered in OmaVero",
   ],
   "ledger.packReadmeEncrypted": [
-    "
-Kirjanpidon ZIP on salattu, mutta raportit ja tämä tiedosto eivät ole.
-",
-    "
-The book ZIP is encrypted, but the reports and this file are not.
-",
+    "\nKirjanpidon ZIP on salattu, mutta raportit ja tämä tiedosto eivät ole.\n",
+    "\nThe book ZIP is encrypted, but the reports and this file are not.\n",
   ],
   "ledger.packReadme": [
-    "Säilytyspaketti, vuosi {y}
-
-Tämä paketti on kirjanpitolain 2 luvun 10 §:n säilytystä varten. Päiväkirja ja pääkirja säilytetään vähintään {b} asti ja tositteet vähintään {v} asti.
-
-Sisältö:
-- {r}/: päiväkirja, pääkirja, tililuettelo, tuloslaskelma ja lomake 5 PDF-tiedostoina.
-- {z}: vuoden kirjanpito ZIP-tiedostona. Se sisältää tositteet CSV:nä, asetukset ja liitteet kansiossa {d}/. Sen voi avaa Kirjanpito-sovelluksessa vain luettavaksi.
-- {h}: pakettitiedostojen SHA-256-tarkisteet.
-- {s}: liitteiden SHA-256-tarkisteet polkuineen, jotka niillä on {z}-tiedoston avaamisen jälkeen.
-
-Tarkistus: pura paketti ja aja sen kansiossa komento sha256sum -c {h}. Liitteet tarkistetaan samoin, kun {z} on purettu omaan kansioonsa ja komento ajetaan siellä: sha256sum -c ../{s}.
-
-Tarkisteet paljastavat vahingossa muuttuneen tai vioittuneen tiedoston. Ne eivät todista mitään sille, joka muuttaa tiedoston tarkoituksella ja laskee tarkisteen uudelleen.
-{e}",
-    "Retention package, year {y}
-
-This package is for the retention of Accounting Act chapter 2 section 10. Keep the journal and the general ledger until at least {b}, and the vouchers until at least {v}.
-
-Contents:
-- {r}/: the journal, general ledger, account list, income statement and Form 5 as PDF files.
-- {z}: the year's bookkeeping as a ZIP. It holds the vouchers as CSV, the settings and the attachments in the folder {d}/. The Kirjanpito app opens it read-only.
-- {h}: SHA-256 hashes of the files in the package.
-- {s}: SHA-256 hashes of the attachments, with the paths they have once {z} is unpacked.
-
-To check: unpack the package and run sha256sum -c {h} in its folder. Check the attachments the same way: unpack {z} into a folder of its own and run sha256sum -c ../{s} there.
-
-The hashes reveal a file that changed by accident or is damaged. They prove nothing against someone who changes a file on purpose and recomputes the hash.
-{e}",
+    "Säilytyspaketti, vuosi {y}\n\nTämä paketti on kirjanpitolain 2 luvun 10 §:n säilytystä varten. Päiväkirja ja pääkirja säilytetään vähintään {b} asti ja tositteet vähintään {v} asti.\n\nSisältö:\n- {r}/: päiväkirja, pääkirja, tililuettelo, tuloslaskelma ja lomake 5 PDF-tiedostoina.\n- {z}: vuoden kirjanpito ZIP-tiedostona. Se sisältää tositteet CSV:nä, asetukset ja liitteet kansiossa {d}/. Sen voi avata Kirjanpito-sovelluksessa vain luettavaksi.\n- {h}: pakettitiedostojen SHA-256-tarkisteet.\n- {s}: liitteiden SHA-256-tarkisteet polkuineen, jotka niillä on {z}-tiedoston avaamisen jälkeen.\n\nTarkistus: pura paketti ja aja sen kansiossa komento sha256sum -c {h}. Liitteet tarkistetaan samoin, kun {z} on purettu omaan kansioonsa ja komento ajetaan siellä: sha256sum -c ../{s}.\n\nTarkisteet paljastavat vahingossa muuttuneen tai vioittuneen tiedoston. Ne eivät todista mitään sille, joka muuttaa tiedoston tarkoituksella ja laskee tarkisteen uudelleen.\n{e}",
+    "Retention package, year {y}\n\nThis package is for the retention of Accounting Act chapter 2 section 10. Keep the journal and the general ledger until at least {b}, and the vouchers until at least {v}.\n\nContents:\n- {r}/: the journal, general ledger, account list, income statement and Form 5 as PDF files.\n- {z}: the year's bookkeeping as a ZIP. It holds the vouchers as CSV, the settings and the attachments in the folder {d}/. The Kirjanpito app opens it read-only.\n- {h}: SHA-256 hashes of the files in the package.\n- {s}: SHA-256 hashes of the attachments, with the paths they have once {z} is unpacked.\n\nTo check: unpack the package and run sha256sum -c {h} in its folder. Check the attachments the same way: unpack {z} into a folder of its own and run sha256sum -c ../{s} there.\n\nThe hashes reveal a file that changed by accident or is damaged. They prove nothing against someone who changes a file on purpose and recomputes the hash.\n{e}",
   ],
   "confirm.archivePackConfirm": [
     "Arkistoi ja tee säilytyspaketti",

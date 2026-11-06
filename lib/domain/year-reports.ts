@@ -131,9 +131,7 @@ function header(f: ReportText, input: YearReportInput): string[] {
   const lines: string[] = []
   const who = [
     input.businessName,
-    input.businessId
-      ? `${f.t("common.businessId")} ${input.businessId}`
-      : "",
+    input.businessId ? `${f.t("common.businessId")} ${input.businessId}` : "",
   ].filter(Boolean)
   if (who.length) lines.push(who.join(" · "))
   lines.push(
@@ -266,10 +264,7 @@ export function journalReport(
   }
 }
 
-export function ledgerReport(
-  f: ReportText,
-  input: YearReportInput
-): ReportDoc {
+export function ledgerReport(f: ReportText, input: YearReportInput): ReportDoc {
   const cats = indexCategories(input.cats)
   const accounts = generalLedger(input.entries, cats, input.year)
   const columns = bookColumns(f, false)
@@ -384,9 +379,7 @@ export function accountListReport(
   const rows: ReportRow[] = list.map(({ line, categories }) => {
     const name = lineName(line, f.lang)
     const own = categories.map((c) => f.catName(c)).filter((c) => c !== name)
-    const content = [groupName(line, f.lang), ...own]
-      .filter(Boolean)
-      .join(", ")
+    const content = [groupName(line, f.lang), ...own].filter(Boolean).join(", ")
     return { kind: "data", cells: [String(line.account), name, content] }
   })
 

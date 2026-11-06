@@ -39,7 +39,7 @@ There is **no backend, no account and no database**. The user opens their bookke
   - `@zip.js/zip.js` for ZIP import and export, including AES encryption (§7.8). `lib/domain/zip.ts` imports its `index-native.js` build, which uses the browser's own deflate and needs neither web workers nor wasm, and `configure({ useWebWorkers: false })` keeps it inside the CSP of §11b.
   - `@dnd-kit/core` and `@dnd-kit/sortable` for rearranging the overview's widgets (§8.12). Native HTML drag and drop has no keyboard or touch support, and dnd-kit's keyboard sensor gives both.
   - `pdfjs-dist` for rendering PDFs. **The worker is copied to `public/pdf.worker.min.mjs` by `scripts/copy-pdf-worker.mjs` on `predev`/`prebuild`, and `workerSrc` points at that fixed URL.** The `new URL(..., import.meta.url)` form was rejected: the worker is an ES module bundle, and whether Turbopack copies it as an asset or pulls it into the module graph differs between the dev server and the export — a failure that would surface only in production. pdfjs is still imported dynamically, from `lib/browser/pdf.ts` alone.
-  - `pdf-lib` for writing the memo vouchers of calculated entries (§8.8). `lib/browser/memo-pdf.ts` is the only module that imports it, and `lib/commands/memo-commands.ts` imports that module dynamically, so no bundle carries it until an entry is booked.
+  - `pdf-lib` for writing the memo vouchers of calculated entries (§8.8). `lib/browser/memo-pdf.ts` and `lib/browser/report-pdf.ts` (§8.21) are the only modules that import it, and the commands that use them import them dynamically, so no bundle carries it until an entry is booked or a package is made.
   - `idb` or `idb-keyval` for IndexedDB.
   - `next-themes` for light, dark and system theme (the standard shadcn approach).
   - Tables are hand-composed on shadcn's `Table`, **not** `@tanstack/react-table`, which was removed from the dependencies. Sorting, filtering and pagination all live in the store — they have to, because the toolbar, the month chips and the totals cards read the same state — which would leave a table adapter owning nothing. See the comment at the top of `components/ledger/ledger-table.tsx`.
@@ -1010,7 +1010,7 @@ The app's front page, at `/app/overview`. `/app`, "Jatka kirjanpitoa", opening a
   - **Myynti**: line 300 split into Suomi, EU, muut maat and käänteinen, as a stacked bar and a list; lines 301 to 324 below as other income.
   - **Kulut ryhmittäin**: the §6.4 buckets with expenses, largest first; empty ones are counted.
   - **Viimeisimmät tositteet** (wide): the year's six newest entries, signed gross, flagged "ei liitettä" where there is no receipt file. A row opens the entry dialog.
-  - **Tarkistettavaa**: unsaved changes with a save (or download) button; each overdue return and each return due within 30 days, with "Ilmoitettu"; one row per check of §8.4 that flags anything (no receipt, a rate that does not fit the date, a future date, a domestic sale without VAT, an unusually large amount, a possible duplicate, VAT on a cost whose VAT cannot be deducted), each with "Näytä", which opens the ledger filtered to them; receipts missing from the file; the VAT registration limit (below); empty months from the first entry to the last complete month, skipping any before the start month; and one row per closed year with entries, as a reminder outside the open count (`yearsToArchive` in `lib/domain/retention.ts`). It gives the dates of KPL 2:10 (vero.fi, "Kirjanpito, tilikausi, verokausi"), the books until 31.12. ten years on and the vouchers six, and asks for a copy of the file that is no longer edited. "Tallessa" marks the year in `yearsArchived` and the toast can undo it. A year past the 10 years is not listed. The journal and the general ledger print the same dates (§8.4).
+  - **Tarkistettavaa**: unsaved changes with a save (or download) button; each overdue return and each return due within 30 days, with "Ilmoitettu"; one row per check of §8.4 that flags anything (no receipt, a rate that does not fit the date, a future date, a domestic sale without VAT, an unusually large amount, a possible duplicate, VAT on a cost whose VAT cannot be deducted), each with "Näytä", which opens the ledger filtered to them; receipts missing from the file; the VAT registration limit (below); empty months from the first entry to the last complete month, skipping any before the start month; and one row per closed year with entries, as a reminder outside the open count (`yearsToArchive` in `lib/domain/retention.ts`). It gives the dates of KPL 2:10 (vero.fi, "Kirjanpito, tilikausi, verokausi"), the books until 31.12. ten years on and the vouchers six, and asks for a copy of the file that is no longer edited. "Säilytyspaketti" downloads the year's retention package (§8.21). "Tallessa" marks the year in `yearsArchived` and the toast can undo it. A year past the 10 years is not listed. The journal and the general ledger print the same dates (§8.4).
 - **The limits of KPL 1:1a** (`lib/domain/book-limits.ts`). Each counts only when it holds in both the closed year and the one before. Single-entry books are allowed unless two of these are exceeded: assets 100 000 €, turnover 200 000 €, more than 3 staff. Financial statements are required when two of the micro limits are: 450 000 €, 900 000 €, 10 staff. They then follow the micro rules, within 4 months. The book does not record staff, so two limits over gets an error row saying the app does not cover it, and one over gets an information row naming the staff limit. Assets are Form 5's 718, which has no bank deposits, so a business near a limit has to count those in itself.
 - **The filing period's limit** (`vatPeriodOverLimit`). Quarterly filing needs turnover of at most 100 000 € and yearly filing at most 30 000 € (vero.fi, "Tax period"). A closed year above that gets a warning row, and nothing is blocked, since the period itself is set in OmaVero.
 - **Form 5's due date** (`lib/domain/tax-return-deadline.ts`). A row from the start of the year until Verohallinto's date, a row per tax year in `data/rules.json`. A year not in the table says "in the spring" until the end of April rather than guessing.
@@ -1094,6 +1094,7 @@ KPL 2:6 has the link between transactions, vouchers and entries, through any sub
 - **The working book keeps a stub** per year in `archives` (`settings.json`): the file name, the date and the entry count. Asetukset, Yleiset lists them. The app cannot find the file again, since a browser hands back no path, so the user opens it from wherever they put it.
 - **Opening an archive** is opening any file (§7.2). `archiveOf` in its settings sets `archiveYear` in the store, which is persisted. Nothing is parked: the archive replaces the open book after the usual unsaved-changes prompt (§8.11), and "Sulje arkisto" in the banner returns to the landing page, where the working book is opened again from its file.
 - **Read-only is the store's rule, not each action's.** While `archiveYear` is set, a state change that touches any of `BOOK_DATA_KEYS` is dropped, so no action needs its own check. Filters, the selected year and sorting stay free. `openDialog` opens only the dialogs that show (a viewer, export, the VAT return, the year-end dialog, and an existing voucher). Saving, autosave and "Uusi tosite" are refused or disabled. A download of the archive is allowed and keeps `archiveOf`.
+- **The confirmation can also make a retention package** (§8.21): its second button, "Arkistoi ja tee säilytyspaketti", builds the package from the archive ZIP before anything is written, and downloads it once the archive is on disk.
 - **Not handled:** unarchiving into the working book, parking the working book while an archive is open, archiving a year with open items, and finding an archive again from its stub.
 - `lib/domain/year-archive.test.ts` covers the rules and `stores/archive-guard.test.ts` the read-only guard.
 
@@ -1110,6 +1111,35 @@ KPL 2:6 has the link between transactions, vouchers and entries, through any sub
 - **Keys.** `Ctrl`/`⌘`+`Z` undoes, `Ctrl`/`⌘`+`Shift`+`Z` and `Ctrl`+`Y` redo. In a field the browser's own undo keeps the key, and nothing fires behind a dialog or confirmation, during an import or a save, in an archive or with no bookkeeping open.
 - No cap on the number of steps. Entries are shared between snapshots, so a step costs one array.
 - `lib/domain/history.test.ts`, `stores/history-store.test.ts` and `test/app-shortcuts.test.tsx` cover it.
+
+### 8.21 Year archive package (Säilytyspaketti)
+
+`lib/domain/year-reports.ts`, `lib/domain/retention-package.ts` (both pure and tested), `lib/browser/report-pdf.ts` and `lib/commands/retention-commands.ts`. KPL 2:10 has the books kept for ten years, and a trader who wants a copy that reads without the app needs more than the working ZIP. The package is one ZIP for one year:
+
+```
+kirjanpito-2026-sailytyspaketti.zip      books-2026-retention-package.zip
+  README.txt                               README.txt
+  hashes.txt                               hashes.txt
+  receipt-hashes.txt                       receipt-hashes.txt
+  kirjanpito-2026.zip                      books-2026.zip
+  raportit/                                reports/
+    1 - Päiväkirja 2026.pdf                  1 - Journal 2026.pdf
+    2 - Pääkirja 2026.pdf                    2 - General ledger 2026.pdf
+    3 - Tililuettelo 2026.pdf                3 - Account list 2026.pdf
+    4 - Tuloslaskelma 2026.pdf               4 - Income statement 2026.pdf
+    5 - Lomake 5 2026.pdf                    5 - Form 5 2026.pdf
+```
+
+- **Where it comes from.** Two entries, one code path. The overview's checklist row for a closed year and the archive banner have "Säilytyspaketti", which downloads it for any year with vouchers and changes nothing in the book (`exportRetentionPackage`). The year archive of §8.19 offers it as the second button of its confirmation (`makeRetentionPackage`). The standalone export needs no file picker, so it works in every browser.
+- **The year's ZIP inside it** is built the way the archive's is (`archiveSettings`, `archiveContents`), so it opens read-only as an archive of that year. In the archive flow it is the archive file itself.
+- **The reports are drawn, not printed.** A browser cannot write its print dialog's PDF to a file, and the package needs the bytes to hash them. `yearReports` turns the journal, general ledger (with its reconciliation to the statement), account list (with the list of books of KPL 2:7a), income statement and Form 5 into a layout-neutral document of tables and text, from the same domain functions the views use. `renderReportPdf` draws it with pdf-lib in the standard fonts, so the text is selectable and `toWinAnsi` applies (§8.8). The look is plainer than the sheets on screen. The statement and Form 5 read the whole book by payment year (§6.3), so they are made from all entries, not only the year's.
+- **The reports follow the book's export language** (§7.1), like the other names in the file. The README and the folder names do too.
+- **Two hash lists, both in `sha256sum` form** (the hash, two spaces, the path). `hashes.txt` covers every file in the package but itself. `receipt-hashes.txt` lists each receipt in the year's ZIP by the path it has once that ZIP is unpacked. The receipts are read back out of the finished ZIP, so the list describes the file and not what the book meant to put in it. The README says how to check both.
+- **The hashes catch accidents and prove nothing else**, as the integrity seal does (§7.9). Anyone who changes a file on purpose can recompute them.
+- **An encrypted book keeps its year ZIP encrypted** (§7.8). The reports, the lists and the README are plain, because the package has to open in any tool years from now, so the standalone export asks first and says so. The outer ZIP is never encrypted.
+- **A receipt the browser and the file being replaced both lack** stops the standalone export, as it stops the archive (`io.archiveLost`).
+- **Not handled:** a month's receipts stamped with voucher numbers for an accountant (a separate idea), encrypting the reports, signing the hash list, and a package for several years at once.
+- `lib/domain/year-reports.test.ts` covers the §10 figures in the reports, the PDF render, the hash lists and the ZIP.
 
 ---
 

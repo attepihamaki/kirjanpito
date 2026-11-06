@@ -48,8 +48,8 @@ function reportInput(state: BookState, year: number): YearReportInput {
     yearEnd: state.yearEnd[year],
     assetOpening: state.assetOpening,
     loanOpening: state.loanOpening,
-    businessName: state.businessName,
-    businessId: state.businessId,
+    businessName: state.businessName ?? "",
+    businessId: state.businessId ?? "",
     exportLang: state.exportLang,
   }
 }

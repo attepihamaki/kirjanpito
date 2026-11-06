@@ -156,17 +156,19 @@ function place(
     (max, p) =>
       Math.max(
         max,
-        p.lines.reduce(
-          (h, l) => h + (l.small ? SMALL : SIZE) * LEADING,
-          0
-        )
+        p.lines.reduce((h, l) => h + (l.small ? SMALL : SIZE) * LEADING, 0)
       ),
     SIZE * LEADING
   )
   return { cells: placed, height: height + 3 }
 }
 
-function drawCells(pen: Pen, placed: readonly Placed[], bold: boolean, muted: boolean) {
+function drawCells(
+  pen: Pen,
+  placed: readonly Placed[],
+  bold: boolean,
+  muted: boolean
+) {
   for (const cell of placed) {
     let y = pen.y
     for (const line of cell.lines) {
@@ -213,7 +215,11 @@ function head(pen: Pen, cols: ReturnType<typeof layout>) {
   pen.y -= 3
 }
 
-function table(pen: Pen, columns: readonly ReportColumn[], rows: readonly ReportRow[]) {
+function table(
+  pen: Pen,
+  columns: readonly ReportColumn[],
+  rows: readonly ReportRow[]
+) {
   const cols = layout(columns)
   head(pen, cols)
   for (const row of rows) {
