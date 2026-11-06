@@ -18,6 +18,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "docs:check": "node scripts/check-docs.mjs",
+    "release-notes": "node scripts/release-notes.mjs",
     "check": "npm run typecheck && npm run format:check && npm run lint && npm run docs:check && npm run test",
     "test:visual": "playwright test",
     "test:visual:update": "playwright test --update-snapshots",

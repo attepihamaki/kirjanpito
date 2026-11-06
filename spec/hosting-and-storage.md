@@ -161,6 +161,15 @@ static files, so any static host would do.
   serves it for unmatched paths, which is also why `trailingSlash: true` matters:
   every route is a real `index.html` and no rewrite rules are involved.
 
+### Release notes
+
+`scripts/release-notes.mjs` turns Conventional Commit subjects into notes. `node scripts/release-notes.mjs` lists what changed since the newest tag, or since the first commit while there is none.
+
+- **Only what a user can notice is listed**: `feat`, `fix` and `perf`, and any commit marked breaking with `!`. `--all` adds docs, tests, CI and refactors, which are written for developers. `--json` prints the entries for something that renders them itself, and `--from`, `--to` and `--title` pick the range and the heading.
+- **The scope is the grouping**: "**vat:** Partial deduction…". A subject without the `type(scope): text` shape is skipped, so a merge or a loose message never reaches the notes.
+- **A release is a tag.** Pushing a `v*` tag runs `.github/workflows/release.yml`, which writes the notes for the range since the previous tag and creates the GitHub release. The site is deployed on every push to main either way, so a tag records what changed and publishes nothing.
+- **The subjects are the source text**, in English and for developers. An in-app "what changed" would need user-facing wording in both languages, which the subjects do not give, so none exists.
+
 ### Local checks (git hooks)
 
 `npm install` sets up two hooks through Husky (`prepare`), so the failures CI reports stop before the push.
