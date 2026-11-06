@@ -112,7 +112,7 @@ export function relinkChangeLog(
 }
 
 /** The most records the log keeps (the book's blob in localStorage holds it). */
-export const MAX_LOG_RECORDS = 5000
+const MAX_LOG_RECORDS = 5000
 
 /**
  * The log cut to `max` records. Lock, unlock and import records are never

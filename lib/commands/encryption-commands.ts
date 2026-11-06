@@ -16,7 +16,7 @@ import { useBookStore } from "@/stores/book-store"
  * archive's key derivation is PBKDF2 with a fixed 1 000 rounds, so a short
  * password is the weak point of the file.
  */
-export const MIN_PASSWORD_LENGTH = 10
+const MIN_PASSWORD_LENGTH = 10
 
 /**
  * Ask for a new password, twice. Resolves null when the user cancels. Used when

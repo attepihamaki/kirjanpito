@@ -7,7 +7,7 @@
  * each exactly once.
  */
 
-export const OVERVIEW_WIDGETS = [
+const OVERVIEW_WIDGETS = [
   "result",
   "vat",
   "bank",

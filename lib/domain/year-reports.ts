@@ -210,10 +210,7 @@ function totalCells(f: ReportText, t: Totals, negative: boolean): string[] {
   ]
 }
 
-export function journalReport(
-  f: ReportText,
-  input: YearReportInput
-): ReportDoc {
+function journalReport(f: ReportText, input: YearReportInput): ReportDoc {
   const cats = indexCategories(input.cats)
   const book = journal(input.entries, cats, input.year)
   const columns = bookColumns(f, true)
@@ -264,7 +261,7 @@ export function journalReport(
   }
 }
 
-export function ledgerReport(f: ReportText, input: YearReportInput): ReportDoc {
+function ledgerReport(f: ReportText, input: YearReportInput): ReportDoc {
   const cats = indexCategories(input.cats)
   const accounts = generalLedger(input.entries, cats, input.year)
   const columns = bookColumns(f, false)
@@ -371,10 +368,7 @@ const BOOK_LIST = [
   ["ledger.bookReports", "ledger.bookReportsKept"],
 ] as const
 
-export function accountListReport(
-  f: ReportText,
-  input: YearReportInput
-): ReportDoc {
+function accountListReport(f: ReportText, input: YearReportInput): ReportDoc {
   const list = accountList(input.entries, input.cats, input.year)
   const rows: ReportRow[] = list.map(({ line, categories }) => {
     const name = lineName(line, f.lang)
@@ -447,10 +441,7 @@ function statementOf(input: YearReportInput) {
   )
 }
 
-export function statementReport(
-  f: ReportText,
-  input: YearReportInput
-): ReportDoc {
+function statementReport(f: ReportText, input: YearReportInput): ReportDoc {
   const cats = indexCategories(input.cats)
   const statement = statementOf(input)
   const rows: ReportRow[] = []
@@ -637,7 +628,7 @@ function formTable(
   return blocks
 }
 
-export function form5Report(f: ReportText, input: YearReportInput): ReportDoc {
+function form5Report(f: ReportText, input: YearReportInput): ReportDoc {
   const cats = indexCategories(input.cats)
   const yearEnd = input.yearEnd ?? EMPTY_YEAR_END
   const balance = form5Balance({

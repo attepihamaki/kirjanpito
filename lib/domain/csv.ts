@@ -12,7 +12,6 @@ import {
 import {
   CSV_HEADER,
   columnName,
-  csvColumnLabel,
   csvHeaderLine,
   type CsvColumn,
 } from "@/lib/domain/csv-header"
@@ -49,7 +48,7 @@ import {
  * landing page and the import command can name them without pulling papaparse
  * into their bundles. This module is the only place the *values* appear.
  */
-export { CSV_HEADER, csvHeaderLine, csvColumnLabel }
+export { CSV_HEADER, csvHeaderLine }
 
 const REQUIRED = ["date", "type", "amount"] as const
 

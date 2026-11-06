@@ -62,7 +62,7 @@ export const SETTINGS_FILE_NAME = "settings.json"
 /** Version of the shape below. A reader ignores keys it does not know. */
 export const SETTINGS_VERSION = 1
 
-export const PAGE_SIZES = [10, 25, 50, 100] as const
+const PAGE_SIZES = [10, 25, 50, 100] as const
 export type PageSize = (typeof PAGE_SIZES)[number]
 
 export type ThemeChoice = "light" | "dark" | "system"

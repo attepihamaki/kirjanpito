@@ -71,7 +71,7 @@ export function vatFigure(
 const TYPED_IN_CODES: ReadonlySet<number> = new Set([725, 749])
 
 /** Whether a Form 5 field has vouchers behind it, without building the list. */
-export function hasForm5Vouchers(
+function hasForm5Vouchers(
   code: number,
   cats: CategoryMap,
   year: number

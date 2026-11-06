@@ -2,7 +2,7 @@ import { lineOf, offStatement } from "@/lib/domain/accounts"
 import { indexCategories, type Category, type Entry } from "@/lib/domain/types"
 
 /** The steps of the getting-started checklist, in the order they are shown. */
-export const ONBOARDING_STEPS = [
+const ONBOARDING_STEPS = [
   "business",
   "sale",
   "purchase",

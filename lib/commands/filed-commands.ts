@@ -38,7 +38,7 @@ function describe(f: Formatters, c: FiledPeriodChange): string {
  * returns, as paragraphs ready for a confirmation, or null when it touches
  * none of them.
  */
-export function filedChangeNotice(after: readonly Entry[]): string | null {
+function filedChangeNotice(after: readonly Entry[]): string | null {
   const { entries, cats, vatPeriod, vatFiled } = useBookStore.getState()
   const changes = filedPeriodChanges(
     entries,

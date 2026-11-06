@@ -446,7 +446,7 @@ export const LINES: readonly AccountLine[] = [
  * the income statement. The account is the usual balance sheet one, because
  * the CSV needs a number and Form 5 has none for these.
  */
-export const CAPITAL_LINES: readonly AccountLine[] = [
+const CAPITAL_LINES: readonly AccountLine[] = [
   {
     ...l(
       "asset-purchase",
@@ -479,7 +479,7 @@ export const CAPITAL_LINES: readonly AccountLine[] = [
  * sheet, so 2939 is the app's own account for the CSV's `tili` column, not one
  * Form 5 asks for.
  */
-export const SETTLEMENT_LINES: readonly AccountLine[] = [
+const SETTLEMENT_LINES: readonly AccountLine[] = [
   {
     ...l(
       "vat-payment",
@@ -512,7 +512,7 @@ export const SETTLEMENT_LINES: readonly AccountLine[] = [
  * entry books have no balance sheet, so 2000 is the app's own account for the
  * CSV's `tili` column, not one Form 5 asks for.
  */
-export const OWNER_LINES: readonly AccountLine[] = [
+const OWNER_LINES: readonly AccountLine[] = [
   {
     ...l(
       "owner-withdrawal",
@@ -544,7 +544,7 @@ export const OWNER_LINES: readonly AccountLine[] = [
  * transactions. Single-entry books have no balance sheet, so 2600 is the app's
  * own account for the CSV's `account` column, not one Form 5 asks for.
  */
-export const LOAN_LINES: readonly AccountLine[] = [
+const LOAN_LINES: readonly AccountLine[] = [
   {
     ...l(
       "loan-drawdown",

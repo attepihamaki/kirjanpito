@@ -8,7 +8,7 @@ import { autosaveBook } from "@/lib/commands/io-commands"
 import { useBookStore } from "@/stores/book-store"
 
 /** How long the bookkeeping must sit still before autosave writes it. */
-export const AUTOSAVE_DELAY_MS = 3000
+const AUTOSAVE_DELAY_MS = 3000
 
 /** The longest wait between two tries after failed writes. */
 const AUTOSAVE_MAX_DELAY_MS = 60_000

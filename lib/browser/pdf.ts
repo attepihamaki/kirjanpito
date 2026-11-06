@@ -31,7 +31,7 @@ async function pdfjs() {
   return lib
 }
 
-export class PdfLoadError extends Error {
+class PdfLoadError extends Error {
   constructor(override readonly cause: unknown) {
     super("Could not open the PDF")
     this.name = "PdfLoadError"

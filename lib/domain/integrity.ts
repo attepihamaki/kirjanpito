@@ -10,7 +10,7 @@
  * log (§8.11).
  */
 
-export const INTEGRITY_ALGORITHM = "sha256"
+const INTEGRITY_ALGORITHM = "sha256"
 
 /** What `settings.json` stores under `integrity`. Both values are lowercase hex. */
 export interface Integrity {

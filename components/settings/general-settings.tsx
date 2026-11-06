@@ -102,7 +102,7 @@ function RulesChecked() {
  * are endonyms, as in the language picker, so each reads the same whichever
  * language the UI is in.
  */
-export function ExportLanguageSetting() {
+function ExportLanguageSetting() {
   const f = useFormatters()
   const exportLang = useBookStore((s) => s.exportLang)
   const setExportLang = useBookStore((s) => s.setExportLang)

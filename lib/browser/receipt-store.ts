@@ -4,7 +4,7 @@ import { createStore, delMany, get, keys, set, type UseStore } from "idb-keyval"
 const DB_NAME = "bookkeeping-receipts"
 const STORE_NAME = "files"
 
-export class ReceiptStorageError extends Error {
+class ReceiptStorageError extends Error {
   constructor(
     readonly op: string,
     override readonly cause: unknown

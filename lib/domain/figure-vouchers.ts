@@ -309,7 +309,7 @@ const FORM5_FIELD_CODES: readonly number[] = [
 const BALANCE_CODES: readonly number[] = [394, 711, 725, 749, 801, 802, 804]
 
 /** The VAT filing period of `kind` that holds a date, as a period to filter by. */
-export function vatPeriodOf(kind: VatPeriodKind, iso: string): Period {
+function vatPeriodOf(kind: VatPeriodKind, iso: string): Period {
   const year = yearOf(iso)
   if (kind === "year") return { kind: "year", year }
   const month = monthOf(iso)

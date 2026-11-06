@@ -47,7 +47,7 @@ export function StatusDot({ className }: { className?: string }) {
  * Whether autosave is on and running, on and paused, or off (§7.5). Off is
  * also what a browser that cannot write to a file always reports.
  */
-export function useAutosaveState(): "off" | "on" | "retrying" | "paused" {
+function useAutosaveState(): "off" | "on" | "retrying" | "paused" {
   const autosave = useBookStore((s) => s.autosave)
   const paused = useBookStore((s) => s.autosavePaused)
   const failures = useBookStore((s) => s.autosaveFailures)

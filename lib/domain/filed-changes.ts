@@ -29,7 +29,7 @@ const TAX_FIELDS: ReadonlySet<string> = new Set([
  * Vero lets a change to the tax of at most 500 € go on the next return
  * instead of a replacement return, as long as only the tax changes.
  */
-export const NEXT_RETURN_LIMIT: Cents = 50_000
+const NEXT_RETURN_LIMIT: Cents = 50_000
 
 export interface FiledPeriodChange {
   period: VatPeriod

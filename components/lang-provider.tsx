@@ -27,7 +27,7 @@ export function LangProvider({
 }
 
 /** The app's provider: language comes from the stored preference. */
-export function AppLangProvider({ children }: { children: React.ReactNode }) {
+function AppLangProvider({ children }: { children: React.ReactNode }) {
   const lang = useLangStore((s) => s.lang)
   return <LangProvider lang={lang}>{children}</LangProvider>
 }
@@ -65,7 +65,7 @@ export function useT() {
  * HtmlShell is a literal that never changes, so React has nothing to revert.
  * This is how next-themes manages `class` on the same element.
  */
-export function LangHtmlAttr() {
+function LangHtmlAttr() {
   const lang = useLangStore((s) => s.lang)
   const hydrated = useLangStore((s) => s.hydrated)
   const t = useT()

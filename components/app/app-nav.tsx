@@ -24,7 +24,7 @@ import { useT } from "@/components/lang-provider"
 import { APP_ROUTES } from "@/lib/site"
 import type { MessageKey } from "@/lib/i18n/messages"
 
-export const NAV_ITEMS = [
+const NAV_ITEMS = [
   { href: APP_ROUTES.overview, key: "nav.overview", icon: LayoutDashboardIcon },
   { href: APP_ROUTES.ledger, key: "nav.ledger", icon: BookOpenIcon },
   { href: APP_ROUTES.vat, key: "nav.vat", icon: CalculatorIcon },

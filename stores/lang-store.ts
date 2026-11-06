@@ -18,7 +18,7 @@ import type { Lang } from "@/lib/domain/types"
  */
 export const LANG_STORAGE_KEY = "lang"
 
-export const DEFAULT_LANG: Lang = "fi"
+const DEFAULT_LANG: Lang = "fi"
 
 export const LANGS: readonly Lang[] = ["fi", "en"]
 

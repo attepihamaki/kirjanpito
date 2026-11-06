@@ -40,7 +40,7 @@ export interface BookLimits {
 }
 
 /** Turnover for the limits: all of line 300, net. */
-export function yearTurnover(
+function yearTurnover(
   entries: readonly Entry[],
   cats: CategoryMap,
   year: number

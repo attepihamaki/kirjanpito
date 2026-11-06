@@ -55,7 +55,7 @@ export function hashList(
 }
 
 /** Hashes of the files, in the list's format. */
-export async function hashFiles(
+async function hashFiles(
   files: readonly { path: string; bytes: Uint8Array }[]
 ): Promise<string> {
   const items = await Promise.all(

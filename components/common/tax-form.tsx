@@ -290,7 +290,7 @@ export function TaxForm({
 }
 
 /** A numbered step of the form, for the steps after the totals as well. */
-export function TaxFormStep({
+function TaxFormStep({
   step,
   filled,
   children,

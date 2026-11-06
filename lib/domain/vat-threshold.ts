@@ -94,7 +94,7 @@ export function vatThreshold(
 }
 
 /** The most a year's turnover may be for quarterly and yearly filing (vero.fi, "Tax period"). */
-export function vatPeriodLimit(
+function vatPeriodLimit(
   period: Exclude<VatPeriodKind, "month">,
   today: string
 ): Cents {

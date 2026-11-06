@@ -17,10 +17,10 @@ export interface StatementLine {
 }
 
 /** The relief on a co-operative's surplus: the first 5 000 € is taxed at the lower share. */
-export const COOP_RELIEF: Cents = 500_000
+const COOP_RELIEF: Cents = 500_000
 /** The taxable percentage of surplus within the relief, and above it. */
-export const COOP_SHARE_BELOW = 25
-export const COOP_SHARE_ABOVE = 75
+const COOP_SHARE_BELOW = 25
+const COOP_SHARE_ABOVE = 75
 
 export interface StatementOptions {
   /**

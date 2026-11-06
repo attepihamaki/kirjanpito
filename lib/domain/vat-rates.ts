@@ -18,7 +18,7 @@ export interface RateChange {
   after: number
 }
 
-export const RATE_CHANGES: readonly RateChange[] = RULES.vatRateChanges
+const RATE_CHANGES: readonly RateChange[] = RULES.vatRateChanges
 
 /**
  * The rate in force on `date` that corresponds to `rate`: 25,5 % becomes

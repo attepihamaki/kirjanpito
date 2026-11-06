@@ -73,7 +73,7 @@ function scope(input: VatCheckInput) {
  * narrowed to the period's own entries, so a period does not change what
  * stands out.
  */
-export const VAT_CHECK_RULES = defineRules<
+const VAT_CHECK_RULES = defineRules<
   VatCheckInput,
   VatCheckData[keyof VatCheckData]
 >([

@@ -16,13 +16,13 @@ import {
  * entries stay out of the income statement, Form 5 and the VAT return.
  */
 
-export function isSettlement(e: Entry, cats: CategoryMap): boolean {
+function isSettlement(e: Entry, cats: CategoryMap): boolean {
   const cat = cats.get(e.catId)
   return !!cat && !!LINE_BY_KEY.get(cat.line)?.settlement
 }
 
 /** Signed like a report's `due`: positive paid, negative received. */
-export function settlementAmount(e: Entry): Cents {
+function settlementAmount(e: Entry): Cents {
   const { gross } = calcEntry(e)
   return (e.type === "expense" ? gross : -gross) + 0
 }

@@ -49,7 +49,7 @@ export function applyHistoryStep(
   return true
 }
 
-export function clearHistory(): void {
+function clearHistory(): void {
   const { past, future } = useHistoryStore.getState()
   if (past.length === 0 && future.length === 0) return
   useHistoryStore.setState(EMPTY_HISTORY)

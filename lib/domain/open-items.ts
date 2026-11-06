@@ -85,8 +85,6 @@ export function balancesAt(
  */
 export type TraderType = "professional" | "business"
 
-export const TRADER_TYPES: readonly TraderType[] = ["professional", "business"]
-
 /**
  * The entries as the income statement and Form 5 read them (§6.3). An
  * ammatinharjoittaja has each entry placed on its payment date and an open one

@@ -160,7 +160,7 @@ export interface ZipLimits {
   receiptBytes: number
 }
 
-export const ZIP_LIMITS: ZipLimits = {
+const ZIP_LIMITS: ZipLimits = {
   textBytes: 64 * MEBIBYTE,
   receiptBytes: 512 * MEBIBYTE,
 }

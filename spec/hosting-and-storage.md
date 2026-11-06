@@ -177,6 +177,7 @@ static files, so any static host would do.
 - **`pre-commit`** runs lint-staged on the staged `.ts` and `.tsx` files: Prettier writes the formatting back, then ESLint runs with `--max-warnings 0`. It takes seconds, because it never looks at the files that are not staged.
 - **`pre-push`** runs `npm run typecheck`, which has to see the whole project.
 - **`npm run docs:check`** (`scripts/check-docs.mjs`, part of `npm run check`) fails when the documentation points at something gone: a file path in backticks in `CLAUDE.md` or `spec/` that does not exist, a `§` reference to a section with no heading, or a "CLAUDE.md §N" comment in the sources that names one. Paths under `docs/` are local-only and are not checked. It does not check function or field names, which the prose uses too freely to match reliably.
+- **`npm run unused`** (knip, configured in `knip.json`, part of `npm run check`) fails on a file, a dependency or an exported value that nothing imports. Tests count as users, so an export that only a test reads passes. Exported types are not reported, since a type exported to document a shape costs nothing, and the exports of `components/ui/` are left alone because that folder holds shadcn's component sets whole. An export used only inside its own file loses its `export`; one used nowhere is deleted.
 - **CI is the backstop.** `npm run check` runs the same checks plus the tests on every push, so `--no-verify` skips a convenience and not the gate.
 
 ## 12. Persistence keys

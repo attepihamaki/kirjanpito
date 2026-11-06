@@ -3,7 +3,7 @@
 import * as React from "react"
 
 /** How long work may run before it is worth telling the user about it. */
-export const BUSY_DELAY_MS = 400
+const BUSY_DELAY_MS = 400
 
 /**
  * `true` once `active` has been true for `delay` ms, and `false` the moment

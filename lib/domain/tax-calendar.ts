@@ -28,10 +28,10 @@ export interface PayMonths {
 export const NO_PAY_MONTHS: PayMonths = { yel: [], advanceTax: [] }
 
 /** Day of the month a YEL instalment falls due (Elo, Varma). */
-export const YEL_DAY = 20
+const YEL_DAY = 20
 
 /** Day of the month an advance tax instalment falls due (vero.fi). */
-export const ADVANCE_TAX_DAY = 23
+const ADVANCE_TAX_DAY = 23
 
 export type CalendarKind = "vat" | "ec" | "form5" | "yel" | "advanceTax"
 
@@ -70,11 +70,7 @@ function monthList(months: readonly number[]): number[] {
 }
 
 /** The month's instalment day, or the next working day. */
-export function instalmentDate(
-  year: number,
-  month: number,
-  day: number
-): string {
+function instalmentDate(year: number, month: number, day: number): string {
   return nextWorkingDay(isoDate(year, month, day) as string)
 }
 
@@ -152,9 +148,6 @@ export function taxCalendar(input: CalendarInput): CalendarEvent[] {
     (a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id)
   )
 }
-
-/** The month of an event's date, 1 to 12. */
-export const eventMonth = (e: CalendarEvent): number => monthOf(e.date)
 
 /* -------------------------------------------------------------------------
  * iCalendar
