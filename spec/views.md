@@ -243,6 +243,7 @@ Every section is a `Panel` (§11). The page is split into two sub-pages, so the 
 - **Luokat** at `/app/settings/categories`: the categories table, with adding in a dialog, and restoring the defaults.
 - **Toistuvat** at `/app/settings/recurring`: the monthly templates (§8.5).
 - **Säännöt** at `/app/settings/rules`: the category rules (§8.17).
+- **Kalenteri** at `/app/settings/calendar`: the calendar's inputs (§8.22), below.
 
 `app/app/settings/layout.tsx` renders `SettingsShell` (`components/settings/settings-shell.tsx`): the page title and a row of tab links shaped like the month chips (§8.4). The current tab is `bg-muted` with `aria-current="page"`, not filled with the primary colour, because it marks a place rather than a filter. The routes are `SETTINGS_ROUTES` in `lib/site.ts`. The sidebar keeps Asetukset lit on any path below it.
 
@@ -254,11 +255,14 @@ On **Yleiset**:
 - **"Elinkeinonharjoittajan tyyppi"**: a segmented Ammatinharjoittaja / Liikkeenharjoittaja that sets `traderType` (§6.3). The hint explains cash against accrual basis and says to ask Verohallinto or an accountant when unsure.
 - **"ALV-ilmoitusjakso"**: a segmented Kuukausi / Neljännesvuosi / Vuosi. It sets `vatPeriod` (§6.5), which the overview's due dates and the VAT view follow. Changing it keeps the VAT view on the same part of the year: October becomes Q4.
 - **"Kirjanpidon aloitus"**: the month the business began, as a month select ("Ensimmäisestä tositteesta" or a month) and, once a month is chosen, a year select. It sets `bookStart` (§6.5). Unset, returns are counted from the first entry.
-- **"YEL-maksun kuukaudet" and "Ennakkoveron kuukaudet"**: month toggles that set `payMonths` (§8.22), which the calendar reads.
-- **"Ennakkoveropäätös {vuosi}"**: the yearly advance tax amount and a tax rate for the estimate (§8.22). Each saves when it loses focus; empty clears it.
 - **"Salaus"**: the state of the file's encryption (§7.8) and, behind "Muuta", the buttons to turn it on, change the password or turn it off, with a description of what is and is not hidden. It is shown in every browser, since a downloaded copy is encrypted too.
 - **"Tallennus"**, only where the browser can write to a file: the "Tallenna automaattisesti" checkbox (§7.5), with a description that says what can be undone: a delete or an edit of one voucher for 10 seconds (§8.11).
 - **"Poista kirjanpito"**, last in the title row's menu, in the destructive colour (`deleteBook` in `book-commands.ts`). It erases the whole bookkeeping from this browser: entries, settings, the receipts in IndexedDB, the linked file handle and the `bookkeeping` localStorage key, then returns to the landing page. The confirmation says the deletion is permanent and to download the bookkeeping first. It **cannot be undone**, and it is not stopped by locked periods or unsaved changes: it is the user's own decision about the browser's working copy, and a file on disk is untouched. The `lang` and `theme` keys stay.
+
+On **Kalenteri**:
+
+- **"YEL-maksun kuukaudet" and "Ennakkoveron kuukaudet"**: month toggles that set `payMonths` (§8.22), which the calendar reads.
+- **"Ennakkoveropäätös {vuosi}"**: the yearly advance tax amount and a tax rate for the estimate (§8.22). Each saves when it loses focus; empty clears it.
 
 On **Luokat**:
 

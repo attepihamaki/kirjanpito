@@ -115,6 +115,7 @@ export const SETTINGS_ROUTES = {
   general: APP_ROUTES.settings,
   categories: `${APP_ROUTES.settings}/categories`,
   recurring: `${APP_ROUTES.settings}/recurring`,
+  calendar: `${APP_ROUTES.settings}/calendar`,
   rules: `${APP_ROUTES.settings}/rules`,
 } as const
 

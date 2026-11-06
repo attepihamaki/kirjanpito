@@ -53,7 +53,7 @@ describe("tax calendar", () => {
     expect(screen.getByText("YEL-maksu")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: /asetuksissa/ })).toHaveAttribute(
       "href",
-      "/app/settings"
+      "/app/settings/calendar"
     )
   })
 })

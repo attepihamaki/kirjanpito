@@ -2367,6 +2367,7 @@ export const APP_DICT = {
   "settings.defaultVat": ["Oletus ALV %", "Default VAT %"],
   "settings.categories": ["Luokat", "Categories"],
   "settings.rulesTab": ["Säännöt", "Rules"],
+  "settings.calendarTab": ["Kalenteri", "Calendar"],
   "settings.rulesTitle": ["Luokkasäännöt", "Category rules"],
   "settings.rulesHint": [
     "Sääntö valitsee luokan ja verokannan, kun teksti esiintyy tiliotteen rivillä tai laskussa. Ensimmäinen osuva sääntö voittaa, joten järjestyksellä on väliä. Säännöt ohittavat tositehistorian ja arvauksen. Ne eivät muuta jo kirjattuja tositteita.",

@@ -151,7 +151,7 @@ export function CalendarView() {
         <p className="text-sm text-muted-foreground">
           {f.t("calendar.note")}{" "}
           <Link
-            href={SETTINGS_ROUTES.general}
+            href={SETTINGS_ROUTES.calendar}
             className="underline underline-offset-2"
           >
             {f.t("calendar.setMonths")}
