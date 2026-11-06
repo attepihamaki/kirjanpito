@@ -41,6 +41,7 @@ import { toast } from "@/components/ui/toast"
 import { newYearDue, newYearTarget } from "@/lib/domain/new-year"
 import { retentionDates, yearsToArchive } from "@/lib/domain/retention"
 import { archiveClosedYear } from "@/lib/commands/io-commands"
+import { exportRetentionPackage } from "@/lib/commands/retention-commands"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { BOOK_LIMIT_RULES } from "@/lib/domain/book-limits"
 import { evaluate, type RuleSeverity } from "@/lib/domain/rules/engine"
@@ -581,6 +582,13 @@ export function ChecksWidget() {
             onClick={() => void archiveClosedYear(ctx, y, data.today)}
           >
             {f.t("overview.yearArchive")}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => void exportRetentionPackage(ctx, y)}
+          >
+            {f.t("overview.yearPackage")}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => archiveYear(y)}>
             {f.t("overview.yearStored")}

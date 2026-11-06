@@ -4,6 +4,8 @@ import { ArchiveIcon } from "lucide-react"
 
 import { useFormatters } from "@/components/lang-provider"
 import { Button } from "@/components/ui/button"
+import { exportRetentionPackage } from "@/lib/commands/retention-commands"
+import { useCommandCtx } from "@/hooks/use-command-ctx"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -13,6 +15,7 @@ import { useBookStore } from "@/stores/book-store"
  */
 export function ArchiveBanner() {
   const f = useFormatters()
+  const ctx = useCommandCtx()
   const year = useBookStore((s) => s.archiveYear)
   const closeBook = useBookStore((s) => s.closeBook)
   if (year === null) return null
@@ -30,8 +33,11 @@ export function ArchiveBanner() {
         variant="outline"
         size="sm"
         className="ml-auto"
-        onClick={closeBook}
+        onClick={() => void exportRetentionPackage(ctx, year)}
       >
+        {f.t("overview.yearPackage")}
+      </Button>
+      <Button variant="outline" size="sm" onClick={closeBook}>
         {f.t("app.archiveClose")}
       </Button>
     </div>

@@ -68,7 +68,7 @@ import {
 } from "@/lib/domain/zip"
 import { SKIP_CODE_KEYS } from "@/lib/i18n/messages"
 import { APP_ROUTES } from "@/lib/site"
-import { alertDialog, confirm } from "@/lib/ui/confirm"
+import { alertDialog, choose, confirm } from "@/lib/ui/confirm"
 import { askPassword } from "@/lib/ui/password-prompt"
 import { heldPassword, holdPassword } from "@/lib/commands/book-password"
 import { askNewPassword } from "@/lib/commands/encryption-commands"
@@ -577,7 +577,7 @@ function applyImport(
  * ---------------------------------------------------------------------- */
 
 /** The bookkeeping as the bytes of a file, named but not yet anywhere. */
-interface BookFile {
+export interface BookFile {
   name: string
   blob: Blob
   /** The state it was built from, to tell whether it is still current. */
@@ -693,7 +693,7 @@ function bookFileName(baseName: string, lang: Lang): string {
 }
 
 /** A bookkeeping is a ZIP, because settings.json has to travel with the entries (§7.6). */
-async function buildBookFile(
+export async function buildBookFile(
   baseName: string,
   source: FileSystemFileHandle | null = null,
   /** Write these entries and these settings instead of the open book's (§8.19). */
@@ -771,7 +771,7 @@ async function buildBookFile(
  * encrypted. With no such file there is nothing to check against, so the
  * password is asked twice instead.
  */
-async function ensurePassword(
+export async function ensurePassword(
   ctx: Ctx,
   source: FileSystemFileHandle | null
 ): Promise<boolean> {
@@ -1076,6 +1076,41 @@ function blockerText(ctx: Ctx, year: number, b: ArchiveBlocker): string {
 }
 
 /**
+ * The `settings.json` of a year's archive (§8.19): the year's own marks, its
+ * year-end figures and its change log records, and nothing else of the book.
+ */
+export function archiveSettings(
+  state: ReturnType<typeof useBookStore.getState>,
+  year: number,
+  today: string
+): Partial<BookSettings> {
+  const key = String(year)
+  return {
+    archives: {},
+    archiveOf: year,
+    autosave: false,
+    vatFiled: Object.fromEntries(
+      Object.entries(state.vatFiled).filter(([k]) => k.startsWith(key))
+    ),
+    yearsArchived: { [key]: today },
+    form5Filed: state.form5Filed[key] ? { [key]: state.form5Filed[key] } : {},
+    recurring: [],
+    categoryRules: [],
+    bankBalance: null,
+    yearEnd: Object.fromEntries(
+      Object.entries(state.yearEnd).filter(
+        ([k]) => k === key || k === String(year - 1)
+      )
+    ),
+    changeLog: state.changeLog.filter((r) =>
+      [r.date, r.period?.replace(/^form5-/, "")].some((d) =>
+        d?.startsWith(key)
+      )
+    ),
+  }
+}
+
+/**
  * Move a closed year out of the working book into a ZIP of its own (§8.19).
  * The archive is written and read back before anything leaves the book, so a
  * failure at any point leaves the book as it was. Must be called from a user
@@ -1121,14 +1156,16 @@ export async function archiveClosedYear(
 
   const leaving = movableEntries(state.entries, year)
   const contents = archiveContents(state.entries, year)
-  const goAhead = await confirm({
+  const answer = await choose({
     title: ctx.t("confirm.archiveTitle", { y: year }),
     message: ctx.t("confirm.archiveMessage", { y: year, n: leaving.length }),
     confirmLabel: ctx.t("confirm.archiveConfirm"),
+    alternativeLabel: ctx.t("confirm.archivePackConfirm"),
     cancelLabel: ctx.t("common.cancel"),
     destructive: false,
   })
-  if (!goAhead) return false
+  if (answer === "cancel") return false
+  const withPackage = answer === "alternative"
 
   useBookStore.getState().setSaving(true)
   try {
@@ -1141,30 +1178,7 @@ export async function archiveClosedYear(
     )
     if (!handle || replacedSince(state.bookEpoch)) return false
 
-    const key = String(year)
-    const settings: Partial<BookSettings> = {
-      archives: {},
-      archiveOf: year,
-      autosave: false,
-      vatFiled: Object.fromEntries(
-        Object.entries(state.vatFiled).filter(([k]) => k.startsWith(key))
-      ),
-      yearsArchived: { [key]: today },
-      form5Filed: state.form5Filed[key] ? { [key]: state.form5Filed[key] } : {},
-      recurring: [],
-      categoryRules: [],
-      bankBalance: null,
-      yearEnd: Object.fromEntries(
-        Object.entries(state.yearEnd).filter(
-          ([k]) => k === key || k === String(year - 1)
-        )
-      ),
-      changeLog: state.changeLog.filter((r) =>
-        [r.date, r.period?.replace(/^form5-/, "")].some((d) =>
-          d?.startsWith(key)
-        )
-      ),
-    }
+    const settings = archiveSettings(state, year, today)
     const file = await buildBookFile(base, null, {
       entries: contents,
       settings,
@@ -1186,8 +1200,25 @@ export async function archiveClosedYear(
       throw new Error("The archive does not read back")
     }
 
+    /*
+     * The package is built before anything is written, from the book as it
+     * still is, so a failure here leaves both the book and the disk alone.
+     */
+    const pack = withPackage
+      ? await (
+          await import("@/lib/commands/retention-commands")
+        ).makeRetentionPackage({
+          state: useBookStore.getState(),
+          year,
+          base,
+          book: { name: file.name, bytes },
+        })
+      : null
+    if (replacedSince(state.bookEpoch)) return false
+
     await writeFile(handle, file.blob)
     if (replacedSince(state.bookEpoch)) return false
+    if (pack) saveBlob(pack.blob, pack.name)
 
     const now = useBookStore.getState()
     const firstMonth = now.entries.map((e) => e.date.slice(0, 7)).sort()[0]

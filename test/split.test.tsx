@@ -79,8 +79,12 @@ describe("the ledger pill", () => {
   })
 })
 
-const openMenu = () =>
-  userEvent.click(screen.getByRole("button", { name: "Lisää toimintoja" }))
+const openMenu = async () => {
+  await userEvent.click(
+    screen.getByRole("button", { name: "Lisää toimintoja" })
+  )
+  await screen.findByRole("menu")
+}
 
 describe("Jaa tosite in the entry dialog", () => {
   const open = (entry: Entry) => {
@@ -94,7 +98,9 @@ describe("Jaa tosite in the entry dialog", () => {
   it("is offered on an ordinary voucher and opens the split dialog", async () => {
     open(receipt)
     await openMenu()
-    await userEvent.click(screen.getByRole("menuitem", { name: "Jaa tosite" }))
+    await userEvent.click(
+      await screen.findByRole("menuitem", { name: "Jaa tosite" })
+    )
     await waitFor(() =>
       expect(useBookStore.getState().dialog).toEqual({
         kind: "split",

@@ -28,14 +28,16 @@ export type IntegrityResult =
   /* The part or parts whose hash no longer matches. */
   | { status: "edited"; csv: boolean; settings: boolean }
 
-async function sha256Hex(text: string): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(text)
-  )
+/** SHA-256 of the bytes as lowercase hex. */
+export async function sha256Bytes(bytes: Uint8Array): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", bytes as BufferSource)
   return Array.from(new Uint8Array(digest), (b) =>
     b.toString(16).padStart(2, "0")
   ).join("")
+}
+
+function sha256Hex(text: string): Promise<string> {
+  return sha256Bytes(new TextEncoder().encode(text))
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

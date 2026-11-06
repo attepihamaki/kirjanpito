@@ -2653,6 +2653,75 @@ export const APP_DICT = {
     "Choose file and archive",
   ],
   "overview.yearArchive": ["Arkistoi", "Archive"],
+  "overview.yearPackage": ["Säilytyspaketti", "Retention package"],
+  "ledger.packForm5Title": ["Lomake 5 {y}", "Form 5 {y}"],
+  "ledger.packForm5Sub": [
+    "kentät siinä järjestyksessä, jossa ne annetaan OmaVerossa",
+    "fields in the order they are entered in OmaVero",
+  ],
+  "ledger.packReadmeEncrypted": [
+    "
+Kirjanpidon ZIP on salattu, mutta raportit ja tämä tiedosto eivät ole.
+",
+    "
+The book ZIP is encrypted, but the reports and this file are not.
+",
+  ],
+  "ledger.packReadme": [
+    "Säilytyspaketti, vuosi {y}
+
+Tämä paketti on kirjanpitolain 2 luvun 10 §:n säilytystä varten. Päiväkirja ja pääkirja säilytetään vähintään {b} asti ja tositteet vähintään {v} asti.
+
+Sisältö:
+- {r}/: päiväkirja, pääkirja, tililuettelo, tuloslaskelma ja lomake 5 PDF-tiedostoina.
+- {z}: vuoden kirjanpito ZIP-tiedostona. Se sisältää tositteet CSV:nä, asetukset ja liitteet kansiossa {d}/. Sen voi avaa Kirjanpito-sovelluksessa vain luettavaksi.
+- {h}: pakettitiedostojen SHA-256-tarkisteet.
+- {s}: liitteiden SHA-256-tarkisteet polkuineen, jotka niillä on {z}-tiedoston avaamisen jälkeen.
+
+Tarkistus: pura paketti ja aja sen kansiossa komento sha256sum -c {h}. Liitteet tarkistetaan samoin, kun {z} on purettu omaan kansioonsa ja komento ajetaan siellä: sha256sum -c ../{s}.
+
+Tarkisteet paljastavat vahingossa muuttuneen tai vioittuneen tiedoston. Ne eivät todista mitään sille, joka muuttaa tiedoston tarkoituksella ja laskee tarkisteen uudelleen.
+{e}",
+    "Retention package, year {y}
+
+This package is for the retention of Accounting Act chapter 2 section 10. Keep the journal and the general ledger until at least {b}, and the vouchers until at least {v}.
+
+Contents:
+- {r}/: the journal, general ledger, account list, income statement and Form 5 as PDF files.
+- {z}: the year's bookkeeping as a ZIP. It holds the vouchers as CSV, the settings and the attachments in the folder {d}/. The Kirjanpito app opens it read-only.
+- {h}: SHA-256 hashes of the files in the package.
+- {s}: SHA-256 hashes of the attachments, with the paths they have once {z} is unpacked.
+
+To check: unpack the package and run sha256sum -c {h} in its folder. Check the attachments the same way: unpack {z} into a folder of its own and run sha256sum -c ../{s} there.
+
+The hashes reveal a file that changed by accident or is damaged. They prove nothing against someone who changes a file on purpose and recomputes the hash.
+{e}",
+  ],
+  "confirm.archivePackConfirm": [
+    "Arkistoi ja tee säilytyspaketti",
+    "Archive and make a retention package",
+  ],
+  "confirm.packEncryptedTitle": [
+    "Raportit tulevat salaamattomina",
+    "The reports will not be encrypted",
+  ],
+  "confirm.packEncryptedMessage": [
+    "Kirjanpidon ZIP on salattu ja pysyy salattuna paketin sisällä. Raportti-PDF:t ja tarkistetiedostot eivät ole salattuja, ja niistä näkyy vuoden luvut. Säilytä paketti sen mukaan.",
+    "The book ZIP is encrypted and stays encrypted inside the package. The report PDFs and hash lists are not, and they show the year’s figures. Store the package accordingly.",
+  ],
+  "confirm.packConfirm": ["Tee paketti", "Make the package"],
+  "confirm.packBlockedTitle": [
+    "Säilytyspakettia {y} ei voi tehdä",
+    "Can’t make the retention package for {y}",
+  ],
+  "io.packDone": [
+    "Säilytyspaketti {y} ladattu: {f}.",
+    "Retention package {y} downloaded: {f}.",
+  ],
+  "io.packFailed": [
+    "Säilytyspaketin teko epäonnistui. Kirjanpito ei muuttunut.",
+    "Making the retention package failed. Your book is unchanged.",
+  ],
   "app.archiveBanner": ["Arkisto {y}: vain luku", "Archive {y}: read-only"],
   "app.archiveClose": ["Sulje arkisto", "Close archive"],
   "settings.archivesTitle": ["Arkistoidut vuodet", "Archived years"],

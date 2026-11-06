@@ -108,6 +108,25 @@ export async function packZip(input: PackInput): Promise<Uint8Array> {
   return zip.close()
 }
 
+/**
+ * A plain ZIP of ready-made files, for the retention package (§8.21). Never
+ * encrypted: a book ZIP inside it keeps its own encryption, and the package
+ * has to open in any tool years from now.
+ */
+export async function packFiles(
+  files: readonly { path: string; bytes: Uint8Array; store?: boolean }[]
+): Promise<Uint8Array> {
+  const zip = new ZipWriter(new Uint8ArrayWriter())
+  for (const file of files) {
+    await zip.add(
+      file.path,
+      new Uint8ArrayReader(file.bytes),
+      file.store ? { level: 0 } : {}
+    )
+  }
+  return zip.close()
+}
+
 export interface UnpackedZip {
   csvPath: string
   csvText: string
