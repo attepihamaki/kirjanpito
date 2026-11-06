@@ -1575,6 +1575,14 @@ static files, so any static host would do.
   serves it for unmatched paths, which is also why `trailingSlash: true` matters:
   every route is a real `index.html` and no rewrite rules are involved.
 
+### Local checks (git hooks)
+
+`npm install` sets up two hooks through Husky (`prepare`), so the failures CI reports stop before the push.
+
+- **`pre-commit`** runs lint-staged on the staged `.ts` and `.tsx` files: Prettier writes the formatting back, then ESLint runs with `--max-warnings 0`. It takes seconds, because it never looks at the files that are not staged.
+- **`pre-push`** runs `npm run typecheck`, which has to see the whole project.
+- **CI is the backstop.** `npm run check` runs the same checks plus the tests on every push, so `--no-verify` skips a convenience and not the gate.
+
 ## 12. Persistence keys
 
 **Storage names and the field names inside them are English**, so what a
