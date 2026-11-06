@@ -42,10 +42,13 @@ import { categoriesToMoveTo, compareCategories } from "@/stores/selectors"
  */
 export function LedgerTable({
   rows,
+  receiptHits,
   selected,
   onSelect,
 }: {
   rows: readonly Entry[]
+  /** Rows the search found only through a receipt's text (§8.4). */
+  receiptHits: ReadonlySet<string>
   /** Ids of the rows picked for a bulk action (§8.4). */
   selected: ReadonlySet<string>
   /** Add the ids to the selection, or take them out. */
@@ -142,6 +145,7 @@ export function LedgerTable({
             key={entry.id}
             entry={entry}
             splitWith={splitVouchers.get(entry.id)}
+            inReceipt={receiptHits.has(entry.id)}
             onRename={(text) => renameEntry(ctx, entry, text)}
             onRecategorize={(catId) =>
               void recategorizeEntries(ctx, [entry], catId)
@@ -194,6 +198,7 @@ function splitVoucherLabels(entries: readonly Entry[]): Map<string, string> {
 function LedgerRow({
   entry,
   splitWith,
+  inReceipt,
   onRename,
   onRecategorize,
   selected,
@@ -206,6 +211,8 @@ function LedgerRow({
   entry: Entry
   /** The voucher numbers of the whole split this entry is part of, if any. */
   splitWith: string | undefined
+  /** The search matched the text of a receipt and nothing else on the row. */
+  inReceipt: boolean
   /** Commit new description text typed in the row. */
   onRename: (text: string) => void
   onRecategorize: (catId: string) => void
@@ -334,6 +341,11 @@ function LedgerRow({
                         ? "ledger.reversePill"
                         : "ledger.euPill"
                   )}
+                </Pill>
+              ) : null}
+              {inReceipt ? (
+                <Pill size="sm" className="ml-2">
+                  {f.t("ledger.inReceiptPill")}
                 </Pill>
               ) : null}
               {isShare(entry.share) ? (

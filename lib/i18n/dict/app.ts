@@ -787,9 +787,10 @@ export const APP_DICT = {
   "ledger.vatPayable": ["Maksettava ALV", "VAT payable"],
   "ledger.vatRefundable": ["Palautettava ALV", "VAT refundable"],
   "ledger.search": [
-    "Hae kuvauksesta, luokasta tai numerolla",
-    "Search description, category or number",
+    "Hae kuvauksesta, luokasta, numerolla tai kuitista",
+    "Search description, category, number or receipt",
   ],
+  "ledger.inReceiptPill": ["Kuitissa", "In receipt"],
   "ledger.colDate": ["Päivämäärä", "Date"],
   "ledger.selectRow": ["Valitse tosite {x}", "Select voucher {x}"],
   "ledger.selectPage": [

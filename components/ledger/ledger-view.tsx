@@ -42,11 +42,13 @@ import {
   entriesInPeriod,
   filterAndSortEntries,
   paginate,
+  receiptOnlyHits,
   searchHitsElsewhere,
   usedCategoryIds,
 } from "@/stores/selectors"
 import { paidDate } from "@/lib/domain/open-items"
 import { useBookStore, type CheckFilter } from "@/stores/book-store"
+import { useReceiptTextStore } from "@/stores/receipt-text-store"
 
 const CHECK_LABEL = {
   noReceipt: "ledger.withoutReceipt",
@@ -70,6 +72,7 @@ export function LedgerView() {
   const year = useBookStore((s) => s.year)
   const month = useBookStore((s) => s.month)
   const query = useBookStore((s) => s.ledgerQuery)
+  const receiptText = useReceiptTextStore((s) => s.texts)
   const typeFilter = useBookStore((s) => s.ledgerType)
   const catFilter = useBookStore((s) => s.ledgerCat)
   const checkFilter = useBookStore((s) => s.ledgerCheck)
@@ -133,6 +136,7 @@ export function LedgerView() {
           catId: catFilter,
           flagged,
           sort,
+          receiptText,
         },
         f.lang,
         f.collator
@@ -145,14 +149,29 @@ export function LedgerView() {
       catFilter,
       flagged,
       sort,
+      receiptText,
       f.lang,
       f.collator,
     ]
   )
 
+  const receiptHits = React.useMemo(
+    () => receiptOnlyHits(filtered, catMap, query, f.lang, receiptText),
+    [filtered, catMap, query, receiptText, f.lang]
+  )
+
   const hitsElsewhere = React.useMemo(
-    () => searchHitsElsewhere(entries, catMap, query, year, month, f.lang),
-    [entries, catMap, query, year, month, f.lang]
+    () =>
+      searchHitsElsewhere(
+        entries,
+        catMap,
+        query,
+        year,
+        month,
+        f.lang,
+        receiptText
+      ),
+    [entries, catMap, query, year, month, f.lang, receiptText]
   )
 
   /** Open a year on the search, with nothing else narrowing what it finds. */
@@ -405,6 +424,7 @@ export function LedgerView() {
                 <Surface className="overflow-hidden">
                   <LedgerTable
                     rows={printAll ? filtered : view.rows}
+                    receiptHits={receiptHits}
                     selected={picked}
                     onSelect={select}
                   />

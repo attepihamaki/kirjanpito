@@ -39,6 +39,7 @@ import { useCommandCtx } from "@/hooks/use-commands"
 import { useDelayedFlag } from "@/hooks/use-delayed-flag"
 import { useFileDrop, isBookFile, isMediaFile } from "@/hooks/use-file-drop"
 import { useReceiptGc } from "@/hooks/use-receipt-gc"
+import { useReceiptText } from "@/hooks/use-receipt-text"
 import { useAppShortcuts } from "@/hooks/use-app-shortcuts"
 import { useAutosave } from "@/hooks/use-autosave"
 import { startRecordingHistory } from "@/stores/history-store"
@@ -82,6 +83,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   }, [hydrated])
 
   useReceiptGc(claimed)
+  useReceiptText(claimed)
 
   // §8.20: the undo stack only follows the tab that holds the bookkeeping.
   React.useEffect(

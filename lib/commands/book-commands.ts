@@ -6,6 +6,7 @@ import {
   gcReceipts,
   isReceiptStorageSupported,
 } from "@/lib/browser/receipt-store"
+import { pruneReceiptText } from "@/lib/browser/receipt-text-db"
 import { heldByAnotherTab } from "@/lib/browser/tab-lock"
 import { yearOf } from "@/lib/domain/dates"
 import { collectLiveIds } from "@/lib/domain/gc"
@@ -21,6 +22,7 @@ import type { Ctx } from "@/lib/commands/ctx"
 import { useBookStore } from "@/stores/book-store"
 import { useHistoryStore } from "@/stores/history-store"
 import { useLangStore } from "@/stores/lang-store"
+import { useReceiptTextStore } from "@/stores/receipt-text-store"
 
 /**
  * Commands that never touch a file format.
@@ -48,15 +50,22 @@ async function unlinkFile(): Promise<void> {
 export async function sweepReceipts(): Promise<void> {
   if (!isReceiptStorageSupported()) return
   try {
+    const swept: { live?: ReadonlySet<string> } = {}
     await gcReceipts(() => {
       const state = useBookStore.getState()
       if (state.importing) return null
-      return collectLiveIds(state.entries, [
+      swept.live = collectLiveIds(state.entries, [
         ...state.draftAttachmentIds,
         ...state.undoAttachmentIds,
         ...historyAttachmentIds(useHistoryStore.getState()),
       ])
+      return swept.live
     })
+    /* The search text of a deleted receipt goes with it (§8.4). */
+    if (swept.live) {
+      await pruneReceiptText(swept.live)
+      useReceiptTextStore.getState().keepOnly(swept.live)
+    }
   } catch (error) {
     /*
      * A failed sweep leaks a blob, which is harmless. It must never surface as

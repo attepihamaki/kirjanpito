@@ -1,6 +1,10 @@
 import { LINE_BY_KEY, categoryName } from "@/lib/domain/accounts"
 import { calcEntry, signedGross } from "@/lib/domain/calc"
 import { monthOf, yearOf } from "@/lib/domain/dates"
+import {
+  receiptTextMatches,
+  type ReceiptTexts,
+} from "@/lib/domain/receipt-text"
 import type { Category, Entry, EntryType, Lang } from "@/lib/domain/types"
 import {
   LEDGER_SORT_DEFAULT,
@@ -59,6 +63,8 @@ export interface LedgerFilters {
   flagged: ReadonlySet<string> | null
   /** Null while no column is chosen: the rows then take `LEDGER_SORT_DEFAULT`. */
   sort: SortState<LedgerSortKey> | null
+  /** Receipt text the query also searches; unset searches the fields only. */
+  receiptText?: ReceiptTexts
 }
 
 function ledgerValue(
@@ -92,8 +98,8 @@ function ledgerValue(
   }
 }
 
-/** Search over the voucher number, the description and the category (§8.4). */
-function matchesQuery(
+/** The entry's own fields: voucher number, description and category (§8.4). */
+function matchesFields(
   e: Entry,
   needle: string,
   cats: ReadonlyMap<string, Category>,
@@ -106,6 +112,44 @@ function matchesQuery(
     e.description.toLowerCase().includes(needle) ||
     name.toLowerCase().includes(needle)
   )
+}
+
+/** Search over the entry's fields and the text of its PDF receipts (§8.4). */
+function matchesQuery(
+  e: Entry,
+  needle: string,
+  cats: ReadonlyMap<string, Category>,
+  lang: Lang,
+  texts: ReceiptTexts | undefined
+): boolean {
+  return (
+    matchesFields(e, needle, cats, lang) || receiptTextMatches(e, needle, texts)
+  )
+}
+
+/**
+ * The ids of the entries a search finds only through a receipt's text, for the
+ * "in receipt" mark on their rows (§8.4).
+ */
+export function receiptOnlyHits(
+  entries: readonly Entry[],
+  cats: ReadonlyMap<string, Category>,
+  query: string,
+  lang: Lang,
+  texts: ReceiptTexts
+): Set<string> {
+  const needle = query.trim().toLowerCase()
+  const hits = new Set<string>()
+  if (!needle) return hits
+  for (const e of entries) {
+    if (
+      receiptTextMatches(e, needle, texts) &&
+      !matchesFields(e, needle, cats, lang)
+    ) {
+      hits.add(e.id)
+    }
+  }
+  return hits
 }
 
 export function filterAndSortEntries(
@@ -121,7 +165,7 @@ export function filterAndSortEntries(
     if (filters.type !== "all" && e.type !== filters.type) return false
     if (filters.catId !== "all" && e.catId !== filters.catId) return false
     if (filters.flagged && !filters.flagged.has(e.id)) return false
-    return !needle || matchesQuery(e, needle, cats, lang)
+    return !needle || matchesQuery(e, needle, cats, lang, filters.receiptText)
   })
 
   const { key, dir } = filters.sort ?? LEDGER_SORT_DEFAULT
@@ -164,7 +208,8 @@ export function searchHitsElsewhere(
   query: string,
   year: number,
   month: number,
-  lang: Lang
+  lang: Lang,
+  texts?: ReceiptTexts
 ): SearchHits[] {
   const needle = query.trim().toLowerCase()
   if (!needle) return []
@@ -173,7 +218,7 @@ export function searchHitsElsewhere(
     const y = yearOf(e.date)
     const onScreen =
       y === year && (month === 0 || Number(e.date.slice(5, 7)) === month)
-    if (onScreen || !matchesQuery(e, needle, cats, lang)) continue
+    if (onScreen || !matchesQuery(e, needle, cats, lang, texts)) continue
     counts.set(y, (counts.get(y) ?? 0) + 1)
   }
   return [...counts]

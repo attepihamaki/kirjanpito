@@ -178,7 +178,9 @@ describe("LedgerView with the sample data", () => {
       screen.getByText("Ei tositteita: Marraskuu 2026.")
     ).toBeInTheDocument()
     expect(
-      screen.queryByLabelText("Hae kuvauksesta, luokasta tai numerolla")
+      screen.queryByLabelText(
+        "Hae kuvauksesta, luokasta, numerolla tai kuitista"
+      )
     ).not.toBeInTheDocument()
     expect(
       screen.queryByRole("combobox", { name: "Tyyppi" })
@@ -190,7 +192,9 @@ describe("LedgerView with the sample data", () => {
     mount(<LedgerView />)
 
     await user.type(
-      screen.getByLabelText("Hae kuvauksesta, luokasta tai numerolla"),
+      screen.getByLabelText(
+        "Hae kuvauksesta, luokasta, numerolla tai kuitista"
+      ),
       "vuokra"
     )
 
@@ -203,7 +207,9 @@ describe("LedgerView with the sample data", () => {
     mount(<LedgerView />)
 
     await user.type(
-      screen.getByLabelText("Hae kuvauksesta, luokasta tai numerolla"),
+      screen.getByLabelText(
+        "Hae kuvauksesta, luokasta, numerolla tai kuitista"
+      ),
       "14"
     )
 
@@ -340,7 +346,9 @@ describe("the period slice drives the totals, not the filters", () => {
     )
 
     await user.type(
-      screen.getByLabelText("Hae kuvauksesta, luokasta tai numerolla"),
+      screen.getByLabelText(
+        "Hae kuvauksesta, luokasta, numerolla tai kuitista"
+      ),
       "vuokra"
     )
 
