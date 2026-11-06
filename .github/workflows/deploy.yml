@@ -24,12 +24,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # The screenshots must match before anything is published.
-  visual:
-    uses: ./.github/workflows/visual.yml
-
   build:
-    needs: visual
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5

@@ -1,16 +1,18 @@
 # Screenshot tests for the receipt motif and the printed sheets.
 #
-# Baselines are Linux renders, committed in e2e/__screenshots__. A pull request
-# or the deploy workflow compares against them. To create or refresh them, run
+# Baselines are Linux renders, committed in e2e/__screenshots__. A push to main
+# or a pull request compares against them. To create or refresh them, run
 # this workflow by hand with "update" ticked, download the `visual-baselines`
 # artifact and commit its contents to e2e/__screenshots__.
 name: Visual regression
 
-# A push to main runs this through the deploy workflow, which waits for it, so
-# there is no `push` trigger here: a second run would only repeat the first.
+# This run reports a drift and gates nothing: the deploy does not wait for it,
+# because the layout still moves often and a stale baseline must not hold back
+# a fix.
 on:
+  push:
+    branches: [main]
   pull_request:
-  workflow_call:
   workflow_dispatch:
     inputs:
       update:
