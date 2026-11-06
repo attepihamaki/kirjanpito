@@ -130,7 +130,10 @@ export function incomeStatement(
     dividendTaxable: sum((l) => l.line.taxableShare != null, counted),
     surplusTotal: sum((l) => l.line.surplus, net),
     surplusTaxable: sum((l) => l.line.surplus, counted),
-    depreciationExcess: sum((l) => l.line.key === "337", (l) => l.net - l.counted),
+    depreciationExcess: sum(
+      (l) => l.line.key === "337",
+      (l) => l.net - l.counted
+    ),
     result,
     resultLine: result >= 0 ? "358" : "359",
     resultMagnitude: Math.abs(result) + 0,
@@ -153,8 +156,7 @@ function countedPart(
   if (line.surplus) {
     const within = Math.min(net, COOP_RELIEF)
     const above = Math.max(0, net - COOP_RELIEF)
-    const share =
-      (within * COOP_SHARE_BELOW + above * COOP_SHARE_ABOVE) / 100
+    const share = (within * COOP_SHARE_BELOW + above * COOP_SHARE_ABOVE) / 100
     return (net >= 0 ? Math.ceil(share) : Math.trunc(share)) + 0
   }
   // Truncated, so 342 never exceeds half of 341 by a rounded cent.

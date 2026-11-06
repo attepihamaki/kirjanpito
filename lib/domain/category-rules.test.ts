@@ -36,7 +36,9 @@ function row(over: Partial<BankRow>): BankRow {
 describe("ruleMatches", () => {
   it("ignores case, accents and punctuation", () => {
     expect(ruleMatches(rule({ contains: "makinen" }), "MÄKINEN Oy")).toBe(true)
-    expect(ruleMatches(rule({ contains: "k-rauta" }), "K RAUTA Oulu")).toBe(true)
+    expect(ruleMatches(rule({ contains: "k-rauta" }), "K RAUTA Oulu")).toBe(
+      true
+    )
   })
 
   it("never matches on a single character", () => {

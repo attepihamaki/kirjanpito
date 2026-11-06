@@ -141,9 +141,11 @@ function limitRule(
  * which is an error; one over leaves staff to decide, which the book does not
  * record, so it is information.
  */
-export const BOOK_LIMIT_RULES = defineRules<BookLimitsContext, BookLimitBreach>([
-  limitRule("singleEntryOver", "blocker", "KPL 1:1a", "singleEntry", "over"),
-  limitRule("singleEntryStaff", "info", "KPL 1:1a", "singleEntry", "staff"),
-  limitRule("statementsOver", "blocker", "KPL 1:4b", "statements", "over"),
-  limitRule("statementsStaff", "info", "KPL 1:4b", "statements", "staff"),
-])
+export const BOOK_LIMIT_RULES = defineRules<BookLimitsContext, BookLimitBreach>(
+  [
+    limitRule("singleEntryOver", "blocker", "KPL 1:1a", "singleEntry", "over"),
+    limitRule("singleEntryStaff", "info", "KPL 1:1a", "singleEntry", "staff"),
+    limitRule("statementsOver", "blocker", "KPL 1:4b", "statements", "over"),
+    limitRule("statementsStaff", "info", "KPL 1:4b", "statements", "staff"),
+  ]
+)

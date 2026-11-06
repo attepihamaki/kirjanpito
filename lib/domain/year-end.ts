@@ -105,8 +105,13 @@ export const YEAR_END_RULES = defineRules<
       const entries = yearEntriesOf(i)
       const out: { check: EntryCheck; n: number }[] = []
       for (const check of ENTRY_CHECKS) {
-        const n = flaggedEntryIds(check, entries, i.cats, i.today, i.changeLog)
-          .size
+        const n = flaggedEntryIds(
+          check,
+          entries,
+          i.cats,
+          i.today,
+          i.changeLog
+        ).size
         if (n) out.push({ check, n })
       }
       return out
@@ -152,9 +157,12 @@ export const YEAR_END_RULES = defineRules<
     severity: "warn",
     source: "EVL 30 §",
     check: (i) => {
-      const asset = assetSchedule(i.entries, i.cats, i.assetOpening, i.year).find(
-        (a) => a.year === i.year
-      )
+      const asset = assetSchedule(
+        i.entries,
+        i.cats,
+        i.assetOpening,
+        i.year
+      ).find((a) => a.year === i.year)
       return asset && asset.maximum > 0 && asset.taken === 0
         ? [{ maximum: asset.maximum }]
         : []
@@ -206,7 +214,11 @@ export const YEAR_END_RULES = defineRules<
       const used = new Set(yearEntriesOf(i).map((e) => monthOf(e.date)))
       if (!used.size) return []
       const months: number[] = []
-      for (let m = Math.min(...used); m <= lastCompleteMonth(i.year, i.today); m++) {
+      for (
+        let m = Math.min(...used);
+        m <= lastCompleteMonth(i.year, i.today);
+        m++
+      ) {
         const key = `${i.year}-${String(m).padStart(2, "0")}`
         if (i.bookStart && key < i.bookStart) continue
         if (!used.has(m)) months.push(m)
@@ -218,9 +230,7 @@ export const YEAR_END_RULES = defineRules<
 
 /** Every breach for a year, blockers first and each severity in rule order. */
 export function yearEndFindings(input: YearEndInput): YearEndFinding[] {
-  return sortBySeverity(
-    evaluate(YEAR_END_RULES, input) as YearEndFinding[]
-  )
+  return sortBySeverity(evaluate(YEAR_END_RULES, input) as YearEndFinding[])
 }
 
 /** Whether the year may be locked: nothing blocks it. */

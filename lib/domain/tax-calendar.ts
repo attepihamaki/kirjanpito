@@ -64,11 +64,17 @@ export interface CalendarInput {
 }
 
 function monthList(months: readonly number[]): number[] {
-  return [...new Set(months)].filter((m) => Number.isInteger(m) && m >= 1 && m <= 12).sort((a, b) => a - b)
+  return [...new Set(months)]
+    .filter((m) => Number.isInteger(m) && m >= 1 && m <= 12)
+    .sort((a, b) => a - b)
 }
 
 /** The month's instalment day, or the next working day. */
-export function instalmentDate(year: number, month: number, day: number): string {
+export function instalmentDate(
+  year: number,
+  month: number,
+  day: number
+): string {
   return nextWorkingDay(isoDate(year, month, day) as string)
 }
 
@@ -81,7 +87,12 @@ export function taxCalendar(input: CalendarInput): CalendarEvent[] {
   for (const y of [year - 1, year]) {
     for (const p of vatPeriods(input.vatPeriod, y)) {
       if (yearOf(p.due) !== year) continue
-      const status = periodStatus(p, input.today, input.vatFiled, input.startDate)
+      const status = periodStatus(
+        p,
+        input.today,
+        input.vatFiled,
+        input.startDate
+      )
       if (status === "before") continue
       out.push({
         id: `vat-${p.key}`,
@@ -97,7 +108,13 @@ export function taxCalendar(input: CalendarInput): CalendarEvent[] {
   for (const y of [year - 1, year]) {
     for (const m of ecSales(input.entries, input.cats, y)) {
       if (yearOf(m.due) !== year) continue
-      out.push({ id: `ec-${m.key}`, kind: "ec", date: m.due, ref: m.key, done: false })
+      out.push({
+        id: `ec-${m.key}`,
+        kind: "ec",
+        date: m.due,
+        ref: m.key,
+        done: false,
+      })
     }
   }
 
@@ -131,7 +148,9 @@ export function taxCalendar(input: CalendarInput): CalendarEvent[] {
     })
   }
 
-  return out.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))
+  return out.sort(
+    (a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id)
+  )
 }
 
 /** The month of an event's date, 1 to 12. */
@@ -173,7 +192,9 @@ function fold(line: string): string {
 const compact = (iso: string) => iso.replace(/-/g, "")
 
 function nextDay(iso: string): string {
-  const d = new Date(Date.UTC(yearOf(iso), monthOf(iso) - 1, Number(iso.slice(8, 10)) + 1))
+  const d = new Date(
+    Date.UTC(yearOf(iso), monthOf(iso) - 1, Number(iso.slice(8, 10)) + 1)
+  )
   return d.toISOString().slice(0, 10)
 }
 
@@ -189,8 +210,15 @@ export interface IcsEvent {
  * day before. `now` stamps the file and is passed in so the output is
  * deterministic.
  */
-export function toIcs(events: readonly IcsEvent[], name: string, now: Date): string {
-  const stamp = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")
+export function toIcs(
+  events: readonly IcsEvent[],
+  name: string,
+  now: Date
+): string {
+  const stamp = now
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}/, "")
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",

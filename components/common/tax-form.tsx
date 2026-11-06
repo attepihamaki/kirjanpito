@@ -474,7 +474,9 @@ function DrillButton({
   const f = useFormatters()
   const open = drill?.(row)
   if (!open) return null
-  const label = f.t("common.figureShow", { x: `${row.code} ${row.label[f.lang]}` })
+  const label = f.t("common.figureShow", {
+    x: `${row.code} ${row.label[f.lang]}`,
+  })
   return (
     <button
       type="button"

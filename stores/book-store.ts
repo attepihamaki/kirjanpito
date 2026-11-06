@@ -1267,7 +1267,10 @@ export const useBookStore = create<BookStore>()(
         const i = categoryRules.findIndex((r) => r.id === id)
         const j = i + step
         if (i < 0 || j < 0 || j >= categoryRules.length) return
-        ;[categoryRules[i], categoryRules[j]] = [categoryRules[j], categoryRules[i]]
+        ;[categoryRules[i], categoryRules[j]] = [
+          categoryRules[j],
+          categoryRules[i],
+        ]
         set({ categoryRules, dirty: true })
       },
       setAssetOpening: (assetOpening) => set({ assetOpening, dirty: true }),

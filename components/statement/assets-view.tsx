@@ -64,7 +64,10 @@ export function AssetsView() {
         <>
           <StatStrip
             stats={[
-              { label: f.t("assets.base"), value: <Money cents={current.base} /> },
+              {
+                label: f.t("assets.base"),
+                value: <Money cents={current.base} />,
+              },
               {
                 label: f.t("assets.maximum"),
                 value: <Money cents={current.maximum} />,
@@ -128,7 +131,9 @@ export function AssetsView() {
                   <TableCell>{e.description}</TableCell>
                   <TableCell>
                     <Pill tone={e.type === "income" ? "income" : "expense"}>
-                      {f.t(e.type === "income" ? "assets.sale" : "assets.purchase")}
+                      {f.t(
+                        e.type === "income" ? "assets.sale" : "assets.purchase"
+                      )}
                     </Pill>
                   </TableCell>
                   <TableCell className="text-right">

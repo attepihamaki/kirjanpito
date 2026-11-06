@@ -402,9 +402,9 @@ export function StatementView() {
               ? "statement.accrualNote"
               : "statement.cashNote",
             {
-            d: f.date(`${year}-12-31`),
-            r: f.money(open.receivables),
-            p: f.money(open.payables),
+              d: f.date(`${year}-12-31`),
+              r: f.money(open.receivables),
+              p: f.money(open.payables),
             }
           )}
         </p>

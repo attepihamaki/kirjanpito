@@ -50,7 +50,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * layout in the file do not matter, only the values.
  */
 function settingsBody(raw: Record<string, unknown>): string {
-  const { integrity: _integrity, ...rest } = raw
+  const rest = Object.fromEntries(
+    Object.entries(raw).filter(([key]) => key !== "integrity")
+  )
   return JSON.stringify(rest)
 }
 

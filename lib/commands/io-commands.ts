@@ -1130,9 +1130,7 @@ export function archiveSettings(
       )
     ),
     changeLog: state.changeLog.filter((r) =>
-      [r.date, r.period?.replace(/^form5-/, "")].some((d) =>
-        d?.startsWith(key)
-      )
+      [r.date, r.period?.replace(/^form5-/, "")].some((d) => d?.startsWith(key))
     ),
   }
 }

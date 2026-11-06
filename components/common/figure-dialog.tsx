@@ -63,7 +63,8 @@ function FigureList({ drill }: { drill: FigureDrill }) {
         <DialogHeader>
           <DialogTitle>{drill.title}</DialogTitle>
           <DialogDescription>
-            {drill.subtitle} · {f.t("common.figureCount", { n: drill.rows.length })}
+            {drill.subtitle} ·{" "}
+            {f.t("common.figureCount", { n: drill.rows.length })}
           </DialogDescription>
         </DialogHeader>
 
@@ -72,10 +73,14 @@ function FigureList({ drill }: { drill: FigureDrill }) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-14">{f.t("ledger.colVoucher")}</TableHead>
+                  <TableHead className="w-14">
+                    {f.t("ledger.colVoucher")}
+                  </TableHead>
                   <TableHead>{f.t("ledger.colDate")}</TableHead>
                   <TableHead>{f.t("ledger.colDescription")}</TableHead>
-                  <TableHead className="text-right">{drill.amountLabel}</TableHead>
+                  <TableHead className="text-right">
+                    {drill.amountLabel}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -101,7 +106,11 @@ function FigureList({ drill }: { drill: FigureDrill }) {
                     >
                       <TableCell className="tabular text-muted-foreground">
                         {e.voucher ? (
-                          <span aria-label={f.t("common.figureOpen", { n: e.voucher })}>
+                          <span
+                            aria-label={f.t("common.figureOpen", {
+                              n: e.voucher,
+                            })}
+                          >
                             {e.voucher}
                           </span>
                         ) : null}
@@ -160,7 +169,9 @@ function FigureList({ drill }: { drill: FigureDrill }) {
         )}
 
         {differs && drill.differenceNote ? (
-          <p className="text-xs text-muted-foreground">{drill.differenceNote}</p>
+          <p className="text-xs text-muted-foreground">
+            {drill.differenceNote}
+          </p>
         ) : null}
       </DialogContent>
     </Dialog>

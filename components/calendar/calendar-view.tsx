@@ -55,7 +55,17 @@ export function CalendarView() {
         entries,
         cats: indexCategories(cats),
       }),
-    [year, today, vatPeriod, bookStart, vatFiled, form5Filed, payMonths, entries, cats]
+    [
+      year,
+      today,
+      vatPeriod,
+      bookStart,
+      vatFiled,
+      form5Filed,
+      payMonths,
+      entries,
+      cats,
+    ]
   )
 
   const byMonth = React.useMemo(() => {

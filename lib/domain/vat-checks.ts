@@ -105,7 +105,13 @@ export const VAT_CHECK_RULES = defineRules<
       const ownIds = new Set(own.map((e) => e.id))
       const out: { check: EntryCheck; n: number }[] = []
       for (const check of ENTRY_CHECKS) {
-        const ids = flaggedEntryIds(check, yearEntries, i.cats, i.today, i.changeLog)
+        const ids = flaggedEntryIds(
+          check,
+          yearEntries,
+          i.cats,
+          i.today,
+          i.changeLog
+        )
         let n = 0
         for (const id of ids) if (ownIds.has(id)) n++
         if (n) out.push({ check, n })
@@ -153,9 +159,7 @@ export const VAT_CHECK_RULES = defineRules<
 
 /** Every breach for a period, blockers first and each severity in rule order. */
 export function vatCheckFindings(input: VatCheckInput): VatCheckFinding[] {
-  return sortBySeverity(
-    evaluate(VAT_CHECK_RULES, input) as VatCheckFinding[]
-  )
+  return sortBySeverity(evaluate(VAT_CHECK_RULES, input) as VatCheckFinding[])
 }
 
 /** Whether the period may be marked as filed: nothing blocks it. */

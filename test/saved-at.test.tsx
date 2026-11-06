@@ -40,7 +40,9 @@ describe("the file's last write", () => {
       savedAt: new Date(2026, 10, 3, 9, 5).getTime(),
     })
     show(<SavedAtNote />)
-    expect(screen.getByText("Tiedosto päivitetty 3.11.2026 klo 09.05")).toBeTruthy()
+    expect(
+      screen.getByText("Tiedosto päivitetty 3.11.2026 klo 09.05")
+    ).toBeTruthy()
   })
 
   it("says nothing without a linked file", () => {
@@ -71,6 +73,10 @@ describe("autosave back-off", () => {
     show(<AutosaveNote />)
     expect(screen.getByText(/Yritetään uudelleen/)).toBeTruthy()
     vi.unstubAllGlobals()
-    useBookStore.setState({ autosave: false, autosaveFailures: 0, fileHandle: null })
+    useBookStore.setState({
+      autosave: false,
+      autosaveFailures: 0,
+      fileHandle: null,
+    })
   })
 })

@@ -197,7 +197,9 @@ function VatReturnForm() {
     <Dialog open onOpenChange={(open) => !open && closeDialog()}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{f.t("vat.returnDialogTitle", { p: label })}</DialogTitle>
+          <DialogTitle>
+            {f.t("vat.returnDialogTitle", { p: label })}
+          </DialogTitle>
           <DialogDescription>{f.t("vat.returnDialogIntro")}</DialogDescription>
         </DialogHeader>
 
@@ -233,7 +235,11 @@ function VatReturnForm() {
                   const d = describe(item)
                   return (
                     <CheckRow
-                      key={item.ruleId === "entryCheck" ? item.data.check : item.ruleId}
+                      key={
+                        item.ruleId === "entryCheck"
+                          ? item.data.check
+                          : item.ruleId
+                      }
                       severity={item.severity}
                       title={d.title}
                       sub={d.sub}
@@ -380,7 +386,10 @@ function CheckRow({
     <li className="grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-start gap-3 px-4 py-3">
       <span
         aria-hidden
-        className={cn("mt-0.5 grid size-5 place-items-center rounded-full", tone)}
+        className={cn(
+          "mt-0.5 grid size-5 place-items-center rounded-full",
+          tone
+        )}
       >
         <Icon className="size-3" strokeWidth={3} />
       </span>

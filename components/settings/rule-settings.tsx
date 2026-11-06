@@ -122,7 +122,9 @@ export function RuleSettings() {
       >
         <Input
           aria-label={f.t("settings.rulesContains")}
-          aria-invalid={error != null && foldText(contains).length < MIN_RULE_TEXT}
+          aria-invalid={
+            error != null && foldText(contains).length < MIN_RULE_TEXT
+          }
           placeholder={f.t("settings.rulesPlaceholder")}
           className="w-56"
           value={contains}
@@ -219,7 +221,7 @@ export function RuleSettings() {
                       className="w-44"
                     />
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-right">
+                  <TableCell className="text-right whitespace-nowrap">
                     <Button
                       variant="ghost"
                       size="icon-sm"

@@ -69,9 +69,7 @@ describe("BOOK_LIMIT_RULES", () => {
   })
 
   it("reports one limit over as information on staff", () => {
-    expect(run(both(250_000), 0)).toEqual([
-      ["singleEntryStaff", "info", 2025],
-    ])
+    expect(run(both(250_000), 0)).toEqual([["singleEntryStaff", "info", 2025]])
   })
 
   it("reports two limits over as a blocker", () => {

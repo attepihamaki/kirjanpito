@@ -253,7 +253,9 @@ function PayMonthsSetting({ kind }: { kind: keyof PayMonths }) {
   const f = useFormatters()
   const payMonths = useBookStore((s) => s.payMonths)
   const setPayMonths = useBookStore((s) => s.setPayMonths)
-  const label = f.t(kind === "yel" ? "calendar.yelMonths" : "calendar.taxMonths")
+  const label = f.t(
+    kind === "yel" ? "calendar.yelMonths" : "calendar.taxMonths"
+  )
   const months = payMonths[kind]
 
   return (

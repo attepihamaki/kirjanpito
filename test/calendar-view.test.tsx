@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CalendarView } from "@/components/calendar/calendar-view"
@@ -42,15 +42,18 @@ describe("tax calendar", () => {
     mount()
     expect(screen.getByText("ALV-ilmoitus, Lokakuu 2026")).toBeInTheDocument()
     expect(screen.getByText("Lomake 5, verovuosi 2025")).toBeInTheDocument()
-    expect(screen.queryByText("ALV-ilmoitus, Syyskuu 2026")).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("ALV-ilmoitus, Syyskuu 2026")
+    ).not.toBeInTheDocument()
   })
 
   it("lists a YEL date for a chosen month and links to the settings", () => {
     useBookStore.setState({ payMonths: { yel: [7], advanceTax: [] } })
     mount()
     expect(screen.getByText("YEL-maksu")).toBeInTheDocument()
-    expect(
-      screen.getByRole("link", { name: /asetuksissa/ })
-    ).toHaveAttribute("href", "/app/settings")
+    expect(screen.getByRole("link", { name: /asetuksissa/ })).toHaveAttribute(
+      "href",
+      "/app/settings"
+    )
   })
 })

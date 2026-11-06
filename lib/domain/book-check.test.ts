@@ -107,9 +107,9 @@ describe("bookCheck", () => {
   it("finds nothing wrong with Verohallinto's own Form 5 checks on the sample year", () => {
     const entries = sampleEntries(createIdFactory())
     expect(
-      bookCheck(input({ entries, bookStart: "2026-01", vatPeriod: "month" })).filter(
-        (b) => b.set === "form5"
-      )
+      bookCheck(
+        input({ entries, bookStart: "2026-01", vatPeriod: "month" })
+      ).filter((b) => b.set === "form5")
     ).toEqual([])
   })
 })

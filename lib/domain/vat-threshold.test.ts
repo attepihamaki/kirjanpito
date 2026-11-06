@@ -113,7 +113,10 @@ describe("vatPeriodOverLimit", () => {
 })
 
 describe("VAT_LIMIT_RULES", () => {
-  const run = (entries: Entry[], vatPeriod: "month" | "quarter" | "year" = "month") =>
+  const run = (
+    entries: Entry[],
+    vatPeriod: "month" | "quarter" | "year" = "month"
+  ) =>
     evaluate(VAT_LIMIT_RULES, {
       entries,
       cats,

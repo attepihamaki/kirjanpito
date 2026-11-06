@@ -221,7 +221,10 @@ export function balanceContribution(
     case 711:
       return (e) => {
         const line = lineKey(e)
-        if (e.type !== "income" || !canBeUnpaid(line ? LINE_BY_KEY.get(line) : undefined)) {
+        if (
+          e.type !== "income" ||
+          !canBeUnpaid(line ? LINE_BY_KEY.get(line) : undefined)
+        ) {
           return null
         }
         return isOpenAt(e, `${year}-12-31`) ? calcEntry(e).gross : null
@@ -236,7 +239,10 @@ export function balanceContribution(
     case 749: {
       const payable: Contribution = (e) => {
         const line = lineKey(e)
-        if (e.type !== "expense" || !canBeUnpaid(line ? LINE_BY_KEY.get(line) : undefined)) {
+        if (
+          e.type !== "expense" ||
+          !canBeUnpaid(line ? LINE_BY_KEY.get(line) : undefined)
+        ) {
           return null
         }
         return isOpenAt(e, `${year}-12-31`) ? calcEntry(e).gross : null
@@ -260,7 +266,9 @@ export function balanceContribution(
     }
     case 804:
       return (e) =>
-        lineKey(e) === "337" && yearOf(e.date) === year ? calcEntry(e).net : null
+        lineKey(e) === "337" && yearOf(e.date) === year
+          ? calcEntry(e).net
+          : null
     default:
       return null
   }
@@ -290,7 +298,12 @@ export interface FigureRefContext {
 
 /** Form 5's income and expense fields a voucher can add to, besides the totals. */
 const FORM5_FIELD_CODES: readonly number[] = [
-  ...new Set([...LINES.map((l) => l.account), ...FORM5_ACCOUNT.keys(), 388, 392]),
+  ...new Set([
+    ...LINES.map((l) => l.account),
+    ...FORM5_ACCOUNT.keys(),
+    388,
+    392,
+  ]),
 ].sort((a, b) => a - b)
 
 const BALANCE_CODES: readonly number[] = [394, 711, 725, 749, 801, 802, 804]
@@ -301,7 +314,11 @@ export function vatPeriodOf(kind: VatPeriodKind, iso: string): Period {
   if (kind === "year") return { kind: "year", year }
   const month = monthOf(iso)
   if (kind === "month") return { kind: "month", year, month }
-  return { kind: "quarter", year, quarter: Math.ceil(month / 3) as 1 | 2 | 3 | 4 }
+  return {
+    kind: "quarter",
+    year,
+    quarter: Math.ceil(month / 3) as 1 | 2 | 3 | 4,
+  }
 }
 
 /**

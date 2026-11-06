@@ -1221,7 +1221,9 @@ describe("cash column", () => {
     ok(parseCsv(serializeCsv([e], cats, { lang }), baseCats)).entries[0]
 
   it("round-trips in both languages", () => {
-    expect(serializeCsv([entry({ cash: true })], cats)).toContain(";kyllä;;\r\n")
+    expect(serializeCsv([entry({ cash: true })], cats)).toContain(
+      ";kyllä;;\r\n"
+    )
     expect(back(entry({ cash: true })).cash).toBe(true)
     expect(back(entry({ cash: true }), "en").cash).toBe(true)
     expect(back(entry({})).cash).toBeUndefined()

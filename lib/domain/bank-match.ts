@@ -1,7 +1,10 @@
 import type { BankRow } from "@/lib/domain/bank-csv"
 import { calcEntry } from "@/lib/domain/calc"
 import { LINE_BY_KEY } from "@/lib/domain/accounts"
-import { findCategoryRule, type CategoryRule } from "@/lib/domain/category-rules"
+import {
+  findCategoryRule,
+  type CategoryRule,
+} from "@/lib/domain/category-rules"
 import { canBeUnpaid, paidDate } from "@/lib/domain/open-items"
 import type { CategoryMap, Cents, Entry, EntryType } from "@/lib/domain/types"
 
@@ -149,12 +152,7 @@ export function suggestFromHistory(
 function draftFor(row: BankRow, ctx: BankContext): NewEntryDraft {
   const type = signedType(row)
   const parts = [row.counterparty, row.message].filter(Boolean)
-  const hit = findCategoryRule(
-    ctx.rules ?? [],
-    parts.join(" "),
-    ctx.cats,
-    type
-  )
+  const hit = findCategoryRule(ctx.rules ?? [], parts.join(" "), ctx.cats, type)
   const suggestion = hit
     ? { catId: hit.catId, vatRate: hit.vatRate }
     : suggestFromHistory(row.counterparty, type, ctx)

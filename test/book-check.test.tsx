@@ -59,9 +59,15 @@ describe("BookCheckDialog", () => {
 
   it("groups findings by year and counts them", () => {
     mount([entry({}), entry({ id: "b", date: "2026-02-01" })])
-    expect(screen.getByRole("heading", { name: "Vuosi 2026" })).toBeInTheDocument()
-    expect(screen.getByRole("heading", { name: "Vuosi 2025" })).toBeInTheDocument()
-    expect(screen.getByText(/^Virheitä \d+, huomautuksia \d+, tiedoksi \d+$/)).toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", { name: "Vuosi 2026" })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", { name: "Vuosi 2025" })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/^Virheitä \d+, huomautuksia \d+, tiedoksi \d+$/)
+    ).toBeInTheDocument()
   })
 
   it("opens the ledger on the year and the check it was shown for", () => {

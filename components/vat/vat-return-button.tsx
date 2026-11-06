@@ -30,7 +30,12 @@ export function VatReturnButton({ className }: { className?: string }) {
 
   const filed = status === "filed"
   return (
-    <div className={cn("flex flex-col items-start gap-1.5 min-[560px]:items-end", className)}>
+    <div
+      className={cn(
+        "flex flex-col items-start gap-1.5 min-[560px]:items-end",
+        className
+      )}
+    >
       <Button
         variant={filed ? "outline" : "default"}
         size="sm"

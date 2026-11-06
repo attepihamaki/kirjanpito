@@ -88,7 +88,8 @@ export function startRecordingHistory(): () => void {
     queueMicrotask(() => {
       const before = base
       base = null
-      if (before) useHistoryStore.setState(record(useHistoryStore.getState(), before))
+      if (before)
+        useHistoryStore.setState(record(useHistoryStore.getState(), before))
     })
   })
 

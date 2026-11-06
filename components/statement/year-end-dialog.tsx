@@ -157,7 +157,11 @@ function YearEndForm() {
                   const d = describeFinding(item, year)
                   return (
                     <CheckRow
-                      key={item.ruleId === "entryCheck" ? item.data.check : item.ruleId}
+                      key={
+                        item.ruleId === "entryCheck"
+                          ? item.data.check
+                          : item.ruleId
+                      }
                       severity={item.severity}
                       title={d.title}
                       sub={d.sub}

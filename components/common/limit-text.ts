@@ -1,4 +1,7 @@
-import type { VatPeriodOverLimit, VatThreshold } from "@/lib/domain/vat-threshold"
+import type {
+  VatPeriodOverLimit,
+  VatThreshold,
+} from "@/lib/domain/vat-threshold"
 import { vatThresholdIn } from "@/lib/domain/vat-threshold"
 import type { Formatters } from "@/lib/i18n/create-formatters"
 

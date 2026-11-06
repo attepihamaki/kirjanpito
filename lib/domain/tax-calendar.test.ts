@@ -61,7 +61,9 @@ describe("taxCalendar", () => {
       ["2026-Q2", "2026-08-12"],
       ["2026-Q3", "2026-11-12"],
     ])
-    expect(dates("vat", { vatPeriod: "year" })).toEqual([["2025", "2026-03-02"]])
+    expect(dates("vat", { vatPeriod: "year" })).toEqual([
+      ["2025", "2026-03-02"],
+    ])
   })
 
   it("leaves out periods before the book began, and all of them without a start", () => {
@@ -100,7 +102,9 @@ describe("taxCalendar", () => {
       ["2026-07", "2026-07-20"],
     ])
     // 23.8.2026 is a Sunday.
-    expect(dates("advanceTax", { payMonths })).toEqual([["2026-08", "2026-08-24"]])
+    expect(dates("advanceTax", { payMonths })).toEqual([
+      ["2026-08", "2026-08-24"],
+    ])
   })
 
   it("sorts by date", () => {
@@ -137,7 +141,14 @@ describe("toIcs", () => {
 
   it("escapes text and folds long lines", () => {
     const ics = toIcs(
-      [{ id: "a", date: "2026-01-02", title: "A, B; C\\D", description: "ä".repeat(80) }],
+      [
+        {
+          id: "a",
+          date: "2026-01-02",
+          title: "A, B; C\\D",
+          description: "ä".repeat(80),
+        },
+      ],
       "k",
       now
     )

@@ -110,7 +110,17 @@ export function OverviewDataProvider({
         vatFiled
       ),
     }
-  }, [entries, basis, options, cats, year, today, vatPeriod, bookStart, vatFiled])
+  }, [
+    entries,
+    basis,
+    options,
+    cats,
+    year,
+    today,
+    vatPeriod,
+    bookStart,
+    vatFiled,
+  ])
 
   return (
     <OverviewDataContext.Provider value={value}>

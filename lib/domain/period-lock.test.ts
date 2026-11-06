@@ -207,7 +207,10 @@ describe("LOCK_RULES", () => {
     expect(evaluate(LOCK_RULES, paid).map((f) => f.ruleId)).toEqual([
       "form5Paid",
     ])
-    const business = { ...paid, marks: { ...marks, traderType: "business" as const } }
+    const business = {
+      ...paid,
+      marks: { ...marks, traderType: "business" as const },
+    }
     expect(evaluate(LOCK_RULES, business)).toEqual([])
   })
 })

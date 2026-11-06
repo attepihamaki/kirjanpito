@@ -56,9 +56,13 @@ export function VatView() {
             {refund ? f.t("vat.refundableTitle") : f.t("vat.payableTitle")}
           </p>
           <FigureLink
-            label={refund ? f.t("vat.refundableTitle") : f.t("vat.payableTitle")}
+            label={
+              refund ? f.t("vat.refundableTitle") : f.t("vat.payableTitle")
+            }
             onOpen={drill({
-              title: refund ? f.t("vat.refundableTitle") : f.t("vat.payableTitle"),
+              title: refund
+                ? f.t("vat.refundableTitle")
+                : f.t("vat.payableTitle"),
               part: "vat",
               figure: report.due,
               select: (r) => r.due,
@@ -159,7 +163,10 @@ export function VatView() {
       </Panel>
 
       {hasEu ? (
-        <Panel title={f.t("vat.euPurchases")} help={viewHelp("vat.euPurchases")}>
+        <Panel
+          title={f.t("vat.euPurchases")}
+          help={viewHelp("vat.euPurchases")}
+        >
           <dl className="divide-y">
             <OtherRow
               label={f.t("vat.euGoodsPurchases")}
@@ -174,7 +181,11 @@ export function VatView() {
             <OtherRow
               label={f.t("vat.euServicesPurchases")}
               cents={eu.services.net}
-              onOpen={euDrill(f.t("vat.euServicesPurchases"), "services", "net")}
+              onOpen={euDrill(
+                f.t("vat.euServicesPurchases"),
+                "services",
+                "net"
+              )}
             />
             <OtherRow
               label={f.t("vat.euServicesTax")}
@@ -200,7 +211,11 @@ export function VatView() {
                 <OtherRow
                   label={f.t("vat.reversePurchases")}
                   cents={eu.reverse.net}
-                  onOpen={euDrill(f.t("vat.reversePurchases"), "reverse", "net")}
+                  onOpen={euDrill(
+                    f.t("vat.reversePurchases"),
+                    "reverse",
+                    "net"
+                  )}
                 />
                 <OtherRow
                   label={f.t("vat.reverseTax")}
@@ -272,12 +287,32 @@ function RateTable({
     bucket: { net: Cents; vat: Cents }
   ) => {
     const value =
-      part === "net" ? bucket.net : part === "vat" ? bucket.vat : bucket.net + bucket.vat
-    const name = rate === "total" ? f.t("common.total") : rate === "other" ? f.t("vat.otherRates") : f.rate(rate)
-    const partName = f.t(part === "net" ? "ledger.colNet" : part === "vat" ? "common.vat" : "common.total")
+      part === "net"
+        ? bucket.net
+        : part === "vat"
+          ? bucket.vat
+          : bucket.net + bucket.vat
+    const name =
+      rate === "total"
+        ? f.t("common.total")
+        : rate === "other"
+          ? f.t("vat.otherRates")
+          : f.rate(rate)
+    const partName = f.t(
+      part === "net"
+        ? "ledger.colNet"
+        : part === "vat"
+          ? "common.vat"
+          : "common.total"
+    )
     const pick = (r: VatReport) => {
       const s = r[which]
-      const b = rate === "total" ? s.total : rate === "other" ? s.other : s.byRate.get(rate)!
+      const b =
+        rate === "total"
+          ? s.total
+          : rate === "other"
+            ? s.other
+            : s.byRate.get(rate)!
       return part === "net" ? b.net : part === "vat" ? b.vat : b.net + b.vat
     }
     const label = `${title}, ${name}, ${partName}`

@@ -157,7 +157,9 @@ function SetupDialogForm({ onClose }: { onClose: () => void }) {
           <Field>
             <FieldLabel>{f.t("settings.traderType")}</FieldLabel>
             <TraderTypeToggle value={traderType} onChange={setTraderType} />
-            <FieldDescription>{f.t("settings.traderTypeHint")}</FieldDescription>
+            <FieldDescription>
+              {f.t("settings.traderTypeHint")}
+            </FieldDescription>
           </Field>
 
           <Field>

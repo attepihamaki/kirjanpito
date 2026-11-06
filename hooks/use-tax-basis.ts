@@ -28,7 +28,10 @@ export function useStatementOptions(): StatementOptions {
   const year = useBookStore((s) => s.year)
   const assetOpening = useBookStore((s) => s.assetOpening)
   return React.useMemo(() => {
-    const latest = entries.reduce((max, e) => Math.max(max, yearOf(e.date)), year)
+    const latest = entries.reduce(
+      (max, e) => Math.max(max, yearOf(e.date)),
+      year
+    )
     return {
       depreciationMax: depreciationMaximums(
         entries,

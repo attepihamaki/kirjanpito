@@ -1170,7 +1170,10 @@ export const APP_DICT = {
   ],
   "entry.logFieldShare": ["Yrityksen osuus", "Business share"],
   "entry.share": ["Yrityksen osuus", "Business share"],
-  "entry.shareInfo": ["Mikä on yrityksen osuus?", "What is the business share?"],
+  "entry.shareInfo": [
+    "Mikä on yrityksen osuus?",
+    "What is the business share?",
+  ],
   "entry.shareInfoText": [
     "Kulu, jota käytetään sekä työhön että yksityisesti, esimerkiksi puhelin. Vain yrityksen osuus kirjataan kuluksi ja vain sen osuuden arvonlisäveron saa vähentää. Maksettu summa pysyy ennallaan.",
     "A cost used for both work and private life, such as a phone. Only the business share counts as an expense and only that share of the VAT can be deducted. The amount paid stays as it is.",
@@ -1196,14 +1199,8 @@ export const APP_DICT = {
     "Kertoo, sisältääkö summa arvonlisäveron. Valitse Verollinen, jos kirjoitit loppusumman, jolloin vero lasketaan sen sisältä. Valitse Veroton, jos kirjoitit summan ilman veroa, jolloin vero lasketaan sen päälle.",
     "Says whether the amount includes VAT. Choose Incl. VAT if you entered the total, and the tax is worked out from within it. Choose Excl. VAT if you entered the amount without tax, and the tax is added on top.",
   ],
-  "entry.convertToNet": [
-    "Muunna verottomaksi",
-    "Convert to excl. VAT",
-  ],
-  "entry.convertToGross": [
-    "Muunna verolliseksi",
-    "Convert to incl. VAT",
-  ],
+  "entry.convertToNet": ["Muunna verottomaksi", "Convert to excl. VAT"],
+  "entry.convertToGross": ["Muunna verolliseksi", "Convert to incl. VAT"],
   "entry.saveAndNew": ["Tallenna ja uusi", "Save and add another"],
   "entry.errDate": ["Anna päivämäärä.", "Enter a date."],
   "entry.errAmount": [

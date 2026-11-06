@@ -59,7 +59,9 @@ describe("vatCheckFindings", () => {
   })
 
   it("blocks a period that has not closed", () => {
-    const items = vatCheckFindings(input({ status: "open", today: "2026-09-25" }))
+    const items = vatCheckFindings(
+      input({ status: "open", today: "2026-09-25" })
+    )
     expect(items[0]).toMatchObject({
       ruleId: "periodOngoing",
       severity: "blocker",
@@ -97,18 +99,31 @@ describe("vatCheckFindings", () => {
   it("counts receipt files missing from the period", () => {
     const entries = [
       entry({
-        atts: [{ id: null, name: "k.pdf", type: "application/pdf", size: 1, missing: true }],
+        atts: [
+          {
+            id: null,
+            name: "k.pdf",
+            type: "application/pdf",
+            size: 1,
+            missing: true,
+          },
+        ],
       }),
     ]
     expect(
-      vatCheckFindings(input({ entries })).find((i) => i.ruleId === "missingFiles")?.data
+      vatCheckFindings(input({ entries })).find(
+        (i) => i.ruleId === "missingFiles"
+      )?.data
     ).toEqual({ n: 1 })
   })
 
   it("lists earlier closed periods that are not marked as filed", () => {
     const item = vatCheckFindings(
       input({
-        entries: [entry({ date: "2026-08-10" }), entry({ id: "b", date: "2026-09-10", amount: 9_900 })],
+        entries: [
+          entry({ date: "2026-08-10" }),
+          entry({ id: "b", date: "2026-09-10", amount: 9_900 }),
+        ],
         bookStart: "2026-07",
         vatFiled: { "2026-07": "2026-09-01" },
       })

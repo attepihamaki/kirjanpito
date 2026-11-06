@@ -36,7 +36,9 @@ describe("field help", () => {
   })
 
   it("explains every VAT return field except the app's own 311/312 row", () => {
-    const codes = vatReturnSections(vatReport([], indexCategories(defaultCategories())))
+    const codes = vatReturnSections(
+      vatReport([], indexCategories(defaultCategories()))
+    )
       .flatMap((s) => s.rows)
       .flatMap((r) => (r.kind === "field" ? [r.code] : []))
     for (const code of codes) expect(vatReturnHelp(code), code).not.toBeNull()

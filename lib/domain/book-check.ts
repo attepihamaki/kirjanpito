@@ -20,10 +20,7 @@ import {
   sortBySeverity,
   type Finding,
 } from "@/lib/domain/rules/engine"
-import {
-  FORM5_RULES,
-  type Form5Breach,
-} from "@/lib/domain/rules/form5-rules"
+import { FORM5_RULES, type Form5Breach } from "@/lib/domain/rules/form5-rules"
 import type { CategoryMap, Entry } from "@/lib/domain/types"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 import {
@@ -127,13 +124,13 @@ export function bookCheck(input: BookCheckInput): BookFinding[] {
     }).assets
 
   const book: BookFinding[] = [
-    ...(evaluate(
-      YEAR_END_RULES,
-      yearEndInput(thisYear),
-      ABOUT_THE_BOOK
-    ) as YearEndFinding[]).map(
-      (finding): BookFinding => ({ set: "yearEnd", year: null, finding })
-    ),
+    ...(
+      evaluate(
+        YEAR_END_RULES,
+        yearEndInput(thisYear),
+        ABOUT_THE_BOOK
+      ) as YearEndFinding[]
+    ).map((finding): BookFinding => ({ set: "yearEnd", year: null, finding })),
     ...evaluate(BOOK_LIMIT_RULES, { entries, cats, assetsOf, today }).map(
       (finding): BookFinding => ({ set: "bookLimits", year: null, finding })
     ),
@@ -142,9 +139,11 @@ export function bookCheck(input: BookCheckInput): BookFinding[] {
       cats,
       vatPeriod: input.vatPeriod,
       today,
-    }).map(
-      (finding): BookFinding => ({ set: "vatLimits", year: null, finding })
-    ),
+    }).map((finding): BookFinding => ({
+      set: "vatLimits",
+      year: null,
+      finding,
+    })),
   ]
 
   const basis = taxBasisEntries(entries, input.traderType)
@@ -162,9 +161,7 @@ export function bookCheck(input: BookCheckInput): BookFinding[] {
 
   const yearRuleIds = YEAR_END_RULES.rules
     .map((r) => r.id)
-    .filter(
-      (id) => !ABOUT_LOCKING.includes(id) && !ABOUT_THE_BOOK.includes(id)
-    )
+    .filter((id) => !ABOUT_LOCKING.includes(id) && !ABOUT_THE_BOOK.includes(id))
 
   const perYear = years.flatMap((year): BookFinding[] => {
     const out: BookFinding[] = []

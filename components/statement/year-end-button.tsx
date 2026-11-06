@@ -31,7 +31,9 @@ export function YearEndButton({ className }: { className?: string }) {
         ) : (
           <FileCheckIcon data-icon="inline-start" />
         )}
-        {f.t(filedOn ? "statement.yearEndOpenFiled" : "statement.yearEndButton")}
+        {f.t(
+          filedOn ? "statement.yearEndOpenFiled" : "statement.yearEndButton"
+        )}
       </Button>
       {filedOn ? (
         <p className="text-xs text-muted-foreground">

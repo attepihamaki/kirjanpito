@@ -57,7 +57,9 @@ describe("VAT return figures", () => {
   })
 
   it("leaves out an entry the return does not count", () => {
-    const wages = [entry({ id: "w", type: "expense", catId: "335", vatRate: 0 })]
+    const wages = [
+      entry({ id: "w", type: "expense", catId: "335", vatRate: 0 }),
+    ]
     expect(
       figureRows(wages, vatContribution(cats, vatFieldSelector("307")))
     ).toEqual([])
@@ -108,13 +110,15 @@ describe("income statement and Form 5 figures", () => {
     )
     expect(rowsTotal(rev)).toBe(statement.revenueTotal)
     expect(rowsTotal(ded)).toBe(statement.deductibleTotal)
-    expect(rowsTotal(figureRows(entries, resultContribution(cats, year, false)))).toBe(
-      statement.result
-    )
+    expect(
+      rowsTotal(figureRows(entries, resultContribution(cats, year, false)))
+    ).toBe(statement.result)
   })
 
   it("a loss adds up to the positive figure the form asks for", () => {
-    const loss = [entry({ id: "c", type: "expense", catId: "333", amount: 5000 })]
+    const loss = [
+      entry({ id: "c", type: "expense", catId: "333", amount: 5000 }),
+    ]
     const s = incomeStatement(loss, cats, year)
     expect(s.resultLine).toBe("359")
     expect(
@@ -155,11 +159,13 @@ describe("Form 5 balance figures", () => {
       amount: 12_550,
       paidOn: null,
     })
-    const paid = entry({ id: "p", date: "2026-12-02", type: "income", paidOn: undefined })
-    const rows = figureRows(
-      [open, paid],
-      balanceContribution(711, cats, 2026)!
-    )
+    const paid = entry({
+      id: "p",
+      date: "2026-12-02",
+      type: "income",
+      paidOn: undefined,
+    })
+    const rows = figureRows([open, paid], balanceContribution(711, cats, 2026)!)
     expect(rows.map((r) => r.entryId)).toEqual(["o"])
   })
 
@@ -192,7 +198,13 @@ describe("liabilities (725, 749)", () => {
       vatRate: 0,
       amountMode: "net",
     })
-    const repay = { ...loan, id: "r", type: "expense", catId: "loan-repayment", amount: 100_000 } as Entry
+    const repay = {
+      ...loan,
+      id: "r",
+      type: "expense",
+      catId: "loan-repayment",
+      amount: 100_000,
+    } as Entry
     const all = [open("o"), loan, repay]
     const current = figureRows(all, balanceContribution(749, cats, 2026)!)
     expect(current.map((r) => r.entryId)).toEqual(["o"])
@@ -210,12 +222,18 @@ describe("liabilities (725, 749)", () => {
       vatRate: 0,
       amountMode: "net",
     })
-    expect(figureRows([later], balanceContribution(725, cats, 2026)!)).toEqual([])
+    expect(figureRows([later], balanceContribution(725, cats, 2026)!)).toEqual(
+      []
+    )
   })
 })
 
 describe("where a voucher counts", () => {
-  const ctx = { vatPeriod: "month" as const, trader: "professional" as const, years: [2026] }
+  const ctx = {
+    vatPeriod: "month" as const,
+    trader: "professional" as const,
+    years: [2026],
+  }
 
   it("finds every voucher in the list of each figure it names", () => {
     const basis = taxBasisEntries(entries, "professional")
@@ -246,17 +264,31 @@ describe("where a voucher counts", () => {
   it("names the return's fields and Form 5's lines for a sale", () => {
     const sale = entries.find((e) => e.description.startsWith("Lasku 1005"))!
     const refs = entryFigureRefs(sale, cats, ctx)
-    expect(refs.filter((r) => r.kind === "vat").map((r) => r.code)).toEqual(["301"])
-    expect(refs.filter((r) => r.kind === "form5").map((r) => r.code)).toEqual([300])
+    expect(refs.filter((r) => r.kind === "vat").map((r) => r.code)).toEqual([
+      "301",
+    ])
+    expect(refs.filter((r) => r.kind === "form5").map((r) => r.code)).toEqual([
+      300,
+    ])
   })
 
   it("has nothing for a VAT payment, which is off both returns", () => {
-    const pay = entry({ id: "p", type: "expense", catId: "vat-payment", vatRate: 0 })
+    const pay = entry({
+      id: "p",
+      type: "expense",
+      catId: "vat-payment",
+      vatRate: 0,
+    })
     expect(entryFigureRefs(pay, cats, ctx)).toEqual([])
   })
 
   it("leaves an open voucher off the statement but on the return", () => {
-    const sale = entry({ id: "o", type: "income", catId: "300-domestic", paidOn: null })
+    const sale = entry({
+      id: "o",
+      type: "income",
+      catId: "300-domestic",
+      paidOn: null,
+    })
     const refs = entryFigureRefs(sale, cats, ctx)
     expect(refs.some((r) => r.kind === "vat")).toBe(true)
     expect(refs.some((r) => r.kind === "form5" && r.code === 300)).toBe(false)
@@ -266,6 +298,9 @@ describe("where a voucher counts", () => {
   it("follows the filing period", () => {
     const sale = entries.find((e) => e.description.startsWith("Lasku 1005"))!
     const [ref] = entryFigureRefs(sale, cats, { ...ctx, vatPeriod: "quarter" })
-    expect(ref).toMatchObject({ kind: "vat", period: { kind: "quarter", quarter: 4 } })
+    expect(ref).toMatchObject({
+      kind: "vat",
+      period: { kind: "quarter", quarter: 4 },
+    })
   })
 })

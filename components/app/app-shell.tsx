@@ -84,7 +84,10 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   useReceiptGc(claimed)
 
   // §8.20: the undo stack only follows the tab that holds the bookkeeping.
-  React.useEffect(() => (claimed ? startRecordingHistory() : undefined), [claimed])
+  React.useEffect(
+    () => (claimed ? startRecordingHistory() : undefined),
+    [claimed]
+  )
 
   /*
    * §7.5: the link to the opened file lives in IndexedDB, not in the store's

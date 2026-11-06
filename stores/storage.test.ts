@@ -211,8 +211,20 @@ describe("persisted preferences and bookkeeping (§12)", () => {
       open: true,
       cats: defaultCategories().filter((c) => c.id !== "333-eu-goods"),
       entries: [
-        { id: "a", date: "2026-02-01", type: "expense", catId: "333", amount: 1 },
-        { id: "b", date: "2026-01-01", type: "expense", catId: "333", amount: 2 },
+        {
+          id: "a",
+          date: "2026-02-01",
+          type: "expense",
+          catId: "333",
+          amount: 1,
+        },
+        {
+          id: "b",
+          date: "2026-01-01",
+          type: "expense",
+          catId: "333",
+          amount: 2,
+        },
       ],
     }
 

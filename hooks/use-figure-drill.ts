@@ -104,7 +104,10 @@ export function form5Figure(
     return {
       ...base,
       amountLabel: f.t(PART_LABEL.net),
-      rows: figureRows(env.basis, resultContribution(cats, o.year, o.code === 359)),
+      rows: figureRows(
+        env.basis,
+        resultContribution(cats, o.year, o.code === 359)
+      ),
       differenceNote: f.t("common.figurePartNote"),
     }
   }
@@ -113,7 +116,10 @@ export function form5Figure(
     return {
       ...base,
       amountLabel: f.t(PART_LABEL.net),
-      rows: figureRows(env.basis, statementContribution(cats, o.year, selection)),
+      rows: figureRows(
+        env.basis,
+        statementContribution(cats, o.year, selection)
+      ),
       differenceNote: f.t("common.figurePartNote"),
     }
   }
