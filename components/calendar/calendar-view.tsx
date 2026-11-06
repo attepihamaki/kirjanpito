@@ -9,8 +9,16 @@ import { Panel } from "@/components/common/panel"
 import { Pill } from "@/components/common/pill"
 import { useFormatters } from "@/components/lang-provider"
 import { Button } from "@/components/ui/button"
+import { useCommandCtx } from "@/hooks/use-commands"
 import { useToday } from "@/hooks/use-today"
 import { saveBlob } from "@/lib/browser/download"
+import { addEntriesWithUndo } from "@/lib/commands/bulk-commands"
+import {
+  ADVANCE_TAX_CAT,
+  advanceTaxPaid,
+  estimateTax,
+} from "@/lib/domain/advance-tax"
+import { uid } from "@/lib/domain/id"
 import { bookStartDate, daysBetween } from "@/lib/domain/vat-deadline"
 import {
   taxCalendar,
@@ -115,6 +123,8 @@ export function CalendarView() {
       />
 
       <div className="space-y-6">
+        <AdvanceTaxSummary />
+
         <Panel>
           {events.length === 0 ? (
             <p className="p-5 text-sm text-muted-foreground">
@@ -156,6 +166,7 @@ function EventRow({ event, today }: { event: CalendarEvent; today: string }) {
   const f = useFormatters()
   const days = daysBetween(today, event.date)
   const past = days < 0
+  const book = useBookInstalment(event, today)
 
   return (
     <li
@@ -170,8 +181,14 @@ function EventRow({ event, today }: { event: CalendarEvent; today: string }) {
       <span className="min-w-0 flex-1 text-sm font-medium">
         {eventTitle(f, event)}
       </span>
+      {event.amount === undefined ? null : (
+        <span className="tabular text-sm">{f.money(event.amount)}</span>
+      )}
+      {book}
       {event.done ? (
-        <Pill tone="income">{f.t("calendar.done")}</Pill>
+        <Pill tone="income">
+          {f.t(event.kind === "advanceTax" ? "calendar.paid" : "calendar.done")}
+        </Pill>
       ) : (
         <Pill>
           {days === 0
@@ -182,5 +199,116 @@ function EventRow({ event, today }: { event: CalendarEvent; today: string }) {
         </Pill>
       )}
     </li>
+  )
+}
+
+/**
+ * The button that books an advance tax instalment as a line 365 expense. It
+ * appears once the instalment is due and has no payment in its month yet; the
+ * ledger then counts it as paid. Null on every other row.
+ */
+function useBookInstalment(event: CalendarEvent, today: string) {
+  const f = useFormatters()
+  const ctx = useCommandCtx()
+  if (
+    event.kind !== "advanceTax" ||
+    event.done ||
+    event.amount === undefined ||
+    event.date > today
+  ) {
+    return null
+  }
+  const amount = event.amount
+  const book = () =>
+    void addEntriesWithUndo(
+      ctx,
+      [
+        {
+          id: `e-${uid()}`,
+          date: event.date,
+          description: f.t("calendar.bookDescription", {
+            m: `${f.month(Number(event.ref.slice(5, 7)) - 1)} ${event.ref.slice(0, 4)}`,
+          }),
+          type: "expense",
+          catId: ADVANCE_TAX_CAT,
+          amount,
+          vatRate: 0,
+          amountMode: "gross",
+        },
+      ],
+      f.t("calendar.booked")
+    )
+  return (
+    <Button size="sm" variant="outline" onClick={book}>
+      {f.t("calendar.book")}
+    </Button>
+  )
+}
+
+/**
+ * The year's advance tax at a glance: the decision, what is booked so far and,
+ * when the user gave a rate, a rough estimate of the year's tax. Absent until
+ * there is a decision or a rate to show.
+ */
+function AdvanceTaxSummary() {
+  const f = useFormatters()
+  const year = useBookStore((s) => s.year)
+  const entries = useBookStore((s) => s.entries)
+  const cats = useBookStore((s) => s.cats)
+  const payMonths = useBookStore((s) => s.payMonths)
+  const decision = payMonths.advanceTaxYearly[String(year)] ?? 0
+  const paid = advanceTaxPaid(entries, year)
+  const estimate = React.useMemo(
+    () =>
+      estimateTax(
+        entries,
+        indexCategories(cats),
+        year,
+        payMonths.taxRate,
+        decision
+      ),
+    [entries, cats, year, payMonths.taxRate, decision]
+  )
+  if (!decision && !estimate && paid === 0) return null
+
+  const rows: [string, string][] = [
+    [
+      f.t("calendar.sumDecision"),
+      decision ? f.money(decision) : f.t("calendar.noMonths"),
+    ],
+    [f.t("calendar.sumPaid"), f.money(paid)],
+  ]
+  if (decision) rows.push([f.t("calendar.sumLeft"), f.money(decision - paid)])
+  if (estimate) {
+    rows.push([
+      f.t("calendar.sumEstimate", {
+        r: String(payMonths.taxRate).replace(".", ","),
+      }),
+      f.money(estimate.tax),
+    ])
+    if (decision && estimate.gap !== 0) {
+      rows.push([
+        f.t(estimate.gap > 0 ? "calendar.sumShort" : "calendar.sumOver"),
+        f.money(Math.abs(estimate.gap)),
+      ])
+    }
+  }
+
+  return (
+    <Panel title={f.t("calendar.sumTitle", { y: year })}>
+      <dl className="grid gap-x-6 gap-y-2 p-5 text-sm sm:grid-cols-2">
+        {rows.map(([label, value]) => (
+          <div key={label} className="flex justify-between gap-4">
+            <dt className="text-muted-foreground">{label}</dt>
+            <dd className="tabular font-medium">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      {estimate ? (
+        <p className="px-5 pb-5 text-sm text-muted-foreground">
+          {f.t("calendar.sumNote")}
+        </p>
+      ) : null}
+    </Panel>
   )
 }

@@ -48,7 +48,7 @@ describe("tax calendar", () => {
   })
 
   it("lists a YEL date for a chosen month and links to the settings", () => {
-    useBookStore.setState({ payMonths: { yel: [7], advanceTax: [] } })
+    useBookStore.setState({ payMonths: { ...NO_PAY_MONTHS, yel: [7] } })
     mount()
     expect(screen.getByText("YEL-maksu")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: /asetuksissa/ })).toHaveAttribute(

@@ -505,9 +505,30 @@ export function parseSettings(text: string): ParsedSettings {
             )
             .sort((a, b) => a - b)
         : []
+    const yearly: Record<string, number> = {}
+    if (isRecord(raw.payMonths.advanceTaxYearly)) {
+      for (const [year, cents] of Object.entries(
+        raw.payMonths.advanceTaxYearly
+      )) {
+        if (
+          /^\d{4}$/.test(year) &&
+          typeof cents === "number" &&
+          Number.isInteger(cents) &&
+          cents > 0
+        ) {
+          yearly[year] = cents
+        }
+      }
+    }
+    const rate = raw.payMonths.taxRate
     out.payMonths = {
       yel: months(raw.payMonths.yel),
       advanceTax: months(raw.payMonths.advanceTax),
+      advanceTaxYearly: yearly,
+      taxRate:
+        typeof rate === "number" && Number.isFinite(rate) && rate >= 0
+          ? rate
+          : null,
     }
   }
   if (isRecord(raw.pageSize)) {

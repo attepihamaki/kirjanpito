@@ -1,3 +1,4 @@
+import { instalmentAmounts, paidMonths } from "@/lib/domain/advance-tax"
 import { ecSales } from "@/lib/domain/ec-sales"
 import { isoDate, monthOf, yearOf } from "@/lib/domain/dates"
 import { form5Due } from "@/lib/domain/tax-return-deadline"
@@ -7,7 +8,7 @@ import {
   vatPeriods,
   type VatPeriodKind,
 } from "@/lib/domain/vat-deadline"
-import type { CategoryMap, Entry } from "@/lib/domain/types"
+import type { CategoryMap, Cents, Entry } from "@/lib/domain/types"
 
 /**
  * The tax calendar (§8.22): every date the book can name for one calendar
@@ -19,13 +20,24 @@ import type { CategoryMap, Entry } from "@/lib/domain/types"
  * user picks the months and the app supplies the day.
  */
 
-/** Months (1 to 12) the user pays in. A setting, kept in `settings.json`. */
+/** What the user tells the app about their payments. Kept in `settings.json`. */
 export interface PayMonths {
+  /** Months (1 to 12) a YEL instalment falls in. */
   yel: number[]
+  /** Months (1 to 12) an advance tax instalment falls in. */
   advanceTax: number[]
+  /** The advance tax decision's yearly amount in cents, by year. */
+  advanceTaxYearly: Record<string, Cents>
+  /** The flat rate in percent that the tax estimate uses, or null for none. */
+  taxRate: number | null
 }
 
-export const NO_PAY_MONTHS: PayMonths = { yel: [], advanceTax: [] }
+export const NO_PAY_MONTHS: PayMonths = {
+  yel: [],
+  advanceTax: [],
+  advanceTaxYearly: {},
+  taxRate: null,
+}
 
 /** Day of the month a YEL instalment falls due (Elo, Varma). */
 const YEL_DAY = 20
@@ -46,8 +58,10 @@ export interface CalendarEvent {
    * covers (`2026-03`), the tax year of Form 5, or the month of an instalment.
    */
   ref: string
-  /** Already dealt with: a return marked as filed. */
+  /** Already dealt with: a return marked as filed, an instalment booked. */
   done: boolean
+  /** What an advance tax instalment comes to, when the decision is entered. */
+  amount?: Cents
 }
 
 export interface CalendarInput {
@@ -134,13 +148,21 @@ export function taxCalendar(input: CalendarInput): CalendarEvent[] {
       done: false,
     })
   }
-  for (const m of monthList(input.payMonths.advanceTax)) {
+  const taxMonths = monthList(input.payMonths.advanceTax)
+  const amounts = instalmentAmounts(
+    input.payMonths.advanceTaxYearly[String(year)] ?? 0,
+    taxMonths
+  )
+  const paid = paidMonths(input.entries, year)
+  for (const m of taxMonths) {
+    const amount = amounts.get(m)
     out.push({
       id: `tax-${year}-${m}`,
       kind: "advanceTax",
       date: instalmentDate(year, m, ADVANCE_TAX_DAY),
       ref: `${year}-${String(m).padStart(2, "0")}`,
-      done: false,
+      done: paid.has(m),
+      ...(amount === undefined ? {} : { amount }),
     })
   }
 

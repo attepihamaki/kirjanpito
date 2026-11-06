@@ -1023,7 +1023,7 @@ export const useBookStore = create<BookStore>()(
           categoryRules: s.categoryRules ?? [],
           assetOpening: s.assetOpening ?? null,
           bankBalance: s.bankBalance ?? null,
-          payMonths: s.payMonths ?? NO_PAY_MONTHS,
+          payMonths: { ...NO_PAY_MONTHS, ...s.payMonths },
           loanOpening: s.loanOpening ?? null,
           yearEnd: s.yearEnd ?? {},
           changeLog: s.changeLog
@@ -1419,6 +1419,19 @@ export const useBookStore = create<BookStore>()(
         yearEnd: s.yearEnd,
         changeLog: s.changeLog,
       }),
+      /*
+       * The default merge is shallow, so a stored `payMonths` from before the
+       * advance tax fields would replace the whole object and leave them
+       * undefined.
+       */
+      merge: (persisted, current) => {
+        const stored = (persisted ?? {}) as Partial<PersistedBook>
+        return {
+          ...current,
+          ...stored,
+          payMonths: { ...NO_PAY_MONTHS, ...stored.payMonths },
+        }
+      },
       migrate: (persisted) => {
         const blob = (persisted ?? {}) as Record<string, unknown>
         /*

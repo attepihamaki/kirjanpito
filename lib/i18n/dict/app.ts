@@ -3033,6 +3033,45 @@ export const APP_DICT = {
     "Päivät ovat ohjeellisia. Tarkista ne OmaVerosta ja eläkeyhtiöltäsi.",
     "The dates are a guide. Check them in OmaVero and with your pension company.",
   ],
+  "calendar.paid": ["Maksettu", "Paid"],
+  "calendar.book": ["Kirjaa maksetuksi", "Book as paid"],
+  "calendar.booked": ["Ennakkovero kirjattu", "Advance tax booked"],
+  "calendar.bookDescription": ["Ennakkovero, {m}", "Advance tax, {m}"],
+  "calendar.decisionTitle": [
+    "Ennakkoveropäätös {y}",
+    "Advance tax decision {y}",
+  ],
+  "calendar.decisionAmount": [
+    "Ennakkovero vuodelta, yhteensä (€)",
+    "Advance tax for the year, total (€)",
+  ],
+  "calendar.decisionRate": [
+    "Veroprosentti arviota varten (%)",
+    "Tax rate for the estimate (%)",
+  ],
+  "calendar.decisionHint": [
+    "Kirjoita summa OmaVeron ennakkoveropäätöksestä. Kalenteri jakaa sen tasan valittujen kuukausien kesken. Veroprosentti on sinun oma arviosi koko tulon veroasteesta. Jätä kenttä tyhjäksi, jos et halua arviota.",
+    "Enter the amount from your advance tax decision in OmaVero. The calendar splits it evenly over the chosen months. The rate is your own guess of the overall share of the income that goes to tax. Leave it empty for no estimate.",
+  ],
+  "calendar.decisionNoRate": ["Ei arviota", "No estimate"],
+  "calendar.decisionRateValue": ["Arvio {r} %:lla", "Estimate at {r} %"],
+  "calendar.sumTitle": ["Ennakkovero {y}", "Advance tax {y}"],
+  "calendar.sumDecision": ["Ennakkoveropäätös", "Advance tax decision"],
+  "calendar.sumPaid": ["Kirjattu maksetuksi", "Booked as paid"],
+  "calendar.sumLeft": ["Maksamatta", "Left to pay"],
+  "calendar.sumEstimate": ["Veroarvio {r} %:lla", "Tax estimate at {r} %"],
+  "calendar.sumShort": [
+    "Päätös on arviota pienempi",
+    "Decision is below the estimate",
+  ],
+  "calendar.sumOver": [
+    "Päätös on arviota suurempi",
+    "Decision is above the estimate",
+  ],
+  "calendar.sumNote": [
+    "Arvio on tilikauden voitto (358) kerrottuna omalla veroprosentillasi. Ansiotulon verotus on progressiivista, joten arvio on suuntaa antava. Jos ennakko jää selvästi alle, voit hakea ennakon korotusta OmaVerossa.",
+    "The estimate is the year's profit (358) times your own rate. Earned income is taxed on a progressive scale, so the figure is only a guide. If the advance falls well short, you can ask for a higher one in OmaVero.",
+  ],
 
   // --- Check the book (§8.23) ---
   "check.title": ["Tarkista kirjanpito", "Check the book"],

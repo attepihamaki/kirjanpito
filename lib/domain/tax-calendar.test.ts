@@ -96,7 +96,11 @@ describe("taxCalendar", () => {
   })
 
   it("puts YEL on the 20th and advance tax on the 23rd of the chosen months", () => {
-    const payMonths = { yel: [7, 1, 7], advanceTax: [8, 13, 0] }
+    const payMonths = {
+      ...NO_PAY_MONTHS,
+      yel: [7, 1, 7],
+      advanceTax: [8, 13, 0],
+    }
     expect(dates("yel", { payMonths })).toEqual([
       ["2026-01", "2026-01-20"],
       ["2026-07", "2026-07-20"],
@@ -109,7 +113,9 @@ describe("taxCalendar", () => {
 
   it("sorts by date", () => {
     const e = taxCalendar(
-      input({ payMonths: { yel: [1, 2, 3], advanceTax: [1, 2, 3] } })
+      input({
+        payMonths: { ...NO_PAY_MONTHS, yel: [1, 2, 3], advanceTax: [1, 2, 3] },
+      })
     )
     const d = e.map((x) => x.date)
     expect(d).toEqual([...d].sort())

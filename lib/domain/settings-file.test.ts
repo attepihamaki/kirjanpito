@@ -64,7 +64,12 @@ function settings(): BookSettings {
     ],
     assetOpening: { year: 2026, amount: 300_000 },
     bankBalance: { amount: -12_345, date: "2026-10-31" },
-    payMonths: { yel: [1, 7], advanceTax: [2, 4, 6] },
+    payMonths: {
+      yel: [1, 7],
+      advanceTax: [2, 4, 6],
+      advanceTaxYearly: { "2026": 360_000 },
+      taxRate: 22.5,
+    },
     loanOpening: { year: 2026, amount: 800_000 },
     changeLog: [{ at: "2026-11-03T10:00:00.000Z", action: "add", voucher: 1 }],
     yearEnd: { "2026": { ...EMPTY_YEAR_END, goods: 120_000, cash: 3_500 } },
@@ -126,7 +131,31 @@ describe("settings.json", () => {
         payMonths: { yel: [7, 7, 0, 13, 1.5, "3", 1], advanceTax: "x" },
       })
     )
-    expect(parsed.payMonths).toEqual({ yel: [1, 7], advanceTax: [] })
+    expect(parsed.payMonths).toEqual({
+      yel: [1, 7],
+      advanceTax: [],
+      advanceTaxYearly: {},
+      taxRate: null,
+    })
+  })
+
+  it("keeps a positive whole-cent decision per year and a non-negative rate", () => {
+    const parsed = parseSettings(
+      JSON.stringify({
+        version: 1,
+        payMonths: {
+          advanceTaxYearly: {
+            "2026": 120_000,
+            "26": 5,
+            "2025": -1,
+            "2024": 1.5,
+          },
+          taxRate: -3,
+        },
+      })
+    )
+    expect(parsed.payMonths?.advanceTaxYearly).toEqual({ "2026": 120_000 })
+    expect(parsed.payMonths?.taxRate).toBeNull()
   })
 
   it("ignores keys it does not know", () => {
