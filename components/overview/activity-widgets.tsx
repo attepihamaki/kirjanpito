@@ -51,35 +51,17 @@ import { RULES, ruleGaps } from "@/lib/domain/rule-tables"
 import { form5Reminder } from "@/lib/domain/tax-return-deadline"
 import {
   VAT_LIMIT_RULES,
-  vatThresholdIn,
   type VatPeriodOverLimit,
   type VatThreshold,
 } from "@/lib/domain/vat-threshold"
+import {
+  BOOK_LIMIT_TEXT,
+  vatPeriodLimitText,
+  vatThresholdText,
+  type BookLimitRuleId,
+} from "@/components/common/limit-text"
 import { useBookStore, type CheckFilter } from "@/stores/book-store"
 import { hasReceipt } from "@/stores/selectors"
-
-const BOOK_LIMIT_TEXT = {
-  singleEntryOver: {
-    key: "singleEntryLimit",
-    title: "overview.singleEntryLimit",
-    sub: "overview.singleEntryLimitOver",
-  },
-  singleEntryStaff: {
-    key: "singleEntryLimit",
-    title: "overview.singleEntryLimit",
-    sub: "overview.singleEntryLimitStaff",
-  },
-  statementsOver: {
-    key: "statementLimit",
-    title: "overview.statementLimit",
-    sub: "overview.statementLimitOver",
-  },
-  statementsStaff: {
-    key: "statementLimit",
-    title: "overview.statementLimit",
-    sub: "overview.statementLimitStaff",
-  },
-} as const
 
 const RULE_GAP_TEXT = {
   travel: "overview.rulesTravel",
@@ -371,34 +353,11 @@ export function ChecksWidget() {
     "vatThresholdNear",
     "vatThresholdBelow",
   ])) {
-    const threshold = found.data as VatThreshold
-    const figures = {
-      a: f.money(threshold.turnover),
-      l: f.money(vatThresholdIn(threshold.year)),
-      y: threshold.year,
-    }
-    items.push(
-      threshold.exceededOn
-        ? {
-            key: "vatThreshold",
-            tone: tone(found.severity),
-            title: f.t("overview.thresholdOver", {
-              d: f.date(threshold.exceededOn),
-            }),
-            sub: f.t("overview.thresholdOverSub", figures),
-          }
-        : {
-            key: "vatThreshold",
-            tone: tone(found.severity),
-            title: f.t("overview.threshold", figures),
-            sub: f.t(
-              threshold.level === "near"
-                ? "overview.thresholdNearSub"
-                : "overview.thresholdSub",
-              figures
-            ),
-          }
-    )
+    items.push({
+      key: "vatThreshold",
+      tone: tone(found.severity),
+      ...vatThresholdText(f, found.data as VatThreshold),
+    })
   }
 
   const unpaid = balancesAt(data.entries, data.catMap, data.today)
@@ -420,15 +379,10 @@ export function ChecksWidget() {
   }
 
   for (const found of evaluate(VAT_LIMIT_RULES, limitCtx, ["vatPeriodLimit"])) {
-    const over = found.data as VatPeriodOverLimit
     items.push({
       key: "vatPeriodLimit",
       tone: tone(found.severity),
-      title: f.t("overview.vatPeriodLimit", {
-        y: over.year,
-        a: f.money(over.turnover),
-      }),
-      sub: f.t("overview.vatPeriodLimitSub", { l: f.money(over.limit) }),
+      ...vatPeriodLimitText(f, found.data as VatPeriodOverLimit),
     })
   }
 
@@ -447,7 +401,7 @@ export function ChecksWidget() {
     today: data.today,
   }
   for (const found of evaluate(BOOK_LIMIT_RULES, bookLimitCtx)) {
-    const text = BOOK_LIMIT_TEXT[found.ruleId as keyof typeof BOOK_LIMIT_TEXT]
+    const text = BOOK_LIMIT_TEXT[found.ruleId as BookLimitRuleId]
     items.push({
       key: text.key,
       tone: tone(found.severity),

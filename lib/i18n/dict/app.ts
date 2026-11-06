@@ -76,6 +76,7 @@ export const APP_DICT = {
   ],
   "file.openShort": ["Avaa", "Open"],
   "file.close": ["Sulje tiedosto", "Close file"],
+  "file.check": ["Tarkista kirjanpito", "Check the book"],
   "file.closed": ["Tiedosto suljettu.", "File closed."],
 
   // --- Confirmations (§8.11) ---
@@ -2999,5 +3000,30 @@ export const APP_DICT = {
   "calendar.note": [
     "Päivät ovat ohjeellisia. Tarkista ne OmaVerosta ja eläkeyhtiöltäsi.",
     "The dates are a guide. Check them in OmaVero and with your pension company.",
+  ],
+
+  // --- Check the book (§8.23) ---
+  "check.title": ["Tarkista kirjanpito", "Check the book"],
+  "check.intro": [
+    "Kaikki säännöt käydään läpi koko kirjanpidolle, vuosi kerrallaan. Huomautus ei estä mitään, ja tosite voi olla oikein.",
+    "Every rule runs over the whole book, one year at a time. A finding blocks nothing, and the voucher may be right.",
+  ],
+  "check.summary": [
+    "Virheitä {b}, huomautuksia {w}, tiedoksi {i}",
+    "{b} errors, {w} warnings, {i} for information",
+  ],
+  "check.allClear": [
+    "Ei huomautettavaa. Yksikään sääntö ei löytänyt mitään.",
+    "Nothing to flag. No rule found anything.",
+  ],
+  "check.book": ["Koko kirjanpito", "The whole book"],
+  "check.year": ["Vuosi {y}", "Year {y}"],
+  "check.form5": [
+    "Lomakkeen 5 luvut eivät täsmää: {codes}",
+    "Form 5 figures do not agree: {codes}",
+  ],
+  "check.form5Sub": [
+    "Verohallinnon tarkistus ({source}) ei päde sovelluksen laskemille luvuille. Tarkista luvut OmaVerossa ennen kuin kopioit ne.",
+    "Verohallinto's check ({source}) fails for the figures the app worked out. Check the figures in OmaVero before you copy them.",
   ],
 } as const satisfies Dict

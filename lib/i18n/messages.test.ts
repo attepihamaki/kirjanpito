@@ -45,6 +45,7 @@ describe("dictionary integrity", () => {
       "balance",
       "bank",
       "calendar",
+      "check",
       "common",
       "confirm",
       "deductions",

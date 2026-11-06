@@ -1,18 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
-import {
-  AlertCircleIcon,
-  CheckIcon,
-  InfoIcon,
-  LockIcon,
-  type LucideIcon,
-} from "lucide-react"
+import { CheckIcon, LockIcon } from "lucide-react"
 
-import { CHECK_TEXT } from "@/components/common/check-text"
+import { CheckRow } from "@/components/common/check-row"
 import { TaxForm } from "@/components/common/tax-form"
 import { useFormatters } from "@/components/lang-provider"
+import { useDescribeYearEnd } from "@/components/statement/use-describe-year-end"
 import { useForm5 } from "@/components/statement/use-form5"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,18 +21,9 @@ import { toast } from "@/components/ui/toast"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useStatementDrill } from "@/hooks/use-figure-drill"
 import { useToday } from "@/hooks/use-today"
-import { periodFromKey } from "@/lib/domain/vat-deadline"
-import type { RuleSeverity } from "@/lib/domain/rules/engine"
-import {
-  canLockYear,
-  yearEndFindings,
-  type YearEndFinding,
-} from "@/lib/domain/year-end"
-import { periodLabel } from "@/lib/i18n/period-label"
-import { APP_ROUTES, STATEMENT_ROUTES } from "@/lib/site"
+import { canLockYear, yearEndFindings } from "@/lib/domain/year-end"
 import { indexCategories } from "@/lib/domain/types"
-import { cn } from "@/lib/utils"
-import { useBookStore, type CheckFilter } from "@/stores/book-store"
+import { useBookStore } from "@/stores/book-store"
 
 type Step = "checks" | "values" | "lock"
 
@@ -64,13 +49,13 @@ export function YearEndDialog() {
 
 function YearEndForm() {
   const f = useFormatters()
-  const router = useRouter()
   const today = useToday()
   const closeDialog = useBookStore((s) => s.closeDialog)
   const setForm5Filed = useBookStore((s) => s.setForm5Filed)
   const { year, sections, balance } = useForm5()
   const { form5Drill } = useStatementDrill()
   const filedOn = useBookStore((s) => s.form5Filed[String(year)])
+  const describeFinding = useDescribeYearEnd()
   const [step, setStep] = React.useState<Step>("checks")
 
   const entries = useBookStore((s) => s.entries)
@@ -115,21 +100,6 @@ function YearEndForm() {
   const canLock = canLockYear(items)
   const warnings = items.filter((i) => i.severity === "warn").length
 
-  function go(href: string, prepare?: () => void) {
-    prepare?.()
-    closeDialog()
-    router.push(href)
-  }
-
-  function showInLedger(check: CheckFilter) {
-    go(APP_ROUTES.ledger, () => {
-      const s = useBookStore.getState()
-      s.clearLedgerFilters()
-      s.setMonth(0)
-      s.setLedgerCheck(check)
-    })
-  }
-
   function lock() {
     setForm5Filed(year, today)
     closeDialog()
@@ -143,103 +113,6 @@ function YearEndForm() {
         },
       },
     })
-  }
-
-  function describe(item: YearEndFinding): {
-    title: string
-    sub: string
-    action?: React.ReactNode
-  } {
-    const link = (label: string, onClick: () => void) => (
-      <Button variant="ghost" size="sm" onClick={onClick}>
-        {label}
-      </Button>
-    )
-    switch (item.ruleId) {
-      case "yearOngoing":
-        return {
-          title: f.t("statement.yearEndOngoing", { y: year }),
-          sub: f.t("statement.yearEndOngoingSub"),
-        }
-      case "noEntries":
-        return {
-          title: f.t("statement.yearEndNoEntries", { y: year }),
-          sub: f.t("statement.yearEndNoEntriesSub"),
-        }
-      case "unsaved":
-        return {
-          title: f.t("file.dirty"),
-          sub: f.t("statement.yearEndUnsavedSub"),
-        }
-      case "entryCheck": {
-        const text = CHECK_TEXT[item.data.check]
-        return {
-          title: f.t(text.title, { n: item.data.n }),
-          sub: f.t(text.sub),
-          action: link(f.t("overview.showThem"), () =>
-            showInLedger(item.data.check)
-          ),
-        }
-      }
-      case "missingFiles":
-        return {
-          title: f.t("overview.missingFiles", { n: item.data.n }),
-          sub: f.t("overview.missingFilesSub"),
-        }
-      case "vatUnfiled": {
-        const names = item.data.keys.map((key) => {
-          const p = periodFromKey(key)
-          return p ? periodLabel(f, p) : key
-        })
-        return {
-          title: f.t("statement.yearEndVatUnfiled", { p: names.join(", ") }),
-          sub: f.t("statement.yearEndVatUnfiledSub"),
-          action: link(f.t("statement.yearEndOpen"), () => go(APP_ROUTES.vat)),
-        }
-      }
-      case "depreciation":
-        return {
-          title: f.t("statement.yearEndDepreciation"),
-          sub: f.t("statement.yearEndDepreciationSub", {
-            a: f.money(item.data.maximum),
-          }),
-          action: link(f.t("statement.yearEndOpen"), () =>
-            go(STATEMENT_ROUTES.assets)
-          ),
-        }
-      case "privateCar":
-        return {
-          title: f.t("statement.yearEndPrivateCar", {
-            a: f.money(item.data.amount),
-          }),
-          sub: f.t("statement.yearEndPrivateCarSub"),
-        }
-      case "yearEndFigures":
-        return {
-          title: f.t("statement.yearEndFigures"),
-          sub: f.t("statement.yearEndFiguresSub"),
-          action: link(f.t("statement.yearEndOpen"), () =>
-            go(STATEMENT_ROUTES.balance)
-          ),
-        }
-      case "openItems":
-        return {
-          title: f.t("overview.openItems", { n: item.data.n }),
-          sub: f.t("overview.openItemsSub", {
-            r: f.money(item.data.receivables),
-            p: f.money(item.data.payables),
-          }),
-        }
-      case "emptyMonths":
-        return {
-          title: f.t("overview.emptyMonths", {
-            m: item.data.months
-              .map((m) => f.month(m - 1, true).toLowerCase())
-              .join(", "),
-          }),
-          sub: f.t("overview.emptyMonthsSub"),
-        }
-    }
   }
 
   const stepIndex = STEPS.indexOf(step)
@@ -280,7 +153,7 @@ function YearEndForm() {
             items.length ? (
               <ul className="divide-y rounded-lg border">
                 {items.map((item) => {
-                  const d = describe(item)
+                  const d = describeFinding(item, year)
                   return (
                     <CheckRow
                       key={item.ruleId === "entryCheck" ? item.data.check : item.ruleId}
@@ -387,43 +260,5 @@ function YearEndForm() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
-
-const SEVERITY: Record<RuleSeverity, { icon: LucideIcon; tone: string }> = {
-  blocker: { icon: AlertCircleIcon, tone: "bg-expense-subtle text-expense" },
-  warn: { icon: AlertCircleIcon, tone: "bg-warning/15 text-warning" },
-  info: { icon: InfoIcon, tone: "bg-muted text-muted-foreground" },
-}
-
-function CheckRow({
-  severity,
-  title,
-  sub,
-  action,
-}: {
-  severity: RuleSeverity
-  title: string
-  sub: string
-  action?: React.ReactNode
-}) {
-  const { icon: Icon, tone } = SEVERITY[severity]
-  return (
-    <li className="grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-start gap-3 px-4 py-3">
-      <span
-        aria-hidden
-        className={cn(
-          "mt-0.5 grid size-5 place-items-center rounded-full",
-          tone
-        )}
-      >
-        <Icon className="size-3" strokeWidth={3} />
-      </span>
-      <div className="min-w-0">
-        <p className="text-sm font-medium">{title}</p>
-        <p className="text-xs text-muted-foreground">{sub}</p>
-      </div>
-      {action ?? <span />}
-    </li>
   )
 }

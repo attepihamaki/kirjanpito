@@ -197,6 +197,8 @@ export type DialogState =
   /** The selected year's checks, Form 5 values and lock (§8.8). */
   | { kind: "year-end" }
   | { kind: "vat-return" }
+  /** Every rule over the whole book (§8.23). */
+  | { kind: "check-book" }
   /** The year-end figures typed in on Varat ja velat (§8.8). */
   | { kind: "year-end-figures" }
   /** Carve a part off an entry, as another category or VAT rate (§8.4). */
@@ -862,6 +864,7 @@ function readOnlyDialog(dialog: DialogState): boolean {
     case "export":
     case "vat-return":
     case "year-end":
+    case "check-book":
       return true
     case "entry":
       return dialog.mode === "edit"

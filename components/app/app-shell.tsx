@@ -18,6 +18,7 @@ import { SplitDialog } from "@/components/entry/split-dialog"
 import { YearEndFiguresDialog } from "@/components/statement/year-end-figures-dialog"
 import { NewYearDialog } from "@/components/new-year/new-year-dialog"
 import { YearEndDialog } from "@/components/statement/year-end-dialog"
+import { BookCheckDialog } from "@/components/check/book-check-dialog"
 import { VatReturnDialog } from "@/components/vat/vat-return-dialog"
 import { EntryDialog } from "@/components/entry/entry-dialog"
 import { FigureDialog } from "@/components/common/figure-dialog"
@@ -246,6 +247,7 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
         <BankImportDialog />
         <SetupDialog />
         <YearEndDialog />
+        <BookCheckDialog />
         <YearEndFiguresDialog />
         <SplitDialog />
         <DeductionDialog />
