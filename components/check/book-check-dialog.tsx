@@ -11,7 +11,10 @@ import {
   type BookLimitRuleId,
 } from "@/components/common/limit-text"
 import { useFormatters } from "@/components/lang-provider"
-import { useDescribeYearEnd } from "@/components/statement/use-describe-year-end"
+import {
+  useDescribeYearEnd,
+  type DescribedFinding,
+} from "@/components/statement/use-describe-year-end"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -106,7 +109,7 @@ function BookCheckForm() {
     return out
   }, [findings])
 
-  function describe(b: BookFinding) {
+  function describe(b: BookFinding): DescribedFinding {
     switch (b.set) {
       case "yearEnd":
         return describeYearEnd(b.finding, b.year ?? yearOf(today))
@@ -171,7 +174,7 @@ function BookCheckForm() {
                           severity={b.finding.severity}
                           title={d.title}
                           sub={d.sub}
-                          action={"action" in d ? d.action : undefined}
+                          action={d.action}
                         />
                       )
                     })}
