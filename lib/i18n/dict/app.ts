@@ -1163,6 +1163,14 @@ export const APP_DICT = {
     "Kertoo, sisältääkö summa arvonlisäveron. Valitse Verollinen, jos kirjoitit loppusumman, jolloin vero lasketaan sen sisältä. Valitse Veroton, jos kirjoitit summan ilman veroa, jolloin vero lasketaan sen päälle.",
     "Says whether the amount includes VAT. Choose Incl. VAT if you entered the total, and the tax is worked out from within it. Choose Excl. VAT if you entered the amount without tax, and the tax is added on top.",
   ],
+  "entry.convertToNet": [
+    "Muunna verottomaksi",
+    "Convert to excl. VAT",
+  ],
+  "entry.convertToGross": [
+    "Muunna verolliseksi",
+    "Convert to incl. VAT",
+  ],
   "entry.saveAndNew": ["Tallenna ja uusi", "Save and add another"],
   "entry.errDate": ["Anna päivämäärä.", "Enter a date."],
   "entry.errAmount": [

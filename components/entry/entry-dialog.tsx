@@ -70,7 +70,7 @@ import {
   categoryName,
   isEuSaleKind,
 } from "@/lib/domain/accounts"
-import { euPurchaseVat } from "@/lib/domain/calc"
+import { calcEntry, euPurchaseVat } from "@/lib/domain/calc"
 import {
   describeInvoice,
   isEmptyGuess,
@@ -93,7 +93,8 @@ import { uid } from "@/lib/domain/id"
 import { periodFromKey, vatPeriods } from "@/lib/domain/vat-deadline"
 import { defaultSettledKey } from "@/lib/domain/vat-settlement"
 import { periodLabel } from "@/lib/i18n/period-label"
-import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
+import { evalAmount, isExpression } from "@/lib/domain/amount-expr"
+import { formatMoney, formatMoneyPlain } from "@/lib/domain/money"
 import { deleteEntry, offerEditUndo } from "@/lib/commands/book-commands"
 import { mergeSplit } from "@/lib/commands/bulk-commands"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
@@ -601,7 +602,33 @@ function EntryDialogForm({
   // A hint, never a block: corrections can carry an older rate (§5).
   const mismatch = rateMismatch(form.vatRate, form.date)
   const noDeduction = vatNotDeductible({ ...form, euPurchase }, catMap)
-  const formAmount = parseAmount(form.amount)
+  const formAmount = evalAmount(form.amount)
+  const amountIsSum = isExpression(form.amount)
+
+  /* The typed sum becomes its result, so what is saved is what is shown. */
+  const commitAmount = () => {
+    if (amountIsSum && formAmount != null) {
+      update({ amount: formatMoneyPlain(formAmount) })
+    }
+  }
+
+  /*
+   * Flip between gross and net and re-express the amount, so the receipt
+   * total stays what it was. Gross to net and back can shift a cent (calc.ts).
+   */
+  const flipAmountMode = () => {
+    if (formAmount == null) return
+    const next: AmountMode = form.amountMode === "gross" ? "net" : "gross"
+    const parts = calcEntry({
+      amount: formAmount,
+      vatRate: form.vatRate,
+      amountMode: form.amountMode,
+    })
+    update({
+      amountMode: next,
+      amount: formatMoneyPlain(next === "net" ? parts.net : parts.gross),
+    })
+  }
   const splitMates =
     mode === "edit" && editing ? splitSiblings(editing, entries).length : 0
   const figureGroups = useEntryFigures(editingId)
@@ -674,7 +701,7 @@ function EntryDialogForm({
       setError({ field: "date", message: f.t("entry.errDate") })
       return null
     }
-    const amount = parseAmount(form.amount)
+    const amount = evalAmount(form.amount)
     if (amount == null || amount === 0) {
       setError({ field: "amount", message: f.t("entry.errAmount") })
       return null
@@ -903,7 +930,7 @@ function EntryDialogForm({
                 description={form.description}
                 type={form.type}
                 cat={selectedCat}
-                amount={parseAmount(form.amount) ?? 0}
+                amount={formAmount ?? 0}
                 vatRate={form.vatRate}
                 amountMode={form.amountMode}
                 euPurchase={euPurchase}
@@ -1149,8 +1176,26 @@ function EntryDialogForm({
                         value={form.amount}
                         aria-invalid={invalid("amount")}
                         onChange={(e) => update({ amount: e.target.value })}
+                        onBlur={commitAmount}
+                        onKeyDown={(e) => {
+                          if (
+                            e.key === "Enter" &&
+                            !e.ctrlKey &&
+                            !e.metaKey &&
+                            amountIsSum &&
+                            formAmount != null
+                          ) {
+                            e.preventDefault()
+                            commitAmount()
+                          }
+                        }}
                         className="tabular text-right"
                       />
+                      {amountIsSum && formAmount != null ? (
+                        <FieldDescription className="tabular text-right">
+                          = {formatMoney(formAmount)}
+                        </FieldDescription>
+                      ) : null}
                       {duplicate ? (
                         <FieldDescription className="text-warning">
                           {f.t("entry.duplicateOf", {
@@ -1227,6 +1272,18 @@ function EntryDialogForm({
                           {f.t("common.net")}
                         </ToggleGroupItem>
                       </ToggleGroup>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="xs"
+                        className="self-start text-muted-foreground w-fit!"
+                        disabled={formAmount == null || formAmount === 0}
+                        onClick={flipAmountMode}
+                      >
+                        {form.amountMode === "gross"
+                          ? f.t("entry.convertToNet")
+                          : f.t("entry.convertToGross")}
+                      </Button>
                     </Field>
                   )}
                 </fieldset>
