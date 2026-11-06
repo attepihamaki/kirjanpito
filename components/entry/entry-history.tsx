@@ -1,7 +1,7 @@
 "use client"
 
-import { EntryDisclosure } from "@/components/entry/entry-disclosure"
 import { useFormatters } from "@/components/lang-provider"
+import { todayIso } from "@/lib/domain/dates"
 import type {
   ChangeRecord,
   FieldChange,
@@ -69,32 +69,74 @@ function formatValue(
   }
 }
 
-function describe(f: Formatters, cats: CategoryMap, r: ChangeRecord): string {
-  switch (r.action) {
-    case "add":
-      return f.t("entry.logAdd")
-    case "delete":
-      return f.t("entry.logDelete")
-    case "restore":
-      return f.t("entry.logRestore")
-    case "edit":
-      return (r.changes ?? [])
-        .map((c) =>
-          f.t("entry.logEdit", {
-            field: f.t(FIELD_LABEL[c.field]),
-            a: formatValue(f, cats, c, c.from),
-            b: formatValue(f, cats, c, c.to),
-          })
-        )
-        .join("; ")
-    default:
-      return ""
-  }
+/** True when more than the adding has happened: an added-only voucher has no history worth a tab. */
+export const hasHistory = (records: readonly ChangeRecord[]) =>
+  records.some((r) => r.action !== "add")
+
+/** The time of day on the clock of the person reading, `19.17` in Finnish. */
+function clock(f: Formatters, at: Date): string {
+  const h = String(at.getHours()).padStart(2, "0")
+  const m = String(at.getMinutes()).padStart(2, "0")
+  return f.lang === "fi" ? `${h}.${m}` : `${h}:${m}`
+}
+
+/** One entry of the timeline: what happened, and for an edit each field's old and new value. */
+function Step({
+  f,
+  cats,
+  record,
+  latest,
+}: {
+  f: Formatters
+  cats: CategoryMap
+  record: ChangeRecord
+  latest: boolean
+}) {
+  const at = new Date(record.at)
+  const when = f.t("entry.historyAt", {
+    d: f.date(todayIso(at)),
+    t: clock(f, at),
+  })
+  const title =
+    record.action === "add"
+      ? f.t("entry.logAdd")
+      : record.action === "delete"
+        ? f.t("entry.logDelete")
+        : record.action === "restore"
+          ? f.t("entry.logRestore")
+          : null
+
+  return (
+    <li className="relative flex flex-col gap-1 pb-5 pl-6 last:pb-0">
+      <span
+        aria-hidden
+        className={
+          latest
+            ? "absolute top-1.5 left-0 size-2.5 rounded-full bg-primary"
+            : "absolute top-1.5 left-0 size-2.5 rounded-full bg-muted-foreground/40"
+        }
+      />
+      <span className="tabular text-sm text-muted-foreground">{when}</span>
+      {title ? <span className="text-sm font-medium">{title}</span> : null}
+      {(record.changes ?? []).map((c) => (
+        <div key={c.field} className="flex flex-col gap-0.5">
+          <span className="text-sm font-medium">
+            {f.t("entry.logChanged", { field: f.t(FIELD_LABEL[c.field]) })}
+          </span>
+          <span className="text-sm break-words text-muted-foreground line-through">
+            {formatValue(f, cats, c, c.from)}
+          </span>
+          <span className="text-sm break-words">
+            {formatValue(f, cats, c, c.to)}
+          </span>
+        </div>
+      ))}
+    </li>
+  )
 }
 
 /**
- * What has happened to one voucher (§8.11), shown open in its dialog. An entry
- * only ever added has no history worth the space.
+ * What has happened to one voucher (§8.11), newest first, as a timeline.
  */
 export function EntryHistory({
   records,
@@ -104,20 +146,19 @@ export function EntryHistory({
   cats: CategoryMap
 }) {
   const f = useFormatters()
-  if (!records.some((r) => r.action !== "add")) return null
+  const newestFirst = [...records].reverse()
 
   return (
-    <EntryDisclosure title={f.t("entry.historyTitle")}>
-      <ul className="flex flex-col gap-1 text-xs text-muted-foreground">
-        {records.map((r, i) => (
-          <li key={`${r.at}-${i}`}>
-            <span className="tabular">
-              {f.date(r.at.slice(0, 10))} {r.at.slice(11, 16)}
-            </span>{" "}
-            {describe(f, cats, r)}
-          </li>
-        ))}
-      </ul>
-    </EntryDisclosure>
+    <ol className="relative flex flex-col before:absolute before:top-3 before:bottom-3 before:left-[4px] before:w-px before:bg-border">
+      {newestFirst.map((r, i) => (
+        <Step
+          key={`${r.at}-${i}`}
+          f={f}
+          cats={cats}
+          record={r}
+          latest={i === 0}
+        />
+      ))}
+    </ol>
   )
 }

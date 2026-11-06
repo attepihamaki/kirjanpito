@@ -57,7 +57,9 @@ describe("click-through on the VAT view (§8.18)", () => {
     )
     const dialog = screen.getByRole("dialog")
     expect(within(dialog).getByText(/Lasku 1005/)).toBeInTheDocument()
-    expect(within(dialog).getByText(/Osto – K-Rauta – Tarvikkeet/)).toBeInTheDocument()
+    expect(
+      within(dialog).getByText(/Osto – K-Rauta – Tarvikkeet/)
+    ).toBeInTheDocument()
     // Bank fees carry no VAT and are not on the return.
     expect(within(dialog).queryByText(/Pankin palvelumaksut/)).toBeNull()
     // The vouchers add up to the figure, so there is no second line.
@@ -170,7 +172,7 @@ describe("where a voucher counts (§8.18)", () => {
 
   it("lists the return field and Form 5 line a sale is part of", () => {
     openEntry("Lasku 1005")
-    expect(screen.getByText("Missä tosite näkyy")).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("tab", { name: /Kirjaukset/ }))
     expect(screen.getByText("ALV-ilmoitus, Lokakuu 2026")).toBeInTheDocument()
     expect(screen.getByText("Lomake 5, 2026")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /^301 / })).toBeInTheDocument()
@@ -179,11 +181,16 @@ describe("where a voucher counts (§8.18)", () => {
 
   it("opens the list behind a line, over the entry dialog", () => {
     openEntry("Lasku 1005")
+    fireEvent.click(screen.getByRole("tab", { name: /Kirjaukset/ }))
     fireEvent.click(screen.getByRole("button", { name: /^301 / }))
     const state = useBookStore.getState()
     expect(state.figure?.title).toMatch(/^301 /)
     expect(state.dialog.kind).toBe("entry")
-    expect(state.figure?.rows.some((r) => r.entryId === (state.dialog as { entryId: string }).entryId)).toBe(true)
+    expect(
+      state.figure?.rows.some(
+        (r) => r.entryId === (state.dialog as { entryId: string }).entryId
+      )
+    ).toBe(true)
   })
 
   it("shows nothing for a voucher that counts nowhere", () => {
@@ -206,6 +213,6 @@ describe("where a voucher counts (§8.18)", () => {
         <EntryDialog registerDropTarget={() => {}} />
       </LangProvider>
     )
-    expect(screen.queryByText("Missä tosite näkyy")).toBeNull()
+    expect(screen.queryByRole("tab", { name: /Kirjaukset/ })).toBeNull()
   })
 })

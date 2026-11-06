@@ -79,6 +79,9 @@ describe("the ledger pill", () => {
   })
 })
 
+const openMenu = () =>
+  userEvent.click(screen.getByRole("button", { name: "Lisää toimintoja" }))
+
 describe("Jaa tosite in the entry dialog", () => {
   const open = (entry: Entry) => {
     load([entry])
@@ -90,7 +93,8 @@ describe("Jaa tosite in the entry dialog", () => {
 
   it("is offered on an ordinary voucher and opens the split dialog", async () => {
     open(receipt)
-    await userEvent.click(screen.getByRole("button", { name: "Jaa tosite" }))
+    await openMenu()
+    await userEvent.click(screen.getByRole("menuitem", { name: "Jaa tosite" }))
     await waitFor(() =>
       expect(useBookStore.getState().dialog).toEqual({
         kind: "split",
@@ -99,7 +103,7 @@ describe("Jaa tosite in the entry dialog", () => {
     )
   })
 
-  it("tells a part that payment and files are shared, and offers to merge", () => {
+  it("tells a part that payment and files are shared, and offers to merge", async () => {
     load([
       { ...receipt, split: "g1" },
       { ...receipt, id: "b", voucher: 2, split: "g1", description: "Lounas" },
@@ -108,31 +112,36 @@ describe("Jaa tosite in the entry dialog", () => {
       dialog: { kind: "entry", mode: "edit", entryId: "a" },
     })
     ui(<EntryDialog registerDropTarget={() => {}} />)
-    fireEvent.click(screen.getByRole("button", { name: "Lisää asetuksia" }))
+    fireEvent.click(screen.getByRole("tab", { name: /Maksu/ }))
     expect(
       screen.getByText(/Maksupäivä, avoin-tila ja käteismaksu/)
     ).toBeVisible()
     expect(screen.getByText(/Liitteet ovat yhteisiä/)).toBeVisible()
-    expect(screen.getByRole("button", { name: "Yhdistä osa" })).toBeVisible()
+    await openMenu()
+    expect(
+      await screen.findByRole("menuitem", { name: "Yhdistä osa" })
+    ).toBeVisible()
   })
 
-  it("says nothing of the kind on an ordinary voucher", () => {
+  it("says nothing of the kind on an ordinary voucher", async () => {
     open(receipt)
     expect(screen.queryByText(/Liitteet ovat yhteisiä/)).not.toBeInTheDocument()
+    await openMenu()
     expect(
-      screen.queryByRole("button", { name: "Yhdistä osa" })
+      screen.queryByRole("menuitem", { name: "Yhdistä osa" })
     ).not.toBeInTheDocument()
   })
 
-  it("is not offered on an EU purchase or a VAT payment", () => {
+  it("is not offered on an EU purchase or a VAT payment", async () => {
     open({
       ...receipt,
       catId: "344-eu-services",
       amountMode: "net",
       euPurchase: "services",
     })
+    await openMenu()
     expect(
-      screen.queryByRole("button", { name: "Jaa tosite" })
+      screen.queryByRole("menuitem", { name: "Jaa tosite" })
     ).not.toBeInTheDocument()
   })
 })

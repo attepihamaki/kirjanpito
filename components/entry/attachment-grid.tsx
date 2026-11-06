@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { FileTextIcon, PlusIcon, XIcon } from "lucide-react"
+import { FileTextIcon, PlusIcon, UploadIcon, XIcon } from "lucide-react"
 
 import { BusyIcon } from "@/components/common/busy-button"
 import { DropTile } from "@/components/common/drop-tile"
@@ -177,38 +177,47 @@ export function AttachmentGrid({
 
   if (readOnly && attachments.length === 0) return null
 
-  return (
-    <div className={cn("flex flex-col gap-2", className)}>
-      <h3 className="text-sm font-medium">{f.t("receipt.sectionTitle")}</h3>
-      {/*
-       * Three columns only while the dialog is stacked and the grid has the
-       * full width; two in the narrow right-hand column beside the receipt
-       * preview. The breakpoint is the dialog's own `md:grid-cols`.
-       */}
-      <div className="grid grid-cols-3 gap-2 md:grid-cols-2">
-        {attachments.map((att, i) => (
-          <Thumb
-            key={att.id ?? `${att.path}-${i}`}
-            att={att}
-            onOpen={() => onOpen(i)}
-            onRemove={readOnly ? undefined : () => onRemove(i)}
-          />
-        ))}
-        {readOnly ? null : (
-          <DropTile
-            onClick={onAdd}
-            disabled={busy}
-            className="flex aspect-3/4 flex-col items-center justify-center gap-1 rounded-md text-muted-foreground hover:text-foreground"
-          >
-            <BusyIcon busy={busy} icon={PlusIcon} className="size-5" />
-            <span className="px-1 text-center text-[0.7rem]">
-              {f.t("receipt.add")}
-            </span>
-          </DropTile>
+  /* Nothing attached yet: one tall tile that fills the column beside the receipt. */
+  if (attachments.length === 0) {
+    return (
+      <DropTile
+        onClick={onAdd}
+        disabled={busy}
+        className={cn(
+          "flex min-h-32 flex-col items-center justify-center gap-1 rounded-xl text-center text-muted-foreground hover:text-foreground",
+          className
         )}
-      </div>
+      >
+        <BusyIcon busy={busy} icon={UploadIcon} className="mb-1 size-5" />
+        <span className="px-2 text-sm font-medium text-foreground">
+          {f.t("receipt.add")}
+        </span>
+        <span className="px-2 text-xs">{f.t("receipt.kinds")}</span>
+      </DropTile>
+    )
+  }
+
+  return (
+    <div className={cn("grid grid-cols-2 content-start gap-2", className)}>
+      {attachments.map((att, i) => (
+        <Thumb
+          key={att.id ?? `${att.path}-${i}`}
+          att={att}
+          onOpen={() => onOpen(i)}
+          onRemove={readOnly ? undefined : () => onRemove(i)}
+        />
+      ))}
       {readOnly ? null : (
-        <p className="text-xs text-muted-foreground">{f.t("receipt.hint")}</p>
+        <DropTile
+          onClick={onAdd}
+          disabled={busy}
+          className="flex aspect-3/4 flex-col items-center justify-center gap-1 rounded-md text-muted-foreground hover:text-foreground"
+        >
+          <BusyIcon busy={busy} icon={PlusIcon} className="size-5" />
+          <span className="px-1 text-center text-[0.7rem]">
+            {f.t("receipt.add")}
+          </span>
+        </DropTile>
       )}
     </div>
   )

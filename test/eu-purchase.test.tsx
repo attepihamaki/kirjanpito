@@ -142,7 +142,9 @@ describe("changing several entries' category", () => {
     bar([subscription, other])
 
     expect(
-      screen.getByText(/kaikki ostoja, joiden veron ilmoitat itse, tai kaikki muita kuluja/)
+      screen.getByText(
+        /kaikki ostoja, joiden veron ilmoitat itse, tai kaikki muita kuluja/
+      )
     ).toBeVisible()
   })
 
@@ -181,6 +183,8 @@ describe("an EU purchase in the VAT view", () => {
       </LangProvider>
     )
 
-    expect(screen.queryByText("Ostot, joiden veron ilmoitat itse")).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("Ostot, joiden veron ilmoitat itse")
+    ).not.toBeInTheDocument()
   })
 })

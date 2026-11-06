@@ -96,7 +96,7 @@ describe("recurring entries", () => {
       dialog: { kind: "entry", mode: "edit", entryId: "a" },
     })
     mount(<EntryDialog registerDropTarget={() => {}} />)
-    fireEvent.click(screen.getByRole("button", { name: "Lisää asetuksia" }))
+    fireEvent.click(screen.getByRole("tab", { name: /Maksu/ }))
     expect(screen.queryByText(/Mikään ei kirjaudu/)).toBeNull()
 
     fireEvent.click(screen.getByLabelText("Mitä toistaminen tekee?"))
@@ -116,7 +116,7 @@ describe("recurring entries", () => {
       dialog: { kind: "entry", mode: "edit", entryId: "a" },
     })
     mount(<EntryDialog registerDropTarget={() => {}} />)
-    fireEvent.click(screen.getByRole("button", { name: "Lisää asetuksia" }))
+    fireEvent.click(screen.getByRole("tab", { name: /Maksu/ }))
     const box = screen.getByRole("checkbox", { name: "Toista joka kuukausi" })
     fireEvent.click(box)
     fireEvent.click(screen.getByRole("button", { name: "Tallenna" }))
@@ -139,6 +139,7 @@ describe("an entry with a template", () => {
       dialog: { kind: "entry", mode: "edit", entryId: "a" },
     })
     mount(<EntryDialog registerDropTarget={() => {}} />)
+    fireEvent.click(screen.getByRole("tab", { name: /Maksu/ }))
     fireEvent.click(
       screen.getByRole("checkbox", { name: "Toista joka kuukausi" })
     )

@@ -279,7 +279,9 @@ describe("YearEndDialog", () => {
 
   it("opens on the checks and lists what stands in the way", () => {
     openDialog()
-    expect(screen.getByText("Vuoden 2026 ilmoitus OmaVeroon")).toBeInTheDocument()
+    expect(
+      screen.getByText("Vuoden 2026 ilmoitus OmaVeroon")
+    ).toBeInTheDocument()
     // The sample year has entries without a receipt, and no year-end figures.
     expect(screen.getByText(/ilman liitettä/i)).toBeInTheDocument()
     expect(
@@ -334,7 +336,9 @@ describe("YearEndDialog", () => {
     expect(
       screen.getByRole("button", { name: "Kopioi kohta 708: 1200,00" })
     ).toBeInTheDocument()
-    expect(screen.getByText("Elinkeinotoiminnan varat yhteensä")).toBeInTheDocument()
+    expect(
+      screen.getByText("Elinkeinotoiminnan varat yhteensä")
+    ).toBeInTheDocument()
     expect(
       screen.getByText("Elinkeinotoiminnan positiivinen nettovarallisuus")
     ).toBeInTheDocument()
@@ -380,7 +384,9 @@ describe("VatReturnDialog", () => {
       screen.getByText("Arvonlisäveroilmoitus: Lokakuu 2026")
     ).toBeInTheDocument()
     expect(screen.getByText(/ilman liitettä/i)).toBeInTheDocument()
-    expect(screen.getByText(/Aiempia kausia ei ole merkitty/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Aiempia kausia ei ole merkitty/)
+    ).toBeInTheDocument()
   })
 
   it("will not mark a period that has not closed", () => {
@@ -500,7 +506,9 @@ describe("the way into the VAT return dialog", () => {
   it("shows a filed period with its date", () => {
     useBookStore.setState({ vatFiled: { "2026-10": "2026-11-12" } })
     mount(<VatView />)
-    expect(screen.getByRole("button", { name: "Ilmoitettu" })).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Ilmoitettu" })
+    ).toBeInTheDocument()
     expect(screen.getByText(/Merkitty ilmoitetuksi/)).toBeInTheDocument()
   })
 })

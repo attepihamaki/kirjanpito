@@ -58,7 +58,7 @@ describe("a locked entry in the dialog", () => {
   it("still opens the extra options", () => {
     mount({ "2026-03": "2026-04-12" })
 
-    fireEvent.click(screen.getByRole("button", { name: "Lisää asetuksia" }))
+    fireEvent.click(screen.getByRole("tab", { name: /Maksu/ }))
 
     expect(
       screen.getByRole("checkbox", { name: "Toista joka kuukausi" })

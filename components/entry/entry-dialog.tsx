@@ -2,12 +2,13 @@
 
 import * as React from "react"
 import {
-  ChevronDownIcon,
   CopyIcon,
+  EllipsisIcon,
   LockIcon,
   MergeIcon,
   SplitIcon,
   Trash2Icon,
+  Undo2Icon,
 } from "lucide-react"
 
 import { EntryTypeToggle } from "@/components/common/filter-controls"
@@ -15,12 +16,19 @@ import { OptionSelect } from "@/components/common/option-select"
 import { InfoPopover } from "@/components/common/info-popover"
 import { Keys } from "@/components/common/keys"
 import { AttachmentGrid } from "@/components/entry/attachment-grid"
-import { EntryFigures } from "@/components/entry/entry-figures"
-import { EntryHistory } from "@/components/entry/entry-history"
+import { EntryFigureList } from "@/components/entry/entry-figures"
+import { EntryHistory, hasHistory } from "@/components/entry/entry-history"
 import { ReceiptPreview } from "@/components/entry/receipt-preview"
 import { AttachmentViewer } from "@/components/receipt/receipt-viewer"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Dialog,
   DialogContent,
@@ -37,10 +45,12 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { toast } from "@/components/ui/toast"
 import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
+import { useEntryFigures } from "@/hooks/use-entry-figures"
 import { useShortcut } from "@/hooks/use-save-book"
 import { isMediaFile } from "@/hooks/use-file-drop"
 import { looksLikeVatId, normalizeVatId } from "@/lib/domain/ec-sales"
@@ -66,7 +76,6 @@ import {
   isEmptyGuess,
   parseInvoiceText,
   previousEntryFrom,
-
   suggestCategory,
 } from "@/lib/domain/invoice-text"
 import { findCategoryRule } from "@/lib/domain/category-rules"
@@ -302,9 +311,7 @@ function EntryDialogForm({
    * reads a complaint with nothing attached to it.
    */
   const [error, setError] = React.useState<FieldErrorState>(null)
-  const [moreOpen, setMoreOpen] = React.useState(
-    mode === "edit" && (initial.paid !== "" || initial.cash || initial.repeat)
-  )
+  const [tab, setTab] = React.useState("details")
   const [busy, setBusy] = React.useState(false)
   // The receipt open in the viewer on top of this dialog, if any (§8.6).
   const [viewing, setViewing] = React.useState<number | null>(null)
@@ -396,9 +403,7 @@ function EntryDialogForm({
       const euCategory = !!(
         previousCat && cats.find((c) => c.id === previousCat.catId)?.euPurchase
       )
-      const readRate = euCategory
-        ? null
-        : (ruleHit?.vatRate ?? guess.vatRate)
+      const readRate = euCategory ? null : (ruleHit?.vatRate ?? guess.vatRate)
       if (readRate != null) keepRate.current = true
 
       setForm((prev) => ({
@@ -599,6 +604,16 @@ function EntryDialogForm({
   const formAmount = parseAmount(form.amount)
   const splitMates =
     mode === "edit" && editing ? splitSiblings(editing, entries).length : 0
+  const figureGroups = useEntryFigures(editingId)
+  const figureCount = figureGroups.reduce((n, g) => n + g.items.length, 0)
+  const showHistory = hasHistory(history)
+  const paidSummary = unpayable
+    ? form.paid === ""
+      ? f.t("entry.paidSame")
+      : form.paid === "open"
+        ? f.t("entry.paidOpenShort")
+        : f.date(form.paid)
+    : null
   const duplicate =
     formAmount && form.date
       ? duplicateOf(
@@ -802,6 +817,12 @@ function EntryDialogForm({
         ? f.t("entry.copyTitle")
         : f.t("ledger.newEntry")
 
+  const countBadge = (n: number) => (
+    <span className="tabular rounded-full bg-muted px-1.5 text-xs font-normal">
+      {n}
+    </span>
+  )
+
   return (
     <Dialog
       open
@@ -810,12 +831,19 @@ function EntryDialogForm({
       }}
     >
       <DialogContent
-        className="max-h-[92svh] overflow-y-auto sm:max-w-3xl"
+        className="flex max-h-[92svh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl"
         onKeyDown={handleKeyDown}
       >
-        <DialogHeader>
-          <div className="flex items-center gap-2">
-            <DialogTitle>{title}</DialogTitle>
+        <DialogHeader className="px-5 pt-4 pb-3">
+          <div className="flex items-center gap-2 pr-10">
+            <DialogTitle className="text-base font-semibold">
+              {title}
+            </DialogTitle>
+            {mode === "edit" && editing?.voucher ? (
+              <span className="tabular rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
+                #{editing.voucher}
+              </span>
+            ) : null}
             {lock ? (
               <InfoPopover
                 label={f.t("entry.locked")}
@@ -844,7 +872,7 @@ function EntryDialogForm({
             ) : null}
           </div>
           {mode === "edit" && editing?.voucher ? (
-            <DialogDescription className="tabular">
+            <DialogDescription className="sr-only">
               {f.t("entry.voucher", { n: editing.voucher })}
             </DialogDescription>
           ) : null}
@@ -865,302 +893,349 @@ function EntryDialogForm({
           }}
         />
 
-        <div className="grid gap-6 md:grid-cols-[1fr_17rem]">
-          <FieldGroup>
-            <fieldset disabled={!!lock} className="contents">
-              {/*
-               * Date and type share a row: both are narrow, and pairing them
-               * keeps the form short enough that the receipt preview beside it
-               * does not stand alone. One column below the compact breakpoint,
-               * where a date input with its picker no longer fits half a dialog.
-               */}
-              <div className="grid gap-5 min-[560px]:grid-cols-2">
-                <Field data-invalid={invalid("date")}>
-                  <FieldLabel htmlFor="entry-date">
-                    {f.t("entry.date")}
-                  </FieldLabel>
-                  <Input
-                    id="entry-date"
-                    ref={dateRef}
-                    type="date"
-                    value={form.date}
-                    autoFocus={mode !== "edit"}
-                    aria-invalid={invalid("date")}
-                    onChange={(e) => {
-                      const date = e.target.value
-                      /*
-                       * A rate the user did not choose follows the date across
-                       * a rate change (§5); one they picked stays.
-                       */
-                      update(
-                        keepRate.current
-                          ? { date }
-                          : { date, vatRate: rateOnDate(form.vatRate, date) }
-                      )
-                    }}
-                  />
-                </Field>
-
-                <Field>
-                  <FieldLabel>{f.t("common.type")}</FieldLabel>
-                  <EntryTypeToggle
-                    value={form.type}
-                    // The old category belongs to the other side.
-                    onChange={(type) => update({ type, catId: "" })}
-                  />
-                </Field>
-              </div>
-
-              <Field>
-                <FieldLabel htmlFor="entry-desc">
-                  {f.t("entry.description")}
-                </FieldLabel>
-                <Input
-                  id="entry-desc"
-                  value={form.description}
-                  placeholder={f.t("entry.descriptionPlaceholder")}
-                  onChange={(e) => update({ description: e.target.value })}
-                />
-              </Field>
-
-              <Field data-invalid={invalid("catId")}>
-                <div className="flex items-center gap-1">
-                  <FieldLabel>{f.t("entry.category")}</FieldLabel>
-                  {euPurchase ? (
-                    <InfoPopover label={f.t("entry.euPurchaseInfo")}>
-                      {f.t(
-                        euPurchase === "import"
-                          ? "entry.importVat"
-                          : euPurchase === "reverse"
-                            ? "entry.reverseVat"
-                            : "entry.euPurchaseVat",
-                        {
-                          a: f.money(
-                            euPurchaseVat({
-                              amount: formAmount ?? 0,
-                              vatRate: form.vatRate,
-                            })
-                          ),
-                          r: f.rate(form.vatRate),
-                        }
-                      )}
-                    </InfoPopover>
-                  ) : null}
-                </div>
-                <OptionSelect
-                  invalid={invalid("catId")}
-                  options={catOptions}
-                  value={form.catId}
-                  onChange={(value) => {
-                    const cat = cats.find((c) => c.id === value)
-                    // Picking a category pre-fills its default rate (§8.5).
-                    update({
-                      catId: value,
-                      // An EU category hides the rate, so it sets it (§6.9).
-                      vatRate:
-                        cat && (cat.euPurchase || !keepRate.current)
-                          ? rateOnDate(cat.vatRate, form.date)
-                          : form.vatRate,
-                    })
-                  }}
-                  placeholder={f.t("entry.errCategory")}
-                  label={f.t("entry.category")}
-                />
-              </Field>
-
-              {settlement ? (
-                <Field>
-                  <FieldLabel>{f.t("entry.settles")}</FieldLabel>
-                  <OptionSelect
-                    options={settledOptions}
-                    value={settledValue}
-                    onChange={(value) => update({ settles: value })}
-                    label={f.t("entry.settles")}
-                  />
-                  <FieldDescription>
-                    {f.t("entry.settlesHint")}
-                  </FieldDescription>
-                </Field>
-              ) : null}
-
-              {ownerTransfer ? (
-                <FieldDescription>{f.t("entry.ownerHint")}</FieldDescription>
-              ) : null}
-
-              {capitalAsset ? (
-                <FieldDescription>{f.t("entry.assetHint")}</FieldDescription>
-              ) : null}
-
-              {euSale ? (
-                <Field>
-                  <FieldLabel htmlFor="entry-buyer-vat">
-                    {f.t("entry.buyerVat")}
-                  </FieldLabel>
-                  <Input
-                    id="entry-buyer-vat"
-                    value={form.buyerVatId}
-                    placeholder="SE556123456701"
-                    onChange={(e) => update({ buyerVatId: e.target.value })}
-                  />
-                  {form.buyerVatId.trim() &&
-                  !looksLikeVatId(form.buyerVatId) ? (
-                    <FieldDescription className="text-warning">
-                      {f.t("entry.buyerVatBad")}
-                    </FieldDescription>
-                  ) : (
-                    <FieldDescription>
-                      {f.t("entry.buyerVatHint")}
-                    </FieldDescription>
-                  )}
-                </Field>
-              ) : null}
-              {euPurchase &&
-              selectedCat &&
-              LINE_BY_KEY.get(selectedCat.line)?.noVatDeduction ? (
-                <Field>
-                  <FieldDescription className="text-warning">
-                    {f.t("entry.euPurchaseNoDeduction")}
-                  </FieldDescription>
-                </Field>
-              ) : null}
-            </fieldset>
-
-            <fieldset disabled={!!lock} className="contents">
-              {selectedCat?.line === "313" ||
-              selectedCat?.line === "314" ||
-              selectedCat?.line === "315" ? (
-                <FieldDescription>
-                  {f.t("entry.privateUseHint")}
-                </FieldDescription>
-              ) : null}
-
-              {selectedCat?.line === "335" ? (
-                <FieldDescription>{f.t("entry.payrollHint")}</FieldDescription>
-              ) : null}
-
-              {/* Paired for the same reason as date and type above. */}
-              <div
-                className={
-                  euPurchase
-                    ? "grid gap-5"
-                    : "grid gap-5 min-[560px]:grid-cols-2"
-                }
-              >
-                <Field data-invalid={invalid("amount")}>
-                  <FieldLabel htmlFor="entry-sum">
-                    {f.t("entry.amount")}
-                  </FieldLabel>
-                  <Input
-                    id="entry-sum"
-                    inputMode="decimal"
-                    value={form.amount}
-                    aria-invalid={invalid("amount")}
-                    onChange={(e) => update({ amount: e.target.value })}
-                    className="tabular text-right"
-                  />
-                  {duplicate ? (
-                    <FieldDescription className="text-warning">
-                      {f.t("entry.duplicateOf", {
-                        n: duplicate.voucher ?? "",
-                        d: duplicate.description || f.t("ledger.noDescription"),
-                      })}
-                    </FieldDescription>
-                  ) : null}
-                </Field>
-
-                {euPurchase ? null : (
-                  <Field>
-                    <FieldLabel>{f.t("entry.vatRate")}</FieldLabel>
-                    <OptionSelect
-                      options={rateOptions.map((rate) => ({
-                        value: String(rate),
-                        label: f.rate(rate),
-                      }))}
-                      value={String(form.vatRate)}
-                      onChange={(value) => {
-                        keepRate.current = true
-                        update({ vatRate: Number(value) })
-                      }}
-                      label={f.t("entry.vatRate")}
-                    />
-                    {mismatch ? (
-                      <FieldDescription className="text-warning">
-                        {mismatch.kind === "notYet"
-                          ? f.t("entry.rateNotYet", {
-                              r: f.rate(mismatch.rate),
-                              d: f.date(mismatch.since),
-                              s: f.rate(mismatch.suggested),
-                            })
-                          : f.t("entry.rateEnded", {
-                              r: f.rate(mismatch.rate),
-                              d: f.date(mismatch.until),
-                              s: f.rate(mismatch.suggested),
-                            })}
-                      </FieldDescription>
-                    ) : null}
-                    {noDeduction ? (
-                      <FieldDescription className="text-warning">
-                        {selectedCat?.line === "341"
-                          ? f.t("entry.vatNotDeductible341")
-                          : f.t("entry.vatNotDeductible")}
-                      </FieldDescription>
-                    ) : null}
-                  </Field>
-                )}
-              </div>
-
-              {euPurchase ? null : (
-                <Field>
-                  <div className="flex items-center gap-1">
-                    <FieldLabel>{f.t("entry.amountMode")}</FieldLabel>
-                    <InfoPopover label={f.t("entry.amountModeInfo")}>
-                      {f.t("entry.amountModeInfoText")}
-                    </InfoPopover>
-                  </div>
-                  <ToggleGroup
-                    aria-label={f.t("entry.amountMode")}
-                    value={[form.amountMode]}
-                    onValueChange={(value) => {
-                      const next = value[0] as AmountMode | undefined
-                      if (next) update({ amountMode: next })
-                    }}
-                  >
-                    <ToggleGroupItem value="gross">
-                      {f.t("common.gross")}
-                    </ToggleGroupItem>
-                    <ToggleGroupItem value="net">
-                      {f.t("common.net")}
-                    </ToggleGroupItem>
-                  </ToggleGroup>
-                </Field>
-              )}
-            </fieldset>
-
-            {/* The payment and repeat options sit behind a toggle. An
-                edited voucher opens it when any of them is not at its
-                default, so a set value is never hidden. The toggle sits
-                outside the locked fieldset so a locked voucher still opens
-                it; the options inside stay disabled. */}
-            <button
-              type="button"
-              aria-expanded={moreOpen}
-              aria-controls="entry-more"
-              onClick={() => setMoreOpen((open) => !open)}
-              className="flex w-fit items-center gap-1 rounded-md text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-            >
-              <ChevronDownIcon
-                className={
-                  moreOpen
-                    ? "size-4 transition-transform"
-                    : "size-4 -rotate-90 transition-transform"
-                }
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {/* The paper sits on a sunken band, which is what tells it apart:
+              it carries no border of its own. The attachments are beside it. */}
+          <div className="flex flex-col gap-2 bg-muted/60 px-5 py-4">
+            <div className="grid items-stretch gap-4 min-[560px]:grid-cols-[1fr_9.5rem]">
+              <ReceiptPreview
+                date={form.date}
+                description={form.description}
+                type={form.type}
+                cat={selectedCat}
+                amount={parseAmount(form.amount) ?? 0}
+                vatRate={form.vatRate}
+                amountMode={form.amountMode}
+                euPurchase={euPurchase}
               />
-              {f.t("entry.moreOptions")}
-            </button>
+              <AttachmentGrid
+                attachments={form.atts}
+                busy={busy}
+                onAdd={() => fileRef.current?.click()}
+                onOpen={setViewing}
+                onRemove={(index) =>
+                  update({ atts: form.atts.filter((_, i) => i !== index) })
+                }
+                readOnly={!!lock}
+                className="min-[560px]:min-h-full"
+              />
+            </div>
+            {splitMates > 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {f.t("entry.splitFilesHint")}
+              </p>
+            ) : null}
+          </div>
 
-            <fieldset disabled={!!lock} className="contents">
-              {moreOpen ? (
-                <div id="entry-more" className="flex flex-col gap-5">
+          <Tabs value={tab} onValueChange={(value) => setTab(String(value))}>
+            <TabsList className="px-5">
+              <TabsTrigger value="details">
+                {f.t("entry.tabDetails")}
+              </TabsTrigger>
+              <TabsTrigger value="payment">
+                {f.t("entry.tabPayment")}
+                {paidSummary ? (
+                  <span className="text-xs font-normal">· {paidSummary}</span>
+                ) : null}
+              </TabsTrigger>
+              {figureCount > 0 ? (
+                <TabsTrigger value="figures">
+                  {f.t("entry.tabFigures")}
+                  {countBadge(figureCount)}
+                </TabsTrigger>
+              ) : null}
+              {showHistory ? (
+                <TabsTrigger value="history">
+                  {f.t("entry.tabHistory")}
+                  {countBadge(history.length)}
+                </TabsTrigger>
+              ) : null}
+            </TabsList>
+
+            <TabsContent value="details" className="min-h-72 px-5 py-5">
+              <FieldGroup>
+                <fieldset disabled={!!lock} className="contents">
+                  {/* Type and date share a row, as do amount and VAT below.
+                      One column under the compact breakpoint, where a date
+                      input with its picker no longer fits half a dialog. */}
+                  <div className="grid gap-5 min-[560px]:grid-cols-2">
+                    <Field>
+                      <FieldLabel>{f.t("common.type")}</FieldLabel>
+                      <EntryTypeToggle
+                        value={form.type}
+                        // The old category belongs to the other side.
+                        onChange={(type) => update({ type, catId: "" })}
+                      />
+                    </Field>
+
+                    <Field data-invalid={invalid("date")}>
+                      <FieldLabel htmlFor="entry-date">
+                        {f.t("entry.date")}
+                      </FieldLabel>
+                      <Input
+                        id="entry-date"
+                        ref={dateRef}
+                        type="date"
+                        value={form.date}
+                        autoFocus={mode !== "edit"}
+                        aria-invalid={invalid("date")}
+                        onChange={(e) => {
+                          const date = e.target.value
+                          /*
+                           * A rate the user did not choose follows the date
+                           * across a rate change (§5); one they picked stays.
+                           */
+                          update(
+                            keepRate.current
+                              ? { date }
+                              : {
+                                  date,
+                                  vatRate: rateOnDate(form.vatRate, date),
+                                }
+                          )
+                        }}
+                      />
+                    </Field>
+                  </div>
+
+                  <Field>
+                    <FieldLabel htmlFor="entry-desc">
+                      {f.t("entry.description")}
+                    </FieldLabel>
+                    <Input
+                      id="entry-desc"
+                      value={form.description}
+                      placeholder={f.t("entry.descriptionPlaceholder")}
+                      onChange={(e) => update({ description: e.target.value })}
+                    />
+                  </Field>
+
+                  <Field data-invalid={invalid("catId")}>
+                    <div className="flex items-center gap-1">
+                      <FieldLabel>{f.t("entry.category")}</FieldLabel>
+                      {euPurchase ? (
+                        <InfoPopover label={f.t("entry.euPurchaseInfo")}>
+                          {f.t(
+                            euPurchase === "import"
+                              ? "entry.importVat"
+                              : euPurchase === "reverse"
+                                ? "entry.reverseVat"
+                                : "entry.euPurchaseVat",
+                            {
+                              a: f.money(
+                                euPurchaseVat({
+                                  amount: formAmount ?? 0,
+                                  vatRate: form.vatRate,
+                                })
+                              ),
+                              r: f.rate(form.vatRate),
+                            }
+                          )}
+                        </InfoPopover>
+                      ) : null}
+                    </div>
+                    <OptionSelect
+                      invalid={invalid("catId")}
+                      options={catOptions}
+                      value={form.catId}
+                      onChange={(value) => {
+                        const cat = cats.find((c) => c.id === value)
+                        // Picking a category pre-fills its default rate (§8.5).
+                        update({
+                          catId: value,
+                          // An EU category hides the rate, so it sets it (§6.9).
+                          vatRate:
+                            cat && (cat.euPurchase || !keepRate.current)
+                              ? rateOnDate(cat.vatRate, form.date)
+                              : form.vatRate,
+                        })
+                      }}
+                      placeholder={f.t("entry.errCategory")}
+                      label={f.t("entry.category")}
+                    />
+                  </Field>
+
+                  {settlement ? (
+                    <Field>
+                      <FieldLabel>{f.t("entry.settles")}</FieldLabel>
+                      <OptionSelect
+                        options={settledOptions}
+                        value={settledValue}
+                        onChange={(value) => update({ settles: value })}
+                        label={f.t("entry.settles")}
+                      />
+                      <FieldDescription>
+                        {f.t("entry.settlesHint")}
+                      </FieldDescription>
+                    </Field>
+                  ) : null}
+
+                  {ownerTransfer ? (
+                    <FieldDescription>
+                      {f.t("entry.ownerHint")}
+                    </FieldDescription>
+                  ) : null}
+
+                  {capitalAsset ? (
+                    <FieldDescription>
+                      {f.t("entry.assetHint")}
+                    </FieldDescription>
+                  ) : null}
+
+                  {euSale ? (
+                    <Field>
+                      <FieldLabel htmlFor="entry-buyer-vat">
+                        {f.t("entry.buyerVat")}
+                      </FieldLabel>
+                      <Input
+                        id="entry-buyer-vat"
+                        value={form.buyerVatId}
+                        placeholder="SE556123456701"
+                        onChange={(e) => update({ buyerVatId: e.target.value })}
+                      />
+                      {form.buyerVatId.trim() &&
+                      !looksLikeVatId(form.buyerVatId) ? (
+                        <FieldDescription className="text-warning">
+                          {f.t("entry.buyerVatBad")}
+                        </FieldDescription>
+                      ) : (
+                        <FieldDescription>
+                          {f.t("entry.buyerVatHint")}
+                        </FieldDescription>
+                      )}
+                    </Field>
+                  ) : null}
+                  {euPurchase &&
+                  selectedCat &&
+                  LINE_BY_KEY.get(selectedCat.line)?.noVatDeduction ? (
+                    <Field>
+                      <FieldDescription className="text-warning">
+                        {f.t("entry.euPurchaseNoDeduction")}
+                      </FieldDescription>
+                    </Field>
+                  ) : null}
+                </fieldset>
+
+                <fieldset disabled={!!lock} className="contents">
+                  {selectedCat?.line === "313" ||
+                  selectedCat?.line === "314" ||
+                  selectedCat?.line === "315" ? (
+                    <FieldDescription>
+                      {f.t("entry.privateUseHint")}
+                    </FieldDescription>
+                  ) : null}
+
+                  {selectedCat?.line === "335" ? (
+                    <FieldDescription>
+                      {f.t("entry.payrollHint")}
+                    </FieldDescription>
+                  ) : null}
+
+                  {/* Paired for the same reason as date and type above. */}
+                  <div
+                    className={
+                      euPurchase
+                        ? "grid gap-5"
+                        : "grid gap-5 min-[560px]:grid-cols-2"
+                    }
+                  >
+                    <Field data-invalid={invalid("amount")}>
+                      <FieldLabel htmlFor="entry-sum">
+                        {f.t("entry.amount")}
+                      </FieldLabel>
+                      <Input
+                        id="entry-sum"
+                        inputMode="decimal"
+                        value={form.amount}
+                        aria-invalid={invalid("amount")}
+                        onChange={(e) => update({ amount: e.target.value })}
+                        className="tabular text-right"
+                      />
+                      {duplicate ? (
+                        <FieldDescription className="text-warning">
+                          {f.t("entry.duplicateOf", {
+                            n: duplicate.voucher ?? "",
+                            d:
+                              duplicate.description ||
+                              f.t("ledger.noDescription"),
+                          })}
+                        </FieldDescription>
+                      ) : null}
+                    </Field>
+
+                    {euPurchase ? null : (
+                      <Field>
+                        <FieldLabel>{f.t("entry.vatRate")}</FieldLabel>
+                        <OptionSelect
+                          options={rateOptions.map((rate) => ({
+                            value: String(rate),
+                            label: f.rate(rate),
+                          }))}
+                          value={String(form.vatRate)}
+                          onChange={(value) => {
+                            keepRate.current = true
+                            update({ vatRate: Number(value) })
+                          }}
+                          label={f.t("entry.vatRate")}
+                        />
+                        {mismatch ? (
+                          <FieldDescription className="text-warning">
+                            {mismatch.kind === "notYet"
+                              ? f.t("entry.rateNotYet", {
+                                  r: f.rate(mismatch.rate),
+                                  d: f.date(mismatch.since),
+                                  s: f.rate(mismatch.suggested),
+                                })
+                              : f.t("entry.rateEnded", {
+                                  r: f.rate(mismatch.rate),
+                                  d: f.date(mismatch.until),
+                                  s: f.rate(mismatch.suggested),
+                                })}
+                          </FieldDescription>
+                        ) : null}
+                        {noDeduction ? (
+                          <FieldDescription className="text-warning">
+                            {selectedCat?.line === "341"
+                              ? f.t("entry.vatNotDeductible341")
+                              : f.t("entry.vatNotDeductible")}
+                          </FieldDescription>
+                        ) : null}
+                      </Field>
+                    )}
+                  </div>
+
+                  {euPurchase ? null : (
+                    <Field>
+                      <div className="flex items-center gap-1">
+                        <FieldLabel>{f.t("entry.amountMode")}</FieldLabel>
+                        <InfoPopover label={f.t("entry.amountModeInfo")}>
+                          {f.t("entry.amountModeInfoText")}
+                        </InfoPopover>
+                      </div>
+                      <ToggleGroup
+                        aria-label={f.t("entry.amountMode")}
+                        value={[form.amountMode]}
+                        onValueChange={(value) => {
+                          const next = value[0] as AmountMode | undefined
+                          if (next) update({ amountMode: next })
+                        }}
+                      >
+                        <ToggleGroupItem value="gross">
+                          {f.t("common.gross")}
+                        </ToggleGroupItem>
+                        <ToggleGroupItem value="net">
+                          {f.t("common.net")}
+                        </ToggleGroupItem>
+                      </ToggleGroup>
+                    </Field>
+                  )}
+                </fieldset>
+              </FieldGroup>
+            </TabsContent>
+
+            <TabsContent value="payment" className="min-h-72 px-5 py-5">
+              <FieldGroup>
+                <fieldset disabled={!!lock} className="contents">
                   {unpayable ? (
                     <Field>
                       <div className="flex items-center gap-1">
@@ -1217,176 +1292,188 @@ function EntryDialogForm({
                     </Field>
                   ) : null}
 
-                  {unpayable && form.paid !== "open" ? (
-                    <Field orientation="horizontal">
+                  <div className="flex flex-col divide-y rounded-lg border">
+                    {unpayable && form.paid !== "open" ? (
+                      <Field orientation="horizontal" className="p-3">
+                        <Checkbox
+                          id="entry-cash"
+                          checked={form.cash}
+                          onCheckedChange={(checked) =>
+                            update({ cash: checked === true })
+                          }
+                        />
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1">
+                            <FieldLabel
+                              htmlFor="entry-cash"
+                              className="font-normal"
+                            >
+                              {f.t("entry.cashLabel")}
+                            </FieldLabel>
+                            <InfoPopover label={f.t("entry.cashInfo")}>
+                              {f.t("entry.cashInfoText", {
+                                d: CASH_BOOKING_DAYS,
+                              })}
+                            </InfoPopover>
+                          </div>
+                          <FieldDescription>
+                            {f.t("entry.cashDesc")}
+                          </FieldDescription>
+                        </div>
+                      </Field>
+                    ) : null}
+
+                    <Field orientation="horizontal" className="p-3">
                       <Checkbox
-                        id="entry-cash"
-                        checked={form.cash}
+                        id="entry-repeat"
+                        checked={form.repeat}
                         onCheckedChange={(checked) =>
-                          update({ cash: checked === true })
+                          update({ repeat: checked === true })
                         }
                       />
-                      <div className="flex items-center gap-1">
-                        <FieldLabel
-                          htmlFor="entry-cash"
-                          className="font-normal"
-                        >
-                          {f.t("entry.cashLabel")}
-                        </FieldLabel>
-                        <InfoPopover label={f.t("entry.cashInfo")}>
-                          {f.t("entry.cashInfoText", {
-                            d: CASH_BOOKING_DAYS,
-                          })}
-                        </InfoPopover>
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-1">
+                          <FieldLabel
+                            htmlFor="entry-repeat"
+                            className="font-normal"
+                          >
+                            {f.t("recurring.repeat")}
+                          </FieldLabel>
+                          <InfoPopover label={f.t("recurring.repeatInfo")}>
+                            {f.t("recurring.repeatHint")}
+                          </InfoPopover>
+                        </div>
+                        <FieldDescription>
+                          {f.t("entry.repeatDesc")}
+                        </FieldDescription>
                       </div>
                     </Field>
-                  ) : null}
+                  </div>
+                </fieldset>
+              </FieldGroup>
+            </TabsContent>
 
-                  <Field orientation="horizontal">
-                    <Checkbox
-                      id="entry-repeat"
-                      checked={form.repeat}
-                      onCheckedChange={(checked) =>
-                        update({ repeat: checked === true })
-                      }
-                    />
-                    <div className="flex items-center gap-1">
-                      <FieldLabel
-                        htmlFor="entry-repeat"
-                        className="font-normal"
-                      >
-                        {f.t("recurring.repeat")}
-                      </FieldLabel>
-                      <InfoPopover label={f.t("recurring.repeatInfo")}>
-                        {f.t("recurring.repeatHint")}
-                      </InfoPopover>
-                    </div>
-                  </Field>
-                </div>
-              ) : null}
-            </fieldset>
-
-            <FieldError>{error?.message}</FieldError>
-
-            <EntryFigures entryId={editingId} />
-
-            <EntryHistory records={history} cats={catMap} />
-          </FieldGroup>
-
-          {/* The paper sits on a sunken surface, which is what tells it
-              apart: it carries no border of its own. */}
-          <div className="flex flex-col gap-4 rounded-lg bg-muted/60 p-4">
-            <ReceiptPreview
-              date={form.date}
-              description={form.description}
-              type={form.type}
-              cat={selectedCat}
-              amount={parseAmount(form.amount) ?? 0}
-              vatRate={form.vatRate}
-              amountMode={form.amountMode}
-              euPurchase={euPurchase}
-            />
-            <AttachmentGrid
-              attachments={form.atts}
-              busy={busy}
-              onAdd={() => fileRef.current?.click()}
-              onOpen={setViewing}
-              onRemove={(index) =>
-                update({ atts: form.atts.filter((_, i) => i !== index) })
-              }
-              readOnly={!!lock}
-            />
-            {splitMates > 0 ? (
-              <p className="text-sm text-muted-foreground">
-                {f.t("entry.splitFilesHint")}
-              </p>
+            {figureCount > 0 ? (
+              <TabsContent value="figures" className="min-h-72 px-5 py-5">
+                <EntryFigureList groups={figureGroups} />
+              </TabsContent>
             ) : null}
-          </div>
+
+            {showHistory ? (
+              <TabsContent value="history" className="min-h-72 px-5 py-5">
+                <EntryHistory records={history} cats={catMap} />
+              </TabsContent>
+            ) : null}
+          </Tabs>
         </div>
 
-        <DialogFooter className="flex-wrap">
+        {error ? (
+          <div className="px-5 pt-3">
+            <FieldError>{error.message}</FieldError>
+          </div>
+        ) : null}
+
+        <DialogFooter className="m-0 flex-row flex-wrap items-center gap-2 bg-popover px-5 py-3">
           {mode === "edit" && editing ? (
-            <>
-              {lock ? (
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    openDialog({
-                      kind: "entry",
-                      mode: "new",
-                      prefill: {
-                        date: todayIso(),
-                        description: f.t("entry.correctionOf", {
-                          n: editing.voucher ?? "",
-                          x: editing.description,
-                        }),
-                        type: editing.type,
-                        catId: editing.catId,
-                        amount: -editing.amount,
-                        vatRate: editing.vatRate,
-                        amountMode: editing.amountMode,
-                      },
-                    })
-                  }
-                >
-                  {f.t("entry.correction")}
-                </Button>
-              ) : (
-                <Button
-                  variant="destructive"
-                  onClick={async () => {
-                    if (await deleteEntry(ctx, editing)) closeDialog()
-                  }}
-                >
-                  <Trash2Icon data-icon="inline-start" />
-                  {f.t("common.delete")}
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                onClick={async () => {
-                  // A copy is of the saved entry, not of what is typed here.
-                  if (await confirmDiscard()) {
-                    openDialog({
-                      kind: "entry",
-                      mode: "copy",
-                      entryId: editing.id,
-                    })
-                  }
-                }}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    aria-label={f.t("entry.moreActions")}
+                  />
+                }
               >
-                <CopyIcon data-icon="inline-start" />
-                {f.t("ledger.copyAsNew")}
-              </Button>
-              {!lock &&
-              canSplitLine(editing.catId, catMap, editing.euPurchase) ? (
-                <Button
-                  variant="outline"
+                <EllipsisIcon />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                side="top"
+                className="min-w-48"
+              >
+                {lock ? (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      openDialog({
+                        kind: "entry",
+                        mode: "new",
+                        prefill: {
+                          date: todayIso(),
+                          description: f.t("entry.correctionOf", {
+                            n: editing.voucher ?? "",
+                            x: editing.description,
+                          }),
+                          type: editing.type,
+                          catId: editing.catId,
+                          amount: -editing.amount,
+                          vatRate: editing.vatRate,
+                          amountMode: editing.amountMode,
+                        },
+                      })
+                    }
+                  >
+                    <Undo2Icon />
+                    {f.t("entry.correction")}
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuItem
                   onClick={async () => {
-                    // A split is of the saved voucher, not of what is typed here.
+                    // A copy is of the saved entry, not of what is typed here.
                     if (await confirmDiscard()) {
-                      openDialog({ kind: "split", entryId: editing.id })
+                      openDialog({
+                        kind: "entry",
+                        mode: "copy",
+                        entryId: editing.id,
+                      })
                     }
                   }}
                 >
-                  <SplitIcon data-icon="inline-start" />
-                  {f.t("entry.splitAction")}
-                </Button>
-              ) : null}
-              {!lock && splitMates > 0 ? (
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    // Merging works on the saved voucher, not what is typed here.
-                    if (!(await confirmDiscard())) return
-                    if (await mergeSplit(ctx, editing)) closeDialog()
-                  }}
-                >
-                  <MergeIcon data-icon="inline-start" />
-                  {f.t("entry.splitMergeAction")}
-                </Button>
-              ) : null}
-            </>
+                  <CopyIcon />
+                  {f.t("entry.copyAction")}
+                </DropdownMenuItem>
+                {!lock &&
+                canSplitLine(editing.catId, catMap, editing.euPurchase) ? (
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      // A split is of the saved voucher, not of what is typed here.
+                      if (await confirmDiscard()) {
+                        openDialog({ kind: "split", entryId: editing.id })
+                      }
+                    }}
+                  >
+                    <SplitIcon />
+                    {f.t("entry.splitAction")}
+                  </DropdownMenuItem>
+                ) : null}
+                {!lock && splitMates > 0 ? (
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      // Merging works on the saved voucher, not what is typed here.
+                      if (!(await confirmDiscard())) return
+                      if (await mergeSplit(ctx, editing)) closeDialog()
+                    }}
+                  >
+                    <MergeIcon />
+                    {f.t("entry.splitMergeAction")}
+                  </DropdownMenuItem>
+                ) : null}
+                {lock ? null : (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={async () => {
+                        if (await deleteEntry(ctx, editing)) closeDialog()
+                      }}
+                    >
+                      <Trash2Icon />
+                      {f.t("entry.deleteAction")}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : null}
 
           <div className="ml-auto flex flex-wrap gap-2">
