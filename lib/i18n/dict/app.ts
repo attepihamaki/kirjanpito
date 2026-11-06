@@ -215,6 +215,8 @@ export const APP_DICT = {
   // --- Shared by several views ---
   // The fill-in forms for OmaVero (§8.7, §8.8).
   "common.businessId": ["Y-tunnus", "Business ID"],
+  "common.helpLabel": ["Mikä tämä on?", "What is this?"],
+  "common.helpSource": ["Lähde", "Source"],
   "common.formShow": ["Näytettävät kohdat", "Fields to show"],
   "common.formFill": ["Täytettävät", "To fill in"],
   "common.formAll": ["Kaikki kohdat", "All fields"],

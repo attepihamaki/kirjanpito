@@ -6,7 +6,9 @@ import { Area, AreaChart, ResponsiveContainer, YAxis } from "recharts"
 
 import { ButtonLink } from "@/components/common/button-link"
 import { Money } from "@/components/common/money"
+import { HelpHint } from "@/components/common/help-hint"
 import { Panel } from "@/components/common/panel"
+import { viewHelp } from "@/lib/domain/field-help"
 import { useFormatters } from "@/components/lang-provider"
 import { useOverviewData } from "@/components/overview/overview-data"
 import { APP_ROUTES } from "@/lib/site"
@@ -46,7 +48,7 @@ export function ResultWidget() {
     >
       <div className="grid items-end gap-5 @lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div>
-          <p className="text-sm text-muted-foreground">
+          <p className="flex items-center gap-1 text-sm text-muted-foreground">
             {f.t(
               statement.resultLine === "358"
                 ? "statement.profit"
@@ -57,6 +59,7 @@ export function ResultWidget() {
               a: f.date(`${year}-01-01`),
               b: f.date(through),
             })}
+            <HelpHint topic={viewHelp("overview.result")} />
           </p>
           <Money
             cents={statement.resultMagnitude}

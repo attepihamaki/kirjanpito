@@ -1,5 +1,6 @@
 "use client"
 
+import { vatReturnHelp } from "@/lib/domain/field-help"
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import {
@@ -273,6 +274,7 @@ function VatReturnForm() {
                 nothing={f.t("vat.returnNothing")}
                 sections={sections}
                 drill={(row) => fieldDrill(row, report.due)}
+                help={(row) => vatReturnHelp(row.code)}
                 notes={[f.t("vat.returnPurchases"), f.t("vat.returnCodes")]}
               />
             </div>

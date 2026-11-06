@@ -1,4 +1,6 @@
+import { HelpHint } from "@/components/common/help-hint"
 import { Surface } from "@/components/common/surface"
+import type { HelpTopic } from "@/lib/domain/field-help"
 import { cn } from "@/lib/utils"
 
 /**
@@ -36,6 +38,7 @@ export const PANEL_ROWS =
  */
 export function Panel({
   title,
+  help,
   description,
   actions,
   footer,
@@ -46,6 +49,8 @@ export function Panel({
 }: {
   /** Omitted for a panel that is a bare bordered box. */
   title?: string
+  /** An explanation of the panel, shown as an info icon beside the title. */
+  help?: HelpTopic | null
   /** A line under the heading saying what the panel is for. */
   description?: string
   /** Controls that sit on the heading row, e.g. a search box and filters. */
@@ -77,7 +82,16 @@ export function Panel({
           )}
         >
           {title ? (
-            <h2 className={cn("font-medium", actions && "mr-2")}>{title}</h2>
+            <h2
+              className={cn(
+                "font-medium",
+                actions && "mr-2",
+                help && "flex items-center gap-1"
+              )}
+            >
+              {title}
+              <HelpHint topic={help} />
+            </h2>
           ) : null}
           {actions}
           {description ? (

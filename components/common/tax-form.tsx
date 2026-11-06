@@ -10,10 +10,12 @@ import {
   ListIcon,
 } from "lucide-react"
 
+import { HelpHint } from "@/components/common/help-hint"
 import { Money } from "@/components/common/money"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { toast } from "@/components/ui/toast"
 import { useFormatters } from "@/components/lang-provider"
+import type { HelpTopic } from "@/lib/domain/field-help"
 import { formatAmountForCsv } from "@/lib/domain/money"
 import {
   taxFormSteps,
@@ -45,6 +47,7 @@ export function TaxForm({
   notes,
   embedded = false,
   drill,
+  help,
   children,
 }: {
   kicker: string
@@ -65,6 +68,8 @@ export function TaxForm({
    * none, such as a figure typed in by hand.
    */
   drill?: (row: TaxFormField) => (() => void) | null
+  /** Explains a field and cites its source, or returns null for one with none. */
+  help?: (row: TaxFormField) => HelpTopic | null
   children?: React.ReactNode
 }) {
   const f = useFormatters()
@@ -184,8 +189,9 @@ export function TaxForm({
                     >
                       <CodeChip tone="solid">{row.code}</CodeChip>
                       <div className="flex min-w-36 flex-1 flex-col gap-0.5 py-1">
-                        <span className="leading-snug font-medium">
+                        <span className="flex items-center gap-1 leading-snug font-medium">
                           {row.label[f.lang]}
+                          <HelpHint topic={help?.(row)} />
                         </span>
                         <span className="text-xs text-muted-foreground">
                           {sectionName(section, f.lang)}
@@ -231,8 +237,9 @@ export function TaxForm({
                   className="flex min-h-12 items-center gap-3 border-b border-sheet-edge px-3 py-1 last:border-b-0 sm:gap-3.5 sm:px-4"
                 >
                   <CodeChip tone="outline">{row.code}</CodeChip>
-                  <span className="min-w-0 flex-1 text-sm leading-snug">
+                  <span className="flex min-w-0 flex-1 items-center gap-1 text-sm leading-snug">
                     {row.label[f.lang]}
+                    <HelpHint topic={help?.(row)} />
                   </span>
                   <DrillButton row={row} drill={drill} />
                   <span className="font-semibold whitespace-nowrap">
@@ -254,6 +261,7 @@ export function TaxForm({
               copied={copied}
               onCopy={(row) => void copy(row)}
               drill={drill}
+              help={help}
             />
           ))}
         </div>
@@ -320,11 +328,13 @@ function AllFieldsSection({
   copied,
   onCopy,
   drill,
+  help,
 }: {
   section: TaxFormSection
   copied: ReadonlySet<string>
   onCopy: (row: TaxFormField) => void
   drill?: (row: TaxFormField) => (() => void) | null
+  help?: (row: TaxFormField) => HelpTopic | null
 }) {
   const f = useFormatters()
   const sum = section.rows.find(
@@ -362,8 +372,9 @@ function AllFieldsSection({
             className="mt-1.5 flex min-h-12 items-center gap-3 rounded-lg bg-muted/60 px-3"
           >
             <CodeChip tone="outline">{row.code}</CodeChip>
-            <span className="min-w-0 flex-1 text-sm leading-snug font-semibold">
+            <span className="flex min-w-0 flex-1 items-center gap-1 text-sm leading-snug font-semibold">
               {row.label[f.lang]}
+              <HelpHint topic={help?.(row)} />
             </span>
             <DrillButton row={row} drill={drill} />
             <span className="font-bold whitespace-nowrap">
@@ -392,7 +403,10 @@ function AllFieldsSection({
                 />
               ) : null}
               <span className="flex flex-col gap-0.5">
-                {row.label[f.lang]}
+                <span className="flex items-center gap-1">
+                  {row.label[f.lang]}
+                  <HelpHint topic={help?.(row)} />
+                </span>
                 {row.hint && row.value ? (
                   <span className="text-xs font-normal text-muted-foreground">
                     {row.hint[f.lang]}

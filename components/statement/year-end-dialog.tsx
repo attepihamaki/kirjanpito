@@ -1,5 +1,6 @@
 "use client"
 
+import { form5Help } from "@/lib/domain/field-help"
 import * as React from "react"
 import { CheckIcon, LockIcon } from "lucide-react"
 
@@ -183,6 +184,7 @@ function YearEndForm() {
               nothing={f.t("statement.form5Nothing")}
               sections={sections}
               drill={form5Drill}
+              help={(row) => form5Help(row.code)}
               notes={[
                 f.t("statement.form5Assumed"),
                 f.t("statement.form5Missing"),

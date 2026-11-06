@@ -4,7 +4,9 @@ import * as React from "react"
 import { LandmarkIcon, PencilIcon } from "lucide-react"
 
 import { Money } from "@/components/common/money"
+import { HelpHint } from "@/components/common/help-hint"
 import { Panel } from "@/components/common/panel"
+import { viewHelp } from "@/lib/domain/field-help"
 import { useFormatters } from "@/components/lang-provider"
 import { useOverviewData } from "@/components/overview/overview-data"
 import { Button } from "@/components/ui/button"
@@ -54,10 +56,11 @@ export function BankWidget() {
       bodyClassName="flex flex-1 flex-col gap-4 p-5"
     >
       <div>
-        <p className="text-sm text-muted-foreground">
+        <p className="flex items-center gap-1 text-sm text-muted-foreground">
           {count > 0
             ? f.t("overview.bankEstimate")
             : f.t("overview.bankOn", { d: f.date(balance.date) })}
+          <HelpHint topic={viewHelp("overview.bank")} />
         </p>
         <Money
           cents={estimate}

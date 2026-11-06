@@ -4,6 +4,7 @@ import * as React from "react"
 
 import { BusinessLine } from "@/components/common/business-line"
 import { FigureLink } from "@/components/common/figure-link"
+import { HelpHint } from "@/components/common/help-hint"
 import { Money, ZeroDash } from "@/components/common/money"
 import { useFormatters } from "@/components/lang-provider"
 import { YearEndButton } from "@/components/statement/year-end-button"
@@ -12,6 +13,7 @@ import {
   form5Balance,
   form5BalanceSections,
 } from "@/lib/domain/form5-balance"
+import { lineHelp } from "@/lib/domain/field-help"
 import { incomeStatement } from "@/lib/domain/income-statement"
 import { indexCategories } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
@@ -201,6 +203,9 @@ export function StatementView() {
                       {row.account}
                     </span>
                     {row.label}
+                    <span className="ml-1 inline-flex align-middle">
+                      <HelpHint topic={lineHelp(row.account)} />
+                    </span>
                   </td>
                   <td className="py-1.5 text-right">
                     {row.net ? (

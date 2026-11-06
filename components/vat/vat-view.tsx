@@ -18,6 +18,7 @@ import { useFormatters } from "@/components/lang-provider"
 import { VatReturnButton } from "@/components/vat/vat-return-button"
 import { useVatDrill, type AmountPart } from "@/hooks/use-figure-drill"
 import { useVatPeriod } from "@/hooks/use-vat-period"
+import { viewHelp, type HelpTopic } from "@/lib/domain/field-help"
 import type { Cents } from "@/lib/domain/types"
 import type { VatReport, VatSide } from "@/lib/domain/vat"
 import { useBookStore } from "@/stores/book-store"
@@ -84,12 +85,14 @@ export function VatView() {
       <div className={cn("grid gap-x-6 lg:grid-cols-2", PANEL_ROWS)}>
         <RateTable
           title={f.t("vat.salesTable")}
+          help={viewHelp("vat.sales")}
           side={report.sales}
           which="sales"
           drill={drill}
         />
         <RateTable
           title={f.t("vat.purchaseTable")}
+          help={viewHelp("vat.purchases")}
           side={report.purchases}
           which="purchases"
           drill={drill}
@@ -98,7 +101,7 @@ export function VatView() {
         />
       </div>
 
-      <Panel title={f.t("vat.otherSales")}>
+      <Panel title={f.t("vat.otherSales")} help={viewHelp("vat.otherSales")}>
         <dl className="divide-y">
           <OtherRow
             label={f.t("vat.euGoodsSales")}
@@ -156,7 +159,7 @@ export function VatView() {
       </Panel>
 
       {hasEu ? (
-        <Panel title={f.t("vat.euPurchases")}>
+        <Panel title={f.t("vat.euPurchases")} help={viewHelp("vat.euPurchases")}>
           <dl className="divide-y">
             <OtherRow
               label={f.t("vat.euGoodsPurchases")}
@@ -248,12 +251,14 @@ type Drill = ReturnType<typeof useVatDrill>["drill"]
 
 function RateTable({
   title,
+  help,
   side,
   skipZero,
   which,
   drill,
 }: {
   title: string
+  help?: HelpTopic | null
   side: VatSide
   skipZero?: boolean
   which: "sales" | "purchases"
@@ -293,6 +298,7 @@ function RateTable({
   return (
     <Panel
       title={title}
+      help={help}
       bodyClassName="[&_[data-slot=table-container]]:h-full [&_table]:h-full"
     >
       <Table>

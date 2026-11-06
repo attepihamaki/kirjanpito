@@ -1178,6 +1178,17 @@ kirjanpito-2026-sailytyspaketti.zip      books-2026-retention-package.zip
 - **It also opens on an archive** (§8.19), since it only reads. Nothing is stored.
 - `lib/domain/book-check.test.ts` and `test/book-check.test.tsx` cover it.
 
+### 8.24 Contextual help (Mikä tämä on?)
+
+`lib/domain/field-help.ts` (pure, tested), `components/common/help-hint.tsx` and the `help` props of `TaxForm` and `Panel`. An info icon beside a figure opens a popover with a short explanation and a link to the vero.fi page it was taken from. It reuses `InfoPopover` (§11), so it opens on hover, tap or Enter, and its accessible name is "Mikä tämä on?".
+
+- **A topic is `{ text, source? }`**, both languages, with the source's URL and title. The tables are `VAT_FIELDS` (by VAT return code, §8.7), `FORM5_FIELDS` (by Form 5 code, §8.8) and `VIEW_TOPICS` (the VAT view's panels and the overview's result, VAT and bank widgets). `lineHelp` maps an income statement line to the Form 5 topic of its account number.
+- **Where it shows.** Every field of the VAT return dialog and the Form 5 dialog that has a topic, in the checklist, the totals and "Kaikki kohdat"; the four panels of the VAT view; the lines of the income statement that carry a rule (300, 317, 319, 321, 327, 335, 337, 341, 364 to 367); and the captions of three overview widgets. A figure with no topic shows no icon. The icon is hidden on paper.
+- **Sources are vero.fi pages only**, and the test fails on any other host. Two pages are used: "Ilmoituksen täyttöohje" for the VAT return and "Veroilmoituksen täyttöohje" for Form 5. They are in Finnish, and the English source title says so. A topic with no `source` is one the page does not state: the sums 316 and 355 and the app's own bank estimate.
+- **Texts follow the source and the rules in this file.** Change a text together with the rule it explains, and move `checkedOn` in `data/rules.json` (§6.11) only for figures that file holds. These topics hold no figure that changes by year except the dividend shares (§6.3), so a law change there means editing the text.
+- `lib/domain/field-help.test.ts` checks that both languages exist, that every VAT return field has a topic, and that no link leaves vero.fi.
+
+
 ---
 
 ## 9. Internationalisation and formatting

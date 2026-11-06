@@ -5,7 +5,9 @@ import { ArrowRightIcon, CalendarIcon, CheckIcon } from "lucide-react"
 
 import { ButtonLink } from "@/components/common/button-link"
 import { Money } from "@/components/common/money"
+import { HelpHint } from "@/components/common/help-hint"
 import { Panel } from "@/components/common/panel"
+import { viewHelp } from "@/lib/domain/field-help"
 import { Pill } from "@/components/common/pill"
 import { Button } from "@/components/ui/button"
 import { useFormatters } from "@/components/lang-provider"
@@ -71,8 +73,9 @@ export function VatWidget() {
       bodyClassName="flex flex-1 flex-col gap-4 p-5"
     >
       <div>
-        <p className="text-sm text-muted-foreground">
+        <p className="flex items-center gap-1 text-sm text-muted-foreground">
           {f.t("overview.vatNext", { p: periodLabel(f, next) })}
+          <HelpHint topic={viewHelp("overview.vat")} />
         </p>
         <Money
           cents={Math.abs(report.due)}
