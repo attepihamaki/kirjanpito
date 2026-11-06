@@ -1,10 +1,12 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import { useId } from "react"
 import {
   Bar,
   BarChart,
   CartesianGrid,
+  LabelList,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -13,6 +15,7 @@ import {
 } from "recharts"
 
 import { useFormatters } from "@/components/lang-provider"
+import { MINUS } from "@/lib/domain/money"
 import type { MonthFigures, Summary } from "@/lib/domain/summary"
 import type { Cents } from "@/lib/domain/types"
 import { APP_ROUTES } from "@/lib/site"
@@ -53,6 +56,8 @@ export function IncomeExpenseChart({
   const setMonth = useBookStore((s) => s.setMonth)
   const clearFilters = useBookStore((s) => s.clearLedgerFilters)
 
+  const hatchId = `hatch-${useId().replace(/:/g, "")}`
+
   const rows = summary.months
   const data: MonthDatum[] = rows.map((r, i) => ({
     month: f.month(i, true),
@@ -60,6 +65,12 @@ export function IncomeExpenseChart({
     income: r.incomeNet / 100,
     expense: -r.expenseNet / 100,
   }))
+
+  // Only the largest bar of each side carries its amount, so twelve months
+  // fit a phone width. A label is matched by value: its index counts only the
+  // bars that were drawn, and a zero month has none.
+  const maxIncome = Math.max(...data.map((d) => d.income))
+  const maxExpense = Math.max(...data.map((d) => -d.expense))
 
   // Old filters left in place could hide the month's rows.
   const openMonth = (m: number) => {
@@ -69,13 +80,39 @@ export function IncomeExpenseChart({
   }
 
   return (
-    <div className={cn("h-64 w-full", className)}>
+    <div className={cn("relative h-64 w-full", className)}>
+      <div
+        className="pointer-events-none absolute top-2 right-2 flex items-center gap-1.5 text-xs text-muted-foreground"
+        aria-hidden
+      >
+        <Swatch kind="income" />
+        {f.t("common.incomePlural")}
+      </div>
+      <div
+        className="pointer-events-none absolute right-2 bottom-8 flex items-center gap-1.5 text-xs text-muted-foreground"
+        aria-hidden
+      >
+        <Swatch kind="expense" />
+        {f.t("common.expensePlural")}
+      </div>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
           stackOffset="sign"
           margin={{ left: 4, right: 4, top: 8 }}
         >
+          <defs>
+            <pattern
+              id={hatchId}
+              width="6"
+              height="6"
+              patternUnits="userSpaceOnUse"
+              patternTransform="rotate(45)"
+            >
+              <rect width="6" height="6" fill="var(--expense-subtle)" />
+              <rect width="2.4" height="6" fill="var(--expense)" />
+            </pattern>
+          </defs>
           <CartesianGrid
             vertical={false}
             stroke="var(--border)"
@@ -138,16 +175,44 @@ export function IncomeExpenseChart({
             maxBarSize={28}
             className="cursor-pointer"
             onClick={(_, i) => openMonth(i + 1)}
-          />
+          >
+            <LabelList
+              dataKey="income"
+              content={(p) =>
+                Number(p.value) === maxIncome ? (
+                  <BarLabel
+                    {...p}
+                    text={`+${wholeEuros.format(maxIncome)}`}
+                    above
+                  />
+                ) : null
+              }
+            />
+          </Bar>
           <Bar
             dataKey="expense"
             stackId="month"
-            fill="var(--expense)"
+            fill={`url(#${hatchId})`}
+            stroke="var(--expense)"
+            strokeWidth={1.2}
             radius={[4, 4, 0, 0]}
             maxBarSize={28}
             className="cursor-pointer"
             onClick={(_, i) => openMonth(i + 1)}
-          />
+          >
+            <LabelList
+              dataKey="expense"
+              content={(p) =>
+                -Number(p.value) === maxExpense ? (
+                  <BarLabel
+                    {...p}
+                    text={`${MINUS}${wholeEuros.format(maxExpense)}`}
+                    above={false}
+                  />
+                ) : null
+              }
+            />
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -168,12 +233,12 @@ export function IncomeExpenseLegend({
   return (
     <div className={cn("flex flex-wrap gap-4 text-sm", className)}>
       <LegendItem
-        swatch="bg-income"
+        kind="income"
         label={f.t("common.incomePlural")}
         value={f.money(income)}
       />
       <LegendItem
-        swatch="bg-expense"
+        kind="expense"
         label={f.t("common.expensePlural")}
         value={f.money(expenses)}
       />
@@ -181,18 +246,68 @@ export function IncomeExpenseLegend({
   )
 }
 
+/** Solid for income, hatched for expenses, so the series differ without colour. */
+function Swatch({ kind }: { kind: "income" | "expense" }) {
+  return (
+    <span
+      className={cn(
+        "size-2.5 shrink-0 rounded-xs",
+        kind === "income"
+          ? "bg-income"
+          : "border border-expense bg-[repeating-linear-gradient(135deg,var(--expense)_0_1.5px,var(--expense-subtle)_1.5px_4px)]"
+      )}
+      aria-hidden
+    />
+  )
+}
+
+/** The amount of a month's bar, placed outside the bar's data end. */
+function BarLabel({
+  x,
+  y,
+  width,
+  height,
+  text,
+  above,
+}: {
+  x?: number | string
+  y?: number | string
+  width?: number | string
+  height?: number | string
+  text: string
+  above: boolean
+}) {
+  const bx = Number(x)
+  const by = Number(y)
+  const bw = Number(width)
+  const bh = Number(height)
+  const edge = above ? Math.min(by, by + bh) - 5 : Math.max(by, by + bh) + 13
+  return (
+    <text
+      x={bx + bw / 2}
+      y={edge}
+      textAnchor="middle"
+      fontSize={11}
+      className="tabular"
+      fill="var(--foreground)"
+    >
+      {text}
+    </text>
+  )
+}
+
 function LegendItem({
-  swatch,
+  kind,
   label,
   value,
 }: {
-  swatch: string
+  kind: "income" | "expense"
   label: string
   value: string
 }) {
   return (
     <span className="inline-flex items-center gap-2 text-muted-foreground">
-      <span className={cn("size-2.5 rounded-xs", swatch)} aria-hidden />
+      <Swatch kind={kind} />
       {label}
       <span className="tabular font-medium text-foreground">{value}</span>
     </span>
