@@ -448,6 +448,14 @@ export interface BookActions {
   setVouchers(numbers: ReadonlyMap<string, number>): void
   /** Put deleted entries back. Ids already present are skipped. */
   restoreEntries(entries: readonly Entry[]): void
+  /**
+   * Replace the entries and categories with an earlier or later state of the
+   * session's history (§8.20). Voucher numbers come back as they were.
+   */
+  restoreSnapshot(snapshot: {
+    entries: readonly Entry[]
+    cats: readonly Category[]
+  }): void
   holdUndoAttachments(ids: readonly string[]): void
   releaseUndoAttachments(ids: readonly string[]): void
   setYear(year: number): void
@@ -1101,6 +1109,13 @@ export const useBookStore = create<BookStore>()(
           gcTick: get().gcTick + 1,
         })
       },
+      restoreSnapshot: ({ entries, cats }) =>
+        set({
+          ...withLog(get(), [...entries], "restore"),
+          cats: [...cats],
+          dirty: true,
+          gcTick: get().gcTick + 1,
+        }),
       holdUndoAttachments: (ids) =>
         set({ undoAttachmentIds: [...get().undoAttachmentIds, ...ids] }),
       releaseUndoAttachments: (ids) => {

@@ -16,6 +16,13 @@ vi.mock("@/lib/commands/io-commands", () => ({
   saveBook: (...args: unknown[]) => saveBook(...args),
 }))
 
+const undoChange = vi.fn()
+const redoChange = vi.fn()
+vi.mock("@/lib/commands/history-commands", () => ({
+  undoChange: (...args: unknown[]) => undoChange(...args),
+  redoChange: (...args: unknown[]) => redoChange(...args),
+}))
+
 const onOpenFile = vi.fn()
 const onExport = vi.fn()
 
@@ -216,5 +223,61 @@ describe("file shortcuts (§8.2)", () => {
     expect(saveBook).not.toHaveBeenCalled()
     // The other two are unaffected.
     expect(press("o")).toBe(true)
+  })
+})
+
+describe("undo and redo shortcuts (§8.20)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useBookStore.setState({
+      open: true,
+      hydrated: true,
+      entries: [],
+      cats: defaultCategories(),
+      importing: false,
+      saving: false,
+      archiveYear: null,
+      dialog: { kind: "none" },
+    })
+  })
+
+  it("undoes on Ctrl+Z and ⌘Z, redoes on Ctrl+Shift+Z and Ctrl+Y", () => {
+    mount()
+
+    expect(press("z")).toBe(true)
+    press("z", { ctrlKey: false, metaKey: true })
+    expect(undoChange).toHaveBeenCalledTimes(2)
+
+    press("Z", { shiftKey: true })
+    press("y")
+    expect(redoChange).toHaveBeenCalledTimes(2)
+  })
+
+  it("leaves Z to a field's own undo", () => {
+    mount()
+    const input = document.createElement("input")
+    document.body.append(input)
+    const event = new KeyboardEvent("keydown", {
+      key: "z",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    input.dispatchEvent(event)
+    input.remove()
+
+    expect(event.defaultPrevented).toBe(false)
+    expect(undoChange).not.toHaveBeenCalled()
+  })
+
+  it("does nothing behind a dialog, in an archive or with no book open", () => {
+    mount()
+    useBookStore.setState({ dialog: { kind: "entry", mode: "new" } })
+    expect(press("z")).toBe(false)
+    useBookStore.setState({ dialog: { kind: "none" }, archiveYear: 2025 })
+    expect(press("z")).toBe(false)
+    useBookStore.setState({ archiveYear: null, open: false })
+    expect(press("z")).toBe(false)
+    expect(undoChange).not.toHaveBeenCalled()
   })
 })

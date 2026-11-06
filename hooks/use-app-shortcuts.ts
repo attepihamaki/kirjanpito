@@ -2,7 +2,9 @@
 
 import * as React from "react"
 
+import { useCommandCtx } from "@/hooks/use-commands"
 import { useCanSaveToFile, useSaveBook } from "@/hooks/use-save-book"
+import { redoChange, undoChange } from "@/lib/commands/history-commands"
 import { useBookStore } from "@/stores/book-store"
 
 /*
@@ -21,6 +23,10 @@ const TAKES_LETTERS =
 const OPEN_LAYER =
   '[role="dialog"]:not([data-slot="toast"]), [role="alertdialog"]:not([data-slot="toast"])'
 
+function isTyping(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest(TAKES_LETTERS) !== null
+}
+
 /** The plain `N` key, pressed where it is not typing into something. */
 function isNewEntryKey(event: KeyboardEvent): boolean {
   if (event.key.toLowerCase() !== "n" || event.repeat) return false
@@ -28,9 +34,7 @@ function isNewEntryKey(event: KeyboardEvent): boolean {
     return false
   }
   if (document.querySelector(OPEN_LAYER)) return false
-  return !(
-    event.target instanceof Element && event.target.closest(TAKES_LETTERS)
-  )
+  return !isTyping(event.target)
 }
 
 /**
@@ -54,6 +58,7 @@ export function useAppShortcuts({
 }): void {
   const save = useSaveBook()
   const canSave = useCanSaveToFile()
+  const ctx = useCommandCtx()
 
   React.useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -69,6 +74,32 @@ export function useAppShortcuts({
 
       if (!(event.metaKey || event.ctrlKey) || event.altKey) return
       const key = event.key.toLowerCase()
+
+      if (key === "z" || key === "y") {
+        /*
+         * In a field, Z and Y belong to the field's own undo, and behind a
+         * dialog the entry being typed is not in the book yet.
+         */
+        if (event.repeat || isTyping(event.target)) return
+        if (document.querySelector(OPEN_LAYER)) return
+        const s = useBookStore.getState()
+        if (
+          !s.open ||
+          s.importing ||
+          s.saving ||
+          s.dialog.kind !== "none" ||
+          s.archiveYear !== null
+        ) {
+          return
+        }
+        const redo = key === "y" ? !event.shiftKey : event.shiftKey
+        if (key === "y" && event.metaKey) return
+        event.preventDefault()
+        if (redo) redoChange(ctx)
+        else undoChange(ctx)
+        return
+      }
+
       if (key !== "o" && key !== "s") return
 
       /*
@@ -105,5 +136,5 @@ export function useAppShortcuts({
 
     window.addEventListener("keydown", handler)
     return () => window.removeEventListener("keydown", handler)
-  }, [canSave, onExport, onOpenFile, save])
+  }, [canSave, ctx, onExport, onOpenFile, save])
 }

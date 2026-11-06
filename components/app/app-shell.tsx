@@ -40,6 +40,7 @@ import { useFileDrop, isBookFile, isMediaFile } from "@/hooks/use-file-drop"
 import { useReceiptGc } from "@/hooks/use-receipt-gc"
 import { useAppShortcuts } from "@/hooks/use-app-shortcuts"
 import { useAutosave } from "@/hooks/use-autosave"
+import { startRecordingHistory } from "@/stores/history-store"
 import { usePersistentStorage } from "@/hooks/use-persistent-storage"
 import { useStorageWarning } from "@/hooks/use-storage-warning"
 import {
@@ -80,6 +81,9 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   }, [hydrated])
 
   useReceiptGc(claimed)
+
+  // §8.20: the undo stack only follows the tab that holds the bookkeeping.
+  React.useEffect(() => (claimed ? startRecordingHistory() : undefined), [claimed])
 
   /*
    * §7.5: the link to the opened file lives in IndexedDB, not in the store's

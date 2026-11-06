@@ -727,6 +727,7 @@ row of nav tabs — is gone.
     | Tallenna | `Ctrl`/`⌘`+`S` | only bound where the browser can write to a file (§7.5); elsewhere it stays the browser's own |
     | Lataa tiedosto | `Ctrl`/`⌘`+`Shift`+`S` | reads as "save as", which is what a downloaded copy is |
     | Sulje tiedosto | **none** | `Ctrl`/`⌘`+`W` is one of the few combinations a browser will not hand to a page, so binding it would close the tab instead |
+    | (no row) | `Ctrl`/`⌘`+`Z`, `Ctrl`/`⌘`+`Shift`+`Z`, `Ctrl`+`Y` | undo and redo of changes to the entries and categories (§8.20); no menu row |
 
   - **`N` opens a new entry**, from the same listener, and "Uusi tosite" says so in its `title` and `aria-keyshortcuts` (`NewEntryButton`). `Ctrl`/`⌘`+`N` belongs to the browser, so this key has no modifier. It stays out of the way of typing: it does nothing in a field or a list that jumps by letter, behind a popover or a confirmation, or when held down.
 
@@ -1095,6 +1096,20 @@ KPL 2:6 has the link between transactions, vouchers and entries, through any sub
 - **Read-only is the store's rule, not each action's.** While `archiveYear` is set, a state change that touches any of `BOOK_DATA_KEYS` is dropped, so no action needs its own check. Filters, the selected year and sorting stay free. `openDialog` opens only the dialogs that show (a viewer, export, the VAT return, the year-end dialog, and an existing voucher). Saving, autosave and "Uusi tosite" are refused or disabled. A download of the archive is allowed and keeps `archiveOf`.
 - **Not handled:** unarchiving into the working book, parking the working book while an archive is open, archiving a year with open items, and finding an archive again from its stub.
 - `lib/domain/year-archive.test.ts` covers the rules and `stores/archive-guard.test.ts` the read-only guard.
+
+### 8.20 Undo and redo (Ctrl+Z)
+
+`lib/domain/history.ts` (pure, tested), `stores/history-store.ts`, `lib/commands/history-commands.ts` and the shortcut in `hooks/use-app-shortcuts.ts`. It goes beyond the 10-second toasts of §8.11: any change to the entries or the categories since the last save can be stepped back, and forward again.
+
+- **A step is a snapshot of `entries` and `cats`.** `startRecordingHistory` subscribes to the book store, mounted in `AppShell` for the tab that holds the bookkeeping (§12). Each change pushes the state before it on the undo stack and empties the redo stack. Writes in one task count as one step, so a split or a bank import undoes in one press. Settings, filed marks, recurring templates, category rules and the year-end figures are not part of it.
+- **The toasts stay as they are.** A toast's "Kumoa" writes to the store like any other change, so it is one more step: Ctrl+Z after it undoes the undo.
+- **The stacks drop** on a save (`dirty` falls), when another bookkeeping takes over (`bookEpoch`), and when a year is archived, whose entries cannot come back without the stub that says where they went (§8.19). They live in memory only. With autosave on, a save follows every change within seconds, so the stack is short.
+- **Locks hold** (§8.11). A step that would add, remove or change a voucher that `lockedEntries` finds locked, in its current or its restored version, is refused with a toast and stays on its stack. A step may still add to a filed return through an entry the return did not count before, and does not ask the way a save does.
+- **Receipts the stacks can bring back stay in IndexedDB** (`historyAttachmentIds`, read by `sweepReceipts`). Clearing the stacks sets the sweep off.
+- **Voucher numbers come back as they were.** `restoreSnapshot` writes the entries as they are and logs the difference in the change log: a delete, an edit or a restore per voucher.
+- **Keys.** `Ctrl`/`⌘`+`Z` undoes, `Ctrl`/`⌘`+`Shift`+`Z` and `Ctrl`+`Y` redo. In a field the browser's own undo keeps the key, and nothing fires behind a dialog or confirmation, during an import or a save, in an archive or with no bookkeeping open.
+- No cap on the number of steps. Entries are shared between snapshots, so a step costs one array.
+- `lib/domain/history.test.ts`, `stores/history-store.test.ts` and `test/app-shortcuts.test.tsx` cover it.
 
 ---
 

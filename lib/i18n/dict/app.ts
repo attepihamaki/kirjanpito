@@ -1166,6 +1166,14 @@ export const APP_DICT = {
   "entry.restoredMany": ["Tositteet palautettu.", "Vouchers restored."],
   "entry.addUndone": ["Lisäys kumottu.", "Addition undone."],
   "entry.editUndone": ["Muutokset kumottu.", "Changes undone."],
+  "entry.historyUndone": ["Viimeisin muutos kumottu.", "Last change undone."],
+  "entry.historyRedone": ["Muutos tehty uudelleen.", "Change redone."],
+  "entry.historyNoUndo": ["Ei kumottavaa.", "Nothing to undo."],
+  "entry.historyNoRedo": ["Ei uudelleen tehtävää.", "Nothing to redo."],
+  "entry.historyLocked": [
+    "Muutos koskee lukittua tositetta, joten sitä ei voi kumota tai tehdä uudelleen.",
+    "The change touches a locked voucher, so it cannot be undone or redone.",
+  ],
   "entry.editUndoChanged": [
     "Tositetta on muutettu sen jälkeen, joten muutosta ei voi kumota.",
     "The voucher has changed since, so the edit cannot be undone.",

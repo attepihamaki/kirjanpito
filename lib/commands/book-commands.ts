@@ -9,6 +9,7 @@ import {
 import { heldByAnotherTab } from "@/lib/browser/tab-lock"
 import { yearOf } from "@/lib/domain/dates"
 import { collectLiveIds } from "@/lib/domain/gc"
+import { historyAttachmentIds } from "@/lib/domain/history"
 import { lockedEntries } from "@/lib/domain/period-lock"
 import type { RecurringEntry } from "@/lib/domain/recurring"
 import { indexCategories, type Entry } from "@/lib/domain/types"
@@ -18,6 +19,7 @@ import { LANDING, APP_ROUTES } from "@/lib/site"
 import { choose, confirm } from "@/lib/ui/confirm"
 import type { Ctx } from "@/lib/commands/ctx"
 import { useBookStore } from "@/stores/book-store"
+import { useHistoryStore } from "@/stores/history-store"
 import { useLangStore } from "@/stores/lang-store"
 
 /**
@@ -52,6 +54,7 @@ export async function sweepReceipts(): Promise<void> {
       return collectLiveIds(state.entries, [
         ...state.draftAttachmentIds,
         ...state.undoAttachmentIds,
+        ...historyAttachmentIds(useHistoryStore.getState()),
       ])
     })
   } catch (error) {
