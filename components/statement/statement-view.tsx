@@ -345,6 +345,14 @@ export function StatementView() {
           </table>
         ))}
 
+        {statement.resultLine === "359" ? (
+          <p className="mt-6 text-xs text-muted-foreground">
+            {f.t("statement.lossNote", {
+              a: f.money(statement.resultMagnitude),
+            })}
+          </p>
+        ) : null}
+
         {statement.taxExemptTotal ? (
           <p className="mt-6 text-xs text-muted-foreground">
             {f.t("statement.exemptNote", {

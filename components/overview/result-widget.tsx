@@ -71,6 +71,11 @@ export function ResultWidget() {
               b: f.money(statement.deductibleTotal),
             })}
           </p>
+          {statement.resultLine === "359" ? (
+            <p className="mt-1 text-sm text-muted-foreground">
+              {f.t("overview.lossCarry")}
+            </p>
+          ) : null}
         </div>
 
         <div

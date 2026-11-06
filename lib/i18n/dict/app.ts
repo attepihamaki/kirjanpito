@@ -1685,6 +1685,14 @@ export const APP_DICT = {
     "Total deductible expenses",
   ],
   "statement.loss": ["359 Elinkeinotoiminnan tappio", "359 Business loss"],
+  "statement.lossNote": [
+    "Tappio {a} vahvistetaan verotuksessa. Vahvistettu tappio vähennetään elinkeinotoiminnan tuloksesta seuraavien 10 vuoden aikana, vanhin tappio ensin. Sovellus ei seuraa vahvistettuja tappioita, joten kirjaa vähennys itse, kun tulos on voitollinen. Kohtaa 373 sovellus ei täytä.",
+    "The loss of {a} is confirmed in the tax assessment. A confirmed loss is deducted from business income over the next 10 years, oldest first. The app does not track confirmed losses, so enter the deduction yourself when a year turns to profit. The app leaves field 373 empty.",
+  ],
+  "overview.lossCarry": [
+    "Tappio voidaan vähentää seuraavien 10 vuoden voitoista.",
+    "A loss can be deducted from profits in the next 10 years.",
+  ],
   "statement.entertainmentNote": [
     "Edustuskuluista (341, yhteensä {a}) vähennetään puolet, {b}. Veroilmoitukseen koko summa kuuluu kohtaan 341 ja vähennettävä osuus kohtaan 342.",
     "Half of entertainment expenses (341, total {a}) is deducted, {b}. On the tax return the full amount goes in 341 and the deductible part in 342.",
