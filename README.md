@@ -252,7 +252,7 @@ if the three SEO files stop agreeing with the flag.
 
 The app replaces an Excel workbook, and was built from an HTML prototype.
 Neither is in the repository — they are source material rather than part of the
-project — but `CLAUDE.md` carries everything taken from them: the domain rules,
+project — but `CLAUDE.md` and the files in `spec/` carry everything taken from them: the domain rules,
 the chart of accounts, the file formats, the design system and the reasoning
 behind the decisions above. That includes the bugs found in the workbook's
 formulas, which the app deliberately does not reproduce. It is the place to look

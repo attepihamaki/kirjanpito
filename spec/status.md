@@ -1,0 +1,64 @@
+# Implementation order, open questions and legal gaps
+
+Part of the project specification. `CLAUDE.md` is the index and holds the conventions; section numbers are the same in every file, and code comments cite them as §N.
+
+## 13. Suggested implementation order
+
+1. Domain modules with no React: types, the chart of accounts and default categories, money and format helpers, `calc`, VAT report, income statement, summary, CSV parse and serialize, path and file-name building, and ZIP pack and unpack. **Unit-test these first** (Vitest), including the reference figures in §10 and comparisons with the Excel's monthly sheets.
+2. A store with persistence (localStorage and IndexedDB), the open/dirty/year/language/theme state, and the i18n dictionary.
+3. The shell (sidebar, top bar), routing, and the theme and language switches.
+4. The ledger with the data table (sort, filter, paginate), the entry dialog, and the confirmation helper.
+5. Import and export (CSV and ZIP), the export dialog, and drag and drop.
+6. Receipts: attach, IndexedDB storage, thumbnails, the viewer with PDF.js, and garbage collection.
+7. The VAT return, income statement (with print), summary, and settings.
+8. The landing page.
+9. Responsive polish, accessibility, and dark-mode check.
+
+### Acceptance checklist
+
+- [ ] The §10 fixture gives the figures in §10.
+- [ ] Exporting and importing back reproduces the same entries **in either export language** (including custom categories, the `mode` column and a net entry's amount).
+- [ ] An English export writes English words and Finnish numbers, dates and delimiter, so it still opens in a European Excel.
+- [ ] Exporting a ZIP with receipts and importing it back restores them under the same names, and a second export reproduces the same paths. A plain CSV import keeps their paths as missing.
+- [ ] Changing the export language on a book whose receipts are not in this browser still carries every receipt into the new file, with no "receipts lost" prompt.
+- [ ] A file the app does not understand is refused in a dialog that says why; a column it does not know is named in the import toast.
+- [ ] On Chrome, a file opened through the picker saves back to itself, survives a reload, and asks before overwriting a file edited elsewhere (§7.5). On Firefox and Safari the save row is absent and nothing else changes.
+- [ ] Every confirmation in §8.11 appears in the right situations, and only then.
+- [ ] No `window.confirm` / `alert` anywhere.
+- [ ] Currency is shown in Finnish format in both languages.
+- [ ] Light, dark and system themes all work. Layouts work at 390 px, 900 px and desktop widths.
+- [ ] None of the Excel bugs in §3 are reproduced.
+
+## 14. Open questions and ideas not yet done
+
+- Undo for edits beyond the 10-second toast (§8.11), for example a history of an entry's earlier versions. The change log holds the old values but the app can not restore from it. Autosave (§7.5) makes a mistake reach the file within seconds, which is why it is opt-in.
+- Filing through Ilmoitin.fi, at least for the VAT return. Not before the user asks for it (§8.8).
+- Form 5 fields the app does not work out: the car detail (271, 273, 274, 275, 379 to 382, 396) behind 313; 347, the deductible part of interest (346), which it fills with the full amount (§8.8); and surplus from listed co-operatives (325, 326).
+- The VAT return of a business that stops trading (§6.5).
+- Asset classes other than machinery and equipment, and templates repeating less often than monthly.
+- Whether KPL 2:6's duty reaches the Form 5 fields the book does not hold: the year-end figures typed in on Varat ja velat, and the loan's opening balance. The click-through (§8.18) lists the vouchers behind a figure and says what is typed in. Assumed that a figure made from the books is covered and one typed in is not.
+- Whether a VAT payment or refund booked on account 2939 (§6.6) is what an accountant would expect in a single-entry book, and whether 2939 should be another number. The same goes for the owner's transfers on 2000 (§6.7).
+
+### Legal gaps
+
+Compared on 3 November 2026 against the Accounting Act as consolidated on Finlex (KPL), Vero's guidance and Verohallinto's 2026 data file specification for Form 5.
+
+What the sources settle:
+
+- **Who keeps what (KPL 1:1a).** A sole trader of either kind must be able to determine accounts payable and receivable at all times. Single-entry books are allowed while at most one of three limits is exceeded in both the closed year and the one before: balance sheet 100 000 €, turnover 200 000 €, more than 3 employees on average. Financial statements are required only when at least two of the micro limits of KPL 1:4b are exceeded in both years: 450 000 €, 900 000 €, 10 employees. They then follow the micro rules, within 4 months (3:6), dated and signed (3:7).
+- **Income timing (EVL 27 a §, vero.fi, "Yritystoiminta, tulonhankkimistoiminta ja harrastustoiminta henkilöverotuksessa").** An ammatinharjoittaja with single-entry books is taxed on a cash basis: income and expenses belong to the year of payment. A liikkeenharjoittaja may keep single-entry books but must adjust them to accrual basis for tax, which the app leaves to the user for now (§6.3). KPL 2:3 allows the accrual, invoice and payment bases in the books themselves.
+- **Changing what is recorded (KPL 2:7).** The content of a voucher or a book may not be changed or deleted after the financial statements are prepared, or after a periodic return to an authority has been made from the books. That includes the VAT return. The form may change for handling or storage, if the content and the audit trail survive.
+- **Timing of entries (KPL 2:4).** Cash payments are recorded without delay, in date order. Others may be monthly, and in time for returns to be made from up-to-date books. The Act sets no four-month limit for a sole trader. An entry marked as paid in cash is checked against when it was added (§8.5), and a new entry in a filed period gets the warning of §8.11.
+- **Lists (KPL 2:2, 2:7a, 2:10).** An account list that explains each account's content, for each financial year, and a list of the books and voucher types showing how they connect and how they are kept. Both for 10 years.
+- **Private use (AVL 21 §, Vero's guidance of 17.3.2020).** Goods whose VAT was deducted carry VAT when taken into private use, on the purchase price or a lower probable selling price. For a natural person the first 850 € a year is free. This guidance predates 2021, so confirm the figure.
+- **EC Sales List (vero.fi).** Monthly, only for a month with such sales, due on the 20th of the next month or the next working day. It lists each buyer's VAT number and total. Goods go by the invoice's month and services by the month of the supply or payment.
+- **Form 5's balance (specification 2026).** 704 machinery and equipment, 708 goods, 709 other current assets, 711 accounts receivable, 714 cash in hand, 716 other financial assets, 718 total assets. 749 current and 750 non-current liabilities, 725 total. 733 or 734 net worth. 394 wages paid in the 12 months before the year's end. **Bank deposits are in none of these.**
+- **Payroll.** Line 335 takes wages, but the app has no payroll records or income register reporting, and says so in the entry dialog and in the year-end dialog. Building them is not planned.
+
+Questions for an accountant. Building proceeds on the answer given:
+
+- Does `Entry.date` as the delivery or invoice date, with a separate payment date, satisfy both kinds of trader? Assumed yes.
+- Is a per-voucher change history with locked periods enough for KPL 2:6 and 2:7 in a file the user controls, given that a deletion has no view in the app? Assumed yes, and the landing page says the log is a record of use and not proof.
+- Are accounts 2939 and 2000, and a loan account, what a single-entry book should use? Assumed acceptable as the app's own numbers.
+
+What the app still leaves to the user is listed above each topic. No known legal gap remains open beyond the questions above, the Form 5 fields at the top of this section. A liikkeenharjoittaja's accrual basis is the entry's own date (§6.3); the app has no accrual or deferral entries beyond that. KPL 2:7 follows the return a voucher went on, while a Form 5 mark locks by both the entry's date and its payment date, so an ammatinharjoittaja's December invoice paid in January locks with the year it is dated in, though it is reported a year later.
