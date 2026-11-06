@@ -71,10 +71,10 @@ describe("serializeCsv", () => {
   it("starts with a BOM and the exact header of its language", () => {
     expect(out.startsWith(`﻿${csvHeaderLine("fi")}\r\n`)).toBe(true)
     expect(csvHeaderLine("fi")).toBe(
-      "tositenro;päivämäärä;selite;tyyppi;tili;luokka;summa;alv;verollisuus;liitteet;verokausi;maksettu;ostajan_alv;eu_osto;käteinen;jaettu"
+      "tositenro;päivämäärä;selite;tyyppi;tili;luokka;summa;alv;verollisuus;liitteet;verokausi;maksettu;ostajan_alv;eu_osto;käteinen;jaettu;osuus"
     )
     expect(HEADER).toBe(
-      "voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase;cash;split"
+      "voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase;cash;split;share"
     )
   })
 
@@ -917,7 +917,7 @@ describe("VAT settlements", () => {
   it("writes and reads back the period a payment settles", () => {
     const text = serializeCsv([payment], cats)
     expect(text).toContain(
-      ";2939;Arvonlisäveron maksu;362,18;0;brutto;;2026-10;;;;;\r\n"
+      ";2939;Arvonlisäveron maksu;362,18;0;brutto;;2026-10;;;;;;\r\n"
     )
 
     const back = ok(parseCsv(text, baseCats)).entries[0]
@@ -1221,7 +1221,7 @@ describe("cash column", () => {
     ok(parseCsv(serializeCsv([e], cats, { lang }), baseCats)).entries[0]
 
   it("round-trips in both languages", () => {
-    expect(serializeCsv([entry({ cash: true })], cats)).toContain(";kyllä;\r\n")
+    expect(serializeCsv([entry({ cash: true })], cats)).toContain(";kyllä;;\r\n")
     expect(back(entry({ cash: true })).cash).toBe(true)
     expect(back(entry({ cash: true }), "en").cash).toBe(true)
     expect(back(entry({})).cash).toBeUndefined()
@@ -1259,7 +1259,7 @@ describe("split column", () => {
   it("writes the first part's voucher number on every part", () => {
     const text = serializeCsv([part("a", 4), part("b", 5)], cats)
     const rows = text.split("\r\n").filter(Boolean).slice(1)
-    expect(rows.map((r) => r.split(";").pop())).toEqual(["4", "4"])
+    expect(rows.map((r) => r.split(";").at(-2))).toEqual(["4", "4"])
   })
 
   it("links the parts again on import, in both languages", () => {
@@ -1308,8 +1308,8 @@ describe("split column", () => {
 
   it("stands a row alone when no other row holds its number, and says so", () => {
     const text = serializeCsv([part("a", 4), part("b", 5)], cats).replace(
-      /;4\r\n$/,
-      ";9\r\n"
+      /;4;\r\n$/,
+      ";9;\r\n"
     )
     const result = ok(parseCsv(text, baseCats))
     expect(result.entries.every((e) => e.split === undefined)).toBe(true)
@@ -1318,8 +1318,8 @@ describe("split column", () => {
 
   it("ignores a cell that is not a number", () => {
     const text = serializeCsv([part("a", 4), part("b", 5)], cats).replace(
-      /;4\r\n/g,
-      ";x\r\n"
+      /;4;\r\n/g,
+      ";x;\r\n"
     )
     const result = ok(parseCsv(text, baseCats))
     expect(result.entries.every((e) => e.split === undefined)).toBe(true)

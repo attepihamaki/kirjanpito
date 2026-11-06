@@ -70,7 +70,7 @@ import {
   categoryName,
   isEuSaleKind,
 } from "@/lib/domain/accounts"
-import { calcEntry, euPurchaseVat } from "@/lib/domain/calc"
+import { calcEntry, euPurchaseVat, isShare } from "@/lib/domain/calc"
 import {
   describeInvoice,
   isEmptyGuess,
@@ -132,13 +132,12 @@ interface FormState {
   cash: boolean
   /** The buyer's VAT number on an EU sale (§8.7). */
   buyerVatId: string
-  /** What an EU purchase bought, "" for any other entry (§6.9). */
+  /** The business share in percent, "" for the whole voucher (§6.12). */
+  share: string
 }
 
-/** The rate an EU purchase starts from when its category is at 0 %. */
-
-/** The three fields §8.5 validates, named as they are in `FormState`. */
-type ErrorField = "date" | "amount" | "catId"
+/** The fields §8.5 validates, named as they are in `FormState`. */
+type ErrorField = "date" | "amount" | "catId" | "share"
 
 type FieldErrorState = { field: ErrorField; message: string } | null
 
@@ -200,6 +199,7 @@ function initialForm({
       paid: "",
       cash: false,
       buyerVatId: "",
+      share: "",
     }
   }
   const today = todayIso()
@@ -226,6 +226,7 @@ function initialForm({
         : "",
     cash: !!editing.cash,
     buyerVatId: editing.buyerVatId ?? "",
+    share: editing.share ? String(editing.share) : "",
   }
 }
 
@@ -331,6 +332,8 @@ function EntryDialogForm({
    * follows the category default and the date (§5).
    */
   const keepRate = React.useRef(mode !== "new")
+  /* A share the user typed, or the one an edited voucher has, is not replaced by a category's default. */
+  const keepShare = React.useRef(mode !== "new")
 
   /*
    * Keep freshly attached receipts alive through a GC sweep (§7.4). One still
@@ -577,6 +580,23 @@ function EntryDialogForm({
     selectedCat && LINE_BY_KEY.get(selectedCat.line)?.capital
   )
   /*
+   * A cost can be used partly privately (§6.12). A transfer, a settlement, a
+   * loan and an EU purchase have no such part.
+   */
+  const catLine = selectedCat && LINE_BY_KEY.get(selectedCat.line)
+  const shareApplies =
+    form.type === "expense" &&
+    !euPurchase &&
+    !!catLine &&
+    !catLine.settlement &&
+    !catLine.owner &&
+    !catLine.loan
+  const shareNumber = form.share.trim() === "" ? null : Number(form.share)
+  const businessShare =
+    shareApplies && isShare(shareNumber) ? shareNumber : undefined
+  const shareInvalid =
+    shareApplies && shareNumber !== null && !isShare(shareNumber)
+  /*
    * A payment or refund names the return it settles (§6.6). Unchosen, it goes
    * by the date, and the periods offered are those of this year and the last.
    */
@@ -710,6 +730,11 @@ function EntryDialogForm({
       setError({ field: "catId", message: f.t("entry.errCategory") })
       return null
     }
+    if (shareInvalid) {
+      setTab("payment")
+      setError({ field: "share", message: f.t("entry.shareBad") })
+      return null
+    }
     setError(null)
     return {
       id: editing && mode === "edit" ? editing.id : uid(),
@@ -733,6 +758,7 @@ function EntryDialogForm({
         ? { buyerVatId: normalizeVatId(form.buyerVatId) }
         : {}),
       ...(euPurchase ? { euPurchase } : {}),
+      ...(businessShare ? { share: businessShare } : {}),
       // A part stays a part of its receipt; a copy is a new voucher of its own.
       ...(mode === "edit" && editing?.split ? { split: editing.split } : {}),
     }
@@ -813,8 +839,10 @@ function EntryDialogForm({
         settles: "",
         paid: "",
         buyerVatId: "",
+        share: "",
       }
       keepRate.current = false
+      keepShare.current = false
       setForm(next)
       setBaseline(snapshot(next))
       // The next receipt usually starts from its own date.
@@ -934,6 +962,7 @@ function EntryDialogForm({
                 vatRate={form.vatRate}
                 amountMode={form.amountMode}
                 euPurchase={euPurchase}
+                share={businessShare}
               />
               <AttachmentGrid
                 attachments={form.atts}
@@ -1075,6 +1104,10 @@ function EntryDialogForm({
                             cat && (cat.euPurchase || !keepRate.current)
                               ? rateOnDate(cat.vatRate, form.date)
                               : form.vatRate,
+                          // A category's default share fills the field (§6.12).
+                          ...(keepShare.current
+                            ? {}
+                            : { share: cat?.share ? String(cat.share) : "" }),
                         })
                       }}
                       placeholder={f.t("entry.errCategory")}
@@ -1276,7 +1309,7 @@ function EntryDialogForm({
                         type="button"
                         variant="outline"
                         size="xs"
-                        className="self-start text-muted-foreground w-fit!"
+                        className="w-fit! self-start text-muted-foreground"
                         disabled={formAmount == null || formAmount === 0}
                         onClick={flipAmountMode}
                       >
@@ -1346,6 +1379,36 @@ function EntryDialogForm({
                           {f.t("entry.splitPaidHint")}
                         </FieldDescription>
                       ) : null}
+                    </Field>
+                  ) : null}
+
+                  {shareApplies ? (
+                    <Field data-invalid={invalid("share")}>
+                      <div className="flex items-center gap-1">
+                        <FieldLabel htmlFor="entry-share">
+                          {f.t("entry.share")}
+                        </FieldLabel>
+                        <InfoPopover label={f.t("entry.shareInfo")}>
+                          {f.t("entry.shareInfoText")}
+                        </InfoPopover>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="entry-share"
+                          inputMode="numeric"
+                          placeholder="100"
+                          value={form.share}
+                          aria-invalid={invalid("share")}
+                          onChange={(e) => {
+                            keepShare.current = true
+                            update({
+                              share: e.target.value.replace(/[^\d]/g, ""),
+                            })
+                          }}
+                          className="tabular w-24 text-right"
+                        />
+                        <span className="text-sm text-muted-foreground">%</span>
+                      </div>
                     </Field>
                   ) : null}
 

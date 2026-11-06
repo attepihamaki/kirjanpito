@@ -158,6 +158,7 @@ interface Entry {
   buyerVatId?: string // the buyer's VAT number on an EU sale (§8.7)
   euPurchase?: "goods" | "services" // a copy of its category's, for `calcEntry` (§6.9)
   split?: string // links the parts of one receipt split across categories or rates
+  share?: number // business share in whole percent, 1 to 99; absent means all of it (§6.12)
 }
 ```
 
@@ -202,6 +203,7 @@ interface Category {
   vatRate: number // default VAT %
   kind?: "domestic" | "euGoods" | "euServices" | "eu" | "nonEu" | "reverse" // for income categories
   euPurchase?: "goods" | "services" // for expense categories bought from another EU country (§6.9)
+  share?: number // default business share for new entries (§6.12)
   enabled: boolean // shown in the entry dialog's dropdown
   custom: boolean // user-created
 }
@@ -433,6 +435,18 @@ Every figure that a law or Verohallinto sets and that changes over time is in `d
 - **`.github/workflows/rules-reminder.yml`** opens an issue on 15 December asking for next year's rows, listing every table with the source of its newest row (`scripts/rules-issue.mjs`).
 - **Not in the file:** the Finnish bank holidays (computed from Easter, `vat-deadline.ts`) and the Form 5 field list, which the specification in `docs/specs/` governs (§6.10).
 
+### 6.12 Costs used partly privately
+
+A phone, a car or a home internet line serves the business and the owner. `Entry.share` is the business share in whole percent, 1 to 99; absent means all of it. It is the user's own estimate, and the app does not check it.
+
+- **The share applies to the whole voucher.** `calcEntry` returns `net` and `vat` as that share of the full amounts and leaves `gross` as the amount paid, so `net + vat` falls short of `gross` by the private part. 125,50 € with 25,5 % VAT included at 50 % gives a cost of 50,00 € and deductible VAT of 12,75 €. Each is rounded half away from zero, so a credit note mirrors its cost. `calcWhole` gives the full amounts, which the receipt preview prints.
+- **Everything that counts a cost or a tax reads `net` and `vat`**, so the income statement, Form 5, the summary, the VAT return and the click-through lists all follow the share. Everything that follows money reads `gross`, so open items, the bank estimate and the duplicate check see what was paid. The private part is not booked anywhere: it is neither a cost nor an owner's withdrawal, since the money left the account to pay a real invoice.
+- **Where it applies.** Costs on any line that can be an EU purchase (`canHaveShare`), which leaves out income, VAT payments, the owner's transfers, loans and EU purchases. The CSV reads it only there (§7.1) and `settings.json` drops it from a category elsewhere.
+- **A category holds a default** (`Category.share`), set in Asetukset, Luokat on any cost category. It pre-fills a new voucher's field when the category is picked, unless the user has typed a share of their own. A voucher keeps the share it was saved with, whatever the category says later.
+- **The entry dialog** shows "Yrityksen osuus" on the Maksu tab, under the payment date, on a cost, with an info popover. Empty means the whole voucher. The receipt preview prints the whole voucher and, beneath it, the business net and the deductible VAT. The ledger shows an "Osuus 50 %" pill.
+- **A split part starts without a share**, since it sits in another category. A copy keeps the share. The change log records it as "Yrityksen osuus".
+- **Not handled:** deriving the share from a logbook or a bill breakdown, a share that differs between the VAT deduction and the income tax deduction, and the adjustment of deducted VAT on fixed assets when use changes later (AVL 117 §).
+
 ---
 
 ## 7. File formats
@@ -445,8 +459,8 @@ category names, the ZIP's suggested name, the CSV's name and the receipt folder
 (§7.2) — and nothing else.
 
 - **Header row**, always these columns in this order, in one of two spellings:
-  - fi: `tositenro;päivämäärä;selite;tyyppi;tili;luokka;summa;alv;verollisuus;liitteet;verokausi;maksettu;ostajan_alv;eu_osto;käteinen;jaettu`
-  - en: `voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase;cash;split`
+  - fi: `tositenro;päivämäärä;selite;tyyppi;tili;luokka;summa;alv;verollisuus;liitteet;verokausi;maksettu;ostajan_alv;eu_osto;käteinen;jaettu;osuus`
+  - en: `voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase;cash;split;share`
 - **`lib/domain/csv-header.ts` is the one place a column name is spelled.** The
   English names are the canonical ones the parser works in; `FINNISH_LABELS`
   gives the Finnish spelling of each, `csvHeaderLine(lang)` builds a header and
@@ -477,6 +491,7 @@ category names, the ZIP's suggested name, the CSV's name and the receipt folder
   - `buyer_vat` is the buyer's VAT number on an EU sale (§8.7), empty on every other row.
   - `cash` is `kyllä` / `yes` on an entry paid in cash (§8.5), empty on every other row. Reading also takes `käteinen`, `cash` and `x`, and keeps it only on a paid entry on a line that can be paid.
   - `split` is the voucher number of the first part of a receipt that was split, on every part of it (§8.4), and empty on every other row. A voucher number is unique within a year, so the import links rows by year and number. A part dated in another year than the first, a group whose first part has no number and a group of one are not written. On import a number only one row holds links nothing: the row stands alone and the toast says so. A cell that is not a whole number is ignored. `Entry.split` itself is an opaque id and renumbering does not touch it.
+  - `share` is the business share of a cost used partly privately (§6.12), a whole percent from 1 to 99 written without a sign, and empty on every other row. Reading also takes a trailing `%`. It is kept only on an expense that is not an EU purchase; any other value reads as the whole voucher.
   - `eu_purchase` is `tavara`/`palvelu` or `goods`/`services` on an EU purchase (§6.9), empty on every other row. A CSV opened on its own has no `settings.json`, so this is what tells a custom EU category it is one. A row marked on any other category moves to an EU category when the book opens.
   - Rows are sorted by date, then by voucher number. Nothing about the format depends on the **UI** language, only on the book's.
   - **A text cell that Excel would run as a formula gets a leading apostrophe.** That is `description`, `category` or `receipts` starting with `=`, `+`, `-`, `@`, a tab or a carriage return. A value that already starts with apostrophes before one of those gets one more, and the import takes exactly one off, so every value round-trips. The amount and rate columns are left alone, so a negative amount stays a number. Excel may show the apostrophe in the cell.

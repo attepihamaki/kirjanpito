@@ -7,6 +7,7 @@ import {
   SearchInput,
   TypeFilterSelect,
 } from "@/components/common/filter-controls"
+import { OptionSelect } from "@/components/common/option-select"
 import { DefaultVatSelect } from "@/components/settings/category-dialogs"
 import { Panel } from "@/components/common/panel"
 import { Pill } from "@/components/common/pill"
@@ -27,7 +28,7 @@ import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { resetCategories } from "@/lib/commands/book-commands"
 import { startDeleteCategory } from "@/lib/commands/category-commands"
-import { categoryName } from "@/lib/domain/accounts"
+import { LINE_BY_KEY, canHaveShare, categoryName } from "@/lib/domain/accounts"
 import type { Category } from "@/lib/domain/types"
 import {
   categoryAccount,
@@ -146,6 +147,9 @@ function CategoryTable() {
             {header("account", f.t("common.account"))}
             {header("name", f.t("common.name"))}
             {header("vatRate", f.t("settings.defaultVat"), "right")}
+            <TableHead className="text-right">
+              {f.t("settings.catShare")}
+            </TableHead>
             <TableHead className="w-px" />
           </TableRow>
         </TableHeader>
@@ -179,6 +183,11 @@ function CategoryTable() {
                 <TableCell>{f.catName(cat)}</TableCell>
                 <TableCell className="text-right">
                   <RateSelect cat={cat} />
+                </TableCell>
+                <TableCell className="text-right">
+                  {canHaveShare(LINE_BY_KEY.get(cat.line), cat.euPurchase) ? (
+                    <ShareSelect cat={cat} />
+                  ) : null}
                 </TableCell>
                 <TableCell>
                   {/*
@@ -250,6 +259,38 @@ function RateSelect({ cat }: { cat: Category }) {
             r: f.rate(rate),
           }),
         })
+      }}
+    />
+  )
+}
+
+const SHARE_CHOICES = [100, 90, 75, 50, 25] as const
+
+/**
+ * A row's default business share (§6.12). It pre-fills new vouchers only;
+ * a voucher keeps the share it was saved with.
+ */
+function ShareSelect({ cat }: { cat: Category }) {
+  const f = useFormatters()
+  const upsertCategory = useBookStore((s) => s.upsertCategory)
+  const current = cat.share ?? 100
+  const choices: number[] = SHARE_CHOICES.includes(
+    current as (typeof SHARE_CHOICES)[number]
+  )
+    ? [...SHARE_CHOICES]
+    : [...SHARE_CHOICES, current].sort((a, b) => b - a)
+
+  return (
+    <OptionSelect
+      options={choices.map((n) => ({ value: String(n), label: `${n} %` }))}
+      value={String(current)}
+      label={`${f.t("settings.catShare")} – ${f.catName(cat)}`}
+      size="sm"
+      className="tabular ml-auto w-24"
+      onChange={(next) => {
+        const share = Number(next)
+        if (share === current) return
+        upsertCategory({ ...cat, share: share === 100 ? undefined : share })
       }}
     />
   )

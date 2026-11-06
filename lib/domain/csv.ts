@@ -16,6 +16,7 @@ import {
   csvHeaderLine,
   type CsvColumn,
 } from "@/lib/domain/csv-header"
+import { isShare } from "@/lib/domain/calc"
 import { parseCsvDate, yearOf } from "@/lib/domain/dates"
 import { canBeEuPurchase, isEuSaleKind } from "@/lib/domain/accounts"
 import { canBeUnpaid } from "@/lib/domain/open-items"
@@ -221,6 +222,7 @@ export function serializeCsv(
         e.euPurchase ? EU_PURCHASE_TO_CSV[lang][e.euPurchase] : "",
         e.cash ? CASH_TO_CSV[lang] : "",
         splitKeys.get(e.id) ?? "",
+        isShare(e.share) ? String(e.share) : "",
       ]
         .map(quote)
         .join(";")
@@ -561,6 +563,7 @@ export function parseCsv(
       ...cashColumn(get("cash"), paid, cat),
       ...buyerColumn(restoreFormula(get("buyer_vat")), cat),
       ...euPurchaseColumn(get("eu_purchase"), cat),
+      ...shareColumn(get("share"), type, cat),
     })
 
     const splitRaw = get("split")
@@ -645,6 +648,23 @@ function euPurchaseColumn(
   return euPurchase && canBeEuPurchase(LINE_BY_KEY.get(cat.line))
     ? { euPurchase }
     : {}
+}
+
+/**
+ * The business share of a cost (§6.12): a whole percent from 1 to 99, with or
+ * without a "%". Kept only on an expense that is not an EU purchase, whose tax
+ * the buyer reports and which has no share. Anything else reads as the whole
+ * voucher.
+ */
+function shareColumn(
+  value: string,
+  type: EntryType,
+  cat: Category
+): { share?: number } {
+  const m = /^\s*(\d{1,3})\s*%?\s*$/.exec(value)
+  if (!m || type !== "expense" || cat.euPurchase) return {}
+  const share = Number(m[1])
+  return isShare(share) ? { share } : {}
 }
 
 /** The buyer's VAT number, kept only on an EU sale (§8.7). */

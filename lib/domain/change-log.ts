@@ -56,6 +56,7 @@ export const LOGGED_FIELDS = [
   "voucher",
   "atts",
   "split",
+  "share",
 ] as const
 export type LoggedField = (typeof LOGGED_FIELDS)[number]
 

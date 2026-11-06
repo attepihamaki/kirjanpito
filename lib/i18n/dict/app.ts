@@ -1168,6 +1168,25 @@ export const APP_DICT = {
     "Vähennyskelvottoman kulun arvonlisäveroa ei voi vähentää. Kirjaa verollinen summa 0 %:n verokannalla, niin vero jää osaksi kulua.",
     "VAT on a non-deductible expense can’t be deducted. Book the amount including VAT at 0 %, so the tax stays part of the cost.",
   ],
+  "entry.logFieldShare": ["Yrityksen osuus", "Business share"],
+  "entry.share": ["Yrityksen osuus", "Business share"],
+  "entry.shareInfo": ["Mikä on yrityksen osuus?", "What is the business share?"],
+  "entry.shareInfoText": [
+    "Kulu, jota käytetään sekä työhön että yksityisesti, esimerkiksi puhelin. Vain yrityksen osuus kirjataan kuluksi ja vain sen osuuden arvonlisäveron saa vähentää. Maksettu summa pysyy ennallaan.",
+    "A cost used for both work and private life, such as a phone. Only the business share counts as an expense and only that share of the VAT can be deducted. The amount paid stays as it is.",
+  ],
+  "entry.shareBad": [
+    "Anna osuus kokonaislukuna 1–99.",
+    "Enter the share as a whole number from 1 to 99.",
+  ],
+  "receipt.businessNet": ["Yrityksen osuus {p}", "Business share {p}"],
+  "receipt.businessVat": ["Vähennettävä ALV", "Deductible VAT"],
+  "ledger.sharePill": ["Osuus {p}", "Share {p}"],
+  "settings.catShare": ["Yrityksen osuus", "Business share"],
+  "settings.catShareHint": [
+    "Esitäyttää uuden tositteen yrityksen osuuden, esimerkiksi 50 % puhelimelle. Voit muuttaa sen jokaisella tositteella.",
+    "Pre-fills the business share of a new voucher, for example 50 % for a phone. You can change it on each voucher.",
+  ],
   "entry.amountMode": ["Verollisuus", "VAT treatment"],
   "entry.amountModeInfo": [
     "Mitä verollisuus tarkoittaa?",

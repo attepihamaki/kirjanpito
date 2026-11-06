@@ -22,7 +22,7 @@ import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { deleteEntry } from "@/lib/commands/book-commands"
 import { recategorizeEntries, renameEntry } from "@/lib/commands/bulk-commands"
-import { calcEntry } from "@/lib/domain/calc"
+import { calcEntry, isShare } from "@/lib/domain/calc"
 import type { Entry } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
 import { useBookStore, type LedgerSortKey } from "@/stores/book-store"
@@ -334,6 +334,11 @@ function LedgerRow({
                         ? "ledger.reversePill"
                         : "ledger.euPill"
                   )}
+                </Pill>
+              ) : null}
+              {isShare(entry.share) ? (
+                <Pill size="sm" className="ml-2">
+                  {f.t("ledger.sharePill", { p: `${entry.share} %` })}
                 </Pill>
               ) : null}
             </span>

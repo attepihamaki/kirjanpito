@@ -8,7 +8,7 @@ import {
   ReceiptTotal,
 } from "@/components/common/receipt-paper"
 import { useFormatters } from "@/components/lang-provider"
-import { calcEntry, euPurchaseVat } from "@/lib/domain/calc"
+import { calcEntry, calcWhole, euPurchaseVat, isShare } from "@/lib/domain/calc"
 import type {
   AmountMode,
   Category,
@@ -29,6 +29,7 @@ export function ReceiptPreview({
   vatRate,
   amountMode,
   euPurchase,
+  share,
 }: {
   date: string
   description: string
@@ -38,14 +39,15 @@ export function ReceiptPreview({
   vatRate: number
   amountMode: AmountMode
   euPurchase?: EuPurchase
+  /** Business share in percent (§6.12). */
+  share?: number
 }) {
   const f = useFormatters()
-  const { net, vat, gross } = calcEntry({
-    amount,
-    vatRate,
-    amountMode,
-    euPurchase,
-  })
+  const input = { amount, vatRate, amountMode, euPurchase }
+  // The receipt prints the whole voucher; the share is shown beneath it.
+  const { net, vat, gross } = calcWhole(input)
+  const business =
+    isShare(share) && !euPurchase ? calcEntry({ ...input, share }) : null
   const income = type === "income"
 
   const badge = euPurchase
@@ -87,6 +89,19 @@ export function ReceiptPreview({
         <div className="mt-1 border-t border-paper-edge pt-2">
           <ReceiptTotal label={f.t("receipt.total")} value={f.money(gross)} />
         </div>
+        {business ? (
+          <>
+            <ReceiptRule className="mt-2 mb-1" />
+            <ReceiptRow
+              label={f.t("receipt.businessNet", { p: `${share} %` })}
+              value={f.money(business.net)}
+            />
+            <ReceiptRow
+              label={f.t("receipt.businessVat")}
+              value={f.money(business.vat)}
+            />
+          </>
+        ) : null}
       </div>
 
       <p className="mt-3 text-center text-[0.7rem] text-paper-foreground/60">

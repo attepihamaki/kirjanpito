@@ -132,6 +132,13 @@ export interface Entry {
    * and only means something next to other entries that hold it.
    */
   split?: string
+  /**
+   * The share of the voucher that belongs to the business, in whole percent
+   * from 1 to 99, for a cost used partly for work and partly privately (§6.12).
+   * Absent means all of it. The cost and the VAT counted are that share of
+   * the whole; the amount paid stays whole.
+   */
+  share?: number
 }
 
 /** A category (luokka) the user books entries to. */
@@ -148,6 +155,8 @@ export interface Category {
   kind?: SalesKind
   /** Set on expense categories whose tax the buyer reports (§6.9). */
   euPurchase?: EuPurchase
+  /** Default business share for new entries on a cost category (§6.12). */
+  share?: number
   /** Shown in the entry dialog's dropdown. */
   enabled: boolean
   /** User-created. */

@@ -76,6 +76,18 @@ export function canBeEuPurchase(line: AccountLine | undefined): boolean {
   )
 }
 
+/**
+ * Whether a cost on this line can be used partly privately (§6.12): any cost
+ * that is not money only moving, and not an EU purchase, whose amount carries
+ * no tax of the seller's.
+ */
+export function canHaveShare(
+  line: AccountLine | undefined,
+  euPurchase: unknown
+): boolean {
+  return canBeEuPurchase(line) && !euPurchase
+}
+
 /** The rate an EU category starts from: what a Finnish buyer usually reports (§6.9). */
 export const GENERAL_RATE = 25.5
 

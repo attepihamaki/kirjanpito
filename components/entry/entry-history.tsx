@@ -27,6 +27,7 @@ const FIELD_LABEL = {
   voucher: "entry.logFieldVoucher",
   atts: "entry.logFieldReceipts",
   split: "entry.logFieldSplit",
+  share: "entry.logFieldShare",
 } as const satisfies Record<LoggedField, string>
 
 /** A field's value as a person reads it. */
@@ -55,6 +56,8 @@ function formatValue(
       return f.t("entry.cash")
     case "split":
       return f.t("entry.logSplitValue")
+    case "share":
+      return `${Number(value)} %`
     case "euPurchase":
       return f.t(
         value === "goods"

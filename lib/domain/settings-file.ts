@@ -2,8 +2,10 @@ import {
   LINE_BY_KEY,
   RETIRED_CATEGORY_ID,
   canBeEuPurchase,
+  canHaveShare,
   defaultCategories,
 } from "@/lib/domain/accounts"
+import { isShare } from "@/lib/domain/calc"
 import { parseBusinessId } from "@/lib/domain/business-id"
 import { isVatRate } from "@/lib/domain/money"
 import type { AssetOpening } from "@/lib/domain/assets"
@@ -221,7 +223,8 @@ function isEuPurchase(value: unknown): value is EuPurchase {
 
 function parseCategory(value: unknown): Category | null {
   if (!isRecord(value)) return null
-  const { id, line, name, vatRate, kind, euPurchase, enabled, custom } = value
+  const { id, line, name, vatRate, kind, euPurchase, share, enabled, custom } =
+    value
   if (typeof id !== "string" || !id) return null
   if (typeof line !== "string" || !LINE_BY_KEY.has(line)) return null
   if (typeof name !== "string" || !name.trim()) return null
@@ -238,6 +241,10 @@ function parseCategory(value: unknown): Category | null {
   if (SALES_KINDS.includes(kind as SalesKind)) cat.kind = kind as SalesKind
   if (isEuPurchase(euPurchase) && canBeEuPurchase(LINE_BY_KEY.get(line))) {
     cat.euPurchase = euPurchase
+  }
+  // A share belongs to a cost that is not an EU purchase (§6.12).
+  if (isShare(share) && canHaveShare(LINE_BY_KEY.get(line), cat.euPurchase)) {
+    cat.share = share
   }
   return cat
 }
@@ -298,6 +305,7 @@ export function mergeCategories(fromFile: readonly Category[]): Category[] {
           ...d,
           enabled: d.id !== RETIRED_CATEGORY_ID && own.enabled,
           vatRate: own.vatRate,
+          ...(own.share ? { share: own.share } : {}),
         }
       : d
   })
@@ -492,7 +500,9 @@ export function parseSettings(text: string): ParsedSettings {
     const months = (v: unknown): number[] =>
       Array.isArray(v)
         ? [...new Set(v)]
-            .filter((m): m is number => Number.isInteger(m) && m >= 1 && m <= 12)
+            .filter(
+              (m): m is number => Number.isInteger(m) && m >= 1 && m <= 12
+            )
             .sort((a, b) => a - b)
         : []
     out.payMonths = {
@@ -543,6 +553,7 @@ export function serializeSettings(s: BookSettings): string {
       vatRate: c.vatRate,
       ...(c.kind ? { kind: c.kind } : {}),
       ...(c.euPurchase ? { euPurchase: c.euPurchase } : {}),
+      ...(c.share ? { share: c.share } : {}),
       enabled: c.enabled,
       custom: c.custom,
     })),
