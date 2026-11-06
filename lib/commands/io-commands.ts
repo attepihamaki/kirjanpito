@@ -1049,11 +1049,33 @@ export async function autosaveBook(ctx: Ctx): Promise<boolean> {
     return true
   } catch (error) {
     console.error(error)
-    toast.add({ title: ctx.t("io.saveFailed") })
-    return pause()
+    return failAutosave(ctx, state.bookEpoch)
   } finally {
     useBookStore.getState().setSaving(false)
   }
+}
+
+/** Failed writes in a row after which autosave stops trying (§7.5). */
+export const AUTOSAVE_MAX_FAILURES = 5
+
+/**
+ * A write that threw may be a cloud folder syncing or a file another program
+ * holds, so autosave counts it and tries again later (`autosaveDelay`) instead
+ * of stopping at once. The first failure says so in a toast. The last one
+ * pauses autosave until a manual save, and says that too.
+ */
+function failAutosave(ctx: Ctx, epoch: number): boolean {
+  if (replacedSince(epoch)) return false
+  const store = useBookStore.getState()
+  const failures = store.autosaveFailures + 1
+  if (failures >= AUTOSAVE_MAX_FAILURES) {
+    toast.add({ title: ctx.t("io.saveFailed") })
+    store.setAutosavePaused(true)
+    return false
+  }
+  store.setAutosaveFailures(failures)
+  if (failures === 1) toast.add({ title: ctx.t("io.autosaveRetry") })
+  return false
 }
 
 /* -------------------------------------------------------------------------

@@ -610,6 +610,15 @@ asks anything (below).
   instead and sets `autosavePaused`; the amber dot stays, the file menu says
   autosave is waiting, and one manual save starts it again. After a reload it
   is always paused until that save, since permission is back to "prompt".
+- **A write that throws is tried again, not given up on.** A cloud folder
+  syncing or another program holding the file makes a write fail for a while.
+  `autosaveBook` counts such a failure (`autosaveFailures`, not persisted) and
+  the wait before the next try doubles: 3, 6, 12 and 24 seconds
+  (`autosaveDelay`, never over a minute). The first failure raises a toast, the
+  file menu says autosave is trying again, and the fifth in a row pauses
+  autosave like any other question (`AUTOSAVE_MAX_FAILURES`). Any save resets
+  the count. A pause for a missing permission or an outside edit never retries,
+  since waiting changes neither.
 - `lib/commands/save-commands.test.ts` covers the round trip, the picker
   fallback, a refused permission, the outside-edit guard and both download
   cases, against a fake handle.
@@ -739,6 +748,7 @@ row of nav tabs — is gone.
   - **Every row is a `ghost` button, with no highlighted one.** They are menu items, and a filled row among them would read as the only real action. The dot and the status line are what say there is unsaved work; a second signal competing with them only makes the popup louder.
   - **"Tallenna" is absent, not disabled, where the browser cannot write to a file.** A permanent dead control in front of every Firefox, Safari and phone user is worse than three rows that all work.
   - **The download is named after what it does, not after "Tallenna".** "Lataa kopio" would read as a copy of an original, which is wrong wherever the download is the only way to keep the work — and one label for one action beats a row that renames itself per browser. It also puts the row in line with "Avaa tiedosto" and "Sulje tiedosto". The dialog it opens is titled "Lataa kirjanpito".
+  - **A linked file shows when it was last written** under the status line (`SavedAtNote`): "Tiedosto päivitetty klo 14.32", or with the date for an earlier day. It is the file's own modification time (`savedAt`), so after opening it says when the file was last changed, and after a save when this app wrote it. It is how a user tells whether the file on disk is current once a save has failed or autosave has paused. A downloaded copy has no linked file to date, so the line is absent.
   - The status words are about saving, not exporting, so one wording covers both ways of keeping the work. Which file is current is `dirty`'s job (§7.5).
   - The year belongs in here because it is read out of the file: this popup is the one place that answers "which bookkeeping, which year, and is it saved".
   - Every action closes the popup first — it hands over to a dialog, a picker, or empties the bookkeeping.

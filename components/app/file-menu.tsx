@@ -13,6 +13,7 @@ import {
 import {
   AutosaveNote,
   FileStatus,
+  SavedAtNote,
   StorageNote,
   StatusDot,
   useFileStatusText,
@@ -123,6 +124,7 @@ export function FileMenu({
             {name}
           </span>
           <FileStatus />
+          <SavedAtNote />
           <AutosaveNote />
           <StorageNote />
         </div>

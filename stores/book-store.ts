@@ -330,6 +330,12 @@ export interface BookState {
    */
   autosavePaused: boolean
   /**
+   * Writes in a row that autosave could not finish. The wait before the next
+   * try doubles with each (`autosaveDelay`), and a count at
+   * `AUTOSAVE_MAX_FAILURES` pauses autosave. Any save resets it. Not persisted.
+   */
+  autosaveFailures: number
+  /**
    * The getting-started checklist is up on the overview (§8.15). Set by a new
    * bookkeeping, cleared by dismissing it, finishing it, or any other book
    * taking over. Not persisted: a reload drops it.
@@ -514,6 +520,7 @@ export interface BookActions {
   /** Turn encryption on or off. The file no longer matches, so the book is dirty (§7.8). */
   setEncrypted(on: boolean): void
   setAutosavePaused(paused: boolean): void
+  setAutosaveFailures(n: number): void
   upsertRecurring(template: RecurringEntry): void
   removeRecurring(id: string): void
   /** Add a rule at the end, or replace the one with the same id (§8.17). */
@@ -602,6 +609,7 @@ function initialState(): BookState {
     savedAt: null,
     saving: false,
     autosavePaused: false,
+    autosaveFailures: 0,
     onboarding: false,
     month: 0,
     ledgerQuery: "",
@@ -932,6 +940,7 @@ export const useBookStore = create<BookStore>()(
             settings.vatPeriod
           ),
           autosavePaused: false,
+          autosaveFailures: 0,
           dirty: false,
           dialog: { kind: "none" },
           figure: null,
@@ -1023,6 +1032,7 @@ export const useBookStore = create<BookStore>()(
           overviewLayout: s.overviewLayout ?? get().overviewLayout,
           autosave: s.autosave ?? get().autosave,
           autosavePaused: false,
+          autosaveFailures: 0,
           onboarding: false,
           ledgerSize: s.ledgerSize ?? get().ledgerSize,
           ctSize: s.ctSize ?? get().ctSize,
@@ -1146,6 +1156,7 @@ export const useBookStore = create<BookStore>()(
       markSaved: ({ fileName, fileHandle, savedAt, dirty = false }) =>
         set({
           dirty,
+          autosaveFailures: 0,
           fileName,
           // Downloading a copy leaves the linked file where it was.
           ...(fileHandle !== undefined ? { fileHandle } : {}),
@@ -1272,10 +1283,16 @@ export const useBookStore = create<BookStore>()(
        * A preference, like the language: it travels in settings.json but
        * turning it on or off does not change the bookkeeping.
        */
-      setAutosave: (autosave) => set({ autosave, autosavePaused: false }),
+      setAutosave: (autosave) =>
+        set({ autosave, autosavePaused: false, autosaveFailures: 0 }),
       setEncrypted: (encrypted) =>
         set({ encrypted, dirty: true, autosavePaused: false }),
-      setAutosavePaused: (autosavePaused) => set({ autosavePaused }),
+      setAutosavePaused: (autosavePaused) =>
+        set({
+          autosavePaused,
+          ...(autosavePaused ? { autosaveFailures: 0 } : {}),
+        }),
+      setAutosaveFailures: (autosaveFailures) => set({ autosaveFailures }),
 
       /*
        * Category edits mark the book dirty: category names are written into

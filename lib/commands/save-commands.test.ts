@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  AUTOSAVE_MAX_FAILURES,
   autosaveBook,
   exportBook,
   openFile,
@@ -416,6 +417,44 @@ describe("autosave", () => {
     await saveBook(ctx, "kirjanpito")
 
     expect(useBookStore.getState().autosavePaused).toBe(false)
+  })
+
+  describe("when a write fails", () => {
+    beforeEach(() => {
+      vi.spyOn(console, "error").mockImplementation(() => {})
+      useBookStore.setState({ autosaveFailures: 0 })
+    })
+
+    it("counts the failure and keeps trying", async () => {
+      const handle = fakeHandle("kirjanpito.zip")
+      linkZip(handle)
+      handle.createWritable.mockRejectedValueOnce(new Error("locked"))
+
+      expect(await autosaveBook(ctx)).toBe(false)
+      expect(useBookStore.getState().autosaveFailures).toBe(1)
+      expect(useBookStore.getState().autosavePaused).toBe(false)
+      expect(useBookStore.getState().dirty).toBe(true)
+
+      expect(await autosaveBook(ctx)).toBe(true)
+      expect(useBookStore.getState().autosaveFailures).toBe(0)
+      expect(useBookStore.getState().dirty).toBe(false)
+    })
+
+    it("pauses once the limit of failures in a row is reached", async () => {
+      const handle = fakeHandle("kirjanpito.zip")
+      linkZip(handle)
+      handle.createWritable.mockRejectedValue(new Error("locked"))
+
+      for (let i = 1; i < AUTOSAVE_MAX_FAILURES; i++) {
+        await autosaveBook(ctx)
+        expect(useBookStore.getState().autosaveFailures).toBe(i)
+        expect(useBookStore.getState().autosavePaused).toBe(false)
+      }
+      await autosaveBook(ctx)
+
+      expect(useBookStore.getState().autosavePaused).toBe(true)
+      expect(useBookStore.getState().autosaveFailures).toBe(0)
+    })
   })
 })
 

@@ -10,6 +10,17 @@ import { useBookStore } from "@/stores/book-store"
 /** How long the bookkeeping must sit still before autosave writes it. */
 export const AUTOSAVE_DELAY_MS = 3000
 
+/** The longest wait between two tries after failed writes. */
+const AUTOSAVE_MAX_DELAY_MS = 60_000
+
+/**
+ * The wait before autosave writes: the usual delay, doubled for each write in a
+ * row that failed (3, 6, 12, 24 seconds), and never over a minute.
+ */
+export function autosaveDelay(failures: number): number {
+  return Math.min(AUTOSAVE_DELAY_MS * 2 ** failures, AUTOSAVE_MAX_DELAY_MS)
+}
+
 /**
  * Opt-in autosave (§7.5). Every change restarts the wait, so a burst of
  * edits is one write rather than one ZIP packed per keystroke. It holds off
@@ -22,6 +33,7 @@ export function useAutosave() {
   const autosave = useBookStore((s) => s.autosave)
   const paused = useBookStore((s) => s.autosavePaused)
   const dirty = useBookStore((s) => s.dirty)
+  const failures = useBookStore((s) => s.autosaveFailures)
   const linked = useBookStore((s) => s.fileHandle !== null)
   const busy = useBookStore(
     (s) => s.saving || s.importing || s.dialog.kind !== "none"
@@ -46,11 +58,12 @@ export function useAutosave() {
     if (!canSave || !autosave || paused || !dirty || !linked || busy) return
     const id = window.setTimeout(
       () => void autosaveBook(ctx),
-      AUTOSAVE_DELAY_MS
+      autosaveDelay(failures)
     )
     return () => window.clearTimeout(id)
   }, [
     ctx,
+    failures,
     canSave,
     autosave,
     paused,

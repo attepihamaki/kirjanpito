@@ -2,6 +2,7 @@
 
 import { useFormatters } from "@/components/lang-provider"
 import { todayIso } from "@/lib/domain/dates"
+import { clock } from "@/lib/i18n/clock"
 import type {
   ChangeRecord,
   FieldChange,
@@ -72,13 +73,6 @@ function formatValue(
 /** True when more than the adding has happened: an added-only voucher has no history worth a tab. */
 export const hasHistory = (records: readonly ChangeRecord[]) =>
   records.some((r) => r.action !== "add")
-
-/** The time of day on the clock of the person reading, `19.17` in Finnish. */
-function clock(f: Formatters, at: Date): string {
-  const h = String(at.getHours()).padStart(2, "0")
-  const m = String(at.getMinutes()).padStart(2, "0")
-  return f.lang === "fi" ? `${h}.${m}` : `${h}:${m}`
-}
 
 /** One entry of the timeline: what happened, and for an edit each field's old and new value. */
 function Step({

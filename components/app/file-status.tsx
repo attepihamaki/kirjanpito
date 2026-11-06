@@ -1,8 +1,11 @@
 "use client"
 
-import { useT } from "@/components/lang-provider"
+import { useFormatters, useT } from "@/components/lang-provider"
 import { useCanSaveToFile } from "@/hooks/use-save-book"
 import { useStorageBehind } from "@/hooks/use-storage-warning"
+import { useToday } from "@/hooks/use-today"
+import { todayIso } from "@/lib/domain/dates"
+import { clock } from "@/lib/i18n/clock"
 import { cn } from "@/lib/utils"
 import { useBookStore } from "@/stores/book-store"
 
@@ -44,14 +47,22 @@ export function StatusDot({ className }: { className?: string }) {
  * Whether autosave is on and running, on and paused, or off (§7.5). Off is
  * also what a browser that cannot write to a file always reports.
  */
-export function useAutosaveState(): "off" | "on" | "paused" {
+export function useAutosaveState(): "off" | "on" | "retrying" | "paused" {
   const autosave = useBookStore((s) => s.autosave)
   const paused = useBookStore((s) => s.autosavePaused)
+  const failures = useBookStore((s) => s.autosaveFailures)
   const linked = useBookStore((s) => s.fileHandle !== null)
   const canSave = useCanSaveToFile()
   if (!autosave || !canSave) return "off"
-  return paused || !linked ? "paused" : "on"
+  if (paused || !linked) return "paused"
+  return failures > 0 ? "retrying" : "on"
 }
+
+const AUTOSAVE_TEXT = {
+  on: "file.autosaveOn",
+  retrying: "file.autosaveRetrying",
+  paused: "file.autosavePaused",
+} as const
 
 /** One line under the save status in the file menu, when autosave is on. */
 export function AutosaveNote() {
@@ -59,8 +70,31 @@ export function AutosaveNote() {
   const state = useAutosaveState()
   if (state === "off") return null
   return (
+    <p className="text-xs text-muted-foreground">{t(AUTOSAVE_TEXT[state])}</p>
+  )
+}
+
+/**
+ * When the linked file was last written (§7.5): its own modification time,
+ * kept in `savedAt`, so it is also what the file said when it was opened. It
+ * answers whether the file on disk is current, which the dot alone cannot say
+ * once a save has failed or been skipped. A downloaded copy has no linked file
+ * to date, so the line is absent.
+ */
+export function SavedAtNote() {
+  const f = useFormatters()
+  const savedAt = useBookStore((s) => s.savedAt)
+  const linked = useBookStore((s) => s.fileHandle !== null)
+  const today = useToday()
+  if (savedAt === null || !linked) return null
+  const at = new Date(savedAt)
+  const day = todayIso(at)
+  const t = clock(f, at)
+  return (
     <p className="text-xs text-muted-foreground">
-      {state === "on" ? t("file.autosaveOn") : t("file.autosavePaused")}
+      {day === today
+        ? f.t("file.writtenToday", { t })
+        : f.t("file.writtenDay", { d: f.date(day), t })}
     </p>
   )
 }

@@ -58,6 +58,16 @@ export const APP_DICT = {
     "Automaattinen tallennus odottaa. Tallenna kerran itse.",
     "Autosave is waiting. Save once yourself.",
   ],
+  "file.autosaveRetrying": [
+    "Automaattinen tallennus ei onnistunut. Yritetään uudelleen.",
+    "Autosave failed. Trying again.",
+  ],
+  /* When the file on disk was last written, which is what `savedAt` holds. */
+  "file.writtenToday": ["Tiedosto päivitetty klo {t}", "File updated at {t}"],
+  "file.writtenDay": [
+    "Tiedosto päivitetty {d} klo {t}",
+    "File updated {d} at {t}",
+  ],
   /*
    * Shown when a write to localStorage fails (§12): private browsing,
    * blocked site data or a full quota. Only the file keeps the work then.
@@ -2714,6 +2724,10 @@ export const APP_DICT = {
     "{y}: {f}, {n} vouchers, archived {d}",
   ],
   "io.saveFailed": ["Tallennus epäonnistui.", "Couldn’t save the file."],
+  "io.autosaveRetry": [
+    "Automaattinen tallennus epäonnistui. Yritetään uudelleen.",
+    "Autosave failed. Trying again.",
+  ],
   "io.saveDenied": [
     "Selain ei antanut lupaa kirjoittaa tiedostoon. Voit silti ladata kopion.",
     "The browser didn’t allow writing to the file. You can still download a copy.",
