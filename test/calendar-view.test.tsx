@@ -38,13 +38,21 @@ describe("tax calendar", () => {
     })
   })
 
-  it("lists the VAT returns from the start month and Form 5", () => {
+  it("lists the VAT returns from the start month, without Form 5 for a year before the book began", () => {
     mount()
     expect(screen.getByText("ALV-ilmoitus, Lokakuu 2026")).toBeInTheDocument()
-    expect(screen.getByText("Lomake 5, verovuosi 2025")).toBeInTheDocument()
+    expect(
+      screen.queryByText("Lomake 5, verovuosi 2025")
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByText("ALV-ilmoitus, Syyskuu 2026")
     ).not.toBeInTheDocument()
+  })
+
+  it("lists Form 5 for the previous year when the book began before it", () => {
+    useBookStore.setState({ bookStart: "2025-01" })
+    mount()
+    expect(screen.getByText("Lomake 5, verovuosi 2025")).toBeInTheDocument()
   })
 
   it("lists a YEL date for a chosen month and links to the settings", () => {
