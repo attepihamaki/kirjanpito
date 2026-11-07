@@ -47,13 +47,13 @@ jobs:
         if: ${{ inputs.update }}
         run: npm run test:visual:update
 
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: ${{ inputs.update }}
         with:
           name: visual-baselines
           path: e2e/__screenshots__
 
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: ${{ failure() }}
         with:
           name: visual-diff
