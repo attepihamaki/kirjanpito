@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils"
 
 type Show = "fill" | "all"
 
-const OMAVERO_URL = "https://www.vero.fi/omavero/"
+export const OMAVERO_URL = "https://www.vero.fi/omavero/"
 
 /**
  * A tax form's fields for copying into OmaVero (§8.7, §8.8).

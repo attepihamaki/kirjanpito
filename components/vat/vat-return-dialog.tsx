@@ -7,12 +7,13 @@ import {
   AlertCircleIcon,
   CheckIcon,
   DownloadIcon,
+  ExternalLinkIcon,
   InfoIcon,
   type LucideIcon,
 } from "lucide-react"
 
 import { CHECK_TEXT } from "@/components/common/check-text"
-import { TaxForm } from "@/components/common/tax-form"
+import { OMAVERO_URL, TaxForm } from "@/components/common/tax-form"
 import { useFormatters } from "@/components/lang-provider"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -56,14 +57,24 @@ import { APP_ROUTES } from "@/lib/site"
 import { cn } from "@/lib/utils"
 import { useBookStore, type CheckFilter } from "@/stores/book-store"
 
-type Step = "checks" | "values" | "file" | "pay"
+type Step = "checks" | "guide" | "values" | "file" | "pay"
 
 const STEP_LABEL = {
   checks: "vat.returnStepChecks",
+  guide: "vat.returnStepGuide",
   values: "vat.returnStepValues",
   file: "vat.returnStepFile",
   pay: "vat.returnStepPay",
 } as const satisfies Record<Step, string>
+
+/** The OmaVero screens a first return goes through, in order (§8.7). */
+const GUIDE_STEPS = [
+  { title: "vat.guideLogin", sub: "vat.guideLoginSub" },
+  { title: "vat.guideStart", sub: "vat.guideStartSub" },
+  { title: "vat.guideFill", sub: "vat.guideFillSub" },
+  { title: "vat.guideCompare", sub: "vat.guideCompareSub" },
+  { title: "vat.guideSend", sub: "vat.guideSendSub" },
+] as const
 
 /** The tooltip of the file button when it is disabled. */
 const FILE_BLOCK_MESSAGE = {
@@ -187,6 +198,8 @@ function VatReturnForm() {
     switch (s) {
       case "checks":
         return items.some((i) => i.severity !== "info") ? "attention" : "done"
+      case "guide":
+        return null
       case "values":
         return filed ? "done" : null
       case "file":
@@ -196,9 +209,19 @@ function VatReturnForm() {
     }
   }
 
-  const steps: readonly Step[] = settlementVisible
-    ? ["checks", "values", "file", "pay"]
-    : ["checks", "values", "file"]
+  /*
+   * The guide is for a book that has never marked a return as filed. It is
+   * decided when the dialog opens, so marking the first return does not remove
+   * the step under the user.
+   */
+  const [firstFiling] = React.useState(() => Object.keys(vatFiled).length === 0)
+  const steps: readonly Step[] = [
+    "checks",
+    ...(firstFiling ? (["guide"] as const) : []),
+    "values",
+    "file",
+    ...(settlementVisible ? (["pay"] as const) : []),
+  ]
   const stepIndex = steps.indexOf(step)
   const lastStep = stepIndex === steps.length - 1
   const showMark = step === "file" && currentStatus !== "before"
@@ -335,6 +358,44 @@ function VatReturnForm() {
                 {f.t("vat.returnAllClear")}
               </p>
             )
+          ) : null}
+
+          {step === "guide" ? (
+            <div className="flex flex-col gap-4">
+              <p className="text-sm text-muted-foreground">
+                {f.t("vat.guideIntro")}
+              </p>
+              <ol className="divide-y rounded-lg border">
+                {GUIDE_STEPS.map((g, i) => (
+                  <li
+                    key={g.title}
+                    className="grid grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-3 px-4 py-3"
+                  >
+                    <span
+                      aria-hidden
+                      className="tabular mt-0.5 grid size-6 place-items-center rounded-full bg-muted text-xs font-medium"
+                    >
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{f.t(g.title)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {f.t(g.sub, { p: label })}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+              <a
+                href={OMAVERO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="focus-ring inline-flex min-h-8 w-fit items-center gap-1.5 rounded-md text-sm font-medium text-primary hover:underline"
+              >
+                {f.t("common.formOpenOmaVero")}
+                <ExternalLinkIcon aria-hidden className="size-3.5" />
+              </a>
+            </div>
           ) : null}
 
           {step === "values" ? (

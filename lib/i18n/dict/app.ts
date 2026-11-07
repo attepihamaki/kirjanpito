@@ -1596,6 +1596,39 @@ export const APP_DICT = {
   "vat.returnStepChecks": ["Tarkistukset", "Checks"],
   "vat.returnStepValues": ["Summat", "Amounts"],
   "vat.returnStepFile": ["Merkintä", "Mark"],
+  "vat.returnStepGuide": ["OmaVero", "OmaVero"],
+  "vat.guideIntro": [
+    "Ensimmäisen ilmoituksen voi tehdä tämän listan mukaan. Kun olet merkinnyt ensimmäisen kauden ilmoitetuksi, vaihe poistuu.",
+    "You can make your first return by following this list. Once you have marked your first period as filed, this step goes away.",
+  ],
+  "vat.guideLogin": ["Kirjaudu OmaVeroon", "Sign in to OmaVero"],
+  "vat.guideLoginSub": [
+    "Käytä verkkopankkitunnuksia tai mobiilivarmennetta. Toiminimen asiat hoidat omilla tunnuksillasi.",
+    "Use your online banking credentials or mobile certificate. You handle a sole trader’s affairs with your own credentials.",
+  ],
+  "vat.guideStart": ["Aloita arvonlisäveroilmoitus", "Start the VAT return"],
+  "vat.guideStartSub": [
+    "Valitse kaudeksi {p}. Jos OmaVero ei tarjoa kautta, tarkista, että arvonlisäverovelvollisuutesi on voimassa.",
+    "Choose {p} as the period. If OmaVero does not offer it, check that your VAT registration is in force.",
+  ],
+  "vat.guideFill": ["Täytä kohdat", "Fill in the fields"],
+  "vat.guideFillSub": [
+    "Seuraava vaihe listaa kohdat OmaVeron järjestyksessä. Napsauta summaa ja liitä se samannimiseen kohtaan. Kohdat, joita listassa ei ole, jätä tyhjiksi.",
+    "The next step lists the fields in the order OmaVero shows them. Click an amount and paste it into the field with the same name. Leave fields that are not in the list empty.",
+  ],
+  "vat.guideCompare": ["Vertaa maksettavaa veroa", "Compare the tax payable"],
+  "vat.guideCompareSub": [
+    "OmaVero laskee kohdan 308 itse. Jos se eroaa tämän sovelluksen luvusta, älä lähetä. Etsi ero kohdista ensin.",
+    "OmaVero works out field 308 itself. If it differs from this app’s figure, do not send. Find the difference in the fields first.",
+  ],
+  "vat.guideSend": [
+    "Lähetä ja tallenna kuittaus",
+    "Send it and save the receipt",
+  ],
+  "vat.guideSendSub": [
+    "Palaa tänne ja merkitse kausi ilmoitetuksi. Jos maksettavaa on, maksu kirjataan Maksu-vaiheessa.",
+    "Come back here and mark the period as filed. If there is tax to pay, you book the payment in the Payment step.",
+  ],
   "vat.returnStepPay": ["Maksu", "Payment"],
   "vat.returnFileTitle": ["Merkitse {p} ilmoitetuksi", "Mark {p} as filed"],
   "vat.returnBack": ["Takaisin", "Back"],
