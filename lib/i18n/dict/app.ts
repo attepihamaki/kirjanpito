@@ -1034,6 +1034,7 @@ export const APP_DICT = {
   ],
   "ledger.copyAsNew": ["Kopioi", "Copy"],
   "ledger.deleteEntry": ["Poista tosite", "Delete voucher"],
+  "ledger.markPaid": ["Merkitse maksetuksi", "Mark as paid"],
 
   // --- Entry dialog (§8.5) ---
   "entry.editTitle": ["Muokkaa tositetta", "Edit voucher"],

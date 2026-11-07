@@ -1,7 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { CopyIcon, PaperclipIcon, PencilIcon, Trash2Icon } from "lucide-react"
+import {
+  CircleCheckIcon,
+  CopyIcon,
+  PaperclipIcon,
+  PencilIcon,
+  SplitIcon,
+  Trash2Icon,
+} from "lucide-react"
 
 import { Money, ZeroDash } from "@/components/common/money"
 import { OptionSelect } from "@/components/common/option-select"
@@ -9,6 +16,13 @@ import { Pill } from "@/components/common/pill"
 import { SortableHeader } from "@/components/common/sortable-header"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
 import { Input } from "@/components/ui/input"
 import {
   Table,
@@ -21,11 +35,17 @@ import {
 import { useFormatters } from "@/components/lang-provider"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { deleteEntry } from "@/lib/commands/book-commands"
-import { recategorizeEntries, renameEntry } from "@/lib/commands/bulk-commands"
+import {
+  markEntryPaid,
+  recategorizeEntries,
+  renameEntry,
+} from "@/lib/commands/bulk-commands"
 import { calcEntry, isShare } from "@/lib/domain/calc"
 import { yearOf } from "@/lib/domain/dates"
+import { entryLock } from "@/lib/domain/period-lock"
 import { reversalLabel } from "@/lib/domain/reversal"
-import type { Entry } from "@/lib/domain/types"
+import { canSplitLine } from "@/lib/domain/split"
+import { indexCategories, type Entry } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
 import { useBookStore, type LedgerSortKey } from "@/stores/book-store"
 import { categoriesToMoveTo, compareCategories } from "@/stores/selectors"
@@ -166,6 +186,8 @@ export function LedgerTable({
             onCopy={() =>
               openDialog({ kind: "entry", mode: "copy", entryId: entry.id })
             }
+            onSplit={() => openDialog({ kind: "split", entryId: entry.id })}
+            onMarkPaid={() => void markEntryPaid(ctx, entry)}
             onDelete={() => void deleteEntry(ctx, entry)}
             onViewReceipt={(index) =>
               openDialog({ kind: "viewer", entryId: entry.id, index })
@@ -246,6 +268,8 @@ function LedgerRow({
   onSelect,
   onEdit,
   onCopy,
+  onSplit,
+  onMarkPaid,
   onDelete,
   onViewReceipt,
 }: {
@@ -265,6 +289,8 @@ function LedgerRow({
   onSelect: (on: boolean) => void
   onEdit: () => void
   onCopy: () => void
+  onSplit: () => void
+  onMarkPaid: () => void
   onDelete: () => void
   onViewReceipt: (index: number) => void
 }) {
@@ -273,6 +299,23 @@ function LedgerRow({
   const income = entry.type === "income"
   const attachments = entry.atts ?? []
   const allCats = useBookStore((s) => s.cats)
+  const vatFiled = useBookStore((s) => s.vatFiled)
+  const yearsArchived = useBookStore((s) => s.yearsArchived)
+  const form5Filed = useBookStore((s) => s.form5Filed)
+  const traderType = useBookStore((s) => s.traderType)
+  const catMap = React.useMemo(() => indexCategories(allCats), [allCats])
+  /*
+   * The menu hides what a locked voucher refuses (§8.11). Marking paid stays,
+   * since the payment date is the one field a lock leaves open.
+   */
+  const locked =
+    entryLock(
+      entry,
+      { vatFiled, yearsArchived, form5Filed, traderType },
+      catMap
+    ) !== null
+  const canSplit =
+    !locked && canSplitLine(entry.catId, catMap, entry.euPurchase)
   /*
    * The categories a row can move to are the bulk bar's (§8.4), plus its own
    * even if disabled.
@@ -294,235 +337,276 @@ function LedgerRow({
   const cancelled = React.useRef(false)
 
   return (
-    <TableRow
-      tabIndex={0}
-      onClick={onEdit}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" && e.currentTarget === e.target) {
-          e.preventDefault()
-          onEdit()
-        }
-      }}
-      className="focus-ring cursor-pointer"
-      data-state={selected ? "selected" : undefined}
-    >
-      {/* Its own cell, so a click on the box does not open the entry. */}
-      <TableCell
-        className="hidden min-[560px]:table-cell print:hidden"
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
-      >
-        <Checkbox
-          checked={selected}
-          aria-label={f.t("ledger.selectRow", {
-            x: entry.description || f.t("ledger.noDescription"),
-          })}
-          onCheckedChange={(checked) => onSelect(checked === true)}
-        />
-      </TableCell>
-
-      <TableCell className="tabular hidden text-right text-muted-foreground min-[560px]:table-cell print:table-cell">
-        {entry.voucher}
-      </TableCell>
-
-      <TableCell className="tabular whitespace-nowrap">
-        {f.date(entry.date)}
-      </TableCell>
-
-      {/* The same badge as the categories table, so the two read alike. */}
-      <TableCell className="hidden min-[560px]:table-cell print:table-cell">
-        <Pill tone={income ? "income" : "expense"} className="font-medium">
-          {income ? f.t("common.income") : f.t("common.expense")}
-        </Pill>
-      </TableCell>
-
-      <TableCell className="group/desc max-w-[22rem]">
-        {editingDescription ? (
-          <Input
-            autoFocus
-            defaultValue={entry.description}
-            aria-label={f.t("ledger.colDescription")}
-            className="h-8"
-            onClick={(e) => e.stopPropagation()}
+    <ContextMenu>
+      <ContextMenuTrigger
+        render={
+          <TableRow
+            tabIndex={0}
+            onClick={onEdit}
             onKeyDown={(e) => {
-              e.stopPropagation()
-              if (e.key === "Enter") e.currentTarget.blur()
-              if (e.key === "Escape") {
-                cancelled.current = true
-                e.currentTarget.blur()
+              if (e.key === "Enter" && e.currentTarget === e.target) {
+                e.preventDefault()
+                onEdit()
               }
             }}
-            onBlur={(e) => {
-              setEditingDescription(false)
-              if (cancelled.current) cancelled.current = false
-              else onRename(e.currentTarget.value)
-            }}
+            className="focus-ring cursor-pointer"
+            data-state={selected ? "selected" : undefined}
           />
-        ) : (
-          <div className="flex items-center gap-1.5">
-            <span
-              className={cn(
-                "truncate",
-                !entry.description && "text-muted-foreground"
-              )}
-            >
-              {entry.description || f.t("ledger.noDescription")}
-              {entry.paidOn === null ? (
-                <Pill size="sm" className="ml-2">
-                  {f.t("ledger.openPill")}
-                </Pill>
+        }
+      >
+        {/* Its own cell, so a click on the box does not open the entry. */}
+        <TableCell
+          className="hidden min-[560px]:table-cell print:hidden"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          <Checkbox
+            checked={selected}
+            aria-label={f.t("ledger.selectRow", {
+              x: entry.description || f.t("ledger.noDescription"),
+            })}
+            onCheckedChange={(checked) => onSelect(checked === true)}
+          />
+        </TableCell>
+
+        <TableCell className="tabular hidden text-right text-muted-foreground min-[560px]:table-cell print:table-cell">
+          {entry.voucher}
+        </TableCell>
+
+        <TableCell className="tabular whitespace-nowrap">
+          {f.date(entry.date)}
+        </TableCell>
+
+        {/* The same badge as the categories table, so the two read alike. */}
+        <TableCell className="hidden min-[560px]:table-cell print:table-cell">
+          <Pill tone={income ? "income" : "expense"} className="font-medium">
+            {income ? f.t("common.income") : f.t("common.expense")}
+          </Pill>
+        </TableCell>
+
+        <TableCell className="group/desc max-w-[22rem]">
+          {editingDescription ? (
+            <Input
+              autoFocus
+              defaultValue={entry.description}
+              aria-label={f.t("ledger.colDescription")}
+              className="h-8"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                e.stopPropagation()
+                if (e.key === "Enter") e.currentTarget.blur()
+                if (e.key === "Escape") {
+                  cancelled.current = true
+                  e.currentTarget.blur()
+                }
+              }}
+              onBlur={(e) => {
+                setEditingDescription(false)
+                if (cancelled.current) cancelled.current = false
+                else onRename(e.currentTarget.value)
+              }}
+            />
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <span
+                className={cn(
+                  "truncate",
+                  !entry.description && "text-muted-foreground"
+                )}
+              >
+                {entry.description || f.t("ledger.noDescription")}
+                {entry.paidOn === null ? (
+                  <Pill size="sm" className="ml-2">
+                    {f.t("ledger.openPill")}
+                  </Pill>
+                ) : null}
+                {splitWith ? (
+                  <Pill size="sm" className="ml-2">
+                    {f.t("ledger.splitPill", { v: splitWith })}
+                  </Pill>
+                ) : null}
+                {reverses ? (
+                  <Pill size="sm" className="ml-2">
+                    {f.t("ledger.reversesPill", { v: reverses })}
+                  </Pill>
+                ) : null}
+                {reversedBy ? (
+                  <Pill size="sm" className="ml-2">
+                    {f.t("ledger.reversedByPill", { v: reversedBy })}
+                  </Pill>
+                ) : null}
+                {entry.euPurchase ? (
+                  <Pill size="sm" className="ml-2">
+                    {f.t(
+                      entry.euPurchase === "import"
+                        ? "ledger.importPill"
+                        : entry.euPurchase === "reverse"
+                          ? "ledger.reversePill"
+                          : "ledger.euPill"
+                    )}
+                  </Pill>
+                ) : null}
+                {inReceipt ? (
+                  <Pill size="sm" className="ml-2">
+                    {f.t("ledger.inReceiptPill")}
+                  </Pill>
+                ) : null}
+                {isShare(entry.share) ? (
+                  <Pill size="sm" className="ml-2">
+                    {f.t("ledger.sharePill", { p: `${entry.share} %` })}
+                  </Pill>
+                ) : null}
+              </span>
+              {attachments.length ? (
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="print:hidden"
+                  aria-label={f.t("receipt.count", { n: attachments.length })}
+                  title={f.t("receipt.count", { n: attachments.length })}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onViewReceipt(0)
+                  }}
+                >
+                  <PaperclipIcon />
+                  {attachments.length > 1 ? (
+                    <span className="tabular text-[0.65rem]">
+                      {attachments.length}
+                    </span>
+                  ) : null}
+                </Button>
               ) : null}
-              {splitWith ? (
-                <Pill size="sm" className="ml-2">
-                  {f.t("ledger.splitPill", { v: splitWith })}
-                </Pill>
-              ) : null}
-              {reverses ? (
-                <Pill size="sm" className="ml-2">
-                  {f.t("ledger.reversesPill", { v: reverses })}
-                </Pill>
-              ) : null}
-              {reversedBy ? (
-                <Pill size="sm" className="ml-2">
-                  {f.t("ledger.reversedByPill", { v: reversedBy })}
-                </Pill>
-              ) : null}
-              {entry.euPurchase ? (
-                <Pill size="sm" className="ml-2">
-                  {f.t(
-                    entry.euPurchase === "import"
-                      ? "ledger.importPill"
-                      : entry.euPurchase === "reverse"
-                        ? "ledger.reversePill"
-                        : "ledger.euPill"
-                  )}
-                </Pill>
-              ) : null}
-              {inReceipt ? (
-                <Pill size="sm" className="ml-2">
-                  {f.t("ledger.inReceiptPill")}
-                </Pill>
-              ) : null}
-              {isShare(entry.share) ? (
-                <Pill size="sm" className="ml-2">
-                  {f.t("ledger.sharePill", { p: `${entry.share} %` })}
-                </Pill>
-              ) : null}
-            </span>
-            {attachments.length ? (
               <Button
                 variant="ghost"
                 size="icon-xs"
-                className="print:hidden"
-                aria-label={f.t("receipt.count", { n: attachments.length })}
-                title={f.t("receipt.count", { n: attachments.length })}
+                className="opacity-0 group-hover/desc:opacity-100 focus-visible:opacity-100 print:hidden"
+                aria-label={f.t("ledger.editDescription")}
+                title={f.t("ledger.editDescription")}
                 onClick={(e) => {
                   e.stopPropagation()
-                  onViewReceipt(0)
+                  setEditingDescription(true)
                 }}
               >
-                <PaperclipIcon />
-                {attachments.length > 1 ? (
-                  <span className="tabular text-[0.65rem]">
-                    {attachments.length}
-                  </span>
-                ) : null}
+                <PencilIcon />
               </Button>
-            ) : null}
+            </div>
+          )}
+        </TableCell>
+
+        {/* Its own cell for clicks, so picking a category does not open the entry. */}
+        <TableCell
+          className="hidden max-w-[16rem] min-[1240px]:table-cell print:table-cell"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          <OptionSelect
+            options={categoryOptions}
+            value={entry.catId}
+            label={f.t("ledger.colCategory")}
+            size="sm"
+            className="w-full border-transparent bg-transparent text-muted-foreground shadow-none hover:border-input print:hidden"
+            onChange={onRecategorize}
+          />
+          <span className="hidden print:inline">
+            {categoryOptions.find((o) => o.value === entry.catId)?.label}
+          </span>
+        </TableCell>
+
+        <TableCell className="hidden text-right min-[560px]:table-cell print:table-cell">
+          <Money cents={net} />
+        </TableCell>
+
+        <TableCell className="hidden text-right min-[560px]:table-cell print:table-cell">
+          {entry.vatRate ? (
+            <span className="flex flex-col items-end leading-tight">
+              <Money cents={vat} />
+              <span className="text-[0.7rem] text-muted-foreground">
+                {f.rate(entry.vatRate)}
+              </span>
+            </span>
+          ) : (
+            <ZeroDash />
+          )}
+        </TableCell>
+
+        <TableCell className="text-right font-medium">
+          <Money cents={gross} signed={!income} />
+        </TableCell>
+
+        <TableCell className="hidden min-[560px]:table-cell print:hidden">
+          <div className="flex justify-end gap-0.5">
             <Button
               variant="ghost"
-              size="icon-xs"
-              className="opacity-0 group-hover/desc:opacity-100 focus-visible:opacity-100 print:hidden"
-              aria-label={f.t("ledger.editDescription")}
-              title={f.t("ledger.editDescription")}
+              size="icon-sm"
+              aria-label={f.t("entry.editTitle")}
               onClick={(e) => {
                 e.stopPropagation()
-                setEditingDescription(true)
+                onEdit()
               }}
             >
               <PencilIcon />
             </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={f.t("ledger.copyAsNew")}
+              onClick={(e) => {
+                e.stopPropagation()
+                onCopy()
+              }}
+            >
+              <CopyIcon />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={f.t("ledger.deleteEntry")}
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete()
+              }}
+            >
+              <Trash2Icon />
+            </Button>
           </div>
-        )}
-      </TableCell>
-
-      {/* Its own cell for clicks, so picking a category does not open the entry. */}
-      <TableCell
-        className="hidden max-w-[16rem] min-[1240px]:table-cell print:table-cell"
+        </TableCell>
+      </ContextMenuTrigger>
+      {/* The popup is portalled, but React still bubbles its events to the row. */}
+      <ContextMenuContent
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
-        <OptionSelect
-          options={categoryOptions}
-          value={entry.catId}
-          label={f.t("ledger.colCategory")}
-          size="sm"
-          className="w-full border-transparent bg-transparent text-muted-foreground shadow-none hover:border-input print:hidden"
-          onChange={onRecategorize}
-        />
-        <span className="hidden print:inline">
-          {categoryOptions.find((o) => o.value === entry.catId)?.label}
-        </span>
-      </TableCell>
-
-      <TableCell className="hidden text-right min-[560px]:table-cell print:table-cell">
-        <Money cents={net} />
-      </TableCell>
-
-      <TableCell className="hidden text-right min-[560px]:table-cell print:table-cell">
-        {entry.vatRate ? (
-          <span className="flex flex-col items-end leading-tight">
-            <Money cents={vat} />
-            <span className="text-[0.7rem] text-muted-foreground">
-              {f.rate(entry.vatRate)}
-            </span>
-          </span>
-        ) : (
-          <ZeroDash />
+        <ContextMenuItem onClick={onEdit}>
+          <PencilIcon />
+          {f.t("entry.editTitle")}
+        </ContextMenuItem>
+        <ContextMenuItem onClick={onCopy}>
+          <CopyIcon />
+          {f.t("entry.copyAction")}
+        </ContextMenuItem>
+        {canSplit ? (
+          <ContextMenuItem onClick={onSplit}>
+            <SplitIcon />
+            {f.t("entry.splitAction")}
+          </ContextMenuItem>
+        ) : null}
+        {entry.paidOn === null ? (
+          <ContextMenuItem onClick={onMarkPaid}>
+            <CircleCheckIcon />
+            {f.t("ledger.markPaid")}
+          </ContextMenuItem>
+        ) : null}
+        {locked ? null : (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuItem variant="destructive" onClick={onDelete}>
+              <Trash2Icon />
+              {f.t("entry.deleteAction")}
+            </ContextMenuItem>
+          </>
         )}
-      </TableCell>
-
-      <TableCell className="text-right font-medium">
-        <Money cents={gross} signed={!income} />
-      </TableCell>
-
-      <TableCell className="hidden min-[560px]:table-cell print:hidden">
-        <div className="flex justify-end gap-0.5">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={f.t("entry.editTitle")}
-            onClick={(e) => {
-              e.stopPropagation()
-              onEdit()
-            }}
-          >
-            <PencilIcon />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={f.t("ledger.copyAsNew")}
-            onClick={(e) => {
-              e.stopPropagation()
-              onCopy()
-            }}
-          >
-            <CopyIcon />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={f.t("ledger.deleteEntry")}
-            onClick={(e) => {
-              e.stopPropagation()
-              onDelete()
-            }}
-          >
-            <Trash2Icon />
-          </Button>
-        </div>
-      </TableCell>
-    </TableRow>
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }

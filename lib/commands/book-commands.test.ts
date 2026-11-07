@@ -11,6 +11,7 @@ import {
 import type { Entry } from "@/lib/domain/types"
 import {
   deleteEntries,
+  markEntryPaid,
   recategorizeEntries,
   mergeSplit,
   renameEntry,
@@ -343,6 +344,40 @@ describe("renameEntry", () => {
     ])
     clickUndo()
     expect(useBookStore.getState().recurring).toEqual([template])
+  })
+})
+
+describe("markEntryPaid", () => {
+  const open = () => {
+    const e = { ...useBookStore.getState().entries[0], paidOn: null }
+    useBookStore.getState().updateEntries([e])
+    return e
+  }
+  const stored = (id: string) =>
+    useBookStore.getState().entries.find((e) => e.id === id)
+
+  it("pays an open voucher on its own date and undoes from the toast", async () => {
+    const before = open()
+    expect(await markEntryPaid(ctx, before)).toBe(true)
+    expect(stored(before.id)?.paidOn).toBeUndefined()
+    clickUndo()
+    expect(stored(before.id)?.paidOn).toBeNull()
+  })
+
+  it("leaves a paid voucher alone", async () => {
+    const paid = useBookStore.getState().entries[0]
+    expect(await markEntryPaid(ctx, paid)).toBe(false)
+    expect(raised).toHaveLength(0)
+  })
+
+  it("refuses when the payment year has a filed Form 5", async () => {
+    const before = open()
+    useBookStore.setState({
+      form5Filed: { [before.date.slice(0, 4)]: "2027-01-01" },
+    })
+    expect(await markEntryPaid(ctx, before)).toBe(false)
+    expect(stored(before.id)?.paidOn).toBeNull()
+    useBookStore.setState({ form5Filed: {} })
   })
 })
 

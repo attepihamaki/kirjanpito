@@ -9,6 +9,7 @@ import {
 import type { Ctx } from "@/lib/commands/ctx"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
 import { uid } from "@/lib/domain/id"
+import { paidChangeHitsForm5 } from "@/lib/domain/period-lock"
 import { entryToRecurring, matchRecurring } from "@/lib/domain/recurring"
 import { carveSplit, mergeSplitPart, type SplitPart } from "@/lib/domain/split"
 import { indexCategories, type Entry } from "@/lib/domain/types"
@@ -242,6 +243,29 @@ export function renameEntry(
     store.upsertRecurring(entryToRecurring(renamed, template.id, template.from))
   }
   offerEditUndo(ctx, entry, recurringBefore)
+  return true
+}
+
+/**
+ * Mark an open voucher paid on its own date (§8.4). Paying changes nothing the
+ * VAT return counts, so a filed VAT period does not stop it, but a year whose
+ * Form 5 is filed does (§8.11). The toast undoes it like any single-voucher
+ * edit. False when the voucher is not open or the change was refused.
+ */
+export async function markEntryPaid(ctx: Ctx, entry: Entry): Promise<boolean> {
+  if (entry.paidOn !== null) return false
+  const state = useBookStore.getState()
+  if (paidChangeHitsForm5(null, entry.date, state)) {
+    toast.add({ title: ctx.t("bank.paidInFiledYear") })
+    return false
+  }
+  const paid: Entry = { ...entry, paidOn: undefined }
+  const after = state.entries.map((e) => (e.id === entry.id ? paid : e))
+  if (!(await confirmFiledChange(after))) return false
+
+  const store = useBookStore.getState()
+  store.updateEntries([paid])
+  offerEditUndo(ctx, entry, store.recurring)
   return true
 }
 
