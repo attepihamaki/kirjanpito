@@ -93,6 +93,8 @@ describe("taxCalendar", () => {
     const e = taxCalendar(input({ form5Filed: { "2025": "2026-03-20" } }))
     expect(e.find((x) => x.kind === "form5")?.done).toBe(true)
     expect(dates("form5", { year: 2027 })).toEqual([])
+    expect(dates("form5", { startDate: "2026-02-01" })).toEqual([])
+    expect(dates("form5", { startDate: null })).toEqual([])
   })
 
   it("puts YEL on the 20th and advance tax on the 23rd of the chosen months", () => {

@@ -129,7 +129,9 @@ export function taxCalendar(input: CalendarInput): CalendarEvent[] {
   }
 
   const due = form5Due(year - 1)
-  if (due && yearOf(due) === year) {
+  /* No return is owed for a tax year that ended before the book began. */
+  const began = input.startDate !== null && yearOf(input.startDate) <= year - 1
+  if (due && began && yearOf(due) === year) {
     out.push({
       id: `form5-${year - 1}`,
       kind: "form5",
