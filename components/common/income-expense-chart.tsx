@@ -80,26 +80,30 @@ export function IncomeExpenseChart({
   }
 
   return (
-    <div className={cn("relative h-64 w-full", className)}>
+    <div className={cn("flex h-64 w-full flex-col", className)}>
+      {/* Outside the plot, so a tall bar or its amount never runs under it. */}
       <div
-        className="pointer-events-none absolute top-2 right-2 flex items-center gap-1.5 text-xs text-muted-foreground"
+        className="flex shrink-0 justify-end gap-4 pr-2 text-xs text-muted-foreground"
         aria-hidden
       >
-        <Swatch kind="income" />
-        {f.t("common.incomePlural")}
+        <span className="inline-flex items-center gap-1.5">
+          <Swatch kind="income" />
+          {f.t("common.incomePlural")}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Swatch kind="expense" />
+          {f.t("common.expensePlural")}
+        </span>
       </div>
-      <div
-        className="pointer-events-none absolute right-2 bottom-8 flex items-center gap-1.5 text-xs text-muted-foreground"
-        aria-hidden
+      <ResponsiveContainer
+        width="100%"
+        height="100%"
+        className="min-h-0 flex-1"
       >
-        <Swatch kind="expense" />
-        {f.t("common.expensePlural")}
-      </div>
-      <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
           stackOffset="sign"
-          margin={{ left: 4, right: 4, top: 8 }}
+          margin={{ left: 4, right: 4, top: 20, bottom: 4 }}
         >
           <defs>
             <pattern
