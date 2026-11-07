@@ -28,6 +28,7 @@ Part of the project specification. `CLAUDE.md` is the index and holds the conven
 - [ ] Currency is shown in Finnish format in both languages.
 - [ ] Light, dark and system themes all work. Layouts work at 390 px, 900 px and desktop widths.
 - [ ] None of the Excel bugs in §3 are reproduced.
+- [ ] Printing the income statement, the journal and the general ledger gives the same sheet in Chromium, Firefox and Safari: no sidebar or top bar, 15 mm margins, the pill and result-line tints kept, no row split across two pages, and the table header repeated on each page. Check the ledger with enough rows to run past one page, in light and dark themes. Only Chromium has been tried so far.
 
 ## 14. Open questions and ideas not yet done
 

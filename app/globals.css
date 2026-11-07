@@ -275,7 +275,28 @@
  * §8.8: the income statement, the journal and the general ledger print as a
  * bare sheet, without the sidebar and the top bar.
  */
+@page {
+  margin: 15mm;
+}
+
 @media print {
+  /*
+   * Chromium, Firefox and Safari all drop background colours when printing
+   * unless asked otherwise, and Safari only honours the prefixed property.
+   * Without it the income / expense pills and the result line lose their tint.
+   */
+  .print-sheet,
+  [data-slot="table-container"] {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* A row is never cut across two pages, and a table repeats its header. */
+  tr {
+    break-inside: avoid;
+  }
+  thead {
+    display: table-header-group;
+  }
   .print-hidden,
   [data-slot="sidebar"],
   [data-slot="sidebar-gap"] {
