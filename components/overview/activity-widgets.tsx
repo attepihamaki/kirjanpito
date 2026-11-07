@@ -11,7 +11,7 @@ import {
 } from "lucide-react"
 
 import { ButtonLink } from "@/components/common/button-link"
-import { CHECK_TEXT } from "@/components/common/check-text"
+import { CHECK_TEXT, INFO_CHECKS } from "@/components/common/check-text"
 import { Money } from "@/components/common/money"
 import { Panel } from "@/components/common/panel"
 import { Pill } from "@/components/common/pill"
@@ -324,7 +324,7 @@ export function ChecksWidget() {
     const text = CHECK_TEXT[check]
     items.push({
       key: check,
-      tone: "warn",
+      tone: INFO_CHECKS.has(check) ? "info" : "warn",
       title: f.t(text.title, { n }),
       sub: f.t(text.sub),
       action: (

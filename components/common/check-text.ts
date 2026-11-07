@@ -44,3 +44,13 @@ export const CHECK_TEXT = {
     sub: "overview.largeExpenseSub",
   },
 } as const satisfies Record<EntryCheck, { title: string; sub: string }>
+
+/**
+ * The checks that only point out a choice, since either way the entry is
+ * right: a small purchase may be depreciated or deducted at once. The
+ * overview shows them as information, not as something to fix.
+ */
+export const INFO_CHECKS: ReadonlySet<EntryCheck> = new Set([
+  "smallAsset",
+  "largeExpense",
+])
