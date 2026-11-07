@@ -45,6 +45,8 @@ export const APP_DICT = {
    * ends in *that* file, and `dirty` already encodes which (§7.5).
    */
   "file.clean": ["Tallennettu", "Saved"],
+  /* The top bar's note after a save; {t} is the device's clock at that moment. */
+  "file.savedAt": ["Tallennettu {t}", "Saved {t}"],
   "file.save": ["Tallenna", "Save"],
   /*
    * Named after what it does, not after its relationship to "Tallenna":
@@ -278,6 +280,9 @@ export const APP_DICT = {
   ],
   "entry.figuresVat": ["ALV-ilmoitus, {p}", "VAT return, {p}"],
   "entry.figuresForm5": ["Lomake 5, {y}", "Form 5, {y}"],
+  /* Group headings in the category picker (§8.5). */
+  "entry.categoryMostUsed": ["Eniten käytetyt", "Most used"],
+  "entry.categoryAll": ["Kaikki", "All"],
   "entry.figuresHint": [
     "Tallennetun tositteen mukaan. Napsauta kohtaa nähdäksesi kaikki sen tositteet.",
     "As saved. Click a field to see all of its vouchers.",

@@ -99,6 +99,27 @@ export function SavedAtNote() {
   )
 }
 
+/**
+ * "Tallennettu 14.32" in the top bar (§8.2): the time this session last saved
+ * or downloaded. It is absent while there are unsaved changes, where the dot
+ * on the file button speaks instead, and before the first save. The text hides
+ * below the `sm` width, where the bar has no room and the dot is enough.
+ */
+export function SavedClock() {
+  const f = useFormatters()
+  const lastSavedAt = useBookStore((s) => s.lastSavedAt)
+  const dirty = useBookStore((s) => s.dirty)
+  if (lastSavedAt === null || dirty) return null
+  return (
+    <span
+      role="status"
+      className="tabular hidden text-xs whitespace-nowrap text-muted-foreground sm:inline"
+    >
+      {f.t("file.savedAt", { t: clock(f, new Date(lastSavedAt)) })}
+    </span>
+  )
+}
+
 /** One line under the save status when the browser could not store the work. */
 export function StorageNote() {
   const t = useT()

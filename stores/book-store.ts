@@ -343,6 +343,12 @@ export interface BookState {
    * a save can tell whether something else has touched the file since.
    */
   savedAt: number | null
+  /**
+   * When this session last finished a save or a download, on the device's
+   * clock. Unlike `savedAt` it is set by a download too, and it is not the
+   * file's own time. Not persisted: a reload has saved nothing yet.
+   */
+  lastSavedAt: number | null
   /** A save is in flight: packing a ZIP of receipts is not instant. */
   saving: boolean
   /**
@@ -637,6 +643,7 @@ function initialState(): BookState {
     importing: false,
     fileHandle: null,
     savedAt: null,
+    lastSavedAt: null,
     saving: false,
     autosavePaused: false,
     autosaveFailures: 0,
@@ -799,6 +806,7 @@ const unlinked = {
   fileName: null,
   fileHandle: null,
   savedAt: null,
+  lastSavedAt: null,
   encrypted: false,
   archiveYear: null,
 }
@@ -981,6 +989,7 @@ export const useBookStore = create<BookStore>()(
           ),
           autosavePaused: false,
           autosaveFailures: 0,
+          lastSavedAt: null,
           dirty: false,
           dialog: { kind: "none" },
           figure: null,
@@ -1079,6 +1088,7 @@ export const useBookStore = create<BookStore>()(
           autosave: s.autosave ?? get().autosave,
           autosavePaused: false,
           autosaveFailures: 0,
+          lastSavedAt: null,
           onboarding: false,
           ledgerSize: s.ledgerSize ?? get().ledgerSize,
           ctSize: s.ctSize ?? get().ctSize,
@@ -1203,6 +1213,7 @@ export const useBookStore = create<BookStore>()(
         set({
           dirty,
           autosaveFailures: 0,
+          lastSavedAt: Date.now(),
           fileName,
           // Downloading a copy leaves the linked file where it was.
           ...(fileHandle !== undefined ? { fileHandle } : {}),

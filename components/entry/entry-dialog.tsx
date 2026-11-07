@@ -82,6 +82,7 @@ import {
   suggestCategory,
 } from "@/lib/domain/invoice-text"
 import { findCategoryRule } from "@/lib/domain/category-rules"
+import { categoryUsage, mostUsedCategories } from "@/lib/domain/category-usage"
 import {
   CASH_BOOKING_DAYS,
   duplicateOf,
@@ -112,6 +113,7 @@ import { categorySide, compareCategories } from "@/stores/selectors"
 import type {
   AmountMode,
   Attachment,
+  Category,
   Entry,
   EntryType,
 } from "@/lib/domain/types"
@@ -122,6 +124,9 @@ import {
   type RecurringEntry,
 } from "@/lib/domain/recurring"
 import { useBookStore, type EntryPrefill } from "@/stores/book-store"
+
+/** A category list this short is scanned whole, so it gets no "most used" group. */
+const MOST_USED_MIN_LIST = 8
 
 interface FormState {
   date: string
@@ -576,6 +581,7 @@ function EntryDialogForm({
   }, [addFiles, registerDropTarget])
 
   const catMap = React.useMemo(() => indexCategories(cats), [cats])
+  const usage = React.useMemo(() => categoryUsage(entries), [entries])
   const typeCats = React.useMemo(() => {
     return (
       cats
@@ -593,10 +599,26 @@ function EntryDialogForm({
     )
   }, [cats, form.type, form.catId, f.collator, f.lang])
 
-  const catOptions = typeCats.map((c) => ({
-    value: c.id,
-    label: f.catLabel(c),
-  }))
+  /*
+   * The account number and the name, plus the Finnish name when the interface
+   * is in English, since that is the one the tax return uses.
+   */
+  const catOption = (c: Category) => {
+    const label = f.catLabel(c)
+    return {
+      value: c.id,
+      label:
+        f.lang === "en" && !c.custom && c.name !== f.catName(c)
+          ? `${label} · ${c.name}`
+          : label,
+    }
+  }
+  const catOptions = typeCats.map(catOption)
+  /* A short list needs no shortcut. */
+  const topCats =
+    typeCats.length > MOST_USED_MIN_LIST
+      ? mostUsedCategories(typeCats, usage)
+      : []
   const selectedCat = cats.find((c) => c.id === form.catId)
   const changeLog = useBookStore((s) => s.changeLog)
   const history = React.useMemo(
@@ -1207,6 +1229,11 @@ function EntryDialogForm({
                     <OptionSelect
                       invalid={invalid("catId")}
                       options={catOptions}
+                      featured={{
+                        options: topCats.map(catOption),
+                        label: f.t("entry.categoryMostUsed"),
+                        allLabel: f.t("entry.categoryAll"),
+                      }}
                       value={form.catId}
                       onChange={(value) => {
                         const cat = cats.find((c) => c.id === value)

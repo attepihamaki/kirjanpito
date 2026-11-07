@@ -5,6 +5,8 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
@@ -32,8 +34,18 @@ export function OptionSelect({
   disabled,
   className,
   size,
+  featured,
 }: {
   options: readonly Option[]
+  /**
+   * A short group listed above `options`, which stay whole and in their own
+   * order below it. The same value appears in both places.
+   */
+  featured?: {
+    options: readonly Option[]
+    label: string
+    allLabel: string
+  }
   value: string
   onChange: (value: string) => void
   /** Shown when `value` matches no option. */
@@ -62,7 +74,23 @@ export function OptionSelect({
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
+        {featured && featured.options.length > 0 ? (
+          <>
+            <SelectGroup>
+              <SelectLabel>{featured.label}</SelectLabel>
+              {featured.options.map((o) => (
+                <SelectItem key={`featured:${o.value}`} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+            <SelectSeparator />
+          </>
+        ) : null}
         <SelectGroup>
+          {featured && featured.options.length > 0 ? (
+            <SelectLabel>{featured.allLabel}</SelectLabel>
+          ) : null}
           {options.map((o) => (
             <SelectItem key={o.value} value={o.value}>
               {o.label}

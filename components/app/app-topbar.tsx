@@ -3,6 +3,7 @@
 import { PanelLeftIcon } from "lucide-react"
 
 import { FileMenu } from "@/components/app/file-menu"
+import { SavedClock } from "@/components/app/file-status"
 import { LangToggle } from "@/components/app/lang-toggle"
 import { ThemeToggle } from "@/components/app/theme-toggle"
 import { Button } from "@/components/ui/button"
@@ -49,6 +50,7 @@ export function AppTopbar({
         </Button>
 
         <div className="ml-auto flex items-center gap-2">
+          <SavedClock />
           <ThemeToggle />
           <LangToggle />
           <FileMenu onOpenFile={onOpenFile} onExport={onExport} />
