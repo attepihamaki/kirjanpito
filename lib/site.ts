@@ -135,7 +135,6 @@ export const STATEMENT_ROUTES = {
   balance: `${APP_ROUTES.statement}/balance`,
   assets: `${APP_ROUTES.statement}/assets`,
   deductions: `${APP_ROUTES.statement}/deductions`,
-  pack: `${APP_ROUTES.statement}/pack`,
 } as const
 
 /**

@@ -11,6 +11,7 @@ import { FigureLink } from "@/components/common/figure-link"
 import { HelpHint } from "@/components/common/help-hint"
 import { Money, ZeroDash } from "@/components/common/money"
 import { useFormatters } from "@/components/lang-provider"
+import { VatYearSection } from "@/components/statement/vat-year-section"
 import { YearEndButton } from "@/components/statement/year-end-button"
 import {
   EMPTY_YEAR_END,
@@ -427,6 +428,8 @@ export function StatementView() {
             }
           )}
         </p>
+
+        <VatYearSection />
 
         <p className="mt-6 border-t border-sheet-edge pt-3 text-xs text-muted-foreground">
           {f.t("landing.footer")}

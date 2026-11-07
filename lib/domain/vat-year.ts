@@ -1,6 +1,4 @@
-import type { BookFinding } from "@/lib/domain/book-check"
 import { filterPeriod } from "@/lib/domain/period"
-import type { TaxFormSection } from "@/lib/domain/tax-form"
 import {
   indexCategories,
   type Category,
@@ -16,31 +14,6 @@ import {
   type VatPeriod,
   type VatPeriodKind,
 } from "@/lib/domain/vat-deadline"
-
-/**
- * The yearly tax return pack (§8.8): Form 5's filled fields, the year's VAT by
- * filing period and what is still open, on one printable page. Everything here
- * is pure; the view only lays it out.
- */
-
-/**
- * Form 5 reduced to what the user types into OmaVero: every field with an
- * amount and the totals that apply. Groups, empty fields and sections left with
- * no row are dropped, so the page stays short.
- */
-export function filledSections(
-  sections: readonly TaxFormSection[]
-): TaxFormSection[] {
-  const out: TaxFormSection[] = []
-  for (const section of sections) {
-    const rows = section.rows.filter(
-      (row) =>
-        row.kind === "field" && (row.total ? !row.unused : row.value !== 0)
-    )
-    if (rows.length) out.push({ ...section, rows })
-  }
-  return out
-}
 
 export interface VatYearRow {
   period: VatPeriod
@@ -108,16 +81,4 @@ export function vatYear(input: VatYearInput): VatYear {
     total.due += row.due
   }
   return { rows, total }
-}
-
-/**
- * The findings that belong on the year's page: the ones about the year itself
- * and the ones about the book as a whole, such as unsaved changes. Findings
- * about other years are left out.
- */
-export function packFindings(
-  findings: readonly BookFinding[],
-  year: number
-): BookFinding[] {
-  return findings.filter((b) => b.year === year || b.year === null)
 }

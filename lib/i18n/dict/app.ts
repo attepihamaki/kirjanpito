@@ -2219,45 +2219,22 @@ export const APP_DICT = {
     "Balance at the start of {y}",
   ],
 
-  // --- Tax return pack ---
+  // --- VAT by period under the statement ---
 
-  "statement.packTab": ["Veroilmoituspaketti", "Tax return pack"],
-  "statement.packTitle": ["Veroilmoituspaketti {y}", "Tax return pack {y}"],
-  "statement.packForm5": [
-    "Lomake 5: täytettävät kohdat",
-    "Form 5: fields to fill in",
-  ],
-  "statement.packNoForm5": [
-    "Vuodella ei ole yhtään lomakkeen kohtaa, jossa olisi summa.",
-    "No field of the form has an amount for this year.",
-  ],
-  "statement.packForm5Filed": [
-    "Lomake 5 ilmoitettu {d}",
-    "Form 5 marked as filed on {d}",
-  ],
-  "statement.packVat": ["ALV vuoden aikana", "VAT over the year"],
-  "statement.packVatPeriod": ["Kausi", "Period"],
-  "statement.packVatTax": ["Vero", "Tax"],
-  "statement.packVatDeductible": ["Vähennettävä (307)", "Deductible (307)"],
-  "statement.packVatDue": ["Maksettava (308)", "Payable (308)"],
-  "statement.packVatStatus": ["Tila", "Status"],
-  "statement.packVatFiledOn": ["Ilmoitettu {d}", "Filed {d}"],
-  "statement.packVatNotFiled": [
+  "statement.vatYear": ["ALV vuoden aikana", "VAT over the year"],
+  "statement.vatYearPeriod": ["Kausi", "Period"],
+  "statement.vatYearTax": ["Vero", "Tax"],
+  "statement.vatYearDeductible": ["Vähennettävä (307)", "Deductible (307)"],
+  "statement.vatYearDue": ["Maksettava (308)", "Payable (308)"],
+  "statement.vatYearStatus": ["Tila", "Status"],
+  "statement.vatYearFiledOn": ["Ilmoitettu {d}", "Filed {d}"],
+  "statement.vatYearNotFiled": [
     "Ei ilmoitettu, eräpäivä {d}",
     "Not filed, due {d}",
   ],
-  "statement.packVatNote": [
+  "statement.vatYearNote": [
     "Miinusmerkkinen summa on palautukseen oikeuttava vero.",
     "A negative amount is tax that qualifies for a refund.",
-  ],
-  "statement.packNoVat": [
-    "Vuodelta ei ole ALV-ilmoitukseen kuuluvia tositteita.",
-    "No voucher of this year belongs on a VAT return.",
-  ],
-  "statement.packOpen": ["Avoimet kysymykset", "Open questions"],
-  "statement.packNoOpen": [
-    "Tarkistus ei löytänyt mitään avointa.",
-    "The check found nothing open.",
   ],
 
   // --- Calculated deductions ---

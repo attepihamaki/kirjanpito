@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest"
 
 import { defaultCategories } from "@/lib/domain/accounts"
-import type { BookFinding } from "@/lib/domain/book-check"
-import type { TaxFormSection } from "@/lib/domain/tax-form"
-import { filledSections, packFindings, vatYear } from "@/lib/domain/tax-pack"
 import type { Entry } from "@/lib/domain/types"
+import { vatYear } from "@/lib/domain/vat-year"
 
 const cats = defaultCategories()
 
@@ -29,41 +27,6 @@ const base = {
   bookStart: null,
   vatFiled: {},
 }
-
-describe("filledSections", () => {
-  const label = { fi: "x", en: "x" }
-  const field = (code: string, value: number, total = false) => ({
-    kind: "field" as const,
-    code,
-    label,
-    value,
-    portion: false,
-    total,
-    unused: false,
-  })
-
-  it("keeps fields with an amount and totals, and drops the rest", () => {
-    const sections: TaxFormSection[] = [
-      {
-        number: "1",
-        title: label,
-        rows: [
-          { kind: "group", label },
-          field("300", 5_000),
-          field("301", 0),
-          field("355", 0, true),
-        ],
-      },
-      { number: "2", title: label, rows: [field("400", 0)] },
-    ]
-    const out = filledSections(sections)
-    expect(out).toHaveLength(1)
-    expect(out[0].rows.map((r) => r.kind === "field" && r.code)).toEqual([
-      "300",
-      "355",
-    ])
-  })
-})
 
 describe("vatYear", () => {
   it("gives a row per period with entries and totals them", () => {
@@ -109,15 +72,5 @@ describe("vatYear", () => {
 
   it("is empty without entries", () => {
     expect(vatYear({ ...base, entries: [] }).rows).toEqual([])
-  })
-})
-
-describe("packFindings", () => {
-  const at = (year: number | null): BookFinding =>
-    ({ set: "yearEnd", year, finding: {} }) as unknown as BookFinding
-
-  it("keeps the year's findings and the book-wide ones", () => {
-    const list = [at(2026), at(2025), at(null)]
-    expect(packFindings(list, 2026)).toEqual([list[0], list[2]])
   })
 })

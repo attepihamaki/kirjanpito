@@ -21,7 +21,7 @@ import type {
 
 /**
  * The words and the way in for any finding of the book check (§8.23), shared
- * by the check dialog and the tax return pack (§8.8).
+ * by the check dialog.
  */
 export function useDescribeFinding() {
   const f = useFormatters()
