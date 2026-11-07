@@ -1,6 +1,10 @@
 "use client"
 
 import { FigureLink } from "@/components/common/figure-link"
+import {
+  NoEntriesState,
+  useYearIsEmpty,
+} from "@/components/common/no-entries-state"
 import { Money } from "@/components/common/money"
 import { PANEL_ROWS, Panel } from "@/components/common/panel"
 import { cn } from "@/lib/utils"
@@ -26,6 +30,7 @@ import { useBookStore } from "@/stores/book-store"
 export function VatView() {
   const f = useFormatters()
   const { report } = useVatPeriod()
+  const yearEmpty = useYearIsEmpty()
   const { drill } = useVatDrill()
   const refund = report.due < 0
   const eu = report.euPurchases
@@ -46,6 +51,8 @@ export function VatView() {
     eu.services.net !== 0 ||
     eu.import.net !== 0 ||
     eu.reverse.net !== 0
+
+  if (yearEmpty) return <NoEntriesState bodyKey="empty.vatBody" />
 
   return (
     <div className="flex flex-col gap-5">

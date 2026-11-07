@@ -806,6 +806,29 @@ export const APP_DICT = {
     "The file is your bookkeeping. The browser is only a workspace.",
   ],
 
+  // --- Empty states (§8.12) ---
+  "empty.noEntriesTitle": ["Ei tositteita vuonna {y}", "No vouchers in {y}"],
+  "empty.vatBody": [
+    "ALV-ilmoitus lasketaan tositteista. Lisää tosite tai tuo tiliote, niin luvut ilmestyvät tähän.",
+    "The VAT return is calculated from vouchers. Add a voucher or import a bank statement and the figures appear here.",
+  ],
+  "empty.statementBody": [
+    "Tuloslaskelma muodostuu vuoden {y} tositteista. Lisää tosite tai tuo tiliote aloittaaksesi.",
+    "The income statement is built from the vouchers of {y}. Add a voucher or import a bank statement to start.",
+  ],
+  "empty.summaryBody": [
+    "Yhteenveto kokoaa vuoden {y} tulot ja kulut. Lisää tosite tai tuo tiliote aloittaaksesi.",
+    "The summary adds up the income and expenses of {y}. Add a voucher or import a bank statement to start.",
+  ],
+  "empty.assetsBody": [
+    "Poistot lasketaan hankintatositteista. Kirjaa pitkävaikutteinen hankinta, niin se ilmestyy tähän.",
+    "Depreciation is calculated from purchase vouchers. Book a long-lived purchase and it appears here.",
+  ],
+  "empty.booksBody": [
+    "Kirjanpito täyttyy tositteista. Lisää tosite tai tuo tiliote vuodelle {y}.",
+    "The books fill up from vouchers. Add a voucher or import a bank statement for {y}.",
+  ],
+
   // --- Ledger (§8.4) ---
   "ledger.emptyTitle": ["Ei vielä tositteita", "No vouchers yet"],
   "ledger.emptyBody": [
@@ -1916,7 +1939,10 @@ export const APP_DICT = {
     "Pohja syntyy, kun valitset tositteessa ”Toista joka kuukausi”. Mikään ei kirjaudu itsestään: tositteet lisätään kuukausittain Kirjanpito-näkymästä. Pohjan muutos tai poisto ei muuta jo tehtyjä tositteita.",
     "A template is made when you choose “Repeat every month” on a voucher. Nothing is booked by itself: you add the vouchers month by month in the ledger. Changing or deleting a template leaves existing vouchers as they are.",
   ],
-  "recurring.empty": ["Ei toistuvia tositteita.", "No recurring vouchers."],
+  "recurring.empty": [
+    "Ei toistuvia tositteita. Tee ensimmäinen tositteen lomakkeella valitsemalla Toista joka kuukausi.",
+    "No recurring vouchers. Make the first one in the voucher form by ticking Repeat every month.",
+  ],
   "recurring.description": ["Kuvaus", "Description"],
   "recurring.category": ["Luokka", "Category"],
   "recurring.amount": ["Summa", "Amount"],
@@ -2507,7 +2533,10 @@ export const APP_DICT = {
   "settings.rulesCategory": ["Luokka", "Category"],
   "settings.rulesRateDefault": ["Luokan oletus", "Category default"],
   "settings.rulesAdd": ["Lisää sääntö", "Add rule"],
-  "settings.rulesEmpty": ["Ei sääntöjä.", "No rules."],
+  "settings.rulesEmpty": [
+    "Ei sääntöjä. Lisää ensimmäinen yllä olevalla lomakkeella.",
+    "No rules. Add the first one with the form above.",
+  ],
   "settings.rulesTextError": [
     "Anna vähintään {n} merkkiä.",
     "Enter at least {n} characters.",

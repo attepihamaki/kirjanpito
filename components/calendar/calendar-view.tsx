@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import { Empty, EmptyContent, EmptyDescription } from "@/components/ui/empty"
+import { NewEntryButton } from "@/components/common/new-entry-button"
 import { DownloadIcon } from "lucide-react"
 import Link from "next/link"
 
@@ -127,9 +129,12 @@ export function CalendarView() {
 
         <Panel>
           {events.length === 0 ? (
-            <p className="p-5 text-sm text-muted-foreground">
-              {f.t("calendar.empty")}
-            </p>
+            <Empty>
+              <EmptyDescription>{f.t("calendar.empty")}</EmptyDescription>
+              <EmptyContent>
+                <NewEntryButton />
+              </EmptyContent>
+            </Empty>
           ) : (
             <ol className="divide-y">
               {byMonth.map(([month, list]) => (

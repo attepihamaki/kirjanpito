@@ -1,5 +1,7 @@
 "use client"
 
+import { Empty, EmptyContent, EmptyDescription } from "@/components/ui/empty"
+import { NewEntryButton } from "@/components/common/new-entry-button"
 import { Trash2Icon } from "lucide-react"
 
 import { Panel } from "@/components/common/panel"
@@ -85,9 +87,12 @@ export function RecurringSettings() {
       description={f.t("recurring.settingsHint")}
     >
       {recurring.length === 0 ? (
-        <p className="p-4 text-sm text-muted-foreground">
-          {f.t("recurring.empty")}
-        </p>
+        <Empty>
+          <EmptyDescription>{f.t("recurring.empty")}</EmptyDescription>
+          <EmptyContent>
+            <NewEntryButton />
+          </EmptyContent>
+        </Empty>
       ) : (
         <Table>
           <TableHeader>

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { Empty, EmptyDescription } from "@/components/ui/empty"
 import { ArrowDownIcon, ArrowUpIcon, Trash2Icon } from "lucide-react"
 
 import { OptionSelect } from "@/components/common/option-select"
@@ -157,9 +158,9 @@ export function RuleSettings() {
       </form>
 
       {rules.length === 0 ? (
-        <p className="p-4 text-sm text-muted-foreground">
-          {f.t("settings.rulesEmpty")}
-        </p>
+        <Empty>
+          <EmptyDescription>{f.t("settings.rulesEmpty")}</EmptyDescription>
+        </Empty>
       ) : (
         <Table>
           <TableHeader>

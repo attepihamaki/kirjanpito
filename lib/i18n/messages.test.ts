@@ -49,6 +49,7 @@ describe("dictionary integrity", () => {
       "common",
       "confirm",
       "deductions",
+      "empty",
       "entry",
       "file",
       "io",

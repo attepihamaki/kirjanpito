@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { NoEntriesState } from "@/components/common/no-entries-state"
 import { PrinterIcon } from "lucide-react"
 
 import { BusinessLine } from "@/components/common/business-line"
@@ -222,13 +223,7 @@ function TotalRow({
 }
 
 function Empty() {
-  const f = useFormatters()
-  const year = useBookStore((s) => s.year)
-  return (
-    <p className="text-sm text-muted-foreground">
-      {f.t("ledger.noEntriesYear", { y: year })}
-    </p>
-  )
+  return <NoEntriesState bodyKey="empty.booksBody" />
 }
 
 /** Päiväkirja: the year in date order, by month (§8.4). */

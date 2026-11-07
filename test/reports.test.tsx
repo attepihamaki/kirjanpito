@@ -19,6 +19,7 @@ import { StatementView } from "@/components/statement/statement-view"
 import { YearEndDialog } from "@/components/statement/year-end-dialog"
 import { VatReturnDialog } from "@/components/vat/vat-return-dialog"
 import { VatShell } from "@/components/vat/vat-shell"
+import { SummaryView } from "@/components/summary/summary-view"
 import { VatView as VatPage } from "@/components/vat/vat-view"
 import { defaultCategories } from "@/lib/domain/accounts"
 import { EMPTY_YEAR_END } from "@/lib/domain/form5-balance"
@@ -648,6 +649,17 @@ describe("journal and general ledger (§8.4)", () => {
   it("says so when the year has no entries", () => {
     useBookStore.setState({ year: 2025 })
     mount(<JournalView />)
-    expect(screen.getByText("Ei tositteita vuonna 2025.")).toBeInTheDocument()
+    expect(screen.getByText("Ei tositteita vuonna 2025")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Uusi tosite/ })).toBeVisible()
+  })
+
+  it("offers a first step on the VAT, summary and statement views too", () => {
+    useBookStore.setState({ year: 2025 })
+    for (const View of [VatPage, SummaryView, StatementView]) {
+      const { unmount } = mount(<View />)
+      expect(screen.getByText("Ei tositteita vuonna 2025")).toBeVisible()
+      expect(screen.getByRole("button", { name: /Uusi tosite/ })).toBeVisible()
+      unmount()
+    }
   })
 })

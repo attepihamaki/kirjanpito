@@ -3,6 +3,10 @@
 import * as React from "react"
 
 import {
+  NoEntriesState,
+  useYearIsEmpty,
+} from "@/components/common/no-entries-state"
+import {
   IncomeExpenseChart,
   IncomeExpenseLegend,
 } from "@/components/common/income-expense-chart"
@@ -36,6 +40,7 @@ import { useBookStore } from "@/stores/book-store"
 
 export function SummaryView() {
   const f = useFormatters()
+  const yearEmpty = useYearIsEmpty()
   const entries = useBookStore((s) => s.entries)
   const basis = useTaxBasisEntries()
   const cats = useBookStore((s) => s.cats)
@@ -50,6 +55,18 @@ export function SummaryView() {
       compare: yearComparison(basis, catMap, year, options),
     }
   }, [entries, basis, cats, year, options])
+
+  if (yearEmpty) {
+    return (
+      <>
+        <PageHeader
+          title={f.t("nav.summary")}
+          subtitle={f.t("summary.subtitle", { y: year })}
+        />
+        <NoEntriesState bodyKey="empty.summaryBody" />
+      </>
+    )
+  }
 
   return (
     <>

@@ -2,6 +2,10 @@
 
 import * as React from "react"
 
+import {
+  NoEntriesState,
+  useYearIsEmpty,
+} from "@/components/common/no-entries-state"
 import { BusinessLine } from "@/components/common/business-line"
 import { FigureLink } from "@/components/common/figure-link"
 import { HelpHint } from "@/components/common/help-hint"
@@ -36,6 +40,8 @@ import { useBookStore } from "@/stores/book-store"
  */
 export function StatementView() {
   const f = useFormatters()
+  const yearEmpty = useYearIsEmpty()
+  const filed = useBookStore((s) => !!s.form5Filed[String(s.year)])
   const entries = useBookStore((s) => s.entries)
   const basis = useTaxBasisEntries()
   const cats = useBookStore((s) => s.cats)
@@ -123,6 +129,11 @@ export function StatementView() {
     }
     return out
   }, [statement, f])
+
+  /* A year already marked as filed keeps its statement, even with no entries. */
+  if (yearEmpty && !filed) {
+    return <NoEntriesState bodyKey="empty.statementBody" />
+  }
 
   return (
     <>

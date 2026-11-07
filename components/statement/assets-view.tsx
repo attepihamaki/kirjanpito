@@ -2,6 +2,10 @@
 
 import * as React from "react"
 
+import {
+  NoEntriesState,
+  useYearIsEmpty,
+} from "@/components/common/no-entries-state"
 import { EuroInput } from "@/components/common/euro-input"
 import { Pill } from "@/components/common/pill"
 import { PrintButton } from "@/components/common/print-button"
@@ -37,6 +41,7 @@ const voucherRef = (e: Entry, year: number) => reversalLabel(e, year) || "–"
 /** The fixed asset register and the year's depreciation (§8.8). */
 export function AssetsView() {
   const f = useFormatters()
+  const yearEmpty = useYearIsEmpty()
   const entries = useBookStore((s) => s.entries)
   const cats = useBookStore((s) => s.cats)
   const year = useBookStore((s) => s.year)
@@ -50,6 +55,10 @@ export function AssetsView() {
     }
   }, [entries, cats, opening, year])
   const current = schedule.find((y) => y.year === year)
+
+  if (yearEmpty && schedule.length === 0) {
+    return <NoEntriesState bodyKey="empty.assetsBody" />
+  }
 
   return (
     <div className="flex flex-col gap-4">
