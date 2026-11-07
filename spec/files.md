@@ -207,6 +207,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
   "exportLang": "fi",
   "businessId": "0112038-9",
   "businessName": "Oma Yritys Oy",
+  "businessPhone": "09 1234567",
   "vatPeriod": "month",
   "traderType": "professional",
   "bookStart": "2026-10",

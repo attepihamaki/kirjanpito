@@ -83,6 +83,8 @@ export interface BookSettings {
   businessId: string | null
   /** The business's own name, or null (§8.10). */
   businessName: string | null
+  /** The contact phone for the VAT file's 042 (§8.7), or null. */
+  businessPhone: string | null
   vatPeriod: VatPeriodKind
   /** Which kind of sole trader keeps the book (§6.3). */
   traderType: TraderType
@@ -352,6 +354,10 @@ export function parseSettings(text: string): ParsedSettings {
   else if (typeof raw.businessName === "string" && raw.businessName.trim()) {
     out.businessName = raw.businessName.trim()
   }
+  if (raw.businessPhone === null) out.businessPhone = null
+  else if (typeof raw.businessPhone === "string" && raw.businessPhone.trim()) {
+    out.businessPhone = raw.businessPhone.trim()
+  }
   if (
     raw.vatPeriod === "month" ||
     raw.vatPeriod === "quarter" ||
@@ -582,6 +588,7 @@ export function serializeSettings(s: BookSettings): string {
     exportLang: s.exportLang,
     businessId: s.businessId,
     businessName: s.businessName,
+    businessPhone: s.businessPhone,
     vatPeriod: s.vatPeriod,
     traderType: s.traderType,
     bookStart: s.bookStart,

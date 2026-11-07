@@ -35,6 +35,7 @@ function settings(): BookSettings {
     exportLang: "en",
     businessId: "0112038-9",
     businessName: "Oma Oy",
+    businessPhone: null,
     vatPeriod: "quarter",
     traderType: "business",
     bookStart: "2025-10",
@@ -103,6 +104,16 @@ describe("settings.json", () => {
   it("reads nothing from a file that is not JSON or not an object", () => {
     expect(parseSettings("not json")).toEqual({})
     expect(parseSettings("[1, 2]")).toEqual({})
+  })
+
+  it("keeps a trimmed phone and drops a blank one", () => {
+    expect(
+      parseSettings(JSON.stringify({ businessPhone: " 09 1234567 " }))
+        ?.businessPhone
+    ).toBe("09 1234567")
+    expect(
+      parseSettings(JSON.stringify({ businessPhone: "  " }))?.businessPhone
+    ).toBeUndefined()
   })
 
   it("drops a bad value and keeps the rest", () => {

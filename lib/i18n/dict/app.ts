@@ -1390,6 +1390,30 @@ export const APP_DICT = {
   "vat.payNone": ["Ei tallennettu.", "Not saved."],
   "vat.payCopy": ["Kopioi", "Copy"],
   "vat.downloadPdf": ["Lataa PDF", "Download PDF"],
+  "vat.downloadFile": [
+    "Lataa Ilmoitin.fi-tiedosto",
+    "Download Ilmoitin.fi file",
+  ],
+  "vat.fileHint": [
+    "Tiedosto ladataan Ilmoitin.fi-palveluun itse. Kirjanpito ei lähetä mitään.",
+    "You upload the file to Ilmoitin.fi yourself. The app sends nothing.",
+  ],
+  "vat.fileBlockNotClosed": [
+    "Verokausi on vielä kesken.",
+    "The tax period has not closed yet.",
+  ],
+  "vat.fileBlockNoBusinessId": [
+    "Lisää y-tunnus kohdassa Asetukset, Yrityksen tiedot.",
+    "Add the business ID under Settings, Business details.",
+  ],
+  "vat.fileBlockEuUnsplit": [
+    "Vanhan luokan Myynti – EU tositteet pitää merkitä tavaroiksi tai palveluiksi.",
+    "Vouchers on the old category Sales – EU must be marked as goods or services.",
+  ],
+  "vat.fileBlockSumMismatch": [
+    "Maksettava vero ei täsmää kenttiin, esimerkiksi tuntemattoman verokannan takia.",
+    "The tax payable does not match the fields, for example because of an unknown tax rate.",
+  ],
   "vat.pdfFailed": ["PDF:n teko epäonnistui.", "Making the PDF failed."],
   "vat.settlementHint": [
     "Kirjanpito ei näe pankkia. Kirjaa maksu tai palautus, kun raha on liikkunut, ja liitä tiliote. Tosite saa tositenumeron, mutta se ei ole tulo eikä kulu eikä muuta ilmoitusta.",
@@ -2346,6 +2370,10 @@ export const APP_DICT = {
     "The name and business ID show in the heading of the income statement, journal, general ledger and account list, and are saved in the file.",
   ],
   "settings.businessName": ["Yrityksen nimi", "Business name"],
+  "settings.businessPhone": [
+    "Puhelinnumero (ALV-tiedostoon)",
+    "Phone number (for the VAT file)",
+  ],
   "settings.businessIdInvalid": [
     "Tarkista y-tunnus, esim. 1234567-1.",
     "Check the business ID, e.g. 1234567-1.",

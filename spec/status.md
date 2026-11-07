@@ -32,7 +32,7 @@ Part of the project specification. `CLAUDE.md` is the index and holds the conven
 ## 14. Open questions and ideas not yet done
 
 - Undo for edits beyond the 10-second toast (§8.11), for example a history of an entry's earlier versions. The change log holds the old values but the app can not restore from it. Autosave (§7.5) makes a mistake reach the file within seconds, which is why it is opt-in.
-- Filing through Ilmoitin.fi, at least for the VAT return. Not before the user asks for it (§8.8).
+- Filing through Ilmoitin.fi for Form 5, and corrections (332 to 335) in the VAT file (§8.7). The VAT file itself exists; the user uploads it.
 - Form 5 fields the app does not work out: the car detail (271, 273, 274, 275, 379 to 382, 396) behind 313; 347, the deductible part of interest (346), which it fills with the full amount (§8.8); and surplus from listed co-operatives (325, 326).
 - The VAT return of a business that stops trading (§6.5).
 - Asset classes other than machinery and equipment, and templates repeating less often than monthly.

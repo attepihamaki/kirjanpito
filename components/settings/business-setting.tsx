@@ -27,10 +27,14 @@ export function BusinessSetting() {
 
   const [idDraft, setIdDraft] = React.useState(businessId ?? "")
   const [nameDraft, setNameDraft] = React.useState(businessName ?? "")
+  const businessPhone = useBookStore((s) => s.businessPhone)
+  const setBusinessPhone = useBookStore((s) => s.setBusinessPhone)
+  const [phoneDraft, setPhoneDraft] = React.useState(businessPhone ?? "")
   const [idInvalid, setIdInvalid] = React.useState(false)
 
   const nameId = React.useId()
   const idId = React.useId()
+  const phoneId = React.useId()
 
   function commitId() {
     const parsed = parseBusinessId(idDraft)
@@ -47,6 +51,13 @@ export function BusinessSetting() {
     const next = trimmed || null
     setNameDraft(trimmed)
     if (next !== businessName) setBusinessName(next)
+  }
+
+  function commitPhone() {
+    const trimmed = phoneDraft.trim()
+    const next = trimmed || null
+    setPhoneDraft(trimmed)
+    if (next !== businessPhone) setBusinessPhone(next)
   }
 
   return (
@@ -85,6 +96,20 @@ export function BusinessSetting() {
             <FieldError>
               {idInvalid ? f.t("settings.businessIdInvalid") : undefined}
             </FieldError>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor={phoneId}>
+              {f.t("settings.businessPhone")}
+            </FieldLabel>
+            <Input
+              id={phoneId}
+              type="tel"
+              autoComplete="tel"
+              className="w-56"
+              value={phoneDraft}
+              onChange={(e) => setPhoneDraft(e.target.value)}
+              onBlur={commitPhone}
+            />
           </Field>
           <SettingHint>{f.t("settings.businessHint")}</SettingHint>
         </div>

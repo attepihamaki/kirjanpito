@@ -257,6 +257,8 @@ export interface BookState {
   businessId: string | null
   /** The business's own name, or null (§8.10). Saved in settings.json. */
   businessName: string | null
+  /** The contact phone written to the VAT file as 042 (§8.7), or null. Saved in settings.json. */
+  businessPhone: string | null
   /** How often the user files a VAT return (§6.5). Saved in settings.json. */
   vatPeriod: VatPeriodKind
   /** Which kind of sole trader keeps the book (§6.3). Saved in settings.json. */
@@ -438,6 +440,7 @@ export interface BookActions {
       exportLang?: Lang
       businessId?: string | null
       businessName?: string | null
+      businessPhone?: string | null
       vatPeriod?: VatPeriodKind
       traderType?: TraderType
       bookStart?: string | null
@@ -517,6 +520,7 @@ export interface BookActions {
   /** `"2026-10"`, or null to follow the first entry. */
   setBusinessId(id: string | null): void
   setBusinessName(name: string | null): void
+  setBusinessPhone(phone: string | null): void
   setBookStart(month: string | null): void
   /** Mark a period as filed on `date`, or clear the mark with null. */
   setVatFiled(key: string, date: string | null): void
@@ -604,6 +608,7 @@ function initialState(): BookState {
     exportLang: "fi",
     businessId: null,
     businessName: null,
+    businessPhone: null,
     vatPeriod: "month",
     traderType: "professional",
     bookStart: null,
@@ -673,6 +678,7 @@ type PersistedBook = Pick<
   | "exportLang"
   | "businessId"
   | "businessName"
+  | "businessPhone"
   | "vatPeriod"
   | "traderType"
   | "bookStart"
@@ -844,6 +850,7 @@ const BOOK_DATA_KEYS: readonly (keyof BookState)[] = [
   "exportLang",
   "businessId",
   "businessName",
+  "businessPhone",
   "vatPeriod",
   "traderType",
   "bookStart",
@@ -937,6 +944,7 @@ export const useBookStore = create<BookStore>()(
            */
           businessId: null,
           businessName: null,
+          businessPhone: null,
           bookStart: null,
           vatFiled: {},
           vatFiledFigures: {},
@@ -986,6 +994,7 @@ export const useBookStore = create<BookStore>()(
           dirty: false,
           businessId: null,
           businessName: null,
+          businessPhone: null,
           bookStart: null,
           vatFiled: {},
           vatFiledFigures: {},
@@ -1041,6 +1050,7 @@ export const useBookStore = create<BookStore>()(
           exportLang: s.exportLang ?? "fi",
           businessId: s.businessId ?? null,
           businessName: s.businessName ?? null,
+          businessPhone: s.businessPhone ?? null,
           vatPeriod,
           vatIndex: clampVatIndex(get().vatIndex, get().vatPeriod, vatPeriod),
           traderType: s.traderType ?? "professional",
@@ -1217,6 +1227,7 @@ export const useBookStore = create<BookStore>()(
       setTraderType: (traderType) => set({ traderType, dirty: true }),
       setBusinessId: (businessId) => set({ businessId, dirty: true }),
       setBusinessName: (businessName) => set({ businessName, dirty: true }),
+      setBusinessPhone: (businessPhone) => set({ businessPhone, dirty: true }),
       setBookStart: (bookStart) => set({ bookStart, dirty: true }),
       setVatFiled: (key, date) => {
         const vatFiled = { ...get().vatFiled }
@@ -1451,6 +1462,7 @@ export const useBookStore = create<BookStore>()(
         exportLang: s.exportLang,
         businessId: s.businessId,
         businessName: s.businessName,
+        businessPhone: s.businessPhone,
         vatPeriod: s.vatPeriod,
         traderType: s.traderType,
         bookStart: s.bookStart,

@@ -39,6 +39,8 @@ import { useToday } from "@/hooks/use-today"
 import { useVatPeriod } from "@/hooks/use-vat-period"
 import { useVatReturnReport } from "@/hooks/use-vat-return-report"
 import { downloadReport } from "@/lib/commands/memo-commands"
+import { saveBlob } from "@/lib/browser/download"
+import { vatReturnFile } from "@/lib/domain/vat-file"
 import { indexCategories } from "@/lib/domain/types"
 import type { RuleSeverity } from "@/lib/domain/rules/engine"
 import {
@@ -62,6 +64,14 @@ const STEP_LABEL = {
   file: "vat.returnStepFile",
   pay: "vat.returnStepPay",
 } as const satisfies Record<Step, string>
+
+/** The tooltip of the file button when it is disabled. */
+const FILE_BLOCK_MESSAGE = {
+  "not-closed": "vat.fileBlockNotClosed",
+  "no-business-id": "vat.fileBlockNoBusinessId",
+  "eu-unsplit": "vat.fileBlockEuUnsplit",
+  "sum-mismatch": "vat.fileBlockSumMismatch",
+} as const
 
 /**
  * Reporting a VAT period (§8.7): the checks that stand between it and the
@@ -124,6 +134,21 @@ function VatReturnForm() {
     ]
   )
   const sections = React.useMemo(() => vatReturnSections(report), [report])
+  const businessId = useBookStore((s) => s.businessId)
+  const businessPhone = useBookStore((s) => s.businessPhone)
+  const file = React.useMemo(
+    () =>
+      currentStatus === "open" || currentStatus === "future"
+        ? ({ ok: false, reason: "not-closed" } as const)
+        : vatReturnFile({
+            report,
+            period: current,
+            businessId,
+            phone: businessPhone,
+            now: new Date(),
+          }),
+    [report, current, currentStatus, businessId, businessPhone]
+  )
   const canMark = canMarkFiled(items)
   const setVatFiled = useBookStore((s) => s.setVatFiled)
   const filed = filedOn(current, vatFiled)
@@ -448,15 +473,35 @@ function VatReturnForm() {
           ) : null}
         </div>
 
-        <DialogFooter>
-          <Button
-            variant="ghost"
-            className="sm:mr-auto"
-            onClick={() => void downloadReport(ctx, makeReport())}
-          >
-            <DownloadIcon data-icon="inline-start" />
-            {f.t("vat.downloadPdf")}
-          </Button>
+        <DialogFooter className="sm:flex-wrap">
+          <div className="flex flex-wrap gap-1 sm:mr-auto">
+            <Button
+              variant="ghost"
+              onClick={() => void downloadReport(ctx, makeReport())}
+            >
+              <DownloadIcon data-icon="inline-start" />
+              {f.t("vat.downloadPdf")}
+            </Button>
+            <Button
+              variant="ghost"
+              disabled={!file.ok}
+              title={
+                file.ok
+                  ? f.t("vat.fileHint")
+                  : f.t(FILE_BLOCK_MESSAGE[file.reason])
+              }
+              onClick={() => {
+                if (!file.ok) return
+                saveBlob(
+                  new Blob([file.text], { type: "text/plain;charset=utf-8" }),
+                  file.fileName
+                )
+              }}
+            >
+              <DownloadIcon data-icon="inline-start" />
+              {f.t("vat.downloadFile")}
+            </Button>
+          </div>
           {stepIndex > 0 ? (
             <Button
               variant="outline"
