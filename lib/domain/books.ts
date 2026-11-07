@@ -39,13 +39,37 @@ function add(t: Totals, r: BookRow): void {
   t.gross += r.gross
 }
 
+/** A stretch of days, both ends included, as ISO dates. */
+export interface DateRange {
+  from: string
+  to: string
+}
+
+/**
+ * What a book covers: a financial year, or any range of days. The books are
+ * kept by calendar year (§8.4); a range is for the audit package (§8.25).
+ */
+export type BookScope = number | DateRange
+
+/** The days a scope covers. */
+export function scopeRange(scope: BookScope): DateRange {
+  return typeof scope === "number"
+    ? { from: `${scope}-01-01`, to: `${scope}-12-31` }
+    : scope
+}
+
+function inScope(date: string, scope: BookScope): boolean {
+  const { from, to } = scopeRange(scope)
+  return date >= from && date <= to
+}
+
 function rowsOf(
   entries: readonly Entry[],
   cats: CategoryMap,
-  year: number
+  scope: BookScope
 ): BookRow[] {
   return entries
-    .filter((e) => yearOf(e.date) === year)
+    .filter((e) => inScope(e.date, scope))
     .sort(
       (a, b) =>
         a.date.localeCompare(b.date) || (a.voucher ?? 0) - (b.voucher ?? 0)
@@ -58,6 +82,7 @@ function rowsOf(
 }
 
 export interface JournalMonth {
+  year: number
   /** 1 to 12. */
   month: number
   rows: BookRow[]
@@ -70,18 +95,22 @@ export interface Journal {
   expense: Totals
 }
 
-/** The year's entries in date order, then voucher order, by month. */
+/** The scope's entries in date order, then voucher order, by month. */
 export function journal(
   entries: readonly Entry[],
   cats: CategoryMap,
-  year: number
+  scope: BookScope
 ): Journal {
   const months: JournalMonth[] = []
   const income = zero()
   const expense = zero()
-  for (const row of rowsOf(entries, cats, year)) {
+  for (const row of rowsOf(entries, cats, scope)) {
     const month = monthOf(row.entry.date)
-    if (months.at(-1)?.month !== month) months.push({ month, rows: [] })
+    const year = yearOf(row.entry.date)
+    const last = months.at(-1)
+    if (last?.month !== month || last.year !== year) {
+      months.push({ year, month, rows: [] })
+    }
     months[months.length - 1].rows.push(row)
     if (!offStatement(row.line ?? undefined)) {
       add(row.entry.type === "income" ? income : expense, row)
@@ -104,10 +133,10 @@ export interface LedgerAccount {
 export function generalLedger(
   entries: readonly Entry[],
   cats: CategoryMap,
-  year: number
+  scope: BookScope
 ): LedgerAccount[] {
   const byLine = new Map<string, LedgerAccount>()
-  for (const row of rowsOf(entries, cats, year)) {
+  for (const row of rowsOf(entries, cats, scope)) {
     if (!row.line) continue
     let account = byLine.get(row.line.key)
     if (!account) {
@@ -215,16 +244,16 @@ export interface AccountListRow {
 }
 
 /**
- * The account list of KPL 2:2 for one financial year: every account with an
- * enabled category or an entry that year, in chart-of-accounts order.
+ * The account list of KPL 2:2 for one financial year or range: every account
+ * with an enabled category or an entry in it, in chart-of-accounts order.
  */
 export function accountList(
   entries: readonly Entry[],
   cats: readonly Category[],
-  year: number
+  scope: BookScope
 ): AccountListRow[] {
   const used = new Set(
-    entries.filter((e) => yearOf(e.date) === year).map((e) => e.catId)
+    entries.filter((e) => inScope(e.date, scope)).map((e) => e.catId)
   )
   return ALL_LINES.flatMap((line) => {
     const categories = cats.filter(

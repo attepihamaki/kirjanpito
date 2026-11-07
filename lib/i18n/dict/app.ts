@@ -3024,6 +3024,52 @@ export const APP_DICT = {
     "Säilytyspaketti, vuosi {y}\n\nTämä paketti on kirjanpitolain 2 luvun 10 §:n säilytystä varten. Päiväkirja ja pääkirja säilytetään vähintään {b} asti ja tositteet vähintään {v} asti.\n\nSisältö:\n- {r}/: päiväkirja, pääkirja, tililuettelo, tuloslaskelma, lomake 5 ja vuoden arvonlisäveroilmoitukset tositteineen PDF-tiedostoina.\n- {z}: vuoden kirjanpito ZIP-tiedostona. Se sisältää tositteet CSV:nä, asetukset ja liitteet kansiossa {d}/. Sen voi avata Kirjanpito-sovelluksessa vain luettavaksi.\n- {h}: pakettitiedostojen SHA-256-tarkisteet.\n- {s}: liitteiden SHA-256-tarkisteet polkuineen, jotka niillä on {z}-tiedoston avaamisen jälkeen.\n\nTarkistus: pura paketti ja aja sen kansiossa komento sha256sum -c {h}. Liitteet tarkistetaan samoin, kun {z} on purettu omaan kansioonsa ja komento ajetaan siellä: sha256sum -c ../{s}.\n\nTarkisteet paljastavat vahingossa muuttuneen tai vioittuneen tiedoston. Ne eivät todista mitään sille, joka muuttaa tiedoston tarkoituksella ja laskee tarkisteen uudelleen.\n{e}",
     "Retention package, year {y}\n\nThis package is for the retention of Accounting Act chapter 2 section 10. Keep the journal and the general ledger until at least {b}, and the vouchers until at least {v}.\n\nContents:\n- {r}/: the journal, general ledger, account list, income statement, Form 5 and the year's VAT returns with their vouchers as PDF files.\n- {z}: the year's bookkeeping as a ZIP. It holds the vouchers as CSV, the settings and the attachments in the folder {d}/. The Kirjanpito app opens it read-only.\n- {h}: SHA-256 hashes of the files in the package.\n- {s}: SHA-256 hashes of the attachments, with the paths they have once {z} is unpacked.\n\nTo check: unpack the package and run sha256sum -c {h} in its folder. Check the attachments the same way: unpack {z} into a folder of its own and run sha256sum -c ../{s} there.\n\nThe hashes reveal a file that changed by accident or is damaged. They prove nothing against someone who changes a file on purpose and recomputes the hash.\n{e}",
   ],
+  "ledger.noEntriesRange": [
+    "Ei tositteita välillä {r}.",
+    "No vouchers in {r}.",
+  ],
+  "ledger.auditReadme": [
+    "Tarkastuspaketti, {a}\n\nTämä paketti on kirjanpidon tarkastusta varten, esimerkiksi Verohallinnon tai tilintarkastajan pyynnöstä. Se kattaa tositteet, jotka on päivätty välillä {a}.\n\nSisältö:\n- {r}/: päiväkirja, pääkirja, tililuettelo ja ne arvonlisäveroilmoitukset tositteineen, joiden kausi on kokonaan tällä välillä, PDF-tiedostoina.\n- {z}: välin kirjanpito ZIP-tiedostona. Se sisältää tositteet CSV:nä ja liitteet kansiossa {d}/.\n- {h}: pakettitiedostojen SHA-256-tarkisteet.\n- {s}: liitteiden SHA-256-tarkisteet polkuineen, jotka niillä on {z}-tiedoston avaamisen jälkeen.\n\nTarkistus: pura paketti ja aja sen kansiossa komento sha256sum -c {h}. Liitteet tarkistetaan samoin, kun {z} on purettu omaan kansioonsa ja komento ajetaan siellä: sha256sum -c ../{s}.\n\nPaketissa ei ole tuloslaskelmaa eikä lomaketta 5, koska ne lasketaan koko vuodesta. Ne ovat vuoden säilytyspaketissa.\n\nTarkisteet paljastavat vahingossa muuttuneen tai vioittuneen tiedoston. Ne eivät todista mitään sille, joka muuttaa tiedoston tarkoituksella ja laskee tarkisteen uudelleen.\n{e}",
+    "Audit package, {a}\n\nThis package is for an audit of the books, for example at the request of the Tax Administration or an auditor. It covers the vouchers dated in {a}.\n\nContents:\n- {r}/: the journal, general ledger, account list and the VAT returns, with their vouchers, whose period lies wholly in this range, as PDF files.\n- {z}: the bookkeeping for the range as a ZIP. It holds the vouchers as CSV and the attachments in the folder {d}/.\n- {h}: SHA-256 hashes of the files in the package.\n- {s}: SHA-256 hashes of the attachments, with the paths they have once {z} is unpacked.\n\nTo check: unpack the package and run sha256sum -c {h} in its folder. Check the attachments the same way: unpack {z} into a folder of its own and run sha256sum -c ../{s} there.\n\nThe package has no income statement or Form 5, because they are worked out for a whole year. They are in the year's retention package.\n\nThe hashes reveal a file that changed by accident or is damaged. They prove nothing against someone who changes a file on purpose and recomputes the hash.\n{e}",
+  ],
+  "file.audit": ["Tarkastuspaketti", "Audit package"],
+  "io.auditTitle": ["Tarkastuspaketti", "Audit package"],
+  "io.auditIntro": [
+    "Tositteet, päiväkirja, pääkirja, tililuettelo ja liitteet valitulta väliltä yhtenä ZIP-tiedostona. Tositteet valitaan päiväyksen mukaan.",
+    "The vouchers, journal, general ledger, account list and attachments for a range of days in one ZIP. Vouchers are chosen by their date.",
+  ],
+  "io.auditFrom": ["Alkaa", "From"],
+  "io.auditTo": ["Päättyy", "To"],
+  "io.auditQuick": ["Pikavalinta", "Quick pick"],
+  "io.auditThisYear": ["Tämä vuosi", "This year"],
+  "io.auditLastYear": ["Viime vuosi", "Last year"],
+  "io.auditLastQuarter": ["Edellinen neljännes", "Last quarter"],
+  "io.auditCount": ["Välillä on {n} tositetta.", "{n} vouchers in this range."],
+  "io.auditNone": [
+    "Välillä ei ole tositteita.",
+    "There are no vouchers in this range.",
+  ],
+  "io.auditInvalid": [
+    "Alkupäivä on loppupäivän jälkeen.",
+    "The start is after the end.",
+  ],
+  "io.auditNote": [
+    "Mukana ovat ALV-ilmoitukset, joiden kausi on kokonaan välillä. Tuloslaskelma ja lomake 5 kuuluvat vuoden säilytyspakettiin, koska ne lasketaan koko vuodesta.",
+    "VAT returns are included when their period lies wholly in the range. The income statement and Form 5 belong to the year's retention package, because they are worked out for a whole year.",
+  ],
+  "io.auditMake": ["Lataa paketti", "Download package"],
+  "io.auditDone": [
+    "Tarkastuspaketti ladattu: {f}.",
+    "Audit package downloaded: {f}.",
+  ],
+  "io.auditFailed": [
+    "Tarkastuspaketin teko epäonnistui. Kirjanpito ei muuttunut.",
+    "Making the audit package failed. Your book is unchanged.",
+  ],
+  "confirm.auditBlockedTitle": [
+    "Tarkastuspakettia ei voi tehdä",
+    "Can’t make the audit package",
+  ],
   "confirm.archivePackConfirm": [
     "Arkistoi ja tee säilytyspaketti",
     "Archive and make a retention package",

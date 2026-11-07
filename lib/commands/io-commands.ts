@@ -1,4 +1,6 @@
 import { toast } from "@/components/ui/toast"
+import type { DateRange } from "@/lib/domain/books"
+import { periodFromKey } from "@/lib/domain/vat-deadline"
 import { NO_PAY_MONTHS } from "@/lib/domain/tax-calendar"
 
 import { releaseAllObjectUrls } from "@/lib/browser/object-urls"
@@ -1148,6 +1150,41 @@ export function archiveSettings(
     ),
     changeLog: state.changeLog.filter((r) =>
       [r.date, r.period?.replace(/^form5-/, "")].some((d) => d?.startsWith(key))
+    ),
+  }
+}
+
+/**
+ * The `settings.json` of an audit package's book ZIP (§8.25): the VAT marks of
+ * the periods that lie wholly in the range and the change log records dated in
+ * it. Unlike an archive's it is an ordinary book, not a read-only year.
+ */
+export function auditSettings(
+  state: ReturnType<typeof useBookStore.getState>,
+  range: DateRange
+): Partial<BookSettings> {
+  const inside = (key: string) => {
+    const p = periodFromKey(key)
+    return p !== null && p.from >= range.from && p.to <= range.to
+  }
+  const onlyInside = <T>(marks: Record<string, T>) =>
+    Object.fromEntries(Object.entries(marks).filter(([key]) => inside(key)))
+  return {
+    archives: {},
+    archiveOf: null,
+    autosave: false,
+    vatFiled: onlyInside(state.vatFiled),
+    vatFiledFigures: onlyInside(state.vatFiledFigures),
+    taxPayment: state.taxPayment,
+    yearsArchived: {},
+    form5Filed: {},
+    recurring: [],
+    categoryRules: [],
+    bankBalance: null,
+    payMonths: NO_PAY_MONTHS,
+    yearEnd: {},
+    changeLog: state.changeLog.filter(
+      (r) => !!r.date && r.date >= range.from && r.date <= range.to
     ),
   }
 }

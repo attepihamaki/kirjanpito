@@ -1,3 +1,4 @@
+import type { DateRange } from "@/lib/domain/books"
 import { sha256Bytes } from "@/lib/domain/integrity"
 import { receiptFolder, receiptStem } from "@/lib/domain/receipt-path"
 import { retentionDates } from "@/lib/domain/retention"
@@ -64,43 +65,62 @@ async function hashFiles(
   return hashList(items)
 }
 
-export interface PackageInput {
-  f: ReportText
-  year: number
+/** What every package holds besides its README: the reports, the book, the hashes. */
+interface PackageParts {
   /** The book's export language: the folder names follow it (§7.1). */
   exportLang: Lang
-  /** The reports as PDFs, in the order of `yearReports`. */
+  /** The reports as PDFs, in the order they were made. */
   reports: readonly { title: string; bytes: Uint8Array }[]
-  /** The year's bookkeeping ZIP, as it was written. */
+  /** The bookkeeping ZIP, as it was written. */
   book: { name: string; bytes: Uint8Array }
   /** SHA-256 of every receipt in the book ZIP, by its path in that ZIP. */
   receiptHashes: readonly { path: string; hash: string }[]
+}
+
+export interface PackageInput extends PackageParts {
+  f: ReportText
+  year: number
   /** Whether the book ZIP is encrypted: the reports and lists are not. */
   encrypted: boolean
 }
 
 /**
- * Every file of the package. `hashes.txt` covers all of them but itself, and
+ * Every file of a package. `hashes.txt` covers all of them but itself, and
  * `receipt-hashes.txt` lists the receipts inside the book ZIP, by the paths
  * they have once it is unpacked, so both can be checked with `sha256sum -c`.
+ * `readme` gets the report folder's name and returns the README's text.
  */
+async function assemble(
+  parts: PackageParts,
+  readme: (folder: string) => string
+): Promise<PackageFile[]> {
+  const folder = REPORT_FOLDER[parts.exportLang]
+  const files: PackageFile[] = parts.reports.map((r, i) => ({
+    path: `${folder}/${reportFileName(i, r.title)}`,
+    bytes: r.bytes,
+  }))
+  files.push({ path: parts.book.name, bytes: parts.book.bytes, store: true })
+
+  const encoder = new TextEncoder()
+  files.push({
+    path: RECEIPT_HASH_FILE,
+    bytes: encoder.encode(hashList(parts.receiptHashes)),
+  })
+  files.push({ path: README_FILE, bytes: encoder.encode(readme(folder)) })
+  files.push({
+    path: HASH_FILE,
+    bytes: encoder.encode(await hashFiles(files)),
+  })
+  return files
+}
+
+/** The retention package of a year (§8.21). */
 export async function buildPackageFiles(
   input: PackageInput
 ): Promise<PackageFile[]> {
   const { f, year } = input
-  const folder = REPORT_FOLDER[input.exportLang]
-  const files: PackageFile[] = input.reports.map((r, i) => ({
-    path: `${folder}/${reportFileName(i, r.title)}`,
-    bytes: r.bytes,
-  }))
-  files.push({ path: input.book.name, bytes: input.book.bytes, store: true })
-
-  const encoder = new TextEncoder()
-  const receiptHashes = encoder.encode(hashList(input.receiptHashes))
-  files.push({ path: RECEIPT_HASH_FILE, bytes: receiptHashes })
-
   const retention = retentionDates(year)
-  const readme = encoder.encode(
+  return assemble(input, (folder) =>
     f.t("ledger.packReadme", {
       y: year,
       b: f.date(retention.books),
@@ -113,11 +133,38 @@ export async function buildPackageFiles(
       e: input.encrypted ? f.t("ledger.packReadmeEncrypted") : "",
     })
   )
-  files.push({ path: README_FILE, bytes: readme })
+}
 
-  files.push({
-    path: HASH_FILE,
-    bytes: encoder.encode(await hashFiles(files)),
-  })
-  return files
+/** The audit package's own name: "kirjanpito-2026-01-01_2026-06-30-tarkastuspaketti.zip". */
+export function auditPackageName(
+  base: string,
+  range: DateRange,
+  lang: Lang
+): string {
+  const suffix = lang === "fi" ? "tarkastuspaketti" : "audit-package"
+  return `${receiptStem(`${base}-${range.from}_${range.to}-${suffix}`)}.zip`
+}
+
+export interface AuditPackageInput extends PackageParts {
+  f: ReportText
+  range: DateRange
+  encrypted: boolean
+}
+
+/** The audit package of a range of days (§8.25). */
+export async function buildAuditPackageFiles(
+  input: AuditPackageInput
+): Promise<PackageFile[]> {
+  const { f, range } = input
+  return assemble(input, (folder) =>
+    f.t("ledger.auditReadme", {
+      a: f.t("overview.range", { a: f.date(range.from), b: f.date(range.to) }),
+      r: folder,
+      z: input.book.name,
+      h: HASH_FILE,
+      s: RECEIPT_HASH_FILE,
+      d: receiptFolder(input.exportLang),
+      e: input.encrypted ? f.t("ledger.packReadmeEncrypted") : "",
+    })
+  )
 }

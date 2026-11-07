@@ -12,6 +12,7 @@ import type { Entry } from "@/lib/domain/types"
 import {
   vatReturnReports,
   yearReports,
+  type ReportDoc,
   type VatReturnInput,
 } from "@/lib/domain/year-reports"
 import { archiveContents } from "@/lib/domain/year-archive"
@@ -62,6 +63,43 @@ function reportInput(state: BookState, year: number): VatReturnInput {
   }
 }
 
+/** The reports as PDFs. pdf-lib stays out of every bundle until a package is made. */
+export async function renderReports(
+  docs: readonly ReportDoc[]
+): Promise<{ title: string; bytes: Uint8Array }[]> {
+  const { renderReportPdf } = await import("@/lib/browser/report-pdf")
+  const reports = []
+  for (const doc of docs) {
+    reports.push({ title: doc.title, bytes: await renderReportPdf(doc) })
+  }
+  return reports
+}
+
+/**
+ * Reads every receipt back out of a finished book ZIP and hashes it, so the
+ * list describes the file as it is rather than what the book meant to put in
+ * it. `missingReceipts` counts those the ZIP lists but does not hold.
+ */
+export async function hashReceipts(
+  state: BookState,
+  bookBytes: Uint8Array
+): Promise<{
+  receiptHashes: { path: string; hash: string }[]
+  missingReceipts: number
+}> {
+  const password = state.encrypted ? (heldPassword() ?? undefined) : undefined
+  const unpacked = await unpackZip(bookBytes, undefined, password)
+  if (!unpacked) throw new Error("The ZIP does not read back")
+  const receiptHashes: { path: string; hash: string }[] = []
+  let missingReceipts = 0
+  for (const path of unpacked.otherFiles) {
+    const bytes = await unpacked.readReceipt(path)
+    if (bytes) receiptHashes.push({ path, hash: await sha256Bytes(bytes) })
+    else missingReceipts += 1
+  }
+  return { receiptHashes, missingReceipts }
+}
+
 /**
  * Build the package around `book`, the year's bookkeeping ZIP as written. The
  * reports are made in the book's export language (§7.1) from the whole book,
@@ -80,23 +118,11 @@ export async function makeRetentionPackage(opts: {
   const input = reportInput(state, year)
   const docs = [...yearReports(f, input), ...vatReturnReports(f, input)]
 
-  /* pdf-lib stays out of every bundle until a package is made. */
-  const { renderReportPdf } = await import("@/lib/browser/report-pdf")
-  const reports = []
-  for (const doc of docs) {
-    reports.push({ title: doc.title, bytes: await renderReportPdf(doc) })
-  }
-
-  const password = state.encrypted ? (heldPassword() ?? undefined) : undefined
-  const unpacked = await unpackZip(book.bytes, undefined, password)
-  if (!unpacked) throw new Error("The year's ZIP does not read back")
-  const receiptHashes: { path: string; hash: string }[] = []
-  let missingReceipts = 0
-  for (const path of unpacked.otherFiles) {
-    const bytes = await unpacked.readReceipt(path)
-    if (bytes) receiptHashes.push({ path, hash: await sha256Bytes(bytes) })
-    else missingReceipts += 1
-  }
+  const reports = await renderReports(docs)
+  const { receiptHashes, missingReceipts } = await hashReceipts(
+    state,
+    book.bytes
+  )
 
   const files = await buildPackageFiles({
     f,

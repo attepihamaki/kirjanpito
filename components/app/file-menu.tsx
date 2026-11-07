@@ -5,6 +5,7 @@ import {
   BellIcon,
   BookBookmarkIcon,
   DownloadIcon,
+  FileArchiveIcon,
   ListChecksIcon,
   SaveIcon,
   UploadIcon,
@@ -197,6 +198,15 @@ export function FileMenu({
           >
             <ListChecksIcon data-icon="inline-start" />
             {f.t("file.check")}
+          </Button>
+
+          <Button
+            variant="ghost"
+            className="justify-start"
+            onClick={act(() => openDialog({ kind: "audit-package" }))}
+          >
+            <FileArchiveIcon data-icon="inline-start" />
+            {f.t("file.audit")}
           </Button>
 
           <Button

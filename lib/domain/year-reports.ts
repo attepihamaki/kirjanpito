@@ -5,7 +5,10 @@ import {
   generalLedger,
   journal,
   ledgerReconciliation,
+  scopeRange,
   type BookRow,
+  type BookScope,
+  type DateRange,
   type Totals,
 } from "@/lib/domain/books"
 import { form5Sections } from "@/lib/domain/form5"
@@ -127,6 +130,20 @@ export interface YearReportInput {
   exportLang: Lang
 }
 
+/**
+ * What the three books read, which is less than a year's reports do: the
+ * audit package (§8.25) makes them for any range of days.
+ */
+export type BookReportInput = Pick<
+  YearReportInput,
+  | "entries"
+  | "cats"
+  | "traderType"
+  | "businessName"
+  | "businessId"
+  | "exportLang"
+>
+
 /** The part of the formatters the reports use, so a test can pass a small one. */
 export type ReportText = Pick<
   Formatters,
@@ -146,24 +163,31 @@ function signed(f: ReportText, cents: Cents, negative: boolean): string {
   return f.money(negative ? -cents : cents)
 }
 
-function header(f: ReportText, input: YearReportInput): string[] {
+/** A year as "2026", a range as its two dates: what the titles put in `{y}`. */
+function scopeLabel(f: ReportText, scope: BookScope): string {
+  if (typeof scope === "number") return String(scope)
+  return f.t("overview.range", { a: f.date(scope.from), b: f.date(scope.to) })
+}
+
+function header(
+  f: ReportText,
+  input: BookReportInput,
+  scope: BookScope
+): string[] {
   const lines: string[] = []
   const who = [
     input.businessName,
     input.businessId ? `${f.t("common.businessId")} ${input.businessId}` : "",
   ].filter(Boolean)
   if (who.length) lines.push(who.join(" · "))
-  lines.push(
-    f.t("overview.range", {
-      a: f.date(`${input.year}-01-01`),
-      b: f.date(`${input.year}-12-31`),
-    })
-  )
+  const { from, to } = scopeRange(scope)
+  lines.push(f.t("overview.range", { a: f.date(from), b: f.date(to) }))
   return lines
 }
 
-function retentionNote(f: ReportText, year: number): string {
-  const r = retentionDates(year)
+/** A range is kept as long as its last year, the later of the dates. */
+function retentionNote(f: ReportText, scope: BookScope): string {
+  const r = retentionDates(typeof scope === "number" ? scope : yearOf(scope.to))
   return f.t("ledger.retention", { b: f.date(r.books), v: f.date(r.vouchers) })
 }
 
@@ -229,13 +253,21 @@ function totalCells(f: ReportText, t: Totals, negative: boolean): string[] {
   ]
 }
 
-function journalReport(f: ReportText, input: YearReportInput): ReportDoc {
+function journalReport(
+  f: ReportText,
+  input: BookReportInput,
+  scope: BookScope
+): ReportDoc {
   const cats = indexCategories(input.cats)
-  const book = journal(input.entries, cats, input.year)
+  const book = journal(input.entries, cats, scope)
   const columns = bookColumns(f, true)
   const rows: ReportRow[] = []
-  for (const { month, rows: monthRows } of book.months) {
-    rows.push({ kind: "heading", text: f.month(month - 1) })
+  const byRange = typeof scope !== "number"
+  for (const { year, month, rows: monthRows } of book.months) {
+    rows.push({
+      kind: "heading",
+      text: byRange ? `${f.month(month - 1)} ${year}` : f.month(month - 1),
+    })
     for (const row of monthRows) {
       rows.push({
         kind: "data",
@@ -266,23 +298,28 @@ function journalReport(f: ReportText, input: YearReportInput): ReportDoc {
   )
   return {
     id: "journal",
-    title: f.t("ledger.journalTitle", { y: input.year }),
-    header: [...header(f, input), f.t("ledger.journalSub")],
+    title: f.t("ledger.journalTitle", { y: scopeLabel(f, scope) }),
+    header: [...header(f, input, scope), f.t("ledger.journalSub")],
     blocks: book.months.length
       ? [{ kind: "table", columns, rows }]
-      : [
-          {
-            kind: "text",
-            text: f.t("ledger.noEntriesYear", { y: input.year }),
-          },
-        ],
-    footer: retentionNote(f, input.year),
+      : [{ kind: "text", text: noEntries(f, scope) }],
+    footer: retentionNote(f, scope),
   }
 }
 
-function ledgerReport(f: ReportText, input: YearReportInput): ReportDoc {
+function noEntries(f: ReportText, scope: BookScope): string {
+  return typeof scope === "number"
+    ? f.t("ledger.noEntriesYear", { y: scope })
+    : f.t("ledger.noEntriesRange", { r: scopeLabel(f, scope) })
+}
+
+function ledgerReport(
+  f: ReportText,
+  input: BookReportInput,
+  scope: BookScope
+): ReportDoc {
   const cats = indexCategories(input.cats)
-  const accounts = generalLedger(input.entries, cats, input.year)
+  const accounts = generalLedger(input.entries, cats, scope)
   const columns = bookColumns(f, false)
   const rows: ReportRow[] = []
   for (const { line, rows: lineRows, totals } of accounts) {
@@ -303,15 +340,15 @@ function ledgerReport(f: ReportText, input: YearReportInput): ReportDoc {
 
   const blocks: ReportBlock[] = accounts.length
     ? [{ kind: "table", columns, rows }]
-    : [{ kind: "text", text: f.t("ledger.noEntriesYear", { y: input.year }) }]
+    : [{ kind: "text", text: noEntries(f, scope) }]
 
-  const recon = ledgerReconciliation(
-    input.entries,
-    cats,
-    input.year,
-    input.traderType
-  )
-  if (recon.crossings.length) {
+  /* The reconciliation is to a year's statement, so a range has none. */
+  const year = typeof scope === "number" ? scope : null
+  const recon =
+    year === null
+      ? null
+      : ledgerReconciliation(input.entries, cats, year, input.traderType)
+  if (year !== null && recon && recon.crossings.length) {
     blocks.push(
       { kind: "text", text: f.t("ledger.reconTitle"), style: "heading" },
       { kind: "text", text: f.t("ledger.reconIntro"), style: "body" },
@@ -322,7 +359,7 @@ function ledgerReport(f: ReportText, input: YearReportInput): ReportDoc {
           { head: f.t("ledger.reconLedger"), align: "right", weight: 14 },
           { head: f.t("ledger.reconOut"), align: "right", weight: 14 },
           {
-            head: f.t("ledger.reconIn", { y: input.year }),
+            head: f.t("ledger.reconIn", { y: year }),
             align: "right",
             weight: 14,
           },
@@ -368,10 +405,10 @@ function ledgerReport(f: ReportText, input: YearReportInput): ReportDoc {
 
   return {
     id: "ledger",
-    title: f.t("ledger.accountsTitle", { y: input.year }),
-    header: [...header(f, input), f.t("ledger.accountsSub")],
+    title: f.t("ledger.accountsTitle", { y: scopeLabel(f, scope) }),
+    header: [...header(f, input, scope), f.t("ledger.accountsSub")],
     blocks,
-    footer: retentionNote(f, input.year),
+    footer: retentionNote(f, scope),
   }
 }
 
@@ -387,8 +424,12 @@ const BOOK_LIST = [
   ["ledger.bookReports", "ledger.bookReportsKept"],
 ] as const
 
-function accountListReport(f: ReportText, input: YearReportInput): ReportDoc {
-  const list = accountList(input.entries, input.cats, input.year)
+function accountListReport(
+  f: ReportText,
+  input: BookReportInput,
+  scope: BookScope
+): ReportDoc {
+  const list = accountList(input.entries, input.cats, scope)
   const rows: ReportRow[] = list.map(({ line, categories }) => {
     const name = lineName(line, f.lang)
     const own = categories.map((c) => f.catName(c)).filter((c) => c !== name)
@@ -422,10 +463,10 @@ function accountListReport(f: ReportText, input: YearReportInput): ReportDoc {
 
   return {
     id: "accounts",
-    title: f.t("ledger.chartTitle", { y: input.year }),
-    header: [...header(f, input), f.t("ledger.chartSub")],
+    title: f.t("ledger.chartTitle", { y: scopeLabel(f, scope) }),
+    header: [...header(f, input, scope), f.t("ledger.chartSub")],
     blocks,
-    footer: retentionNote(f, input.year),
+    footer: retentionNote(f, scope),
   }
 }
 
@@ -596,7 +637,7 @@ function statementReport(f: ReportText, input: YearReportInput): ReportDoc {
   return {
     id: "statement",
     title: `${f.t("nav.statement")} ${input.year}`,
-    header: header(f, input),
+    header: header(f, input, input.year),
     blocks,
     footer: f.t("landing.footer"),
   }
@@ -665,7 +706,7 @@ function form5Report(f: ReportText, input: YearReportInput): ReportDoc {
   return {
     id: "form5",
     title: f.t("ledger.packForm5Title", { y: input.year }),
-    header: [...header(f, input), f.t("ledger.packForm5Sub")],
+    header: [...header(f, input, input.year), f.t("ledger.packForm5Sub")],
     blocks: formTable(f, sections),
     footer: f.t("landing.footer"),
   }
@@ -814,15 +855,11 @@ export function vatReturnReport(
   }
 }
 
-/**
- * The year's VAT returns, one document per filing period (§6.5) in the order of
- * the year. A period is left out when it ended before the book began, and when
- * it has neither a voucher on the return nor a filed mark, so a quiet month
- * does not add a page of zeros.
- */
-export function vatReturnReports(
+/** Keeps the periods with something to report and makes a document of each. */
+function reportsForPeriods(
   f: ReportText,
-  input: VatReturnInput
+  input: VatReturnBook & Pick<VatReturnInput, "bookStart">,
+  periods: readonly VatPeriod[]
 ): ReportDoc[] {
   const cats = indexCategories(input.cats)
   const start = bookStartDate(
@@ -833,7 +870,7 @@ export function vatReturnReports(
     )
   )
   if (!start) return []
-  return vatPeriods(input.vatPeriod, input.year)
+  return periods
     .filter((p) => p.to >= start)
     .filter(
       (p) =>
@@ -845,15 +882,62 @@ export function vatReturnReports(
     .map((p) => vatReturnReport(f, input, p))
 }
 
+/**
+ * The year's VAT returns, one document per filing period (§6.5) in the order of
+ * the year. A period is left out when it ended before the book began, and when
+ * it has neither a voucher on the return nor a filed mark, so a quiet month
+ * does not add a page of zeros.
+ */
+export function vatReturnReports(
+  f: ReportText,
+  input: VatReturnInput
+): ReportDoc[] {
+  return reportsForPeriods(f, input, vatPeriods(input.vatPeriod, input.year))
+}
+
+/** What the audit package's reports read (§8.25). */
+export interface AuditReportInput
+  extends
+    BookReportInput,
+    VatReturnBook,
+    Pick<VatReturnInput, "vatPeriod" | "bookStart"> {}
+
+/**
+ * The reports of the audit package for any range of days (§8.25): the journal,
+ * the general ledger and the account list over the range, then the VAT return
+ * of every filing period that lies wholly inside it. A period cut by the range
+ * is left out, since a return for part of a period is not one that was filed.
+ */
+export function auditReports(
+  f: ReportText,
+  input: AuditReportInput,
+  range: DateRange
+): ReportDoc[] {
+  const periods: VatPeriod[] = []
+  for (let y = yearOf(range.from); y <= yearOf(range.to); y++) {
+    periods.push(...vatPeriods(input.vatPeriod, y))
+  }
+  return [
+    journalReport(f, input, range),
+    ledgerReport(f, input, range),
+    accountListReport(f, input, range),
+    ...reportsForPeriods(
+      f,
+      input,
+      periods.filter((p) => p.from >= range.from && p.to <= range.to)
+    ),
+  ]
+}
+
 /** The five reports, in the order the package lists them. */
 export function yearReports(
   f: ReportText,
   input: YearReportInput
 ): ReportDoc[] {
   return [
-    journalReport(f, input),
-    ledgerReport(f, input),
-    accountListReport(f, input),
+    journalReport(f, input, input.year),
+    ledgerReport(f, input, input.year),
+    accountListReport(f, input, input.year),
     statementReport(f, input),
     form5Report(f, input),
   ]

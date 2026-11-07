@@ -210,6 +210,8 @@ export type DialogState =
   | { kind: "vat-return" }
   /** Every rule over the whole book (§8.23). */
   | { kind: "check-book" }
+  /** The audit package of a range of days (§8.25). */
+  | { kind: "audit-package" }
   /** The year-end figures typed in on Varat ja velat (§8.8). */
   | { kind: "year-end-figures" }
   /** Carve a part off an entry, as another category or VAT rate (§8.4). */
@@ -907,6 +909,7 @@ function readOnlyDialog(dialog: DialogState): boolean {
     case "vat-return":
     case "year-end":
     case "check-book":
+    case "audit-package":
       return true
     case "entry":
       return dialog.mode === "edit"
