@@ -72,6 +72,7 @@ import {
   categoryName,
   isEuSaleKind,
 } from "@/lib/domain/accounts"
+import { isPeriod } from "@/lib/domain/accrual"
 import { calcEntry, euPurchaseVat, isShare } from "@/lib/domain/calc"
 import {
   describeInvoice,
@@ -147,10 +148,13 @@ interface FormState {
   reverses: string
   /** The id of the purchase this sale of machinery disposes of, "" for none (§8.8). */
   sells: string
+  /** The first and last day the entry covers, "" for none (§6.3). */
+  periodFrom: string
+  periodTo: string
 }
 
 /** The fields §8.5 validates, named as they are in `FormState`. */
-type ErrorField = "date" | "amount" | "catId" | "share"
+type ErrorField = "date" | "amount" | "catId" | "share" | "period"
 
 type FieldErrorState = { field: ErrorField; message: string } | null
 
@@ -217,6 +221,8 @@ function initialForm({
       share: "",
       reverses: "",
       sells: "",
+      periodFrom: "",
+      periodTo: "",
     }
   }
   const today = todayIso()
@@ -247,6 +253,9 @@ function initialForm({
     // A copy is a new voucher and reverses nothing until it is told to.
     reverses: mode === "edit" ? (editing.reverses ?? "") : "",
     sells: mode === "edit" ? (editing.sells ?? "") : "",
+    // A copy is dated afresh, so the days the original covered no longer fit.
+    periodFrom: mode === "edit" ? (editing.periodFrom ?? "") : "",
+    periodTo: mode === "edit" ? (editing.periodTo ?? "") : "",
   }
 }
 
@@ -643,6 +652,14 @@ function EntryDialogForm({
   const shareInvalid =
     shareApplies && shareNumber !== null && !isShare(shareNumber)
   /*
+   * A period is for a liikkeenharjoittaja's accrual (§6.3). Both dates or
+   * neither, the end not before the start.
+   */
+  const periodApplies = unpayable && traderType === "business"
+  const periodFilled = !!(form.periodFrom || form.periodTo)
+  const periodInvalid =
+    periodApplies && periodFilled && !isPeriod(form.periodFrom, form.periodTo)
+  /*
    * A payment or refund names the return it settles (§6.6). Unchosen, it goes
    * by the date, and the periods offered are those of this year and the last.
    */
@@ -814,6 +831,11 @@ function EntryDialogForm({
       setError({ field: "share", message: f.t("entry.shareBad") })
       return null
     }
+    if (periodInvalid) {
+      setTab("payment")
+      setError({ field: "period", message: f.t("entry.periodBad") })
+      return null
+    }
     setError(null)
     return {
       id: editing && mode === "edit" ? editing.id : uid(),
@@ -832,6 +854,9 @@ function EntryDialogForm({
         : {}),
       ...(unpayable && form.cash && form.paid !== "open"
         ? { cash: true as const }
+        : {}),
+      ...(periodApplies && periodFilled
+        ? { periodFrom: form.periodFrom, periodTo: form.periodTo }
         : {}),
       ...(euSale && form.buyerVatId.trim()
         ? { buyerVatId: normalizeVatId(form.buyerVatId) }
@@ -1459,6 +1484,41 @@ function EntryDialogForm({
                           {f.t("entry.splitPaidHint")}
                         </FieldDescription>
                       ) : null}
+                    </Field>
+                  ) : null}
+
+                  {periodApplies ? (
+                    <Field data-invalid={invalid("period")}>
+                      <div className="flex items-center gap-1">
+                        <FieldLabel>{f.t("entry.period")}</FieldLabel>
+                        <InfoPopover label={f.t("entry.periodInfo")}>
+                          {f.t("entry.periodInfoText")}
+                        </InfoPopover>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Input
+                          type="date"
+                          aria-label={f.t("entry.periodFrom")}
+                          aria-invalid={invalid("period")}
+                          value={form.periodFrom}
+                          onChange={(e) =>
+                            update({ periodFrom: e.target.value })
+                          }
+                          className="w-44"
+                        />
+                        <span className="text-sm text-muted-foreground">–</span>
+                        <Input
+                          type="date"
+                          aria-label={f.t("entry.periodTo")}
+                          aria-invalid={invalid("period")}
+                          value={form.periodTo}
+                          onChange={(e) => update({ periodTo: e.target.value })}
+                          className="w-44"
+                        />
+                      </div>
+                      <FieldDescription>
+                        {f.t("entry.periodHint")}
+                      </FieldDescription>
                     </Field>
                   ) : null}
 

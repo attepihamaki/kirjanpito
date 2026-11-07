@@ -230,6 +230,10 @@ export function carveSplit(
   if (canBeUnpaid(line)) {
     if (entry.paidOn !== undefined) next.paidOn = entry.paidOn
     if (entry.cash) next.cash = true
+    if (entry.periodFrom && entry.periodTo) {
+      next.periodFrom = entry.periodFrom
+      next.periodTo = entry.periodTo
+    }
   }
   return {
     ok: true,

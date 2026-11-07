@@ -11,6 +11,8 @@ import type { Lang } from "@/lib/domain/types"
  * business share of a cost used partly privately (§6.12). `reverses` names the
  * voucher a refund, credit note or correction reverses (§8.4). `sells` names
  * the purchase voucher a sale of machinery or equipment disposes of (§8.8).
+ * `period_from` and `period_to` are the first and last day an entry covers,
+ * for a liikkeenharjoittaja's accrual (§6.3).
  *
  * These names are the canonical ones the parser works in. What a file is
  * written with is `csvHeaderLine`, which follows the book's export language;
@@ -41,6 +43,8 @@ export const CSV_HEADER = [
   "share",
   "reverses",
   "sells",
+  "period_from",
+  "period_to",
 ] as const
 
 export type CsvColumn = (typeof CSV_HEADER)[number]
@@ -71,6 +75,8 @@ const FINNISH_LABELS: Readonly<Record<CsvColumn, string>> = {
   share: "osuus",
   reverses: "korjaa",
   sells: "myy",
+  period_from: "jakso_alkaa",
+  period_to: "jakso_päättyy",
 }
 
 /** The label a column is written under, for a header or an error message. */

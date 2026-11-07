@@ -59,6 +59,8 @@ export const LOGGED_FIELDS = [
   "share",
   "reverses",
   "sells",
+  "periodFrom",
+  "periodTo",
 ] as const
 export type LoggedField = (typeof LOGGED_FIELDS)[number]
 

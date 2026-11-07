@@ -58,6 +58,8 @@ interface Entry {
   atts?: Attachment[] // receipts, may be several
   settles?: string // VAT payment or refund only: the period key it settles (§6.6)
   paidOn?: string | null // payment date if not `date`; null while open (§6.3)
+  periodFrom?: string // first day the cost or income covers; with periodTo, spread over the years for a liikkeenharjoittaja (§6.3)
+  periodTo?: string // last day it covers
   cash?: true // paid in cash (§8.5)
   buyerVatId?: string // the buyer's VAT number on an EU sale (§8.7)
   euPurchase?: "goods" | "services" // a copy of its category's, for `calcEntry` (§6.9)

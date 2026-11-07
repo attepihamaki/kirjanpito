@@ -12,8 +12,8 @@ category names, the ZIP's suggested name, the CSV's name and the receipt folder
 (§7.2) — and nothing else.
 
 - **Header row**, always these columns in this order, in one of two spellings:
-  - fi: `tositenro;päivämäärä;selite;tyyppi;tili;luokka;summa;alv;verollisuus;liitteet;verokausi;maksettu;ostajan_alv;eu_osto;käteinen;jaettu;osuus;korjaa;myy`
-  - en: `voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase;cash;split;share;reverses;sells`
+  - fi: `tositenro;päivämäärä;selite;tyyppi;tili;luokka;summa;alv;verollisuus;liitteet;verokausi;maksettu;ostajan_alv;eu_osto;käteinen;jaettu;osuus;korjaa;myy;jakso_alkaa;jakso_päättyy`
+  - en: `voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase;cash;split;share;reverses;sells;period_from;period_to`
 - **`lib/domain/csv-header.ts` is the one place a column name is spelled.** The
   English names are the canonical ones the parser works in; `FINNISH_LABELS`
   gives the Finnish spelling of each, `csvHeaderLine(lang)` builds a header and
@@ -46,6 +46,7 @@ category names, the ZIP's suggested name, the CSV's name and the receipt folder
   - `split` is the voucher number of the first part of a receipt that was split, on every part of it (§8.4), and empty on every other row. A voucher number is unique within a year, so the import links rows by year and number. A part dated in another year than the first, a group whose first part has no number and a group of one are not written. On import a number only one row holds links nothing: the row stands alone and the toast says so. A cell that is not a whole number is ignored. `Entry.split` itself is an opaque id and renumbering does not touch it.
   - `share` is the business share of a cost used partly privately (§6.12), a whole percent from 1 to 99 written without a sign, and empty on every other row. Reading also takes a trailing `%`. It is kept only on an expense that is not an EU purchase; any other value reads as the whole voucher.
   - `reverses` names the voucher a refund, credit note or correction reverses (§8.4), written as `#number/year` (`#12/2026`), and empty on every other row. The `#` keeps Excel from reading it as a date. A voucher number is unique within a year, so the import finds the target by year and number. A target without a number is not written. On import a cell that is unreadable, names no row of the file, names the row itself or would close a loop links nothing, and the toast counts those rows. `Entry.reverses` itself is the target's id.
+  - `period_from` and `period_to` are the first and last day an entry covers (§6.3), as ISO dates, and empty on an entry with no period. The import keeps them only as a pair of real dates with the end not before the start, on a line that can be paid; anything else reads as no period.
   - `sells` names the purchase voucher a sale of machinery or equipment disposes of (§8.8), written as `#number/year` like `reverses`, and empty on every other row. The import finds the purchase by year and number; a cell that is unreadable, names no row of the file or names the row itself links nothing, and the toast counts those rows. `Entry.sells` itself is the purchase's id.
   - `eu_purchase` is `tavara`/`palvelu` or `goods`/`services` on an EU purchase (§6.9), empty on every other row. A CSV opened on its own has no `settings.json`, so this is what tells a custom EU category it is one. A row marked on any other category moves to an EU category when the book opens.
   - Rows are sorted by date, then by voucher number. Nothing about the format depends on the **UI** language, only on the book's.

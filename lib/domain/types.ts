@@ -112,6 +112,14 @@ export interface Entry {
    */
   paidOn?: string | null
   /**
+   * The first and last day the cost or income covers, as ISO dates, when that
+   * is not just `date`. A liikkeenharjoittaja's statement spreads the net
+   * amount over the calendar years the period touches (§6.3). Both or neither,
+   * and only on a line that can be paid.
+   */
+  periodFrom?: string
+  periodTo?: string
+  /**
    * Paid in cash. KPL 2:4 has a cash payment booked without delay and day by
    * day, so the app checks when it was booked, and the bank estimate leaves it
    * out (§8.5). Only on a paid entry on a line that can be paid.

@@ -16,6 +16,7 @@ import {
   type CsvColumn,
 } from "@/lib/domain/csv-header"
 import { isShare } from "@/lib/domain/calc"
+import { isPeriod } from "@/lib/domain/accrual"
 import { parseCsvDate, yearOf } from "@/lib/domain/dates"
 import { canBeEuPurchase, isEuSaleKind } from "@/lib/domain/accounts"
 import { canBeUnpaid } from "@/lib/domain/open-items"
@@ -234,6 +235,8 @@ export function serializeCsv(
         isShare(e.share) ? String(e.share) : "",
         linkTarget(e.reverses),
         linkTarget(e.sells),
+        e.periodFrom ?? "",
+        e.periodTo ?? "",
       ]
         .map(quote)
         .join(";")
@@ -583,6 +586,7 @@ export function parseCsv(
       ...buyerColumn(restoreFormula(get("buyer_vat")), cat),
       ...euPurchaseColumn(get("eu_purchase"), cat),
       ...shareColumn(get("share"), type, cat),
+      ...periodColumns(get("period_from"), get("period_to"), cat),
     })
 
     const splitRaw = get("split")
@@ -762,6 +766,23 @@ function paidColumn(
   }
   const paid = parseCsvDate(value)
   return paid && paid !== date ? { paidOn: paid } : {}
+}
+
+/**
+ * The period an entry covers (§6.3). Both dates have to be real, the end not
+ * before the start, and the line one that can be paid; anything else is read as
+ * no period, since half a period would change no figure.
+ */
+function periodColumns(
+  from: string,
+  to: string,
+  cat: Category
+): { periodFrom?: string; periodTo?: string } {
+  if (!from || !to || !canBeUnpaid(LINE_BY_KEY.get(cat.line))) return {}
+  const start = parseCsvDate(from)
+  const end = parseCsvDate(to)
+  if (!start || !end || !isPeriod(start, end)) return {}
+  return { periodFrom: start, periodTo: end }
 }
 
 /**

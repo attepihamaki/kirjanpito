@@ -1,4 +1,5 @@
 import { LINE_BY_KEY, type AccountLine } from "@/lib/domain/accounts"
+import { accrueEntry } from "@/lib/domain/accrual"
 import { calcEntry } from "@/lib/domain/calc"
 import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
 
@@ -89,13 +90,18 @@ export type TraderType = "professional" | "business"
  * The entries as the income statement and Form 5 read them (§6.3). An
  * ammatinharjoittaja has each entry placed on its payment date and an open one
  * left out. A liikkeenharjoittaja is read by the entry's own date, paid or not,
- * which is the accrual adjustment.
+ * which is the accrual adjustment. An entry with a period is spread over the
+ * years the period covers (`accrueEntry`).
  */
 export function taxBasisEntries(
   entries: readonly Entry[],
   trader: TraderType = "professional"
 ): readonly Entry[] {
-  if (trader === "business") return entries
+  if (trader === "business") {
+    return entries.flatMap((e) =>
+      e.periodFrom === undefined ? [e] : accrueEntry(e)
+    )
+  }
   return entries.flatMap((e) => {
     const paid = paidDate(e)
     if (paid === null) return []

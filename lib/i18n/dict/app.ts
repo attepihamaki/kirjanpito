@@ -1192,6 +1192,24 @@ export const APP_DICT = {
     "Tositteen päivä on toimitus- tai laskupäivä. Arvonlisävero menee sen mukaan.",
     "The voucher’s date is the delivery or invoice date. VAT goes by it.",
   ],
+  "entry.period": ["Kattaa ajanjakson", "Covers the period"],
+  "entry.periodFrom": ["Jakson ensimmäinen päivä", "First day of the period"],
+  "entry.periodTo": ["Jakson viimeinen päivä", "Last day of the period"],
+  "entry.periodInfo": ["Mitä jakso tekee?", "What does the period do?"],
+  "entry.periodInfoText": [
+    "Liikkeenharjoittajan tulos jaksotetaan suoriteperusteelle. Jos kulu tai tulo kattaa useamman vuoden, esimerkiksi marraskuussa maksettu vuoden vakuutus, tulos jakaa veroton summan vuosille päivien suhteessa. Arvonlisäveroilmoitus ei muutu, se menee edelleen tositteen päivän mukaan. Vähäisen erän voi jättää jaksottamatta (EVL 19 §).",
+    "A liikkeenharjoittaja’s result is on accrual basis. When a cost or income covers more than one year, for example a year’s insurance paid in November, the statement splits the amount without VAT across the years by days. The VAT return does not change and still goes by the voucher’s date. An insignificant item can be left unspread (EVL 19 §).",
+  ],
+  "entry.periodHint": [
+    "Täytä vain, kun tosite kattaa vuodenvaihteen yli ulottuvan ajan. Tyhjänä tosite lasketaan tositteen päivälle.",
+    "Fill in only when the voucher covers a time across a year-end. Left empty, the voucher counts on its own date.",
+  ],
+  "entry.periodBad": [
+    "Anna jakson molemmat päivät, ja loppu ei saa olla alkua aiemmin.",
+    "Give both days of the period. The end cannot be before the start.",
+  ],
+  "entry.logFieldPeriodFrom": ["Jakso alkaa", "Period starts"],
+  "entry.logFieldPeriodTo": ["Jakso päättyy", "Period ends"],
   "entry.privateUseHint": [
     "Tavaran oma käyttö on arvonlisäverollista, jos ostosta on vähennetty vero, ja 850 € vuodessa on verotonta. Auton kohdalla asia riippuu siitä, paljonko autosta on vähennetty.",
     "Taking goods into private use carries VAT if the VAT on the purchase was deducted, and the first 850 € a year is free. For a car it depends on how much of the car was deducted.",

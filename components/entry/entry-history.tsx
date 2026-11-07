@@ -30,6 +30,8 @@ const FIELD_LABEL = {
   share: "entry.logFieldShare",
   reverses: "entry.logFieldReverses",
   sells: "entry.logFieldSells",
+  periodFrom: "entry.logFieldPeriodFrom",
+  periodTo: "entry.logFieldPeriodTo",
 } as const satisfies Record<LoggedField, string>
 
 /** A field's value as a person reads it. */
@@ -45,6 +47,8 @@ function formatValue(
       return f.money(Number(value))
     case "date":
     case "paidOn":
+    case "periodFrom":
+    case "periodTo":
       return f.date(String(value))
     case "vatRate":
       return f.rate(Number(value))
