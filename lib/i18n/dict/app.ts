@@ -2463,6 +2463,41 @@ export const APP_DICT = {
     "Tuloslaskelma ja lomake 5 lukevat tositteet tositteen päivän mukaan, maksettuina tai avoimina.",
     "The income statement and Form 5 read vouchers by voucher date, paid or open.",
   ],
+  "settings.features": ["Käytössä olevat osat", "Parts in use"],
+  "settings.featuresQuestion": [
+    "Mitä liiketoimintasi sisältää?",
+    "What does your business involve?",
+  ],
+  "settings.featuresHint": [
+    "Poista rasti osasta, jota et käytä. Sen luokat, näkymä tai laskuri piilotetaan. Osa näkyy silti, jos kirjanpidossa on jo siihen kuuluvia tositteita. Voit palauttaa osan milloin tahansa Asetukset-sivulta.",
+    "Clear the box for a part you do not use. Its categories, view or calculator are hidden. A part still shows when the book already has entries that belong to it. You can bring it back at any time on the Settings page.",
+  ],
+  "settings.featuresAll": ["Kaikki näkyvissä", "All shown"],
+  "settings.featuresAllNote": [
+    "Mikään osa ei ole piilotettu.",
+    "No part is hidden.",
+  ],
+  "settings.featuresHidden": ["{n} piilotettu", "{n} hidden"],
+  "settings.featureEmployees": [
+    "Minulla on työntekijöitä (palkat ja sivukulut)",
+    "I have employees (wages and staff costs)",
+  ],
+  "settings.featureCar": [
+    "Käytän autoa yritystoimintaan (ajoneuvokulut, kilometrikorvaus)",
+    "I use a car for the business (vehicle costs, mileage)",
+  ],
+  "settings.featureHomeOffice": [
+    "Teen töitä kotona (kotitoimiston vähennys)",
+    "I work from home (home office deduction)",
+  ],
+  "settings.featureEuSales": [
+    "Myyn tavaroita tai palveluja toiseen EU-maahan (yhteenvetoilmoitus)",
+    "I sell goods or services to other EU countries (EC Sales List)",
+  ],
+  "settings.featureLoans": [
+    "Minulla on yrityksen laina (nosto ja lyhennys)",
+    "I have a business loan (drawdown and repayment)",
+  ],
   "settings.vatPeriod": ["ALV-ilmoitusjakso", "VAT reporting period"],
   "settings.vatPeriodHint": [
     "Kuinka usein annat arvonlisäveroilmoituksen. Yleiskatsauksen eräpäivät lasketaan tämän mukaan.",

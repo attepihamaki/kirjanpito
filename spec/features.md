@@ -196,3 +196,14 @@ kirjanpito-2026-sailytyspaketti.zip      books-2026-retention-package.zip
 - **The file is named** `kirjanpito-2026-01-01_2026-06-30-tarkastuspaketti.zip`, or `…-audit-package.zip` for an English book, from the file's name and the range.
 - **Encryption, receipts and hashes behave as in §8.21.** An encrypted book keeps its ZIP encrypted while the reports stay plain, and the dialog asks first. A receipt the browser lacks stops the export. The hashes catch accidents and prove nothing else.
 - `lib/domain/audit-package.test.ts` covers the range books, the reports, the file list and the quick picks.
+
+### 8.26 Parts in use (Käytössä olevat osat)
+
+`lib/domain/features.ts`, pure and tested. A book can do without five parts of the app: employees, a car, a home office, EU sales and a loan. The setup dialog (§8.3) asks one tick box per part, and Asetukset, Yleiset lists the same boxes under "Käytössä olevat osat".
+
+- **Stored as `hiddenFeatures`** in `settings.json` (§7.6): the parts switched off. A file without the key hides nothing, so an old book opens as it was.
+- **Categories.** Clearing a part sets `enabled` false on its categories: the staff lines 335 and 336 (employees), 313, 344-vehicle and 364-car (car), the EU sales categories (EU sales) and the two loan lines (loans). Ticking it again sets them back to enabled, except the retired `300-eu`. Only a part whose state changed is touched, so a category the user switched off by hand stays off. Categories settings still lists them all.
+- **Views.** EU sales hides the "Yhteenvetoilmoitus" tab on the VAT page, car hides the mileage calculator and home office hides the home office calculator on Vähennykset. The routes still work by address.
+- **Use wins over the choice.** A hidden part stays visible while the book holds an entry on one of its categories, or any entry on category 354 for the home office (`shownFeatures`). Hiding can never put data out of sight.
+- `lib/domain/features.test.ts` covers the mapping, the use rule and the category switch, and `settings-file.test.ts` the parse.
+

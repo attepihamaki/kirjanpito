@@ -26,10 +26,12 @@ import {
   setBookPassword,
 } from "@/lib/commands/encryption-commands"
 import { viewHelp } from "@/lib/domain/field-help"
+import { FEATURES, type Feature } from "@/lib/domain/features"
 import { RULES } from "@/lib/domain/rule-tables"
 import type { TraderType } from "@/lib/domain/open-items"
 import type { Lang } from "@/lib/domain/types"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
+import type { MessageKey } from "@/lib/i18n/messages"
 import { useBookStore } from "@/stores/book-store"
 import { LANGS, LANG_NAMES } from "@/stores/lang-store"
 
@@ -44,6 +46,7 @@ export function GeneralSettings() {
       <SettingGrid>
         <BusinessSetting />
         <TraderTypeSetting />
+        <FeaturesSetting />
         <VatPeriodSetting />
         <BookStartSetting />
         <ExportLanguageSetting />
@@ -240,6 +243,92 @@ function TraderTypeSetting() {
         )}
       />
     </SettingCard>
+  )
+}
+
+const FEATURE_KEYS = {
+  employees: "settings.featureEmployees",
+  car: "settings.featureCar",
+  homeOffice: "settings.featureHomeOffice",
+  euSales: "settings.featureEuSales",
+  loans: "settings.featureLoans",
+} as const satisfies Record<Feature, MessageKey>
+
+/**
+ * The parts of the app this book uses (§8.26). Every box ticked is shown;
+ * clearing one hides its categories, its view or its calculator.
+ */
+function FeaturesSetting() {
+  const f = useFormatters()
+  const hidden = useBookStore((s) => s.hiddenFeatures)
+  const setHidden = useBookStore((s) => s.setHiddenFeatures)
+
+  return (
+    <SettingCard
+      label={f.t("settings.features")}
+      editor={
+        <>
+          <FeatureChecklist hidden={hidden} onChange={setHidden} />
+          <SettingHint>{f.t("settings.featuresHint")}</SettingHint>
+        </>
+      }
+    >
+      <SettingValue
+        value={
+          hidden.length === 0
+            ? f.t("settings.featuresAll")
+            : f.t("settings.featuresHidden", { n: hidden.length })
+        }
+        note={
+          hidden.length === 0
+            ? f.t("settings.featuresAllNote")
+            : hidden.map((h) => f.t(FEATURE_KEYS[h])).join(", ")
+        }
+      />
+    </SettingCard>
+  )
+}
+
+/**
+ * One checkbox per feature, ticked while the feature is shown. The setup
+ * dialog (§8.3) shows the same list, so the question is asked in one wording.
+ */
+export function FeatureChecklist({
+  hidden,
+  onChange,
+  idPrefix = "feature",
+}: {
+  hidden: readonly Feature[]
+  onChange: (hidden: Feature[]) => void
+  idPrefix?: string
+}) {
+  const f = useFormatters()
+
+  return (
+    <div className="flex flex-col gap-2">
+      {FEATURES.map((feature) => {
+        const id = `${idPrefix}-${feature}`
+        const shown = !hidden.includes(feature)
+        return (
+          <Field key={feature} orientation="horizontal">
+            <Checkbox
+              id={id}
+              checked={shown}
+              onCheckedChange={(checked) =>
+                onChange(
+                  checked === true
+                    ? hidden.filter((h) => h !== feature)
+                    : [...hidden, feature]
+                )
+              }
+            />
+            <FieldLabel htmlFor={id} className="font-normal">
+              {f.t(FEATURE_KEYS[feature])}
+            </FieldLabel>
+          </Field>
+        )
+      })}
+    </div>
   )
 }
 

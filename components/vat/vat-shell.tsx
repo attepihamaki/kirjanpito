@@ -7,6 +7,7 @@ import { PrintButton } from "@/components/common/print-button"
 import { SubPageTabs } from "@/components/common/sub-page-tabs"
 import { useFormatters } from "@/components/lang-provider"
 import { VatPeriodStrip } from "@/components/vat/vat-period-strip"
+import { useShownFeatures } from "@/hooks/use-shown-features"
 import { useVatPeriod } from "@/hooks/use-vat-period"
 import { VAT_ROUTES } from "@/lib/site"
 import { useBookStore } from "@/stores/book-store"
@@ -20,6 +21,7 @@ export function VatShell({ children }: { children: React.ReactNode }) {
   const setIndex = useBookStore((s) => s.setVatIndex)
   const { mode, label, periods, statuses, current } = useVatPeriod()
   const year = useBookStore((s) => s.year)
+  const showEc = useShownFeatures().has("euSales")
   // The EC Sales List is monthly whatever the VAT period is (§8.7).
   const monthlyList = usePathname().replace(/\/$/, "") === VAT_ROUTES.ec
 
@@ -35,7 +37,9 @@ export function VatShell({ children }: { children: React.ReactNode }) {
           label={f.t("vat.sections")}
           tabs={[
             { href: VAT_ROUTES.sheet, label: f.t("vat.sheetTab") },
-            { href: VAT_ROUTES.ec, label: f.t("vat.ecTab") },
+            ...(showEc || monthlyList
+              ? [{ href: VAT_ROUTES.ec, label: f.t("vat.ecTab") }]
+              : []),
           ]}
         />
         {mode !== "year" && !monthlyList ? (

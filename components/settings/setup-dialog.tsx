@@ -22,12 +22,14 @@ import {
   AutosaveCheckbox,
   BookStartSelects,
   ExportLanguageToggle,
+  FeatureChecklist,
   TraderTypeToggle,
   VatPeriodToggle,
 } from "@/components/settings/general-settings"
 import { useFormatters } from "@/components/lang-provider"
 import { useCanSaveToFile } from "@/hooks/use-save-book"
 import { parseBusinessId } from "@/lib/domain/business-id"
+import type { Feature } from "@/lib/domain/features"
 import type { TraderType } from "@/lib/domain/open-items"
 import type { Lang } from "@/lib/domain/types"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
@@ -67,6 +69,9 @@ function SetupDialogForm({ onClose }: { onClose: () => void }) {
   const [traderType, setTraderType] = React.useState<TraderType>(
     initial.traderType
   )
+  const [hiddenFeatures, setHiddenFeatures] = React.useState<Feature[]>(
+    initial.hiddenFeatures
+  )
   const [bookStart, setBookStart] = React.useState<string | null>(
     initial.bookStart
   )
@@ -92,6 +97,7 @@ function SetupDialogForm({ onClose }: { onClose: () => void }) {
       businessId: parsedId,
       vatPeriod,
       traderType,
+      hiddenFeatures,
       bookStart,
       autosave,
     })
@@ -160,6 +166,16 @@ function SetupDialogForm({ onClose }: { onClose: () => void }) {
             <FieldDescription>
               {f.t("settings.traderTypeHint")}
             </FieldDescription>
+          </Field>
+
+          <Field>
+            <FieldLabel>{f.t("settings.featuresQuestion")}</FieldLabel>
+            <FeatureChecklist
+              idPrefix="setup-feature"
+              hidden={hiddenFeatures}
+              onChange={setHiddenFeatures}
+            />
+            <FieldDescription>{f.t("settings.featuresHint")}</FieldDescription>
           </Field>
 
           <Field>

@@ -7,6 +7,7 @@ import {
   defaultCategories,
 } from "@/lib/domain/accounts"
 import { isShare } from "@/lib/domain/calc"
+import { FEATURES, type Feature } from "@/lib/domain/features"
 import { parseBusinessId } from "@/lib/domain/business-id"
 import { isVatRate } from "@/lib/domain/money"
 import type { AssetOpening } from "@/lib/domain/assets"
@@ -88,6 +89,8 @@ export interface BookSettings {
   vatPeriod: VatPeriodKind
   /** Which kind of sole trader keeps the book (§6.3). */
   traderType: TraderType
+  /** Features the user switched off (§8.26). Absent in a file means none. */
+  hiddenFeatures: Feature[]
   /** `"2026-10"`: the month the bookkeeping began, or null to follow the first entry. */
   bookStart: string | null
   /** Period key (`"2026-09"`, `"2026-Q3"`, `"2026"`) → ISO date it was marked. */
@@ -368,6 +371,10 @@ export function parseSettings(text: string): ParsedSettings {
   if (raw.traderType === "professional" || raw.traderType === "business") {
     out.traderType = raw.traderType
   }
+  if (Array.isArray(raw.hiddenFeatures)) {
+    const listed: unknown[] = raw.hiddenFeatures
+    out.hiddenFeatures = FEATURES.filter((f) => listed.includes(f))
+  }
   if (raw.bookStart === null) out.bookStart = null
   else if (typeof raw.bookStart === "string" && MONTH.test(raw.bookStart)) {
     out.bookStart = raw.bookStart
@@ -591,6 +598,7 @@ export function serializeSettings(s: BookSettings): string {
     businessPhone: s.businessPhone,
     vatPeriod: s.vatPeriod,
     traderType: s.traderType,
+    hiddenFeatures: [...s.hiddenFeatures],
     bookStart: s.bookStart,
     vatFiled: Object.fromEntries(
       Object.entries(s.vatFiled).sort(([a], [b]) => a.localeCompare(b))

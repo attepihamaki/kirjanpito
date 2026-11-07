@@ -38,6 +38,7 @@ function settings(): BookSettings {
     businessPhone: null,
     vatPeriod: "quarter",
     traderType: "business",
+    hiddenFeatures: ["car", "euSales"],
     bookStart: "2025-10",
     vatFiled: { "2026-Q2": "2026-08-10", "2026-Q1": "2026-05-11" },
     vatFiledFigures: {
@@ -114,6 +115,17 @@ describe("settings.json", () => {
     expect(
       parseSettings(JSON.stringify({ businessPhone: "  " }))?.businessPhone
     ).toBeUndefined()
+  })
+
+  it("keeps the known hidden features and drops the rest", () => {
+    const parsed = parseSettings(
+      JSON.stringify({ hiddenFeatures: ["car", "boat", 3, "loans"] })
+    )
+    expect(parsed.hiddenFeatures).toEqual(["car", "loans"])
+  })
+
+  it("leaves hiddenFeatures unset when the file has none", () => {
+    expect(parseSettings(JSON.stringify({})).hiddenFeatures).toBeUndefined()
   })
 
   it("drops a bad value and keeps the rest", () => {

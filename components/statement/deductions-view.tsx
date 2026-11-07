@@ -14,6 +14,7 @@ import {
   CAT_TRAVEL,
 } from "@/components/statement/deduction-dialog"
 import { Button } from "@/components/ui/button"
+import { useShownFeatures } from "@/hooks/use-shown-features"
 import { calcEntry } from "@/lib/domain/calc"
 import { yearOf } from "@/lib/domain/dates"
 import { homeOfficeAmounts, travelRates } from "@/lib/domain/deductions"
@@ -31,6 +32,7 @@ export function DeductionsView() {
   const year = useBookStore((s) => s.year)
   const entries = useBookStore((s) => s.entries)
   const openDialog = useBookStore((s) => s.openDialog)
+  const shown = useShownFeatures()
   const rates = travelRates(year)
   const homeOffice = homeOfficeAmounts(year)
   const booked = React.useMemo(
@@ -93,45 +95,46 @@ export function DeductionsView() {
           note={`${f.t("deductions.statVouchers")}: ${booked.length}`}
         />
       </SettingCard>
-      {rates
-        ? [
-            calculator(
+      {shown.has("car")
+        ? rates
+          ? calculator(
               "mileage",
               CAT_CAR,
               f.t("deductions.mileageTitle"),
               f.t("deductions.mileageCard")
-            ),
-            calculator(
-              "per-diem",
-              CAT_TRAVEL,
-              f.t("deductions.perDiemTitle"),
-              f.t("deductions.perDiemCard")
-            ),
-          ]
-        : [
-            unavailable(
+            )
+          : unavailable(
               "mileage",
               f.t("deductions.mileageTitle"),
               f.t("deductions.noTravelRates", { y: year })
-            ),
-            unavailable(
-              "per-diem",
-              f.t("deductions.perDiemTitle"),
-              f.t("deductions.noTravelRates", { y: year })
-            ),
-          ]}
-      {homeOffice
+            )
+        : null}
+      {rates
         ? calculator(
-            "home-office",
-            CAT_354,
-            f.t("deductions.homeTitle"),
-            f.t("deductions.homeCard")
+            "per-diem",
+            CAT_TRAVEL,
+            f.t("deductions.perDiemTitle"),
+            f.t("deductions.perDiemCard")
           )
         : unavailable(
-            "home-office",
-            f.t("deductions.homeTitle"),
-            f.t("deductions.noHomeRates", { y: year })
+            "per-diem",
+            f.t("deductions.perDiemTitle"),
+            f.t("deductions.noTravelRates", { y: year })
           )}
+      {!shown.has("homeOffice")
+        ? null
+        : homeOffice
+          ? calculator(
+              "home-office",
+              CAT_354,
+              f.t("deductions.homeTitle"),
+              f.t("deductions.homeCard")
+            )
+          : unavailable(
+              "home-office",
+              f.t("deductions.homeTitle"),
+              f.t("deductions.noHomeRates", { y: year })
+            )}
       {booked.map((e) => (
         <SettingCard key={e.id} label={f.date(e.date)}>
           <p className="text-base font-medium">

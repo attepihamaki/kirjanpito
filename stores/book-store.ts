@@ -43,6 +43,7 @@ import type {
 import type { TraderType } from "@/lib/domain/open-items"
 import { filterPeriod } from "@/lib/domain/period"
 import { vatReport } from "@/lib/domain/vat"
+import { applyHiddenFeatures, type Feature } from "@/lib/domain/features"
 import {
   asPeriod,
   periodFromKey,
@@ -265,6 +266,8 @@ export interface BookState {
   vatPeriod: VatPeriodKind
   /** Which kind of sole trader keeps the book (§6.3). Saved in settings.json. */
   traderType: TraderType
+  /** Features the user switched off (§8.26). Saved in settings.json. */
+  hiddenFeatures: Feature[]
   /**
    * `"2026-10"`: the month the bookkeeping began (§8.10). No return is owed
    * for a period that ended before it. Null follows the first entry.
@@ -422,6 +425,7 @@ export interface BookActions {
     businessId: string | null
     vatPeriod: VatPeriodKind
     traderType: TraderType
+    hiddenFeatures: Feature[]
     bookStart: string | null
     autosave: boolean
   }): void
@@ -451,6 +455,7 @@ export interface BookActions {
       businessPhone?: string | null
       vatPeriod?: VatPeriodKind
       traderType?: TraderType
+      hiddenFeatures?: Feature[]
       bookStart?: string | null
       vatFiled?: Record<string, string>
       vatFiledFigures?: Record<string, Record<string, number>>
@@ -525,6 +530,7 @@ export interface BookActions {
   setExportLang(lang: Lang): void
   setVatPeriod(kind: VatPeriodKind): void
   setTraderType(kind: TraderType): void
+  setHiddenFeatures(features: Feature[]): void
   /** `"2026-10"`, or null to follow the first entry. */
   setBusinessId(id: string | null): void
   setBusinessName(name: string | null): void
@@ -619,6 +625,7 @@ function initialState(): BookState {
     businessPhone: null,
     vatPeriod: "month",
     traderType: "professional",
+    hiddenFeatures: [],
     bookStart: null,
     vatFiled: {},
     vatFiledFigures: {},
@@ -690,6 +697,7 @@ type PersistedBook = Pick<
   | "businessPhone"
   | "vatPeriod"
   | "traderType"
+  | "hiddenFeatures"
   | "bookStart"
   | "vatFiled"
   | "vatFiledFigures"
@@ -863,6 +871,7 @@ const BOOK_DATA_KEYS: readonly (keyof BookState)[] = [
   "businessPhone",
   "vatPeriod",
   "traderType",
+  "hiddenFeatures",
   "bookStart",
   "vatFiled",
   "vatFiledFigures",
@@ -956,6 +965,7 @@ export const useBookStore = create<BookStore>()(
           businessId: null,
           businessName: null,
           businessPhone: null,
+          hiddenFeatures: [],
           bookStart: null,
           vatFiled: {},
           vatFiledFigures: {},
@@ -980,8 +990,13 @@ export const useBookStore = create<BookStore>()(
       dismissOnboarding: () => set({ onboarding: false }),
 
       startBook: (settings) =>
-        set({
+        set((s) => ({
           ...settings,
+          cats: applyHiddenFeatures(
+            s.cats,
+            s.hiddenFeatures,
+            settings.hiddenFeatures
+          ),
           vatIndex: clampVatIndex(
             get().vatIndex,
             get().vatPeriod,
@@ -993,7 +1008,7 @@ export const useBookStore = create<BookStore>()(
           dirty: false,
           dialog: { kind: "none" },
           figure: null,
-        }),
+        })),
 
       closeBook: () =>
         set({
@@ -1066,6 +1081,7 @@ export const useBookStore = create<BookStore>()(
           vatPeriod,
           vatIndex: clampVatIndex(get().vatIndex, get().vatPeriod, vatPeriod),
           traderType: s.traderType ?? "professional",
+          hiddenFeatures: s.hiddenFeatures ?? [],
           bookStart: s.bookStart ?? null,
           vatFiled: s.vatFiled ?? {},
           vatFiledFigures: s.vatFiledFigures ?? {},
@@ -1239,6 +1255,12 @@ export const useBookStore = create<BookStore>()(
           dirty: true,
         }),
       setTraderType: (traderType) => set({ traderType, dirty: true }),
+      setHiddenFeatures: (hiddenFeatures) =>
+        set((s) => ({
+          hiddenFeatures,
+          cats: applyHiddenFeatures(s.cats, s.hiddenFeatures, hiddenFeatures),
+          dirty: true,
+        })),
       setBusinessId: (businessId) => set({ businessId, dirty: true }),
       setBusinessName: (businessName) => set({ businessName, dirty: true }),
       setBusinessPhone: (businessPhone) => set({ businessPhone, dirty: true }),
@@ -1479,6 +1501,7 @@ export const useBookStore = create<BookStore>()(
         businessPhone: s.businessPhone,
         vatPeriod: s.vatPeriod,
         traderType: s.traderType,
+        hiddenFeatures: s.hiddenFeatures,
         bookStart: s.bookStart,
         vatFiled: s.vatFiled,
         vatFiledFigures: s.vatFiledFigures,
