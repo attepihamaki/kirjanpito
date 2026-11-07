@@ -1,28 +1,10 @@
-import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
+import { AmountInput } from "@/components/common/amount-input"
 
 /**
- * An amount input with a trailing euro sign, right-aligned with tabular
- * figures. The sign is decoration (`aria-hidden`); the label carries the
- * meaning, and the value stays a plain number the parsers already read.
+ * An amount input with a trailing euro sign. It is an `AmountInput`, so it
+ * takes sums and offers a choice for an ambiguous paste. The sign is
+ * decoration (`aria-hidden`); the label carries the meaning.
  */
-export function EuroInput({
-  className,
-  ...props
-}: React.ComponentProps<typeof Input>) {
-  return (
-    <div className="relative">
-      <Input
-        inputMode="decimal"
-        className={cn("tabular pr-8 text-right", className)}
-        {...props}
-      />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground"
-      >
-        €
-      </span>
-    </div>
-  )
+export function EuroInput(props: React.ComponentProps<typeof AmountInput>) {
+  return <AmountInput euro {...props} />
 }

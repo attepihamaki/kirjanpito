@@ -381,6 +381,9 @@ export const APP_DICT = {
   ],
   "overview.bankAmount": ["Saldo (€)", "Balance (€)"],
   "overview.bankDate": ["Päivä", "Date"],
+  "common.amountAmbiguous": ["Tarkoititko:", "Did you mean:"],
+  "common.datePlaceholder": ["pp.kk.vvvv", "dd.mm.yyyy"],
+  "common.openCalendar": ["Avaa kalenteri", "Open calendar"],
   "overview.bankSave": ["Tallenna saldo", "Save balance"],
   "overview.bankRemove": ["Poista saldo", "Remove balance"],
   "overview.bankAmountError": [

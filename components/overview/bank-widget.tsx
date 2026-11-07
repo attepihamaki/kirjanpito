@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import { DateInput } from "@/components/common/date-input"
+import { AmountInput } from "@/components/common/amount-input"
 import { LandmarkIcon, PencilIcon } from "lucide-react"
 
 import { Money } from "@/components/common/money"
@@ -11,9 +13,9 @@ import { useFormatters } from "@/components/lang-provider"
 import { useOverviewData } from "@/components/overview/overview-data"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import { bankEstimate, type BankBalance } from "@/lib/domain/bank-balance"
-import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
+import { formatMoneyPlain } from "@/lib/domain/money"
+import { evalAmount } from "@/lib/domain/amount-expr"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -130,7 +132,7 @@ function BalanceForm({
 
   const save = (event: React.FormEvent) => {
     event.preventDefault()
-    const cents = parseAmount(amount)
+    const cents = evalAmount(amount)
     if (cents === null) {
       setError({ field: "amount", message: f.t("overview.bankAmountError") })
       return
@@ -156,10 +158,8 @@ function BalanceForm({
           <FieldLabel htmlFor="bank-amount">
             {f.t("overview.bankAmount")}
           </FieldLabel>
-          <Input
+          <AmountInput
             id="bank-amount"
-            inputMode="decimal"
-            className="tabular text-right"
             value={amount}
             aria-invalid={error?.field === "amount"}
             onChange={(event) => {
@@ -172,14 +172,13 @@ function BalanceForm({
           <FieldLabel htmlFor="bank-date">
             {f.t("overview.bankDate")}
           </FieldLabel>
-          <Input
+          <DateInput
             id="bank-date"
-            type="date"
             max={today}
             value={date}
             aria-invalid={error?.field === "date"}
-            onChange={(event) => {
-              setDate(event.target.value)
+            onValueChange={(iso) => {
+              setDate(iso)
               if (error?.field === "date") setError(null)
             }}
           />

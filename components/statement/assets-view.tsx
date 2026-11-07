@@ -30,7 +30,8 @@ import { calcEntry } from "@/lib/domain/calc"
 import { todayIso } from "@/lib/domain/dates"
 import { calculatedEntryDate } from "@/lib/domain/deductions"
 import { uid } from "@/lib/domain/id"
-import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
+import { formatMoneyPlain } from "@/lib/domain/money"
+import { evalAmount } from "@/lib/domain/amount-expr"
 import { indexCategories, type Entry } from "@/lib/domain/types"
 import { reversalLabel } from "@/lib/domain/reversal"
 import { useBookStore } from "@/stores/book-store"
@@ -283,7 +284,7 @@ function BookCard({ row }: { row: AssetYear }) {
     [f.t("assets.closing"), row.closing],
   ]
   const book = async () => {
-    const cents = parseAmount(amount)
+    const cents = evalAmount(amount)
     if (cents == null || cents <= 0) {
       setError(f.t("assets.badAmount"))
       return
@@ -381,7 +382,7 @@ function OpeningCard({ year, info }: { year: number; info?: string }) {
             defaultValue={opening ? formatMoneyPlain(opening.amount) : ""}
             onBlur={(event) => {
               const text = event.target.value.trim()
-              const cents = text ? parseAmount(text) : 0
+              const cents = text ? evalAmount(text) : 0
               if (cents == null || cents < 0) {
                 event.target.value = opening
                   ? formatMoneyPlain(opening.amount)

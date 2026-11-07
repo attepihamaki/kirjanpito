@@ -104,8 +104,10 @@ import { uid } from "@/lib/domain/id"
 import { periodFromKey, vatPeriods } from "@/lib/domain/vat-deadline"
 import { defaultSettledKey } from "@/lib/domain/vat-settlement"
 import { periodLabel } from "@/lib/i18n/period-label"
-import { evalAmount, isExpression } from "@/lib/domain/amount-expr"
-import { formatMoney, formatMoneyPlain } from "@/lib/domain/money"
+import { AmountInput } from "@/components/common/amount-input"
+import { DateInput } from "@/components/common/date-input"
+import { evalAmount } from "@/lib/domain/amount-expr"
+import { formatMoneyPlain } from "@/lib/domain/money"
 import { deleteEntry, offerEditUndo } from "@/lib/commands/book-commands"
 import { mergeSplit } from "@/lib/commands/bulk-commands"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
@@ -708,14 +710,6 @@ function EntryDialogForm({
   const mismatch = rateMismatch(form.vatRate, form.date)
   const noDeduction = vatNotDeductible({ ...form, euPurchase }, catMap)
   const formAmount = evalAmount(form.amount)
-  const amountIsSum = isExpression(form.amount)
-
-  /* The typed sum becomes its result, so what is saved is what is shown. */
-  const commitAmount = () => {
-    if (amountIsSum && formAmount != null) {
-      update({ amount: formatMoneyPlain(formAmount) })
-    }
-  }
 
   const splitMates =
     mode === "edit" && editing ? splitSiblings(editing, entries).length : 0
@@ -1163,15 +1157,13 @@ function EntryDialogForm({
                       <FieldLabel htmlFor="entry-date">
                         {f.t("entry.date")}
                       </FieldLabel>
-                      <Input
+                      <DateInput
                         id="entry-date"
                         ref={dateRef}
-                        type="date"
                         value={form.date}
                         autoFocus={mode !== "edit"}
                         aria-invalid={invalid("date")}
-                        onChange={(e) => {
-                          const date = e.target.value
+                        onValueChange={(date) => {
                           /*
                            * A rate the user did not choose follows the date
                            * across a rate change (§5); one they picked stays.
@@ -1344,32 +1336,12 @@ function EntryDialogForm({
                       <FieldLabel htmlFor="entry-sum">
                         {f.t("entry.amount")}
                       </FieldLabel>
-                      <Input
+                      <AmountInput
                         id="entry-sum"
-                        inputMode="decimal"
                         value={form.amount}
                         aria-invalid={invalid("amount")}
                         onChange={(e) => update({ amount: e.target.value })}
-                        onBlur={commitAmount}
-                        onKeyDown={(e) => {
-                          if (
-                            e.key === "Enter" &&
-                            !e.ctrlKey &&
-                            !e.metaKey &&
-                            amountIsSum &&
-                            formAmount != null
-                          ) {
-                            e.preventDefault()
-                            commitAmount()
-                          }
-                        }}
-                        className="tabular text-right"
                       />
-                      {amountIsSum && formAmount != null ? (
-                        <FieldDescription className="tabular text-right">
-                          = {formatMoney(formAmount)}
-                        </FieldDescription>
-                      ) : null}
                       {duplicate ? (
                         <FieldDescription className="text-warning">
                           {f.t("entry.duplicateOf", {
@@ -1494,11 +1466,10 @@ function EntryDialogForm({
                           className="w-48"
                         />
                         {form.paid && form.paid !== "open" ? (
-                          <Input
-                            type="date"
+                          <DateInput
                             aria-label={f.t("entry.paidDate")}
                             value={form.paid}
-                            onChange={(e) => update({ paid: e.target.value })}
+                            onValueChange={(iso) => update({ paid: iso })}
                             className="w-44"
                           />
                         ) : null}
@@ -1523,23 +1494,19 @@ function EntryDialogForm({
                         </InfoPopover>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <Input
-                          type="date"
+                        <DateInput
                           aria-label={f.t("entry.periodFrom")}
                           aria-invalid={invalid("period")}
                           value={form.periodFrom}
-                          onChange={(e) =>
-                            update({ periodFrom: e.target.value })
-                          }
+                          onValueChange={(iso) => update({ periodFrom: iso })}
                           className="w-44"
                         />
                         <span className="text-sm text-muted-foreground">–</span>
-                        <Input
-                          type="date"
+                        <DateInput
                           aria-label={f.t("entry.periodTo")}
                           aria-invalid={invalid("period")}
                           value={form.periodTo}
-                          onChange={(e) => update({ periodTo: e.target.value })}
+                          onValueChange={(iso) => update({ periodTo: iso })}
                           className="w-44"
                         />
                       </div>

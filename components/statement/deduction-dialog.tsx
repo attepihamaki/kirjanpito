@@ -34,7 +34,8 @@ import {
 } from "@/lib/domain/deductions"
 import { uid } from "@/lib/domain/id"
 import type { MemoRow } from "@/lib/domain/memo-voucher"
-import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
+import { formatMoneyPlain } from "@/lib/domain/money"
+import { evalAmount } from "@/lib/domain/amount-expr"
 import type { Cents, Entry } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
 
@@ -192,7 +193,7 @@ function MileageBody({ rates }: { rates: TravelRates }) {
   )
 
   const kilometres = count(km)
-  const bookedCosts = parseAmount(costs) ?? 0
+  const bookedCosts = evalAmount(costs) ?? 0
   const amount = additionalDeduction(
     mileageAllowance(kilometres, rates),
     bookedCosts
@@ -271,7 +272,7 @@ function PerDiemBody({ rates }: { rates: TravelRates }) {
 
   const fullDays = Math.trunc(count(full))
   const partialDays = Math.trunc(count(partial))
-  const bookedCosts = parseAmount(costs) ?? 0
+  const bookedCosts = evalAmount(costs) ?? 0
   const allowance = perDiemAllowance(fullDays, partialDays, rates)
   const amount = additionalDeduction(allowance, bookedCosts)
 

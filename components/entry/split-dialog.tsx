@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/field"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { splitEntry } from "@/lib/commands/bulk-commands"
-import { parseAmount } from "@/lib/domain/money"
+import { evalAmount } from "@/lib/domain/amount-expr"
 import { canSplitLine } from "@/lib/domain/split"
 import { indexCategories } from "@/lib/domain/types"
 import { rateOnDate, validRates } from "@/lib/domain/vat-rates"
@@ -78,7 +78,7 @@ function SplitForm({ entryId }: { entryId: string }) {
   const rateOptions = rates.includes(vatRate) ? rates : [...rates, vatRate]
 
   const sign = Math.sign(entry.amount) || 1
-  const parsed = parseAmount(amount)
+  const parsed = evalAmount(amount)
   const part = parsed == null ? null : sign * Math.abs(parsed)
   const left = part == null ? null : entry.amount - part
 

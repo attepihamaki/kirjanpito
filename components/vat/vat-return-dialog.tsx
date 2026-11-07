@@ -1,6 +1,7 @@
 "use client"
 
 import { vatReturnHelp } from "@/lib/domain/field-help"
+import { DateInput } from "@/components/common/date-input"
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import {
@@ -17,7 +18,6 @@ import { OMAVERO_URL, TaxForm } from "@/components/common/tax-form"
 import { useFormatters } from "@/components/lang-provider"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   Dialog,
   DialogContent,
@@ -505,14 +505,13 @@ function VatReturnForm() {
                     >
                       {f.t("vat.filingDate")}
                     </label>
-                    <Input
+                    <DateInput
                       id="vat-filing-date"
-                      type="date"
                       min={current.to}
                       max={today}
                       value={filingDate}
                       aria-invalid={!filingDateOk}
-                      onChange={(event) => setFilingDate(event.target.value)}
+                      onValueChange={setFilingDate}
                     />
                     <p className="text-xs text-muted-foreground">
                       {f.t("vat.filingDateHint")}

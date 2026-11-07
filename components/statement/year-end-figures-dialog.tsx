@@ -20,7 +20,8 @@ import {
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { EMPTY_YEAR_END, type YearEnd } from "@/lib/domain/form5-balance"
 import type { MessageKey } from "@/lib/i18n/messages"
-import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
+import { formatMoneyPlain } from "@/lib/domain/money"
+import { evalAmount } from "@/lib/domain/amount-expr"
 import { useBookStore } from "@/stores/book-store"
 
 /** Label and help text keys for each figure the book cannot know. */
@@ -204,7 +205,7 @@ function AmountField({
   const [bad, setBad] = React.useState(false)
 
   const commit = () => {
-    const parsed = text.trim() === "" ? 0 : parseAmount(text)
+    const parsed = text.trim() === "" ? 0 : evalAmount(text)
     if (parsed == null || parsed < 0) {
       setBad(true)
       return

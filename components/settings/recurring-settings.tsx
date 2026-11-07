@@ -1,6 +1,7 @@
 "use client"
 
 import { Empty, EmptyContent, EmptyDescription } from "@/components/ui/empty"
+import { AmountInput } from "@/components/common/amount-input"
 import { NewEntryButton } from "@/components/common/new-entry-button"
 import { Trash2Icon } from "lucide-react"
 
@@ -18,7 +19,8 @@ import {
 } from "@/components/ui/table"
 import { toast } from "@/components/ui/toast"
 import { categoryLabel } from "@/lib/domain/accounts"
-import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
+import { formatMoneyPlain } from "@/lib/domain/money"
+import { evalAmount } from "@/lib/domain/amount-expr"
 import type { RecurringEntry } from "@/lib/domain/recurring"
 import { indexCategories } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
@@ -35,14 +37,13 @@ export function RecurringAmountInput({
   const f = useFormatters()
   const upsertRecurring = useBookStore((s) => s.upsertRecurring)
   return (
-    <Input
+    <AmountInput
       key={r.amount}
       aria-label={`${f.t("recurring.amount")}: ${r.description}`}
-      inputMode="decimal"
-      className="tabular ml-auto w-28 text-right"
+      className="ml-auto w-28"
       defaultValue={formatMoneyPlain(r.amount)}
       onBlur={(event) => {
-        const amount = parseAmount(event.target.value)
+        const amount = evalAmount(event.target.value)
         if (amount != null && amount !== 0 && amount !== r.amount) {
           upsertRecurring({ ...r, amount })
         }

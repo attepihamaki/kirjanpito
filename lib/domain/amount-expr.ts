@@ -1,4 +1,4 @@
-import { parseAmount, roundCents } from "@/lib/domain/money"
+import { cleanAmountText, parseAmount, roundCents } from "@/lib/domain/money"
 import type { Cents } from "@/lib/domain/types"
 
 /** Largest result accepted, in euros. Keeps cents far below 2^53. */
@@ -23,7 +23,7 @@ export function evalAmount(input: string | null | undefined): Cents | null {
   if (plain != null) return plain
   if (!isExpression(input)) return null
 
-  const text = input.replace(/[\s  €]/g, "").replace(/−/g, "-")
+  const text = cleanAmountText(input)
   let pos = 0
 
   const peek = () => text[pos]
@@ -105,6 +105,6 @@ export function evalAmount(input: string | null | undefined): Cents | null {
  */
 export function isExpression(input: string | null | undefined): boolean {
   if (input == null) return false
-  const t = input.replace(/[\s  €]/g, "").replace(/−/g, "-")
+  const t = cleanAmountText(input)
   return /[+*/x×÷()]/i.test(t.replace(/^-/, "")) || /\d-/.test(t)
 }

@@ -68,8 +68,39 @@ export function formatFileSize(bytes: number, lang: Lang): string {
 }
 
 /**
+ * Strip what a pasted amount carries besides the number: spaces of every kind,
+ * "€", the words EUR, euro and euroa on either side, and a Unicode minus
+ * (turned into a hyphen).
+ */
+export function cleanAmountText(input: string): string {
+  return String(input)
+    .replace(/[\s\u00a0\u202f]/g, "")
+    .replace(/€|^(?:eur|euroa?)(?=[-+.,\d])|(?<=\d)(?:eur|euroa?)$/gi, "")
+    .replace(/−/g, "-")
+}
+
+/**
+ * The two readings of an amount `parseAmount` refuses as ambiguous: "1,234"
+ * and "1.234" are 1,23 € or 1 234 €. Returns null for anything else, so a
+ * typo is not offered as a choice.
+ */
+export function ambiguousAmount(
+  input: string | null | undefined
+): { decimal: Cents; thousands: Cents } | null {
+  if (input == null) return null
+  const t = cleanAmountText(input)
+  const m = /^(-?)(\d{1,3})[.,](\d{3})$/.exec(t)
+  if (!m) return null
+  const sign = m[1] ? -1 : 1
+  return {
+    decimal: sign * roundCents(parseFloat(`${m[2]}.${m[3]}`) * 100),
+    thousands: sign * Number(`${m[2]}${m[3]}`) * 100,
+  }
+}
+
+/**
  * Parse a user- or CSV-supplied amount into cents. Lenient per §7.1: tolerates
- * spaces, NBSP, narrow NBSP, "€" and a Unicode minus.
+ * spaces, NBSP, narrow NBSP, "€", "EUR" and a Unicode minus.
  *
  * When both "," and "." appear, the last one is the decimal separator. A lone
  * comma is always a decimal comma, whatever the UI language, so the same file
@@ -81,10 +112,11 @@ export function formatFileSize(bytes: number, lang: Lang): string {
  */
 export function parseAmount(input: string | null | undefined): Cents | null {
   if (input == null) return null
-  let t = String(input)
-    .replace(/[\s  €]/g, "")
-    .replace(/−/g, "-")
+  let t = cleanAmountText(input)
   if (!t) return null
+
+  /* "1.234.567" and "1,234,567": one separator repeated, always thousands. */
+  if (/^-?\d{1,3}([.,]\d{3}){2,}$/.test(t)) t = t.replace(/[.,]/g, "")
 
   const lastComma = t.lastIndexOf(",")
   const lastDot = t.lastIndexOf(".")

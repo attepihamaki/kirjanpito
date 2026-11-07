@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { DateInput } from "@/components/common/date-input"
 import { FileArchiveIcon } from "lucide-react"
 
 import { BusyButton } from "@/components/common/busy-button"
@@ -15,7 +16,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { useToday } from "@/hooks/use-today"
 import { auditEntries, exportAuditPackage } from "@/lib/commands/audit-commands"
@@ -64,22 +64,20 @@ function AuditForm() {
         <div className="grid grid-cols-2 gap-4">
           <Field data-invalid={!valid}>
             <FieldLabel htmlFor="audit-from">{f.t("io.auditFrom")}</FieldLabel>
-            <Input
+            <DateInput
               id="audit-from"
-              type="date"
               value={range.from}
               aria-invalid={!valid}
-              onChange={(e) => setRange({ ...range, from: e.target.value })}
+              onValueChange={(iso) => setRange({ ...range, from: iso })}
             />
           </Field>
           <Field data-invalid={!valid}>
             <FieldLabel htmlFor="audit-to">{f.t("io.auditTo")}</FieldLabel>
-            <Input
+            <DateInput
               id="audit-to"
-              type="date"
               value={range.to}
               aria-invalid={!valid}
-              onChange={(e) => setRange({ ...range, to: e.target.value })}
+              onValueChange={(iso) => setRange({ ...range, to: iso })}
             />
           </Field>
         </div>

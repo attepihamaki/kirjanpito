@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { AmountInput } from "@/components/common/amount-input"
 
 import {
   SettingCard,
@@ -12,7 +13,8 @@ import { useFormatters } from "@/components/lang-provider"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { formatMoneyPlain, parseAmount, parseRate } from "@/lib/domain/money"
+import { formatMoneyPlain, parseRate } from "@/lib/domain/money"
+import { evalAmount } from "@/lib/domain/amount-expr"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -107,7 +109,7 @@ function AdvanceTaxDecisionSetting() {
 
   const saveAmount = () => {
     const text = amountText.trim()
-    const cents = text === "" ? 0 : parseAmount(text)
+    const cents = text === "" ? 0 : evalAmount(text)
     if (cents === null || cents < 0) {
       setAmountBad(true)
       return
@@ -139,10 +141,8 @@ function AdvanceTaxDecisionSetting() {
             <FieldLabel htmlFor="decision-amount">
               {f.t("calendar.decisionAmount")}
             </FieldLabel>
-            <Input
+            <AmountInput
               id="decision-amount"
-              inputMode="decimal"
-              className="tabular text-right"
               value={amountText}
               aria-invalid={amountBad}
               onChange={(e) => setAmountText(e.target.value)}
