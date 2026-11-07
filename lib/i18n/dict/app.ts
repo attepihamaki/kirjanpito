@@ -573,6 +573,31 @@ export const APP_DICT = {
     "Oma käyttö ylittää vuodessa 850 €. Ylittävä osa on arvonlisäverollista, jos tavaran ostosta on vähennetty vero.",
     "Private use is over 850 € this year. The part above that carries VAT if the VAT on the goods was deducted.",
   ],
+  "overview.smallAsset": [
+    pl(
+      "1 käyttöomaisuushankinta alle pienhankintarajan",
+      "{n} käyttöomaisuushankintaa alle pienhankintarajan"
+    ),
+    pl(
+      "1 asset purchase under the small purchase limit",
+      "{n} asset purchases under the small purchase limit"
+    ),
+  ],
+  "overview.smallAssetSub": [
+    "Enintään 1 200 euron hankinnan voi vähentää heti, yhteensä 3 600 euroon asti vuodessa. Kirjaa se kuluksi, jos haluat vähentää sen kerralla.",
+    "A purchase of up to 1,200 euros can be deducted at once, up to 3,600 euros a year in total. Book it as an expense if you want to deduct it in one go.",
+  ],
+  "overview.largeExpense": [
+    pl("1 kulu yli pienhankintarajan", "{n} kulua yli pienhankintarajan"),
+    pl(
+      "1 expense over the small purchase limit",
+      "{n} expenses over the small purchase limit"
+    ),
+  ],
+  "overview.largeExpenseSub": [
+    "Yli 1 200 euron laite on yleensä kirjattava käyttöomaisuudeksi ja poistettava. Heti vähentäminen onnistuu vain, jos käyttöikä on enintään 3 vuotta.",
+    "Equipment over 1,200 euros is usually booked as a fixed asset and depreciated. Deducting it at once works only if its useful life is 3 years or less.",
+  ],
   "overview.openItems": [
     pl("1 avoin tosite", "{n} avointa tositetta"),
     pl("1 open voucher", "{n} open vouchers"),
@@ -998,6 +1023,14 @@ export const APP_DICT = {
   "ledger.privateUseNoVat": [
     "Oma käyttö ilman ALV:tä",
     "Private use without VAT",
+  ],
+  "ledger.smallAsset": [
+    "Pienhankinta kirjattu käyttöomaisuutena",
+    "Small purchase booked as an asset",
+  ],
+  "ledger.largeExpense": [
+    "Suuri hankinta kirjattu kuluksi",
+    "Large purchase booked as an expense",
   ],
   "ledger.copyAsNew": ["Kopioi", "Copy"],
   "ledger.deleteEntry": ["Poista tosite", "Delete voucher"],

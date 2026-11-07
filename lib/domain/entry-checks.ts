@@ -23,6 +23,8 @@ export type EntryCheck =
   | "vatNotDeductible"
   | "privateUseNoVat"
   | "lateCash"
+  | "smallAsset"
+  | "largeExpense"
 
 export const ENTRY_CHECKS: readonly EntryCheck[] = [
   "noReceipt",
@@ -34,6 +36,8 @@ export const ENTRY_CHECKS: readonly EntryCheck[] = [
   "vatNotDeductible",
   "privateUseNoVat",
   "lateCash",
+  "smallAsset",
+  "largeExpense",
 ]
 
 /**
@@ -299,6 +303,49 @@ export const ENTRY_RULES = defineRules<EntryCheckContext, string>([
       return !!paid && !!on && daysFrom(paid, on) > CASH_BOOKING_DAYS
     })
   }),
+  entryRule("smallAsset", "vero.fi, Poistot ja pienhankinnat", (ctx) => {
+    /*
+     * A purchase of machinery and equipment up to the item limit may be
+     * deducted at once, up to the year's total. The purchases are taken in
+     * date order, so the ones that fit under the total are the earliest.
+     * Credit notes and corrections are left out: they reverse a purchase and
+     * are not one.
+     */
+    const purchases = ctx.entries
+      .filter(
+        (e) =>
+          e.type === "expense" &&
+          ctx.cats.get(e.catId)?.line === "asset-purchase" &&
+          !e.reverses
+      )
+      .map((e) => ({ id: e.id, date: e.date, net: calcEntry(e).net }))
+      .filter((p) => p.net > 0)
+      .sort((a, b) => a.date.localeCompare(b.date))
+    const out: string[] = []
+    let total = 0
+    for (const p of purchases) {
+      if (p.net > limitOn("smallPurchaseItem", p.date)) continue
+      total += p.net
+      if (total > limitOn("smallPurchaseYear", p.date)) break
+      out.push(p.id)
+    }
+    return out
+  }),
+  entryRule("largeExpense", "vero.fi, Poistot ja pienhankinnat", (ctx) =>
+    /*
+     * Line 344 "other" is where equipment lands when it is booked as a cost. Above the
+     * item limit it is depreciated, unless its useful life is 3 years or less,
+     * which the app cannot know, so this is a hint only.
+     */
+    idsWhere(
+      ctx,
+      (e) =>
+        e.type === "expense" &&
+        !e.reverses &&
+        ctx.cats.get(e.catId)?.line === "344-other" &&
+        calcEntry(e).net > limitOn("smallPurchaseItem", e.date)
+    )
+  ),
 ])
 
 /**

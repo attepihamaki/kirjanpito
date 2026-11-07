@@ -60,6 +60,8 @@ const CHECK_LABEL = {
   vatNotDeductible: "ledger.vatNotDeductible",
   privateUseNoVat: "ledger.privateUseNoVat",
   lateCash: "ledger.lateCash",
+  smallAsset: "ledger.smallAsset",
+  largeExpense: "ledger.largeExpense",
 } as const satisfies Record<EntryCheck, string>
 
 const NO_IDS: ReadonlySet<string> = new Set()

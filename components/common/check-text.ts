@@ -35,4 +35,12 @@ export const CHECK_TEXT = {
     sub: "overview.privateUseNoVatSub",
   },
   lateCash: { title: "overview.lateCash", sub: "overview.lateCashSub" },
+  smallAsset: {
+    title: "overview.smallAsset",
+    sub: "overview.smallAssetSub",
+  },
+  largeExpense: {
+    title: "overview.largeExpense",
+    sub: "overview.largeExpenseSub",
+  },
 } as const satisfies Record<EntryCheck, { title: string; sub: string }>

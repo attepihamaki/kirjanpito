@@ -247,6 +247,57 @@ describe("privateUseNoVat", () => {
   })
 })
 
+describe("smallAsset", () => {
+  const asset = (id: string, euros: number, date = "2026-03-01") =>
+    entry({
+      id,
+      date,
+      catId: "asset-purchase",
+      amount: euros * 100,
+      amountMode: "net",
+    })
+
+  it("flags a purchase up to the item limit and not one above it", () => {
+    const rows = [asset("a", 1200), asset("b", 1201)]
+    expect(flagged("smallAsset", rows)).toEqual(["a"])
+  })
+
+  it("compares the amount without VAT", () => {
+    const gross = entry({
+      id: "g",
+      catId: "asset-purchase",
+      amount: 140_000,
+      amountMode: "gross",
+    })
+    expect(flagged("smallAsset", [gross])).toEqual(["g"])
+  })
+
+  it("stops flagging once the year's total passes the cap", () => {
+    const rows = [
+      asset("a", 1200, "2026-01-01"),
+      asset("b", 1200, "2026-02-01"),
+      asset("c", 1000, "2026-03-01"),
+      asset("d", 300, "2026-04-01"),
+    ]
+    expect(flagged("smallAsset", rows).sort()).toEqual(["a", "b", "c"])
+  })
+
+  it("leaves a credit note alone", () => {
+    const rows = [asset("a", 500), { ...asset("b", 500), reverses: "a" }]
+    expect(flagged("smallAsset", rows)).toEqual(["a"])
+  })
+})
+
+describe("largeExpense", () => {
+  const cost = (id: string, euros: number, catId = "344-other") =>
+    entry({ id, catId, amount: euros * 100, amountMode: "net" })
+
+  it("flags a line 344 expense above the item limit", () => {
+    const rows = [cost("a", 1200), cost("b", 1201), cost("c", 5000, "333")]
+    expect(flagged("largeExpense", rows)).toEqual(["b"])
+  })
+})
+
 describe("lateCash", () => {
   const added = (entryId: string, at: string) => ({
     at,

@@ -122,6 +122,20 @@
         "source": "EVL 30 §; vero.fi, Poistot ja pienhankinnat"
       }
     ],
+    "smallPurchaseItem": [
+      {
+        "from": null,
+        "value": 120000,
+        "source": "vero.fi, Poistot ja pienhankinnat"
+      }
+    ],
+    "smallPurchaseYear": [
+      {
+        "from": null,
+        "value": 360000,
+        "source": "vero.fi, Poistot ja pienhankinnat"
+      }
+    ],
     "depreciationSmallBalance": [
       {
         "from": null,

@@ -27,6 +27,8 @@ export const LIMIT_KEYS = [
   "microTurnover",
   "depreciationPercent",
   "depreciationSmallBalance",
+  "smallPurchaseItem",
+  "smallPurchaseYear",
 ] as const
 
 export type LimitKey = (typeof LIMIT_KEYS)[number]
