@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { EntryDialog } from "@/components/entry/entry-dialog"
@@ -66,14 +66,5 @@ describe("amount calculator", () => {
     expect(screen.queryByText(/^=/)).not.toBeInTheDocument()
     fireEvent.change(sum(), { target: { value: "12*" } })
     expect(screen.queryByText(/^=/)).not.toBeInTheDocument()
-  })
-
-  it("converts gross to net and back at the entry's rate", async () => {
-    mount({ catId: "343", vatRate: 25.5 })
-    fireEvent.change(sum(), { target: { value: "125,50" } })
-    fireEvent.click(screen.getByRole("button", { name: "Muunna verottomaksi" }))
-    await waitFor(() => expect(sum().value).toBe("100,00"))
-    fireEvent.click(screen.getByRole("button", { name: "Muunna verolliseksi" }))
-    await waitFor(() => expect(sum().value).toBe("125,50"))
   })
 })

@@ -197,13 +197,15 @@ function initialForm({
   prefill?: EntryPrefill
 }): FormState {
   if (!editing || mode === "new") {
+    const date = prefill?.date ?? defaultDate(year, month)
     return {
-      date: prefill?.date ?? defaultDate(year, month),
+      date,
       description: prefill?.description ?? "",
       type: prefill?.type ?? lastType,
       catId: prefill?.catId ?? "",
       amount: prefill?.amount ? formatMoneyPlain(prefill.amount) : "",
-      vatRate: prefill?.vatRate ?? 0,
+      /* The general rate until a category sets its own, so the amount mode converts from the start. */
+      vatRate: prefill?.vatRate ?? rateOnDate(25.5, date),
       amountMode: prefill?.amountMode ?? lastMode,
       // A memo voucher a calculator made for this entry (§8.8).
       atts: [...(prefill?.atts ?? [])],
@@ -676,23 +678,6 @@ function EntryDialogForm({
     }
   }
 
-  /*
-   * Flip between gross and net and re-express the amount, so the receipt
-   * total stays what it was. Gross to net and back can shift a cent (calc.ts).
-   */
-  const flipAmountMode = () => {
-    if (formAmount == null) return
-    const next: AmountMode = form.amountMode === "gross" ? "net" : "gross"
-    const parts = calcEntry({
-      amount: formAmount,
-      vatRate: form.vatRate,
-      amountMode: form.amountMode,
-    })
-    update({
-      amountMode: next,
-      amount: formatMoneyPlain(next === "net" ? parts.net : parts.gross),
-    })
-  }
   const splitMates =
     mode === "edit" && editing ? splitSiblings(editing, entries).length : 0
   const entryYear = form.date ? yearOf(form.date) : year
@@ -1412,18 +1397,6 @@ function EntryDialogForm({
                           {f.t("common.net")}
                         </ToggleGroupItem>
                       </ToggleGroup>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="xs"
-                        className="w-fit! self-start text-muted-foreground"
-                        disabled={formAmount == null || formAmount === 0}
-                        onClick={flipAmountMode}
-                      >
-                        {form.amountMode === "gross"
-                          ? f.t("entry.convertToNet")
-                          : f.t("entry.convertToGross")}
-                      </Button>
                     </Field>
                   )}
                 </fieldset>
