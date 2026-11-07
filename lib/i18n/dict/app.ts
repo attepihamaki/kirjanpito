@@ -88,6 +88,14 @@ export const APP_DICT = {
   "file.close": ["Sulje tiedosto", "Close file"],
   "file.check": ["Tarkista kirjanpito", "Check the book"],
   "file.closed": ["Tiedosto suljettu.", "File closed."],
+  "file.messages": ["Viestit", "Messages"],
+  "file.messagesTitle": ["Viestit", "Messages"],
+  "file.messagesDescription": [
+    "Tämän istunnon ilmoitukset, uusin ensin.",
+    "Notices from this session, newest first.",
+  ],
+  "file.messagesEmpty": ["Ei viestejä vielä.", "No messages yet."],
+  "file.messagesClear": ["Tyhjennä", "Clear"],
 
   // --- Confirmations (§8.11) ---
   "confirm.closeTitle": ["Suljetaanko tiedosto?", "Close the file?"],

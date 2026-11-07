@@ -5,6 +5,7 @@ import { Toast as ToastPrimitive } from "@base-ui/react/toast"
 import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
+import { recordToast } from "@/stores/toast-history"
 import {
   XIcon,
   CircleCheckIcon,
@@ -14,7 +15,20 @@ import {
   Loader2Icon,
 } from "lucide-react"
 
-const toast = ToastPrimitive.createToastManager()
+const baseToast = ToastPrimitive.createToastManager()
+
+/*
+ * Every toast raised through this manager is also written to the session's
+ * toast history (stores/toast-history.ts), so a message that was missed can be
+ * read again from the file menu.
+ */
+const toast: typeof baseToast = {
+  ...baseToast,
+  add(options) {
+    recordToast(options)
+    return baseToast.add(options)
+  },
+}
 
 function ToastProvider({ ...props }: ToastPrimitive.Provider.Props) {
   return <ToastPrimitive.Provider {...props} />

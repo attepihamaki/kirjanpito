@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import {
+  BellIcon,
   BookBookmarkIcon,
   DownloadIcon,
   ListChecksIcon,
@@ -18,6 +19,7 @@ import {
   StatusDot,
   useFileStatusText,
 } from "@/components/app/file-status"
+import { MessagesDialog } from "@/components/app/messages-dialog"
 import { YearSelect } from "@/components/app/year-select"
 import { BusyButton, BusyIcon } from "@/components/common/busy-button"
 import { Button } from "@/components/ui/button"
@@ -61,6 +63,7 @@ export function FileMenu({
   const f = useFormatters()
   const ctx = useCommandCtx()
   const [open, setOpen] = React.useState(false)
+  const [messagesOpen, setMessagesOpen] = React.useState(false)
   const fileName = useBookStore((s) => s.fileName)
   const importing = useBookStore((s) => s.importing)
   const saving = useBookStore((s) => s.saving)
@@ -199,6 +202,15 @@ export function FileMenu({
           <Button
             variant="ghost"
             className="justify-start"
+            onClick={act(() => setMessagesOpen(true))}
+          >
+            <BellIcon data-icon="inline-start" />
+            {f.t("file.messages")}
+          </Button>
+
+          <Button
+            variant="ghost"
+            className="justify-start"
             onClick={act(() => void closeBook(ctx))}
           >
             <XIcon data-icon="inline-start" />
@@ -206,6 +218,7 @@ export function FileMenu({
           </Button>
         </div>
       </PopoverContent>
+      <MessagesDialog open={messagesOpen} onOpenChange={setMessagesOpen} />
     </Popover>
   )
 }

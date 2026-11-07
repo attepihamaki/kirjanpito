@@ -8,6 +8,7 @@ import { AppSkeleton } from "@/components/app/app-skeleton"
 import { AppTopbar } from "@/components/app/app-topbar"
 import { ArchiveBanner } from "@/components/app/archive-banner"
 import { ImportOverlay } from "@/components/app/import-overlay"
+import { ScrollMemory } from "@/components/app/scroll-memory"
 import { ExportDialog } from "@/components/export/export-dialog"
 import { BankImportDialog } from "@/components/bank/bank-import-dialog"
 import { RecurringDialog } from "@/components/ledger/recurring-dialog"
@@ -215,6 +216,7 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
           }}
         />
 
+        <ScrollMemory />
         <AppSidebar />
 
         <SidebarInset className="min-w-0">
