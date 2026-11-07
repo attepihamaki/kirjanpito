@@ -53,6 +53,3 @@ next-env.d.ts
 # is built against, so they travel with the repository.
 !/docs/specs/
 
-# Playwright output
-/test-results/
-/playwright-report/

@@ -190,26 +190,6 @@ reference bookkeeping in `lib/domain/test-helpers/` is a fixture only — an
 eslint rule blocks importing it outside test files, so no sample ledger can
 leak into the app.
 
-### Visual regression
-
-```bash
-npm run build
-npm run test:visual
-```
-
-Playwright screenshots the receipt motif (landing hero and the entry dialog's
-preview, light and dark) and the printed sheets (income statement, journal,
-general ledger and account list in print media, plus the statement in dark).
-It serves `out/` under `/kirjanpito`, opens `e2e/fixtures/vouchers.csv` (the
-§10 book) and pins the clock to 5.11.2026.
-
-Baselines are Linux renders in `e2e/__screenshots__`, because fonts rasterise
-differently per OS. On other systems the specs skip; `VISUAL_FORCE=1` runs
-them anyway. To create or refresh baselines, run the "Visual regression"
-workflow by hand with "update" ticked, download the `visual-baselines`
-artifact and commit it. The same workflow runs on every pull request and
-push to `main`.
-
 ## Deployment
 
 Pushing to `main` builds the static export and publishes it to GitHub Pages

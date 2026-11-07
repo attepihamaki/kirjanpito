@@ -21,8 +21,6 @@
     "unused": "knip",
     "release-notes": "node scripts/release-notes.mjs",
     "check": "npm run typecheck && npm run format:check && npm run lint && npm run docs:check && npm run unused && npm run test",
-    "test:visual": "playwright test",
-    "test:visual:update": "playwright test --update-snapshots",
     "prepare": "husky"
   },
   "dependencies": {
@@ -47,7 +45,6 @@
     "zustand": "^5.0.16"
   },
   "devDependencies": {
-    "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

@@ -41,7 +41,6 @@ const PATH_ROOTS = [
   "app/",
   "components/",
   "data/",
-  "e2e/",
   "hooks/",
   "lib/",
   "public/",
@@ -58,7 +57,6 @@ const PATH_FILES = new Set([
   "package.json",
   "next.config.ts",
   "eslint.config.mjs",
-  "playwright.config.ts",
   "vitest.config.ts",
   "components.json",
 ])
