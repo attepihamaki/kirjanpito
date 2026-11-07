@@ -24,10 +24,21 @@ if (typeof window !== "undefined") {
     })) as unknown as typeof window.matchMedia
   }
 
-  // Base UI's popups measure themselves.
+  /*
+   * Base UI's popups measure themselves, and recharts sizes its containers
+   * from the first observation. jsdom has no layout, so every observed element
+   * reports a fixed box; without one the charts warn about a zero size.
+   */
   if (!window.ResizeObserver) {
     window.ResizeObserver = class {
-      observe() {}
+      constructor(private readonly callback: ResizeObserverCallback) {}
+      observe(target: Element) {
+        const rect = { width: 800, height: 400 } as DOMRectReadOnly
+        this.callback(
+          [{ target, contentRect: rect } as ResizeObserverEntry],
+          this as unknown as ResizeObserver
+        )
+      }
       unobserve() {}
       disconnect() {}
     } as unknown as typeof ResizeObserver

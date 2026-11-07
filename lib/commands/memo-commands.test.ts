@@ -123,6 +123,7 @@ describe("bookWithMemo", () => {
 
   it("books without a memo when it cannot be stored, and the check flags it", async () => {
     failing = true
+    vi.spyOn(console, "warn").mockImplementation(() => {})
     const raised: string[] = []
     vi.mocked(toast.add).mockImplementation((o) => {
       raised.push(String(o.title))
@@ -161,6 +162,7 @@ describe("storeReport", () => {
 
   it("returns null and says so when the write fails", async () => {
     failing = true
+    vi.spyOn(console, "warn").mockImplementation(() => {})
     expect(await storeReport(ctx, doc)).toBeNull()
     expect(toast.add).toHaveBeenCalled()
     expect(useBookStore.getState().draftAttachmentIds).toEqual([])
