@@ -71,6 +71,12 @@ export const CONTENT_SECURITY_POLICY = [
 export const LANDING = "/"
 
 /**
+ * The privacy statement (§8.3). Public like the landing page, and in the
+ * sitemap, so a link to it from outside the app resolves.
+ */
+export const PRIVACY = "/privacy"
+
+/**
  * The landing page's FAQ section. The id is English like the routes, because
  * it is an address rather than a label.
  */

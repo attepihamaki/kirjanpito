@@ -48,9 +48,11 @@ describe("SEO switch", () => {
     }
   })
 
-  it("offers the landing page in the sitemap only when indexable", () => {
+  it("offers the public pages in the sitemap only when indexable", () => {
     const urls = sitemap().map((entry) => entry.url)
-    expect(urls).toEqual(INDEXABLE ? [`${SITE_URL}/`] : [])
+    expect(urls).toEqual(
+      INDEXABLE ? [`${SITE_URL}/`, `${SITE_URL}/privacy/`] : []
+    )
   })
 
   it("keeps the Open Graph card regardless, so links still preview", () => {

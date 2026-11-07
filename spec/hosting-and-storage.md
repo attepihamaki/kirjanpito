@@ -25,10 +25,11 @@ route tree flat — see "One root layout" below for what the alternative cost.
 ```
 app/
   robots.ts                      → /robots.txt      (disallows /app/)
-  sitemap.ts                     → /sitemap.xml     (/ only, no alternates)
+  sitemap.ts                     → /sitemap.xml     (/ and /privacy, no alternates)
   not-found.tsx                  → /404.html        noindex, title only
   layout.tsx                     ROOT LAYOUT — <html lang="fi">
   page.tsx                       /                  landing, indexed
+  privacy/page.tsx               /privacy           privacy statement, indexed (§8.3)
   og/[file]/route.tsx            /og/opengraph-image.png  1200×630 via next/og
   app/
     layout.tsx                   AppShell + metadata.robots = noindex, nofollow

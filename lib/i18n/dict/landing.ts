@@ -193,6 +193,95 @@ export const LANDING_DICT = {
     "Laskelmat eivät ole vero- tai kirjanpitoneuvontaa.",
     "The calculations are not tax or accounting advice.",
   ],
+  "landing.privacyLink": ["Tietosuoja", "Privacy"],
+
+  "privacy.badge": ["TIETOSUOJA", "PRIVACY"],
+  "privacy.title": [
+    "Kirjanpitosi ei lähde selaimesta",
+    "Your books never leave the browser",
+  ],
+  "privacy.lead": [
+    "Kirjanpito ei lähetä tietojasi minnekään. Kaikki tapahtuu tässä selaimessa ja tiedostoissa, jotka itse tallennat.",
+    "Kirjanpito sends your data nowhere. Everything happens in this browser and in the files you save yourself.",
+  ],
+  "privacy.back": ["Takaisin etusivulle", "Back to the home page"],
+
+  "privacy.whoTitle": ["Kuka tietoja pitää hallussaan", "Who holds the data"],
+  "privacy.who1": [
+    "Sovelluksen tekijä ei saa kirjanpitotietojasi eikä säilytä niistä kopiota. Sovelluksella ei ole tiliä, palvelinta eikä tietokantaa.",
+    "The author of the app receives none of your bookkeeping and keeps no copy. There is no account, no server and no database.",
+  ],
+  "privacy.who2": [
+    "Olet siis itse omien tietojesi rekisterinpitäjä. Tiedot ovat sinun koneellasi, ja vastaat myös niiden varmuuskopioista.",
+    "You are therefore the controller of your own data. It sits on your machine, and the backups are your job too.",
+  ],
+  "privacy.who3": [
+    "Sivuston tiedostot jaetaan GitHub Pagesista, joka näkee sivujen tavalliset latauspyynnöt. Kirjanpitosi ei kulje sen kautta.",
+    "The site's files are served by GitHub Pages, which sees the ordinary requests for the pages. Your books do not pass through it.",
+  ],
+
+  "privacy.storeTitle": ["Mitä tallennetaan minne", "What is stored where"],
+  "privacy.storeLead": [
+    "Tiedot ovat kahdessa paikassa. Selain pitää työkopiota tallennusten välillä, ja varsinainen kopio on tiedosto, jonka tallennat.",
+    "The data lives in two places. The browser keeps a working copy between saves, and the real copy is the file you save.",
+  ],
+  "privacy.lsTitle": ["Selaimen localStorage", "Browser localStorage"],
+  "privacy.ls": [
+    "Tositteet, kirjanpidon asetukset, yrityksen nimi ja Y-tunnus sekä muutosloki avaimella bookkeeping. Kieli ja teema omilla avaimillaan, lang ja theme. Pelkkä etusivun katsominen ei tallenna kirjanpitoa.",
+    "The entries, the book's settings, the business name and ID and the change log under the key bookkeeping. Language and theme under their own keys, lang and theme. Only looking at the home page stores no bookkeeping.",
+  ],
+  "privacy.idbTitle": ["Selaimen IndexedDB", "Browser IndexedDB"],
+  "privacy.idb": [
+    "Liitetiedostot (bookkeeping-receipts), liitteistä luettu hakuteksti (bookkeeping-receipt-text) ja avatun tiedoston osoitin (bookkeeping-file). Hakuteksti on välimuisti, jota ei kirjoiteta tiedostoon.",
+    "The receipt files (bookkeeping-receipts), the text read from receipts for search (bookkeeping-receipt-text) and the pointer to the opened file (bookkeeping-file). The search text is a cache and is never written to the file.",
+  ],
+  "privacy.fileTitle": ["Tiedosto, jonka tallennat", "The file you save"],
+  "privacy.file": [
+    "ZIP-tiedosto, jossa on tositteet CSV:nä, asetukset (settings.json) ja liitteet. Valitset itse, minne se tallennetaan. Jos selain sallii, sovellus tallentaa suoraan samaan tiedostoon, ja automaattinen tallennus kirjoittaa sinne ilman kysymistä.",
+    "A ZIP file holding the entries as CSV, the settings (settings.json) and the receipts. You choose where it goes. Where the browser allows it, the app saves straight back to the same file, and autosave writes there without asking.",
+  ],
+  "privacy.noneTitle": ["Mitä ei käytetä", "What is not used"],
+  "privacy.none": [
+    "Ei evästeitä, ei sessionStoragea, ei analytiikkaa eikä käyttäjäseurantaa.",
+    "No cookies, no sessionStorage, no analytics and no tracking.",
+  ],
+
+  "privacy.netTitle": ["Verkkoyhteydet", "Network traffic"],
+  "privacy.net1": [
+    "Sivu ei lähetä kirjanpitoasi millekään palvelimelle. Sisällönsuojauskäytäntö (CSP) sallii yhteydet vain sivuston omaan osoitteeseen (connect-src 'self') eikä lomakkeiden lähetystä (form-action 'none'), joten tämä pätisi, vaikka sivulle pääsisi ulkopuolista koodia.",
+    "The page sends your books to no server. The content security policy (CSP) allows connections to the site's own address only (connect-src 'self') and no form submission (form-action 'none'), so this would hold even if outside code got onto the page.",
+  ],
+  "privacy.net2": [
+    "Skriptit, fontit ja kuvat tulevat sivuston omista tiedostoista. Ulkopuolisia CDN-palveluita ei käytetä.",
+    "Scripts, fonts and images come from the site's own files. No outside CDN is used.",
+  ],
+
+  "privacy.secTitle": [
+    "Salaus ja eheysleima",
+    "Encryption and the integrity seal",
+  ],
+  "privacy.enc1": [
+    "Tiedoston salaus on valinnainen (Asetukset, Yleiset, Salaus). Salattu ZIP käyttää AES-256-salausta, ja sen avaa myös 7-Zip. Salasanaa ei tallenneta mihinkään, vaan se pysyy muistissa, kunnes suljet tiedoston tai lataat sivun uudelleen. Unohtunutta salasanaa ei voi palauttaa.",
+    "Encrypting the file is optional (Settings, General, Encryption). An encrypted ZIP uses AES-256 and opens in 7-Zip too. The password is stored nowhere. It stays in memory until you close the file or reload the page. A forgotten password cannot be recovered.",
+  ],
+  "privacy.enc2": [
+    "Salaus ei peitä tiedostojen nimiä, kokoja eikä päivämääriä. Selaimen työkopio ei ole salattu, joten se ei suojaa sitä vastaan, joka käyttää samaa selainprofiilia.",
+    "Encryption does not hide file names, sizes or dates. The browser's working copy is not encrypted, so it does not protect against someone using the same browser profile.",
+  ],
+  "privacy.seal": [
+    "Jokainen tallennus kirjoittaa tiedostoon SHA-256-eheysleiman. Se paljastaa tiedoston vahingossa muuttuneen, mutta ei todista mitään, koska sen voi laskea uudelleen tahallisen muokkauksen jälkeen.",
+    "Every save writes a SHA-256 integrity seal into the file. It reveals an accidental change, but proves nothing, because anyone who edits the file on purpose can recompute it.",
+  ],
+
+  "privacy.clearTitle": ["Tietojen poistaminen", "Removing the data"],
+  "privacy.clear1": [
+    "Valinta Sulje tiedosto tyhjentää selaimen työkopion. Voit myös poistaa sivuston tiedot selaimen asetuksista.",
+    "Close file empties the browser's working copy. You can also clear the site's data in the browser's settings.",
+  ],
+  "privacy.clear2": [
+    "Tallentamasi tiedosto säilyy omalla levyllä, ja sen poistaminen on sinun asiasi. Tallenna tiedosto ennen kuin tyhjennät selaimen tiedot, koska ennen ensimmäistä tallennusta selaimen työkopio on ainoa kopio.",
+    "The file you saved stays on your disk, and deleting it is up to you. Save before you clear the browser's data, because until the first save the working copy is the only copy.",
+  ],
 
   /*
    * 404. Lives here rather than in the app dictionary, because the page is

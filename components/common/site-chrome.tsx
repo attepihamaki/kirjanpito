@@ -4,6 +4,7 @@ import Link from "next/link"
 
 import { BrandMark } from "@/components/common/brand-mark"
 import { useT } from "@/components/lang-provider"
+import { PRIVACY } from "@/lib/site"
 
 /**
  * The header and footer of the two full-width documents outside the app
@@ -39,6 +40,9 @@ export function SiteFooter() {
     <footer className="border-t">
       <div className="mx-auto flex w-full max-w-5xl flex-wrap justify-between gap-2 px-4 py-6 text-sm text-muted-foreground">
         <span>{t("app.name")}</span>
+        <Link href={PRIVACY} className="underline-offset-4 hover:underline">
+          {t("landing.privacyLink")}
+        </Link>
         <span>{t("landing.footer")}</span>
       </div>
     </footer>

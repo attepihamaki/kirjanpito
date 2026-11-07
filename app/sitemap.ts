@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next"
 
-import { INDEXABLE, SITE_URL } from "@/lib/site"
+import { INDEXABLE, PRIVACY, SITE_URL } from "@/lib/site"
 
 /*
  * Required by output: "export" — this is a Route Handler, and a static
@@ -26,6 +26,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${SITE_URL}/`,
       changeFrequency: "monthly",
       priority: 1,
+    },
+    {
+      url: `${SITE_URL}${PRIVACY}/`,
+      changeFrequency: "yearly",
+      priority: 0.3,
     },
   ]
 }
