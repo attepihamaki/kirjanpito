@@ -13,6 +13,7 @@ import {
 
 import { EntryTypeToggle } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
+import { VoucherPicker } from "@/components/entry/voucher-picker"
 import { InfoPopover } from "@/components/common/info-popover"
 import { Keys } from "@/components/common/keys"
 import { AttachmentGrid } from "@/components/entry/attachment-grid"
@@ -88,6 +89,11 @@ import {
 import { isPdf } from "@/lib/domain/receipt-path"
 import { isoDate, monthOf, todayIso, yearOf } from "@/lib/domain/dates"
 import { canSplitLine, splitSiblings } from "@/lib/domain/split"
+import {
+  reversalCandidates,
+  reversalLabel,
+  reversingEntries,
+} from "@/lib/domain/reversal"
 import { rateMismatch, rateOnDate } from "@/lib/domain/vat-rates"
 import { uid } from "@/lib/domain/id"
 import { periodFromKey, vatPeriods } from "@/lib/domain/vat-deadline"
@@ -134,6 +140,8 @@ interface FormState {
   buyerVatId: string
   /** The business share in percent, "" for the whole voucher (§6.12). */
   share: string
+  /** The id of the entry this one reverses, "" for none (§8.4). */
+  reverses: string
 }
 
 /** The fields §8.5 validates, named as they are in `FormState`. */
@@ -200,6 +208,7 @@ function initialForm({
       cash: false,
       buyerVatId: "",
       share: "",
+      reverses: "",
     }
   }
   const today = todayIso()
@@ -227,7 +236,34 @@ function initialForm({
     cash: !!editing.cash,
     buyerVatId: editing.buyerVatId ?? "",
     share: editing.share ? String(editing.share) : "",
+    // A copy is a new voucher and reverses nothing until it is told to.
+    reverses: mode === "edit" ? (editing.reverses ?? "") : "",
   }
+}
+
+/** A button that opens the voucher at the other end of a reversal. */
+function LinkedVoucherButton({
+  entry,
+  fromYear,
+  onOpen,
+}: {
+  entry: Entry
+  fromYear: number
+  onOpen: (id: string) => void
+}) {
+  const f = useFormatters()
+  const label = reversalLabel(entry, fromYear) || "–"
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="xs"
+      className="w-fit self-start"
+      onClick={() => onOpen(entry.id)}
+    >
+      {f.t("entry.reversesOpen", { v: label })}
+    </Button>
+  )
 }
 
 export function EntryDialog({
@@ -651,6 +687,29 @@ function EntryDialogForm({
   }
   const splitMates =
     mode === "edit" && editing ? splitSiblings(editing, entries).length : 0
+  const entryYear = form.date ? yearOf(form.date) : year
+  const reversalOptions = React.useMemo(
+    () =>
+      reversalCandidates(editingId ?? "", form.date, entries).map((e) => {
+        const label = f.t("entry.reversesOption", {
+          v: reversalLabel(e, entryYear) || "–",
+          d: f.date(e.date),
+          x: e.description || f.t("ledger.noDescription"),
+          m: f.money(calcEntry(e).gross),
+        })
+        // The ISO date and the plain amount let "2026-03" or "124,50" match.
+        const extra = `${e.date} ${formatMoneyPlain(e.amount)}`
+        return {
+          value: e.id,
+          label,
+          haystack: `${label} ${extra}`.toLowerCase(),
+        }
+      }),
+    [editingId, form.date, entries, entryYear, f]
+  )
+  const reversed = entries.find((e) => e.id === form.reverses)
+  const reversedBy =
+    editingId && editing ? reversingEntries(editing, entries) : []
   const figureGroups = useEntryFigures(editingId)
   const figureCount = figureGroups.reduce((n, g) => n + g.items.length, 0)
   const showHistory = hasHistory(history)
@@ -709,6 +768,12 @@ function EntryDialogForm({
     if (await confirmDiscard()) closeDialog()
   }
 
+  /** Switch to the other end of a reversal, once nothing typed would be lost. */
+  const openLinked = async (id: string) => {
+    if (!(await confirmDiscard())) return
+    openDialog({ kind: "entry", mode: "edit", entryId: id })
+  }
+
   const validate = (): Entry | null => {
     if (
       !form.date ||
@@ -759,6 +824,10 @@ function EntryDialogForm({
         : {}),
       ...(euPurchase ? { euPurchase } : {}),
       ...(businessShare ? { share: businessShare } : {}),
+      // A link to an entry that has since been deleted is let go.
+      ...(form.reverses && entries.some((e) => e.id === form.reverses)
+        ? { reverses: form.reverses }
+        : {}),
       // A part stays a part of its receipt; a copy is a new voucher of its own.
       ...(mode === "edit" && editing?.split ? { split: editing.split } : {}),
     }
@@ -840,6 +909,7 @@ function EntryDialogForm({
         paid: "",
         buyerVatId: "",
         share: "",
+        reverses: "",
       }
       keepRate.current = false
       keepShare.current = false
@@ -1469,7 +1539,49 @@ function EntryDialogForm({
                       </div>
                     </Field>
                   </div>
+
+                  <Field>
+                    <div className="flex items-center gap-1">
+                      <FieldLabel>{f.t("entry.reverses")}</FieldLabel>
+                      <InfoPopover label={f.t("entry.reversesInfo")}>
+                        {f.t("entry.reversesInfoText")}
+                      </InfoPopover>
+                    </div>
+                    <VoucherPicker
+                      options={reversalOptions}
+                      value={reversed ? form.reverses : ""}
+                      label={f.t("entry.reverses")}
+                      noneLabel={f.t("entry.reversesNone")}
+                      searchPlaceholder={f.t("entry.reversesSearch")}
+                      emptyText={f.t("entry.reversesEmpty")}
+                      moreText={(n) => f.t("entry.reversesMore", { n })}
+                      onChange={(value) => update({ reverses: value })}
+                    />
+                  </Field>
                 </fieldset>
+
+                {reversed ? (
+                  <LinkedVoucherButton
+                    entry={reversed}
+                    fromYear={entryYear}
+                    onOpen={openLinked}
+                  />
+                ) : null}
+                {reversedBy.length > 0 ? (
+                  <Field>
+                    <FieldLabel>{f.t("entry.reversedBy")}</FieldLabel>
+                    <div className="flex flex-wrap gap-2">
+                      {reversedBy.map((e) => (
+                        <LinkedVoucherButton
+                          key={e.id}
+                          entry={e}
+                          fromYear={entryYear}
+                          onOpen={openLinked}
+                        />
+                      ))}
+                    </div>
+                  </Field>
+                ) : null}
               </FieldGroup>
             </TabsContent>
 

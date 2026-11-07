@@ -139,6 +139,14 @@ export interface Entry {
    * the whole; the amount paid stays whole.
    */
   share?: number
+  /**
+   * The `id` of the entry this one reverses: a refund, a credit note or a
+   * correction (§8.4). It is a reference only and changes no figure. The
+   * reversed entry holds nothing; it finds its reversals by looking for this
+   * id, so the two sides cannot disagree. An id no longer in the book means
+   * no link.
+   */
+  reverses?: string
 }
 
 /** A category (luokka) the user books entries to. */

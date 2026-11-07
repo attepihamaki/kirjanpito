@@ -28,6 +28,7 @@ const FIELD_LABEL = {
   atts: "entry.logFieldReceipts",
   split: "entry.logFieldSplit",
   share: "entry.logFieldShare",
+  reverses: "entry.logFieldReverses",
 } as const satisfies Record<LoggedField, string>
 
 /** A field's value as a person reads it. */
@@ -58,6 +59,8 @@ function formatValue(
       return f.t("entry.logSplitValue")
     case "share":
       return `${Number(value)} %`
+    case "reverses":
+      return f.t("entry.logReversesValue")
     case "euPurchase":
       return f.t(
         value === "goods"

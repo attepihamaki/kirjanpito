@@ -27,6 +27,11 @@ import {
   parseRate,
 } from "@/lib/domain/money"
 import { periodFromKey } from "@/lib/domain/vat-deadline"
+import {
+  parseReversalKey,
+  reversalKey,
+  reversalLoops,
+} from "@/lib/domain/reversal"
 import { isVoucherNumber } from "@/lib/domain/voucher"
 import {
   attachmentKey,
@@ -189,6 +194,11 @@ export function serializeCsv(
   )
 
   const splitKeys = splitColumnValues(sorted)
+  const byId = new Map(sorted.map((e) => [e.id, e]))
+  const reverseTarget = (e: Entry): string => {
+    const target = e.reverses === undefined ? undefined : byId.get(e.reverses)
+    return target ? reversalKey(target) : ""
+  }
 
   for (const e of sorted) {
     const cat = cats.get(e.catId)
@@ -222,6 +232,7 @@ export function serializeCsv(
         e.cash ? CASH_TO_CSV[lang] : "",
         splitKeys.get(e.id) ?? "",
         isShare(e.share) ? String(e.share) : "",
+        reverseTarget(e),
       ]
         .map(quote)
         .join(";")
@@ -354,6 +365,8 @@ export type ImportWarning =
   | { code: "unknown-columns"; columns: readonly string[] }
   /** Rows whose `split` value no other row of their year shared, so they stand alone. */
   | { code: "split-dissolved"; rows: number }
+  /** Rows whose `reverses` value named no voucher in the file, so they link to nothing. */
+  | { code: "reverses-dissolved"; rows: number }
 
 export type ImportFailure =
   | { ok: false; code: "empty-file" }
@@ -465,6 +478,8 @@ export function parseCsv(
   const warnings: ImportWarning[] = []
   /* Each entry's `split` cell as a year and number, in step with `entries`. */
   const splitKeysRead: (string | null)[] = []
+  /* Each entry's `reverses` cell, in step with `entries`. */
+  const reversesRead: ReversesCell[] = []
   let newCategoryCount = 0
   let rejectedReceiptCount = 0
   let latestYear: number | null = null
@@ -570,12 +585,20 @@ export function parseCsv(
       /^\d+$/.test(splitRaw) ? `${yearOf(date)}:${Number(splitRaw)}` : null
     )
 
+    const reversesRaw = get("reverses")
+    reversesRead.push(
+      reversesRaw === "" ? null : (parseReversalKey(reversesRaw) ?? "bad")
+    )
+
     const y = yearOf(date)
     if (latestYear == null || y > latestYear) latestYear = y
   }
 
   const dissolved = linkSplits(entries, splitKeysRead, makeId)
   if (dissolved) warnings.push({ code: "split-dissolved", rows: dissolved })
+
+  const unlinked = linkReversals(entries, reversesRead)
+  if (unlinked) warnings.push({ code: "reverses-dissolved", rows: unlinked })
 
   /*
    * Rows that were all bad are a failure. No rows at all is a bookkeeping with
@@ -631,6 +654,39 @@ function linkSplits(
     entries[i].split = id
   })
   return dissolved
+}
+
+/** A `reverses` cell as read: empty, the voucher it names, or unreadable. */
+type ReversesCell = ReturnType<typeof parseReversalKey> | "bad"
+
+/**
+ * Point each entry at the one its `reverses` cell names (§8.4), found by year
+ * and voucher number among the entries read. A cell that names no entry read,
+ * names the row itself or would close a loop links nothing; the count of
+ * those rows is returned for the import to report.
+ */
+function linkReversals(
+  entries: ImportedEntry[],
+  cells: readonly ReversesCell[]
+): number {
+  const byNumber = new Map<string, ImportedEntry>()
+  for (const e of entries) {
+    if (!isVoucherNumber(e.voucher)) continue
+    const key = `${yearOf(e.date)}:${e.voucher}`
+    if (!byNumber.has(key)) byNumber.set(key, e)
+  }
+  let dropped = 0
+  cells.forEach((cell, i) => {
+    if (cell === null) return
+    const target =
+      cell === "bad" ? undefined : byNumber.get(`${cell.year}:${cell.voucher}`)
+    if (!target || reversalLoops(entries[i].id, target.id, entries)) {
+      dropped += 1
+      return
+    }
+    entries[i].reverses = target.id
+  })
+  return dropped
 }
 
 /**

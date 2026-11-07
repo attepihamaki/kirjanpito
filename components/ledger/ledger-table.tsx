@@ -23,6 +23,8 @@ import { useCommandCtx } from "@/hooks/use-commands"
 import { deleteEntry } from "@/lib/commands/book-commands"
 import { recategorizeEntries, renameEntry } from "@/lib/commands/bulk-commands"
 import { calcEntry, isShare } from "@/lib/domain/calc"
+import { yearOf } from "@/lib/domain/dates"
+import { reversalLabel } from "@/lib/domain/reversal"
 import type { Entry } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
 import { useBookStore, type LedgerSortKey } from "@/stores/book-store"
@@ -62,6 +64,10 @@ export function LedgerTable({
   const allEntries = useBookStore((s) => s.entries)
   const splitVouchers = React.useMemo(
     () => splitVoucherLabels(allEntries),
+    [allEntries]
+  )
+  const reversals = React.useMemo(
+    () => reversalLabels(allEntries),
     [allEntries]
   )
 
@@ -145,6 +151,8 @@ export function LedgerTable({
             key={entry.id}
             entry={entry}
             splitWith={splitVouchers.get(entry.id)}
+            reverses={reversals.reverses.get(entry.id)}
+            reversedBy={reversals.reversedBy.get(entry.id)}
             inReceipt={receiptHits.has(entry.id)}
             onRename={(text) => renameEntry(ctx, entry, text)}
             onRecategorize={(catId) =>
@@ -195,9 +203,42 @@ function splitVoucherLabels(entries: readonly Entry[]): Map<string, string> {
   return out
 }
 
+/**
+ * What each end of a reversal shows in the pill (§8.4): for a reversing entry
+ * the voucher it reverses, for a reversed one the vouchers that reverse it.
+ * Looked up over the whole book, since the other end may be on another page,
+ * in another month or in another year.
+ */
+function reversalLabels(entries: readonly Entry[]): {
+  reverses: Map<string, string>
+  reversedBy: Map<string, string>
+} {
+  const reverses = new Map<string, string>()
+  const reversedBy = new Map<string, string[]>()
+  const byId = new Map(entries.map((e) => [e.id, e]))
+  for (const e of entries) {
+    const target = e.reverses === undefined ? undefined : byId.get(e.reverses)
+    if (!target) continue
+    const year = yearOf(e.date)
+    reverses.set(e.id, reversalLabel(target, year) || "–")
+    const list = reversedBy.get(target.id)
+    const label = reversalLabel(e, yearOf(target.date)) || "–"
+    if (list) list.push(label)
+    else reversedBy.set(target.id, [label])
+  }
+  return {
+    reverses,
+    reversedBy: new Map(
+      [...reversedBy].map(([id, labels]) => [id, labels.join(", ")])
+    ),
+  }
+}
+
 function LedgerRow({
   entry,
   splitWith,
+  reverses,
+  reversedBy,
   inReceipt,
   onRename,
   onRecategorize,
@@ -211,6 +252,10 @@ function LedgerRow({
   entry: Entry
   /** The voucher numbers of the whole split this entry is part of, if any. */
   splitWith: string | undefined
+  /** The voucher this entry reverses, if any. */
+  reverses: string | undefined
+  /** The vouchers that reverse this entry, if any. */
+  reversedBy: string | undefined
   /** The search matched the text of a receipt and nothing else on the row. */
   inReceipt: boolean
   /** Commit new description text typed in the row. */
@@ -330,6 +375,16 @@ function LedgerRow({
               {splitWith ? (
                 <Pill size="sm" className="ml-2">
                   {f.t("ledger.splitPill", { v: splitWith })}
+                </Pill>
+              ) : null}
+              {reverses ? (
+                <Pill size="sm" className="ml-2">
+                  {f.t("ledger.reversesPill", { v: reverses })}
+                </Pill>
+              ) : null}
+              {reversedBy ? (
+                <Pill size="sm" className="ml-2">
+                  {f.t("ledger.reversedByPill", { v: reversedBy })}
                 </Pill>
               ) : null}
               {entry.euPurchase ? (

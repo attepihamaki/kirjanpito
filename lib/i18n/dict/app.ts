@@ -2563,6 +2563,43 @@ export const APP_DICT = {
       " {n} parts of split receipts had no other parts in the file and are now ordinary vouchers."
     ),
   ],
+  /* A reverses cell that names no voucher in the file links to nothing. */
+  "io.reversesDissolved": [
+    pl(
+      " Yhden tositteen korjauslinkki ei osoittanut mihinkään tositteeseen tiedostossa, joten se jätettiin pois.",
+      " {n} tositteen korjauslinkki ei osoittanut mihinkään tositteeseen tiedostossa, joten ne jätettiin pois."
+    ),
+    pl(
+      " One voucher's link to the voucher it reverses pointed at nothing in the file and was left out.",
+      " {n} vouchers' links to the voucher they reverse pointed at nothing in the file and were left out."
+    ),
+  ],
+  "ledger.reversesPill": ["Korjaa {v}", "Reverses {v}"],
+  "ledger.reversedByPill": ["Korjattu {v}", "Reversed by {v}"],
+  "entry.logFieldReverses": ["Korjaa tositetta", "Reverses voucher"],
+  "entry.logReversesValue": ["linkitetty", "linked"],
+  "entry.reverses": ["Korjaa tositetta", "Reverses voucher"],
+  "entry.reversesInfo": [
+    "Mitä korjaustosite tarkoittaa?",
+    "What does reversing a voucher mean?",
+  ],
+  "entry.reversesInfoText": [
+    "Hyvitys, hyvityslasku tai oikaisu osoittaa tositteeseen, jonka se kumoaa. Linkki on vain muistiinpano: se ei muuta laskelmia, joten kirjaa hyvitys silti omana rivinään oikealla summalla ja päivämäärällä. Kumpikin tosite näyttää toisensa.",
+    "A refund, credit note or correction points at the voucher it reverses. The link is a note only. It changes no calculation, so still book the refund as its own row with the right amount and date. Each voucher shows the other.",
+  ],
+  "entry.reversesNone": ["Ei linkkiä", "No link"],
+  "entry.reversesSearch": [
+    "Hae numerolla, selitteellä, päivällä tai summalla",
+    "Search by number, description, date or amount",
+  ],
+  "entry.reversesEmpty": ["Ei osumia", "No matches"],
+  "entry.reversesMore": [
+    "{n} muuta. Tarkenna hakua.",
+    "{n} more. Narrow the search.",
+  ],
+  "entry.reversesOption": ["{v} · {d} · {x} · {m}", "{v} · {d} · {x} · {m}"],
+  "entry.reversedBy": ["Korjattu tositteilla", "Reversed by"],
+  "entry.reversesOpen": ["Avaa tosite {v}", "Open voucher {v}"],
   "io.noRows": [
     "Yhtään riviä ei voitu lukea. {e}",
     "No rows could be read. {e}",

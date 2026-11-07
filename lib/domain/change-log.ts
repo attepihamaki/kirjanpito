@@ -57,6 +57,7 @@ export const LOGGED_FIELDS = [
   "atts",
   "split",
   "share",
+  "reverses",
 ] as const
 export type LoggedField = (typeof LOGGED_FIELDS)[number]
 
@@ -69,6 +70,8 @@ function logged(e: Entry, field: LoggedField): string | number | null {
   if (field === "cash") return e.cash ? "cash" : null
   // The link is an opaque id; the log records only that the voucher is a part.
   if (field === "split") return e.split ? "split" : null
+  // Same for the reversal link: the log records that there is one, not the id.
+  if (field === "reverses") return e.reverses ? "reverses" : null
   return e[field] ?? null
 }
 

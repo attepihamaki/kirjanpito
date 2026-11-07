@@ -125,6 +125,8 @@ function importSummary(
   }
   const dissolved = result.warnings.find((w) => w.code === "split-dissolved")
   if (dissolved) text += ctx.t("io.splitDissolved", { n: dissolved.rows })
+  const unlinked = result.warnings.find((w) => w.code === "reverses-dissolved")
+  if (unlinked) text += ctx.t("io.reversesDissolved", { n: unlinked.rows })
   if (result.skipped.length) {
     const first = result.skipped
       .slice(0, 3)
