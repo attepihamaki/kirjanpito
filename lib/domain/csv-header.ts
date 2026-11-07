@@ -9,7 +9,8 @@ import type { Lang } from "@/lib/domain/types"
  * made in cash (§8.5). `split` holds the voucher number of the first part of
  * a receipt that was split, on every part of it (§8.4). `share` is the
  * business share of a cost used partly privately (§6.12). `reverses` names the
- * voucher a refund, credit note or correction reverses (§8.4).
+ * voucher a refund, credit note or correction reverses (§8.4). `sells` names
+ * the purchase voucher a sale of machinery or equipment disposes of (§8.8).
  *
  * These names are the canonical ones the parser works in. What a file is
  * written with is `csvHeaderLine`, which follows the book's export language;
@@ -39,6 +40,7 @@ export const CSV_HEADER = [
   "split",
   "share",
   "reverses",
+  "sells",
 ] as const
 
 export type CsvColumn = (typeof CSV_HEADER)[number]
@@ -68,6 +70,7 @@ const FINNISH_LABELS: Readonly<Record<CsvColumn, string>> = {
   split: "jaettu",
   share: "osuus",
   reverses: "korjaa",
+  sells: "myy",
 }
 
 /** The label a column is written under, for a header or an error message. */

@@ -147,6 +147,12 @@ export interface Entry {
    * no link.
    */
   reverses?: string
+  /**
+   * The `id` of the purchase this sale of machinery or equipment disposes of
+   * (§8.8). A reference for the asset list only: the pool is still one balance
+   * and no figure reads it. An id no longer in the book means no link.
+   */
+  sells?: string
 }
 
 /** A category (luokka) the user books entries to. */

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 
+import { InfoPopover } from "@/components/common/info-popover"
 import { Surface } from "@/components/common/surface"
 import { useT } from "@/components/lang-provider"
 import { cn } from "@/lib/utils"
@@ -55,6 +56,7 @@ export function SettingCard({
   label,
   editor,
   action,
+  info,
   children,
 }: {
   label: string
@@ -62,6 +64,8 @@ export function SettingCard({
   editor?: React.ReactNode
   /** A button of the card's own, in place of the edit toggle. */
   action?: React.ReactNode
+  /** A longer explanation, shown in a popover beside the label. */
+  info?: React.ReactNode
   /** The summary: usually a `SettingValue`. */
   children: React.ReactNode
 }) {
@@ -78,7 +82,16 @@ export function SettingCard({
       )}
     >
       <div className="flex min-h-7 items-center justify-between gap-2 text-sm text-muted-foreground">
-        <h2 className="font-normal">{label}</h2>
+        <h2 className="flex min-w-0 items-center gap-1 font-normal">
+          {label}
+          {info ? (
+            <span className="print-hidden inline-flex shrink-0">
+              <InfoPopover label={`${t("common.helpLabel")}: ${label}`}>
+                {info}
+              </InfoPopover>
+            </span>
+          ) : null}
+        </h2>
         {editor ? (
           <button
             type="button"

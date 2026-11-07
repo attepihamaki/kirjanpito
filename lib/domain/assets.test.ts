@@ -3,9 +3,12 @@ import { describe, expect, it } from "vitest"
 import { defaultCategories } from "@/lib/domain/accounts"
 import {
   assetEntries,
+  assetList,
   assetSchedule,
   maximumDepreciation,
+  sellCandidates,
 } from "@/lib/domain/assets"
+import { parseCsv, serializeCsv } from "@/lib/domain/csv"
 import { journal } from "@/lib/domain/books"
 import { incomeStatement } from "@/lib/domain/income-statement"
 import { summary } from "@/lib/domain/summary"
@@ -149,5 +152,68 @@ describe("a fixed asset purchase", () => {
     const book = journal([purchase], cats, 2026)
     expect(book.months[0].rows).toHaveLength(1)
     expect(book.expense.net).toBe(0)
+  })
+})
+
+describe("asset list", () => {
+  const buy = entry("2025-04-01", "asset-purchase", 500_000, {
+    id: "buy",
+    voucher: 3,
+    description: "Lathe",
+  })
+  const buy2 = entry("2026-02-01", "asset-purchase", 90_000, {
+    id: "buy2",
+    voucher: 1,
+    description: "Drill",
+  })
+  const sale = entry("2026-06-01", "asset-sale", 120_000, {
+    id: "sale",
+    voucher: 8,
+    type: "income",
+    sells: "buy",
+  })
+  const loose = entry("2026-07-01", "asset-sale", 10_000, {
+    id: "loose",
+    voucher: 9,
+    type: "income",
+  })
+
+  it("lists purchases with the sale that names them", () => {
+    const list = assetList([buy, buy2, sale, loose], cats, 2026)
+    expect(list.items.map((i) => i.purchase.id)).toEqual(["buy", "buy2"])
+    expect(list.items[0].sales).toEqual([sale])
+    expect(list.items[1].sales).toEqual([])
+    expect(list.unlinkedSales).toEqual([loose])
+  })
+
+  it("stops at the end of the selected year", () => {
+    const list = assetList([buy, buy2, sale], cats, 2025)
+    expect(list.items.map((i) => i.purchase.id)).toEqual(["buy"])
+    expect(list.items[0].sales).toEqual([])
+    expect(list.unlinkedSales).toEqual([])
+  })
+
+  it("offers only purchases to a sale, nearest date first", () => {
+    const out = sellCandidates([buy, buy2, sale], cats, "2026-03-01")
+    expect(out.map((e) => e.id)).toEqual(["buy2", "buy"])
+  })
+
+  it("round-trips the sale link through the CSV", () => {
+    const text = serializeCsv([buy, sale], cats)
+    expect(text).toContain("#3/2025")
+    const result = parseCsv(text, defaultCategories())
+    if (!result.ok) throw new Error(result.code)
+    const bought = result.entries.find((e) => e.voucher === 3)
+    const sold = result.entries.find((e) => e.voucher === 8)
+    expect(sold?.sells).toBe(bought?.id)
+  })
+
+  it("drops a sale link that names nothing and counts it", () => {
+    const header = "voucher;date;description;type;amount;sells"
+    const row = "1;2026-03-01;A;tulo;100,00;#99/2026"
+    const result = parseCsv(`${header}\n${row}`, defaultCategories())
+    if (!result.ok) throw new Error(result.code)
+    expect(result.entries[0].sells).toBeUndefined()
+    expect(result.warnings).toContainEqual({ code: "sells-dissolved", rows: 1 })
   })
 })

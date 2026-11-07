@@ -195,11 +195,6 @@ describe("the statement's new pages", () => {
   it("says so when the app has no amounts for the year", () => {
     useBookStore.setState({ year: 2010 })
     mount(<DeductionsView />)
-    expect(
-      screen.getByText(/matkakorvausten määriä vuodelle 2010/)
-    ).toBeVisible()
-    expect(
-      screen.getByText(/työhuonevähennyksen määrää vuodelle 2010/)
-    ).toBeVisible()
+    expect(screen.getAllByText("Ei määriä vuodelle 2010")).toHaveLength(3)
   })
 })

@@ -2059,6 +2059,31 @@ export const APP_DICT = {
   "assets.date": ["Pvm", "Date"],
   "assets.purchase": ["Hankinta", "Purchase"],
   "assets.sale": ["Myynti", "Sale"],
+  "assets.listTitle": ["Käyttöomaisuusluettelo", "Fixed asset list"],
+  "assets.listHint": [
+    "Hankintatositteet {y} loppuun asti ja niihin linkitetyt myyntitositteet. Luettelo on muistiinpano: vero lasketaan edelleen yhtenä poistopohjana.",
+    "Purchase vouchers up to the end of {y} and the sale vouchers linked to them. The list is a record only. The tax is still worked out on one pool.",
+  ],
+  "assets.listEmpty": [
+    "Ei hankintatositteita. Aloitussaldoon sisältyvät hyödykkeet eivät näy luettelossa.",
+    "No purchase vouchers. Assets inside the opening balance are not listed.",
+  ],
+  "assets.listItem": ["Hyödyke", "Item"],
+  "assets.listPurchase": ["Hankintatosite", "Purchase voucher"],
+  "assets.listCost": ["Hankintameno", "Cost"],
+  "assets.listSale": ["Myyntitosite", "Sale voucher"],
+  "assets.listPrice": ["Myyntihinta", "Sale price"],
+  "assets.listStatus": ["Tila", "Status"],
+  "assets.listInUse": ["Käytössä", "In use"],
+  "assets.listSold": ["Myyty", "Sold"],
+  "assets.listUnlinked": [
+    "Myyntejä ilman linkkiä hankintaan",
+    "Sales not linked to a purchase",
+  ],
+  "assets.listUnlinkedHint": [
+    "Avaa myyntitosite ja valitse Maksu-välilehdellä hankinta, jonka myynti koskee.",
+    "Open the sale voucher and choose the purchase it sells on the Maksu tab.",
+  ],
   "assets.used": ["Enimmäispoistosta kirjattu", "Booked of the maximum"],
   "assets.calculation": ["Poistopohjan lasku", "How the base is worked out"],
   "assets.openingTitle": ["Aloitussaldo", "Opening balance"],
@@ -2078,6 +2103,7 @@ export const APP_DICT = {
     "Matkojen ja yksityisauton lisävähennykset kirjataan riville 364 (veroilmoituksen kohdat 388 ja 392) ja työhuonevähennys riville 354, kirjanpidon ulkopuolisiin vähennyskelpoisiin kuluihin. Laskelmat käyttävät Verohallinnon vuoden {y} määriä, ja ne ovat apuväline: säilytä ajopäiväkirja ja matkojen tiedot itse.",
     "The travel and private car deductions go on line 364 (fields 388 and 392 of the return), and the home office deduction on line 354, deductible expenses outside the books. The calculators use the Tax Administration’s amounts for {y}. They are an aid: keep your own logbook and trip records.",
   ],
+  "deductions.noRates": ["Ei määriä vuodelle {y}", "No amounts for {y}"],
   "deductions.noTravelRates": [
     "Sovelluksessa ei ole Verohallinnon matkakorvausten määriä vuodelle {y}.",
     "The app does not have the Tax Administration’s travel amounts for {y}.",
@@ -2574,6 +2600,28 @@ export const APP_DICT = {
       " {n} vouchers' links to the voucher they reverse pointed at nothing in the file and were left out."
     ),
   ],
+  /* A sells cell that names no voucher in the file links to nothing. */
+  "io.sellsDissolved": [
+    pl(
+      " Yhden myyntitositteen linkki hankintaan ei osoittanut mihinkään tositteeseen tiedostossa, joten se jätettiin pois.",
+      " {n} myyntitositteen linkki hankintaan ei osoittanut mihinkään tositteeseen tiedostossa, joten ne jätettiin pois."
+    ),
+    pl(
+      " One sale voucher's link to its purchase pointed at nothing in the file and was left out.",
+      " {n} sale vouchers' links to their purchases pointed at nothing in the file and were left out."
+    ),
+  ],
+  "entry.logFieldSells": ["Myy hankinnan", "Sells purchase"],
+  "entry.sells": ["Myytävä hankinta", "Purchase sold"],
+  "entry.sellsInfo": [
+    "Mihin myyntilinkkiä käytetään?",
+    "What is the sale link for?",
+  ],
+  "entry.sellsInfoText": [
+    "Valitse koneen tai kaluston hankintatosite, jonka tämä myynti koskee. Käyttöomaisuusluettelo näyttää silloin hankinnan ja myynnin samalla rivillä. Linkki on vain muistiinpano: poistopohja lasketaan edelleen summista.",
+    "Choose the purchase voucher of the machine or equipment this sale is for. The fixed asset list then shows the purchase and the sale on one row. The link is a note only. The depreciation base is still worked out from the sums.",
+  ],
+  "entry.sellsNone": ["Ei linkkiä", "No link"],
   "ledger.reversesPill": ["Korjaa {v}", "Reverses {v}"],
   "ledger.reversedByPill": ["Korjattu {v}", "Reversed by {v}"],
   "entry.logFieldReverses": ["Korjaa tositetta", "Reverses voucher"],

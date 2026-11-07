@@ -195,8 +195,8 @@ export function serializeCsv(
 
   const splitKeys = splitColumnValues(sorted)
   const byId = new Map(sorted.map((e) => [e.id, e]))
-  const reverseTarget = (e: Entry): string => {
-    const target = e.reverses === undefined ? undefined : byId.get(e.reverses)
+  const linkTarget = (id: string | undefined): string => {
+    const target = id === undefined ? undefined : byId.get(id)
     return target ? reversalKey(target) : ""
   }
 
@@ -232,7 +232,8 @@ export function serializeCsv(
         e.cash ? CASH_TO_CSV[lang] : "",
         splitKeys.get(e.id) ?? "",
         isShare(e.share) ? String(e.share) : "",
-        reverseTarget(e),
+        linkTarget(e.reverses),
+        linkTarget(e.sells),
       ]
         .map(quote)
         .join(";")
@@ -367,6 +368,8 @@ export type ImportWarning =
   | { code: "split-dissolved"; rows: number }
   /** Rows whose `reverses` value named no voucher in the file, so they link to nothing. */
   | { code: "reverses-dissolved"; rows: number }
+  /** Rows whose `sells` value named no voucher in the file, so they link to nothing. */
+  | { code: "sells-dissolved"; rows: number }
 
 export type ImportFailure =
   | { ok: false; code: "empty-file" }
@@ -480,6 +483,8 @@ export function parseCsv(
   const splitKeysRead: (string | null)[] = []
   /* Each entry's `reverses` cell, in step with `entries`. */
   const reversesRead: ReversesCell[] = []
+  /* Each entry's `sells` cell, in step with `entries`. */
+  const sellsRead: ReversesCell[] = []
   let newCategoryCount = 0
   let rejectedReceiptCount = 0
   let latestYear: number | null = null
@@ -590,6 +595,11 @@ export function parseCsv(
       reversesRaw === "" ? null : (parseReversalKey(reversesRaw) ?? "bad")
     )
 
+    const sellsRaw = get("sells")
+    sellsRead.push(
+      sellsRaw === "" ? null : (parseReversalKey(sellsRaw) ?? "bad")
+    )
+
     const y = yearOf(date)
     if (latestYear == null || y > latestYear) latestYear = y
   }
@@ -597,8 +607,11 @@ export function parseCsv(
   const dissolved = linkSplits(entries, splitKeysRead, makeId)
   if (dissolved) warnings.push({ code: "split-dissolved", rows: dissolved })
 
-  const unlinked = linkReversals(entries, reversesRead)
+  const unlinked = linkReversals(entries, reversesRead, "reverses")
   if (unlinked) warnings.push({ code: "reverses-dissolved", rows: unlinked })
+
+  const unsold = linkReversals(entries, sellsRead, "sells")
+  if (unsold) warnings.push({ code: "sells-dissolved", rows: unsold })
 
   /*
    * Rows that were all bad are a failure. No rows at all is a bookkeeping with
@@ -656,18 +669,20 @@ function linkSplits(
   return dissolved
 }
 
-/** A `reverses` cell as read: empty, the voucher it names, or unreadable. */
+/** A `reverses` or `sells` cell as read: empty, the voucher it names, or unreadable. */
 type ReversesCell = ReturnType<typeof parseReversalKey> | "bad"
 
 /**
- * Point each entry at the one its `reverses` cell names (§8.4), found by year
- * and voucher number among the entries read. A cell that names no entry read,
- * names the row itself or would close a loop links nothing; the count of
- * those rows is returned for the import to report.
+ * Point each entry at the one its `reverses` cell (§8.4) or `sells` cell
+ * (§8.8) names, found by year and voucher number among the entries read. A
+ * cell that names no entry read, names the row itself or, for `reverses`,
+ * would close a loop links nothing; the count of those rows is returned for
+ * the import to report.
  */
 function linkReversals(
   entries: ImportedEntry[],
-  cells: readonly ReversesCell[]
+  cells: readonly ReversesCell[],
+  field: "reverses" | "sells"
 ): number {
   const byNumber = new Map<string, ImportedEntry>()
   for (const e of entries) {
@@ -680,11 +695,16 @@ function linkReversals(
     if (cell === null) return
     const target =
       cell === "bad" ? undefined : byNumber.get(`${cell.year}:${cell.voucher}`)
-    if (!target || reversalLoops(entries[i].id, target.id, entries)) {
+    const loops =
+      !!target &&
+      (field === "sells"
+        ? target.id === entries[i].id
+        : reversalLoops(entries[i].id, target.id, entries))
+    if (!target || loops) {
       dropped += 1
       return
     }
-    entries[i].reverses = target.id
+    entries[i][field] = target.id
   })
   return dropped
 }

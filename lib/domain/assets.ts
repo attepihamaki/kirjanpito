@@ -59,6 +59,68 @@ export function assetEntries(
     .sort((a, b) => a.date.localeCompare(b.date))
 }
 
+/**
+ * The purchases a sale dated `date` may be linked to, nearest in date first.
+ * Any year qualifies, since a machine is often sold years after it was bought.
+ */
+export function sellCandidates(
+  entries: readonly Entry[],
+  cats: CategoryMap,
+  date: string
+): Entry[] {
+  const at = Date.parse(date)
+  const distance = (e: Entry) =>
+    Number.isNaN(at) ? 0 : Math.abs(Date.parse(e.date) - at)
+  return entries
+    .filter((e) => e.type === "expense" && isCapital(e, cats))
+    .sort(
+      (a, b) => distance(a) - distance(b) || (b.voucher ?? 0) - (a.voucher ?? 0)
+    )
+}
+
+/** One purchase in the asset list, with the sales that name it. */
+export interface AssetItem {
+  purchase: Entry
+  /** The sales linked to the purchase, in date order. Empty while it is in use. */
+  sales: Entry[]
+}
+
+export interface AssetList {
+  items: AssetItem[]
+  /** Sales that name no purchase in the list, so no item shows them as sold. */
+  unlinkedSales: Entry[]
+}
+
+/**
+ * The list of what the pool holds (§8.8): every purchase dated up to the end
+ * of `through`, with the sales linked to it by `Entry.sells` and dated by
+ * then. The list is a record for an accountant. The pool's balance is worked
+ * out from the sums alone, so a missing or wrong link changes no figure.
+ */
+export function assetList(
+  entries: readonly Entry[],
+  cats: CategoryMap,
+  through: number
+): AssetList {
+  const byDate = (a: Entry, b: Entry) =>
+    a.date.localeCompare(b.date) || (a.voucher ?? 0) - (b.voucher ?? 0)
+  const capital = entries
+    .filter((e) => yearOf(e.date) <= through && isCapital(e, cats))
+    .sort(byDate)
+  const items: AssetItem[] = capital
+    .filter((e) => e.type === "expense")
+    .map((purchase) => ({ purchase, sales: [] }))
+  const byId = new Map(items.map((item) => [item.purchase.id, item]))
+  const unlinkedSales: Entry[] = []
+  for (const sale of capital) {
+    if (sale.type !== "income") continue
+    const item = sale.sells === undefined ? undefined : byId.get(sale.sells)
+    if (item) item.sales.push(sale)
+    else unlinkedSales.push(sale)
+  }
+  return { items, unlinkedSales }
+}
+
 /** The maximum for a balance in a year: a quarter of it, or all of a small one. */
 export function maximumDepreciation(base: Cents, year: number): Cents {
   const on = startOf(year)

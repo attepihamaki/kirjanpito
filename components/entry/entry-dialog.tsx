@@ -89,6 +89,7 @@ import {
 import { isPdf } from "@/lib/domain/receipt-path"
 import { isoDate, monthOf, todayIso, yearOf } from "@/lib/domain/dates"
 import { canSplitLine, splitSiblings } from "@/lib/domain/split"
+import { sellCandidates } from "@/lib/domain/assets"
 import {
   reversalCandidates,
   reversalLabel,
@@ -142,6 +143,8 @@ interface FormState {
   share: string
   /** The id of the entry this one reverses, "" for none (§8.4). */
   reverses: string
+  /** The id of the purchase this sale of machinery disposes of, "" for none (§8.8). */
+  sells: string
 }
 
 /** The fields §8.5 validates, named as they are in `FormState`. */
@@ -209,6 +212,7 @@ function initialForm({
       buyerVatId: "",
       share: "",
       reverses: "",
+      sells: "",
     }
   }
   const today = todayIso()
@@ -238,6 +242,7 @@ function initialForm({
     share: editing.share ? String(editing.share) : "",
     // A copy is a new voucher and reverses nothing until it is told to.
     reverses: mode === "edit" ? (editing.reverses ?? "") : "",
+    sells: mode === "edit" ? (editing.sells ?? "") : "",
   }
 }
 
@@ -615,6 +620,7 @@ function EntryDialogForm({
   const capitalAsset = !!(
     selectedCat && LINE_BY_KEY.get(selectedCat.line)?.capital
   )
+  const assetSale = capitalAsset && form.type === "income"
   /*
    * A cost can be used partly privately (§6.12). A transfer, a settlement, a
    * loan and an EU purchase have no such part.
@@ -707,6 +713,27 @@ function EntryDialogForm({
       }),
     [editingId, form.date, entries, entryYear, f]
   )
+  const sellOptions = React.useMemo(
+    () =>
+      assetSale
+        ? sellCandidates(entries, catMap, form.date).map((e) => {
+            const label = f.t("entry.reversesOption", {
+              v: reversalLabel(e, entryYear) || "–",
+              d: f.date(e.date),
+              x: e.description || f.t("ledger.noDescription"),
+              m: f.money(calcEntry(e).gross),
+            })
+            const extra = `${e.date} ${formatMoneyPlain(e.amount)}`
+            return {
+              value: e.id,
+              label,
+              haystack: `${label} ${extra}`.toLowerCase(),
+            }
+          })
+        : [],
+    [assetSale, entries, catMap, form.date, entryYear, f]
+  )
+  const sold = entries.find((e) => e.id === form.sells)
   const reversed = entries.find((e) => e.id === form.reverses)
   const reversedBy =
     editingId && editing ? reversingEntries(editing, entries) : []
@@ -828,6 +855,9 @@ function EntryDialogForm({
       ...(form.reverses && entries.some((e) => e.id === form.reverses)
         ? { reverses: form.reverses }
         : {}),
+      ...(assetSale && form.sells && entries.some((e) => e.id === form.sells)
+        ? { sells: form.sells }
+        : {}),
       // A part stays a part of its receipt; a copy is a new voucher of its own.
       ...(mode === "edit" && editing?.split ? { split: editing.split } : {}),
     }
@@ -910,6 +940,7 @@ function EntryDialogForm({
         buyerVatId: "",
         share: "",
         reverses: "",
+        sells: "",
       }
       keepRate.current = false
       keepShare.current = false
@@ -1539,6 +1570,27 @@ function EntryDialogForm({
                       </div>
                     </Field>
                   </div>
+
+                  {assetSale ? (
+                    <Field>
+                      <div className="flex items-center gap-1">
+                        <FieldLabel>{f.t("entry.sells")}</FieldLabel>
+                        <InfoPopover label={f.t("entry.sellsInfo")}>
+                          {f.t("entry.sellsInfoText")}
+                        </InfoPopover>
+                      </div>
+                      <VoucherPicker
+                        options={sellOptions}
+                        value={sold ? form.sells : ""}
+                        label={f.t("entry.sells")}
+                        noneLabel={f.t("entry.sellsNone")}
+                        searchPlaceholder={f.t("entry.reversesSearch")}
+                        emptyText={f.t("entry.reversesEmpty")}
+                        moreText={(n) => f.t("entry.reversesMore", { n })}
+                        onChange={(value) => update({ sells: value })}
+                      />
+                    </Field>
+                  ) : null}
 
                   <Field>
                     <div className="flex items-center gap-1">

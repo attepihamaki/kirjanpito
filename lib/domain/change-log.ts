@@ -58,6 +58,7 @@ export const LOGGED_FIELDS = [
   "split",
   "share",
   "reverses",
+  "sells",
 ] as const
 export type LoggedField = (typeof LOGGED_FIELDS)[number]
 
@@ -72,6 +73,7 @@ function logged(e: Entry, field: LoggedField): string | number | null {
   if (field === "split") return e.split ? "split" : null
   // Same for the reversal link: the log records that there is one, not the id.
   if (field === "reverses") return e.reverses ? "reverses" : null
+  if (field === "sells") return e.sells ? "sells" : null
   return e[field] ?? null
 }
 
