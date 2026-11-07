@@ -4,17 +4,8 @@ import * as React from "react"
 import { CheckIcon } from "lucide-react"
 
 import { CheckRow } from "@/components/common/check-row"
-import {
-  BOOK_LIMIT_TEXT,
-  vatPeriodLimitText,
-  vatThresholdText,
-  type BookLimitRuleId,
-} from "@/components/common/limit-text"
+import { useDescribeFinding } from "@/components/check/use-describe-finding"
 import { useFormatters } from "@/components/lang-provider"
-import {
-  useDescribeYearEnd,
-  type DescribedFinding,
-} from "@/components/statement/use-describe-year-end"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -26,12 +17,7 @@ import {
 } from "@/components/ui/dialog"
 import { useToday } from "@/hooks/use-today"
 import { bookCheck, type BookFinding } from "@/lib/domain/book-check"
-import { yearOf } from "@/lib/domain/dates"
 import { indexCategories } from "@/lib/domain/types"
-import type {
-  VatPeriodOverLimit,
-  VatThreshold,
-} from "@/lib/domain/vat-threshold"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -49,7 +35,7 @@ function BookCheckForm() {
   const f = useFormatters()
   const today = useToday()
   const closeDialog = useBookStore((s) => s.closeDialog)
-  const describeYearEnd = useDescribeYearEnd()
+  const describe = useDescribeFinding()
 
   const entries = useBookStore((s) => s.entries)
   const cats = useBookStore((s) => s.cats)
@@ -108,29 +94,6 @@ function BookCheckForm() {
     }
     return out
   }, [findings])
-
-  function describe(b: BookFinding): DescribedFinding {
-    switch (b.set) {
-      case "yearEnd":
-        return describeYearEnd(b.finding, b.year ?? yearOf(today))
-      case "bookLimits": {
-        const text = BOOK_LIMIT_TEXT[b.finding.ruleId as BookLimitRuleId]
-        return {
-          title: f.t(text.title, { y: b.finding.data.year }),
-          sub: f.t(text.sub),
-        }
-      }
-      case "vatLimits":
-        return b.finding.ruleId === "vatPeriodLimit"
-          ? vatPeriodLimitText(f, b.finding.data as VatPeriodOverLimit)
-          : vatThresholdText(f, b.finding.data as VatThreshold)
-      case "form5":
-        return {
-          title: f.t("check.form5", { codes: b.finding.data.codes.join(", ") }),
-          sub: f.t("check.form5Sub", { source: b.finding.source }),
-        }
-    }
-  }
 
   return (
     <Dialog open onOpenChange={(open) => !open && closeDialog()}>
