@@ -11,7 +11,7 @@ import { vatReturnSections, vatReturnValues } from "@/lib/domain/vat-return"
  */
 
 /** The program name written to 048. */
-export const VAT_FILE_PROGRAM = "Kirjanpito"
+const VAT_FILE_PROGRAM = "Kirjanpito"
 
 /** Suffix of 014, which the specification builds as `Y-TUNNUS_AN2`. */
 const SOFTWARE_SUFFIX = "KP"

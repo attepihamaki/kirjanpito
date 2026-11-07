@@ -10,7 +10,7 @@ export type ToastRecord = {
 }
 
 /** The newest messages kept. Older ones fall off the end. */
-export const TOAST_HISTORY_LIMIT = 50
+const TOAST_HISTORY_LIMIT = 50
 
 let records: readonly ToastRecord[] = []
 let nextId = 1
