@@ -29,6 +29,7 @@ import { useCommandCtx } from "@/hooks/use-commands"
 import { resetCategories } from "@/lib/commands/book-commands"
 import { startDeleteCategory } from "@/lib/commands/category-commands"
 import { LINE_BY_KEY, canHaveShare, categoryName } from "@/lib/domain/accounts"
+import { viewHelp, type HelpTopic } from "@/lib/domain/field-help"
 import type { Category } from "@/lib/domain/types"
 import {
   categoryAccount,
@@ -114,8 +115,14 @@ function CategoryTable() {
 
   const view = paginate(rows, page, size)
 
-  const header = (key: CatSortKey, label: string, align?: "right") => (
+  const header = (
+    key: CatSortKey,
+    label: string,
+    align?: "right",
+    help?: HelpTopic | null
+  ) => (
     <SortableHeader
+      help={help}
       label={label}
       columnKey={key}
       active={sort?.key === key}
@@ -146,7 +153,12 @@ function CategoryTable() {
             {header("side", f.t("common.type"))}
             {header("account", f.t("common.account"))}
             {header("name", f.t("common.name"))}
-            {header("vatRate", f.t("settings.defaultVat"), "right")}
+            {header(
+              "vatRate",
+              f.t("settings.defaultVat"),
+              "right",
+              viewHelp("settings.defaultVat")
+            )}
             <TableHead className="text-right">
               {f.t("settings.catShare")}
             </TableHead>

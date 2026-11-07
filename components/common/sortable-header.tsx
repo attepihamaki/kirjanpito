@@ -2,7 +2,9 @@
 
 import { ArrowDownIcon, ArrowUpIcon, ChevronsUpDownIcon } from "lucide-react"
 
+import { HelpHint } from "@/components/common/help-hint"
 import { TableHead } from "@/components/ui/table"
+import type { HelpTopic } from "@/lib/domain/field-help"
 import { cn } from "@/lib/utils"
 
 /**
@@ -17,6 +19,7 @@ export function SortableHeader<K extends string>({
   onToggle,
   align = "left",
   className,
+  help,
 }: {
   label: string
   columnKey: K
@@ -25,6 +28,8 @@ export function SortableHeader<K extends string>({
   onToggle: (key: K) => void
   align?: "left" | "right"
   className?: string
+  /** An explanation of the column, in a popover beside the sort button. */
+  help?: HelpTopic | null
 }) {
   const Icon = !active
     ? ChevronsUpDownIcon
@@ -37,22 +42,30 @@ export function SortableHeader<K extends string>({
       aria-sort={active ? (dir === 1 ? "ascending" : "descending") : "none"}
       className={cn(align === "right" && "text-right", className)}
     >
-      <button
-        type="button"
-        onClick={() => onToggle(columnKey)}
+      <div
         className={cn(
-          "inline-flex items-center gap-1 rounded-sm whitespace-nowrap",
-          "focus-ring",
-          active ? "text-foreground" : "hover:text-foreground",
+          "inline-flex items-center gap-1",
           align === "right" && "flex-row-reverse"
         )}
       >
-        {label}
-        <Icon
-          className={cn("size-3.5 shrink-0", !active && "opacity-50")}
-          aria-hidden="true"
-        />
-      </button>
+        <button
+          type="button"
+          onClick={() => onToggle(columnKey)}
+          className={cn(
+            "inline-flex items-center gap-1 rounded-sm whitespace-nowrap",
+            "focus-ring",
+            active ? "text-foreground" : "hover:text-foreground",
+            align === "right" && "flex-row-reverse"
+          )}
+        >
+          {label}
+          <Icon
+            className={cn("size-3.5 shrink-0", !active && "opacity-50")}
+            aria-hidden="true"
+          />
+        </button>
+        <HelpHint topic={help} />
+      </div>
     </TableHead>
   )
 }

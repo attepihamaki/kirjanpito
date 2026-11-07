@@ -2,9 +2,11 @@
 
 import * as React from "react"
 
+import { HelpHint } from "@/components/common/help-hint"
 import { InfoPopover } from "@/components/common/info-popover"
 import { Surface } from "@/components/common/surface"
 import { useT } from "@/components/lang-provider"
+import type { HelpTopic } from "@/lib/domain/field-help"
 import { cn } from "@/lib/utils"
 
 /**
@@ -57,6 +59,7 @@ export function SettingCard({
   editor,
   action,
   info,
+  help,
   children,
 }: {
   label: string
@@ -66,6 +69,8 @@ export function SettingCard({
   action?: React.ReactNode
   /** A longer explanation, shown in a popover beside the label. */
   info?: React.ReactNode
+  /** A tax term explained with its source, like the help on the tax forms. */
+  help?: HelpTopic | null
   /** The summary: usually a `SettingValue`. */
   children: React.ReactNode
 }) {
@@ -91,6 +96,7 @@ export function SettingCard({
               </InfoPopover>
             </span>
           ) : null}
+          <HelpHint topic={help} />
         </h2>
         {editor ? (
           <button

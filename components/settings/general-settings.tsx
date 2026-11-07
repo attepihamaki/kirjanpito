@@ -25,6 +25,7 @@ import {
   removeBookEncryption,
   setBookPassword,
 } from "@/lib/commands/encryption-commands"
+import { viewHelp } from "@/lib/domain/field-help"
 import { RULES } from "@/lib/domain/rule-tables"
 import type { TraderType } from "@/lib/domain/open-items"
 import type { Lang } from "@/lib/domain/types"
@@ -218,6 +219,7 @@ function TraderTypeSetting() {
   return (
     <SettingCard
       label={f.t("settings.traderType")}
+      help={viewHelp("settings.traderType")}
       editor={
         <>
           <TraderTypeToggle value={traderType} onChange={setTraderType} />
@@ -261,6 +263,7 @@ function VatPeriodSetting() {
   return (
     <SettingCard
       label={f.t("settings.vatPeriod")}
+      help={viewHelp("settings.vatPeriod")}
       editor={
         <>
           <VatPeriodToggle value={vatPeriod} onChange={setVatPeriod} />
@@ -288,6 +291,7 @@ function BookStartSetting() {
   return (
     <SettingCard
       label={f.t("settings.bookStart")}
+      help={viewHelp("settings.bookStart")}
       editor={
         <>
           <div className="flex flex-wrap gap-2">

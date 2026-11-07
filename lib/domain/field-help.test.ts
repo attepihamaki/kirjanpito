@@ -50,5 +50,18 @@ describe("field help", () => {
     expect(lineHelp(341)).toBe(form5Help("341"))
     expect(lineHelp(343)).toBeNull()
     expect(viewHelp("overview.bank")?.source).toBeUndefined()
+    for (const id of [
+      "ledger.net",
+      "ledger.vat",
+      "ledger.gross",
+      "ledger.category",
+      "entry.vatRate",
+      "settings.traderType",
+      "settings.vatPeriod",
+      "settings.bookStart",
+      "settings.defaultVat",
+    ]) {
+      expect(viewHelp(id), id).not.toBeNull()
+    }
   })
 })

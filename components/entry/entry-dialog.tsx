@@ -14,6 +14,7 @@ import {
 import { EntryTypeToggle } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
 import { VoucherPicker } from "@/components/entry/voucher-picker"
+import { HelpHint } from "@/components/common/help-hint"
 import { InfoPopover } from "@/components/common/info-popover"
 import { Keys } from "@/components/common/keys"
 import { AttachmentGrid } from "@/components/entry/attachment-grid"
@@ -88,6 +89,7 @@ import {
 } from "@/lib/domain/entry-checks"
 import { isPdf } from "@/lib/domain/receipt-path"
 import { isoDate, monthOf, todayIso, yearOf } from "@/lib/domain/dates"
+import { viewHelp } from "@/lib/domain/field-help"
 import { canSplitLine, splitSiblings } from "@/lib/domain/split"
 import { sellCandidates } from "@/lib/domain/assets"
 import {
@@ -1170,6 +1172,7 @@ function EntryDialogForm({
                   <Field data-invalid={invalid("catId")}>
                     <div className="flex items-center gap-1">
                       <FieldLabel>{f.t("entry.category")}</FieldLabel>
+                      <HelpHint topic={viewHelp("ledger.category")} />
                       {euPurchase ? (
                         <InfoPopover label={f.t("entry.euPurchaseInfo")}>
                           {f.t(
@@ -1344,7 +1347,10 @@ function EntryDialogForm({
 
                     {euPurchase ? null : (
                       <Field>
-                        <FieldLabel>{f.t("entry.vatRate")}</FieldLabel>
+                        <div className="flex items-center gap-1">
+                          <FieldLabel>{f.t("entry.vatRate")}</FieldLabel>
+                          <HelpHint topic={viewHelp("entry.vatRate")} />
+                        </div>
                         <OptionSelect
                           options={rateOptions.map((rate) => ({
                             value: String(rate),

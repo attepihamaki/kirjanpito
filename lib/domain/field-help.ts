@@ -321,6 +321,66 @@ const VIEW_TOPICS: Record<string, HelpTopic> = {
       en: "The app cannot see your bank. The estimate is the balance you typed in plus the vouchers paid since. Taxes and other payments that are not booked are missing.",
     },
   },
+  "ledger.net": {
+    text: {
+      fi: "Veroton hinta eli arvonlisäveron osuutta vailla oleva summa. Tuloslaskelma ja lomake 5 lasketaan tästä summasta.",
+      en: "The price without VAT. The income statement and Form 5 are calculated from this amount.",
+    },
+    source: FORM5,
+  },
+  "ledger.vat": {
+    text: {
+      fi: "Tositteen arvonlisävero. Myynnistä se on veroa, jonka tilität Verohallinnolle, ja ostosta veroa, jonka saat yleensä vähentää. Osittain vähennettävässä ostossa vähennys on vain yrityksen osuus.",
+      en: "The VAT on the voucher. On a sale it is tax you pay to Verohallinto, and on a purchase it is tax you can usually deduct. On a partly deductible purchase only the business share is deducted.",
+    },
+    source: VAT_RETURN,
+  },
+  "ledger.gross": {
+    text: {
+      fi: "Verollinen hinta eli summa, jonka tositteella maksetaan tai saadaan. Se on veroton summa plus arvonlisävero.",
+      en: "The price with VAT, which is the amount paid or received on the voucher. It is the net amount plus VAT.",
+    },
+  },
+  "ledger.category": {
+    text: {
+      fi: "Luokka päättää, mille tuloslaskelman riville ja ALV-ilmoituksen kentälle tosite kuuluu. Luokkien asetukset löytyvät Asetuksista.",
+      en: "The category decides which income statement line and VAT return field the voucher belongs to. Categories are set up in Settings.",
+    },
+  },
+  "entry.vatRate": {
+    text: {
+      fi: "Tositteen arvonlisäverokanta. Yleinen kanta on 25,5 %, alennetut 13,5 % ja 10 %, ja 0 % kattaa verottomat tapahtumat. Kanta määrää, kuinka suuri osa summasta on veroa.",
+      en: "The VAT rate of the voucher. The general rate is 25.5%, the reduced rates are 13.5% and 10%, and 0% covers VAT-free transactions. The rate decides how much of the amount is tax.",
+    },
+    source: VAT_RETURN,
+  },
+  "settings.traderType": {
+    text: {
+      fi: "Ammatinharjoittaja verotetaan maksuperusteisesti ja liikkeenharjoittaja suoriteperusteisesti. Valinta päättää, luetaanko tulot ja menot maksupäivän vai tositteen päivän mukaan.",
+      en: "A professional is taxed on payment and a business trader on accrual. The choice decides whether income and costs are read by payment date or by voucher date.",
+    },
+    source: FORM5,
+  },
+  "settings.vatPeriod": {
+    text: {
+      fi: "Verokausi on kuukausi, kolme kuukautta tai vuosi, ja se määräytyy liikevaihdon mukaan. Ilmoitus annetaan jokaiselta kaudelta, vaikka toimintaa ei olisi ollut.",
+      en: "The tax period is a month, a quarter or a year, depending on turnover. A return is filed for every period, even one with no activity.",
+    },
+    source: VAT_RETURN,
+  },
+  "settings.bookStart": {
+    text: {
+      fi: "Kuukausi, jona yritystoiminta alkoi. Sitä aiemmilta jaksoilta ei odoteta ALV-ilmoitusta, joten alkamisvuoden alussa ei näy myöhässä olevia ilmoituksia.",
+      en: "The month the business began. No VAT return is expected for earlier periods, so the first year does not show overdue returns.",
+    },
+  },
+  "settings.defaultVat": {
+    text: {
+      fi: "Verokanta, jonka luokka esitäyttää uudelle tositteelle. Yleinen kanta on 25,5 %, alennetut 13,5 % ja 10 %, ja 0 % kattaa verottomat tapahtumat. Jo kirjatut tositteet eivät muutu.",
+      en: "The VAT rate a category pre-fills on a new voucher. The general rate is 25.5%, the reduced rates are 13.5% and 10%, and 0% covers VAT-free transactions. Vouchers already booked do not change.",
+    },
+    source: VAT_RETURN,
+  },
 }
 
 /** Statement lines by account number: the lines where a reader needs a rule. */

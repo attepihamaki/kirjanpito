@@ -42,6 +42,7 @@ import {
 } from "@/lib/commands/bulk-commands"
 import { calcEntry, isShare } from "@/lib/domain/calc"
 import { yearOf } from "@/lib/domain/dates"
+import { viewHelp } from "@/lib/domain/field-help"
 import { entryLock } from "@/lib/domain/period-lock"
 import { reversalLabel } from "@/lib/domain/reversal"
 import { canSplitLine } from "@/lib/domain/split"
@@ -95,9 +96,11 @@ export function LedgerTable({
     key: LedgerSortKey,
     label: string,
     align: "left" | "right" = "left",
-    className?: string
+    className?: string,
+    helpId?: string
   ) => (
     <SortableHeader
+      help={helpId ? viewHelp(helpId) : null}
       label={label}
       columnKey={key}
       active={sort?.key === key}
@@ -145,21 +148,30 @@ export function LedgerTable({
             "category",
             f.t("ledger.colCategory"),
             "left",
-            "hidden min-[1240px]:table-cell print:table-cell"
+            "hidden min-[1240px]:table-cell print:table-cell",
+            "ledger.category"
           )}
           {header(
             "net",
             f.t("ledger.colNet"),
             "right",
-            "hidden min-[560px]:table-cell print:table-cell"
+            "hidden min-[560px]:table-cell print:table-cell",
+            "ledger.net"
           )}
           {header(
             "vat",
             f.t("ledger.colVat"),
             "right",
-            "hidden min-[560px]:table-cell print:table-cell"
+            "hidden min-[560px]:table-cell print:table-cell",
+            "ledger.vat"
           )}
-          {header("gross", f.t("ledger.colGross"), "right")}
+          {header(
+            "gross",
+            f.t("ledger.colGross"),
+            "right",
+            undefined,
+            "ledger.gross"
+          )}
           <TableHead className="hidden w-px min-[560px]:table-cell print:hidden">
             <span className="sr-only">{f.t("common.actions")}</span>
           </TableHead>
