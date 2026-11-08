@@ -234,6 +234,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
 }
 ```
 
+- **Invoices are two more JSON files at the ZIP root** (§8.27, planned): `invoices.json` and `customers.json`, DEFLATE-compressed like `settings.json`, read as leniently, and sealed and encrypted with the rest (§7.8, §7.9). `settings.json` gains `invoiceSettings` (address, email, IBAN, payment term, terms text, first invoice number). An invoice's PDF is an ordinary attachment of its entries (§7.2). A book without the files has no invoices.
 - **Keys are English**, like browser storage (§12). Nobody opens this file in Excel.
 - **Reading is lenient**, like the CSV. A missing file means defaults. A bad or unknown value is dropped on its own and the rest is kept. A `version` above `SETTINGS_VERSION` still parses, and sets `fromNewerVersion` so the import can say the file may hold settings this reader passed over — lenient, but not silent.
 - **`exportLang` is the language the book is written out in** (§7.1, §7.2). It belongs to the bookkeeping, not to the browser: open a book elsewhere and save it, and it comes back in the shape it went out in rather than reformatting itself to that browser's UI language. Unlike `language` and `theme` it **marks the book dirty**, since it changes the bytes a save would produce, and it is in `bookVersion()`. Absent from a file, it falls back to `"fi"`; a new book is seeded from the UI language and the setup dialog (§8.3) can change it.
