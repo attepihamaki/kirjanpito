@@ -35,7 +35,11 @@ import {
   type BankParseResult,
   type BankRow,
 } from "@/lib/domain/bank-csv"
-import { proposeForRows, type BankProposal } from "@/lib/domain/bank-match"
+import {
+  proposeForRows,
+  withInvoiceEntries,
+  type BankProposal,
+} from "@/lib/domain/bank-match"
 import { todayIso } from "@/lib/domain/dates"
 import { uid } from "@/lib/domain/id"
 import { periodFromKey } from "@/lib/domain/vat-deadline"
@@ -229,6 +233,7 @@ function Review({
   const f = useFormatters()
   const ctx = useCommandCtx()
   const entries = useBookStore((s) => s.entries)
+  const invoices = useBookStore((s) => s.invoices)
   const cats = useBookStore((s) => s.cats)
   const closeDialog = useBookStore((s) => s.closeDialog)
   const categoryRules = useBookStore((s) => s.categoryRules)
@@ -242,6 +247,7 @@ function Review({
   const [proposals] = React.useState(() =>
     proposeForRows(result.rows, {
       entries,
+      invoices,
       cats: catMap,
       rules: categoryRules,
       dues: unsettledDues(
@@ -341,7 +347,10 @@ function Review({
         if (att.id) held.push(att.id)
       }
     }
-    const done = await bookBankRows(ctx, { paid, added })
+    const done = await bookBankRows(ctx, {
+      paid: withInvoiceEntries(paid, invoices, entries),
+      added,
+    })
     if (held.length) {
       const store = useBookStore.getState()
       store.setDraftAttachmentIds(
@@ -496,9 +505,11 @@ function noteFor(
 ): string {
   switch (p.kind) {
     case "match":
-      return p.confidence === "likely"
-        ? f.t("bank.statusLikely")
-        : f.t("bank.statusAmount")
+      return p.confidence === "reference"
+        ? f.t("bank.statusReference")
+        : p.confidence === "likely"
+          ? f.t("bank.statusLikely")
+          : f.t("bank.statusAmount")
     case "ambiguous":
       return f.t("bank.statusAmbiguous")
     case "booked": {

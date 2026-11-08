@@ -6,6 +6,9 @@ import {
   type CategoryRule,
 } from "@/lib/domain/category-rules"
 import { canBeUnpaid, paidDate } from "@/lib/domain/open-items"
+import type { Invoice } from "@/lib/domain/invoice"
+import { compactReference } from "@/lib/domain/invoice-reference"
+import { openEntries } from "@/lib/domain/invoice-status"
 import { hintCategory } from "@/lib/domain/invoice-text"
 import { periodFromKey } from "@/lib/domain/vat-deadline"
 import type { UnsettledDue } from "@/lib/domain/vat-settlement"
@@ -22,8 +25,12 @@ export type BankProposal =
   | {
       kind: "match"
       entryId: string
-      /** `likely` when the text agrees too, `amount` when only the amount does. */
-      confidence: "likely" | "amount"
+      /**
+       * `reference` when the row's reference number is an invoice's and the
+       * amount is what it still owes (§8.27), `likely` when the text agrees
+       * too, `amount` when only the amount does.
+       */
+      confidence: "likely" | "amount" | "reference"
     }
   /* Several open entries fit and nothing tells them apart. */
   | { kind: "ambiguous"; entryIds: string[] }
@@ -113,6 +120,84 @@ export interface BankContext {
   rules?: readonly CategoryRule[]
   /** Closed periods with a payment or refund still to book (§6.6). */
   dues?: readonly UnsettledDue[]
+  /** The sales invoices, matched to a row by their reference number (§8.27). */
+  invoices?: readonly Invoice[]
+}
+
+/** Whether the row carries the invoice's reference number, in its reference field or its message. */
+function carriesReference(row: BankRow, invoice: Invoice): boolean {
+  if (!invoice.reference) return false
+  const reference = compactReference(invoice.reference)
+  return (
+    compactReference(row.reference) === reference ||
+    numberTokens(row.message).includes(reference)
+  )
+}
+
+/**
+ * The issued invoice this row pays: money in that carries the invoice's
+ * reference and equals what the invoice still owes (§8.27). A part payment or
+ * an overpayment is not matched here and goes through the ordinary rules.
+ */
+function payingInvoice(
+  row: BankRow,
+  ctx: BankContext,
+  claimed: ReadonlySet<string>
+): { invoice: Invoice; open: Entry[] } | undefined {
+  if (row.amount <= 0) return undefined
+  const byId = new Map(ctx.entries.map((e) => [e.id, e]))
+  for (const invoice of ctx.invoices ?? []) {
+    if (!carriesReference(row, invoice)) continue
+    const open = openEntries(invoice, byId).filter((e) => !claimed.has(e.id))
+    const owed = open.reduce((sum, e) => sum + calcEntry(e).gross, 0)
+    if (open.length > 0 && owed === row.amount) return { invoice, open }
+  }
+  return undefined
+}
+
+/**
+ * An invoice of several entries that this row already paid: its reference, its
+ * entries all paid on the row's day and together the row's amount. A one-entry
+ * invoice is found by `alreadyBooked`.
+ */
+function alreadyPaidInvoice(row: BankRow, ctx: BankContext): Entry | undefined {
+  if (row.amount <= 0) return undefined
+  const byId = new Map(ctx.entries.map((e) => [e.id, e]))
+  for (const invoice of ctx.invoices ?? []) {
+    if (!carriesReference(row, invoice)) continue
+    const entries = invoice.entryIds.flatMap((id) => byId.get(id) ?? [])
+    if (entries.length < 2 || entries.length !== invoice.entryIds.length)
+      continue
+    const settled = entries.every((e) => paidDate(e) === row.date)
+    const total = entries.reduce((sum, e) => sum + calcEntry(e).gross, 0)
+    if (settled && total === row.amount) return entries[0]
+  }
+  return undefined
+}
+
+/**
+ * The payments a booking makes, with every other open entry of an invoice
+ * added when one of its entries is paid: an invoice is paid whole, on the day
+ * the money arrived (§8.27).
+ */
+export function withInvoiceEntries(
+  paid: readonly { entryId: string; on: string }[],
+  invoices: readonly Invoice[],
+  entries: readonly Entry[]
+): { entryId: string; on: string }[] {
+  const byId = new Map(entries.map((e) => [e.id, e]))
+  const out = [...paid]
+  const seen = new Set(paid.map((p) => p.entryId))
+  for (const { entryId, on } of paid) {
+    const invoice = invoices.find((i) => i.entryIds.includes(entryId))
+    if (!invoice) continue
+    for (const e of openEntries(invoice, byId)) {
+      if (seen.has(e.id)) continue
+      seen.add(e.id)
+      out.push({ entryId: e.id, on })
+    }
+  }
+  return out
 }
 
 /** An entry that already records this payment: same side, amount and payment day. */
@@ -241,8 +326,18 @@ export function proposeForRows(
   const claimed = new Set<string>()
   const claimedDues = new Set<string>()
   return rows.map((row): BankProposal => {
-    const booked = alreadyBooked(row, ctx)
+    const booked = alreadyBooked(row, ctx) ?? alreadyPaidInvoice(row, ctx)
     if (booked) return { kind: "booked", entryId: booked.id }
+
+    const paying = payingInvoice(row, ctx, claimed)
+    if (paying) {
+      for (const e of paying.open) claimed.add(e.id)
+      return {
+        kind: "match",
+        entryId: paying.open[0].id,
+        confidence: "reference",
+      }
+    }
 
     const type = signedType(row)
     const gross = Math.abs(row.amount)

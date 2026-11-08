@@ -7,7 +7,9 @@ import {
   proposeForRows,
   suggestFromHistory,
   suggestFromWords,
+  withInvoiceEntries,
 } from "@/lib/domain/bank-match"
+import { emptyParty, type Invoice } from "@/lib/domain/invoice"
 import { indexCategories, type Entry } from "@/lib/domain/types"
 
 const cats = indexCategories(defaultCategories())
@@ -275,5 +277,144 @@ describe("proposeForRows, VAT payments and refunds", () => {
     const [a, b] = proposeForRows(rows, withDues)
     expect(a).toMatchObject({ draft: { settles: "2026-09" } })
     expect(b.kind === "new" && b.draft.settles).toBeFalsy()
+  })
+})
+
+describe("proposeForRows, invoices (§8.27)", () => {
+  const sale = (id: string, paidOn: Entry["paidOn"], amount = 10_000): Entry =>
+    entry({
+      id,
+      type: "income",
+      catId: "300-domestic",
+      amount,
+      amountMode: "net",
+      vatRate: 25.5,
+      paidOn,
+    })
+  const invoice = (over: Partial<Invoice> = {}): Invoice => ({
+    id: "i1",
+    number: 1001,
+    date: "2026-11-01",
+    dueDate: "2026-11-15",
+    supplyFrom: null,
+    supplyTo: null,
+    customerId: null,
+    customer: emptyParty(),
+    language: "fi",
+    rows: [],
+    note: "",
+    terms: "",
+    reference: "10016",
+    seller: null,
+    issuedAt: "2026-11-01T09:00:00.000Z",
+    entryIds: ["a"],
+    credits: null,
+    ...over,
+  })
+  const incoming = (over: Partial<BankRow> = {}) =>
+    row({ amount: 12_550, date: "2026-11-10", reference: "10016", ...over })
+  const withInvoices = (entries: Entry[], invoices: Invoice[]) => ({
+    entries,
+    cats,
+    invoices,
+  })
+
+  it("matches the invoice by its reference and the amount it still owes", () => {
+    const [p] = proposeForRows(
+      [incoming()],
+      withInvoices([sale("a", null)], [invoice()])
+    )
+    expect(p).toEqual({ kind: "match", entryId: "a", confidence: "reference" })
+  })
+
+  it("finds the reference in the message and ignores spaces in the reference field", () => {
+    const ctxWith = withInvoices([sale("a", null)], [invoice()])
+    expect(
+      proposeForRows(
+        [incoming({ reference: "", message: "Maksu 10016" })],
+        ctxWith
+      )[0]
+    ).toMatchObject({ confidence: "reference" })
+    expect(
+      proposeForRows([incoming({ reference: "1 0016" })], ctxWith)[0]
+    ).toMatchObject({ confidence: "reference" })
+  })
+
+  it("matches an invoice of two entries to its total and claims both", () => {
+    const entries = [sale("a", null), sale("b", null, 5000)]
+    const both = invoice({ entryIds: ["a", "b"] })
+    const proposals = proposeForRows(
+      [incoming({ amount: 18_825 }), incoming({ amount: 6275, reference: "" })],
+      withInvoices(entries, [both])
+    )
+    expect(proposals[0]).toEqual({
+      kind: "match",
+      entryId: "a",
+      confidence: "reference",
+    })
+    /* The second row cannot claim the entry the first one took. */
+    expect(proposals[1].kind).not.toBe("match")
+  })
+
+  it("does not match a part payment or an overpayment by reference", () => {
+    const ctxWith = withInvoices([sale("a", null)], [invoice()])
+    expect(proposeForRows([incoming({ amount: 5000 })], ctxWith)[0].kind).toBe(
+      "new"
+    )
+    expect(
+      proposeForRows([incoming({ amount: 20_000 })], ctxWith)[0].kind
+    ).toBe("new")
+  })
+
+  it("falls back to the ordinary rules for another reference, money out and a paid invoice", () => {
+    const ctxWith = withInvoices([sale("a", null)], [invoice()])
+    expect(
+      proposeForRows([incoming({ reference: "10029" })], ctxWith)[0]
+    ).toEqual({ kind: "match", entryId: "a", confidence: "amount" })
+    expect(
+      proposeForRows([incoming({ amount: -12_550 })], ctxWith)[0].kind
+    ).toBe("new")
+    const paid = withInvoices([sale("a", "2026-11-05")], [invoice()])
+    expect(proposeForRows([incoming()], paid)[0].kind).toBe("new")
+  })
+
+  it("sees an invoice of two entries as already booked when the statement is read again", () => {
+    const entries = [sale("a", "2026-11-10"), sale("b", "2026-11-10", 5000)]
+    const both = invoice({ entryIds: ["a", "b"] })
+    const [p] = proposeForRows(
+      [incoming({ amount: 18_825 })],
+      withInvoices(entries, [both])
+    )
+    expect(p).toEqual({ kind: "booked", entryId: "a" })
+  })
+})
+
+describe("withInvoiceEntries", () => {
+  const entries: Entry[] = [
+    entry({ id: "a", paidOn: null }),
+    entry({ id: "b", paidOn: null }),
+    entry({ id: "c", paidOn: "2026-11-01" }),
+    entry({ id: "x", paidOn: null }),
+  ]
+  const inv = { entryIds: ["a", "b", "c"] } as Invoice
+
+  it("adds the invoice's other open entries on the same day", () => {
+    expect(
+      withInvoiceEntries([{ entryId: "a", on: "2026-11-10" }], [inv], entries)
+    ).toEqual([
+      { entryId: "a", on: "2026-11-10" },
+      { entryId: "b", on: "2026-11-10" },
+    ])
+  })
+
+  it("leaves an entry that is not on an invoice alone, and adds nothing twice", () => {
+    expect(
+      withInvoiceEntries([{ entryId: "x", on: "2026-11-10" }], [inv], entries)
+    ).toEqual([{ entryId: "x", on: "2026-11-10" }])
+    const paid = [
+      { entryId: "a", on: "2026-11-10" },
+      { entryId: "b", on: "2026-11-10" },
+    ]
+    expect(withInvoiceEntries(paid, [inv], entries)).toEqual(paid)
   })
 })

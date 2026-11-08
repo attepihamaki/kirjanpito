@@ -3584,6 +3584,10 @@ export const APP_DICT = {
   "bank.actionSkip": ["Ohita", "Skip"],
   "bank.actionNew": ["Uusi tosite", "New voucher"],
   "bank.actionPaid": ["Maksettu: {v}", "Paid: {v}"],
+  "bank.statusReference": [
+    "Viitenumero täsmää laskuun, ja summa on sen avoin määrä.",
+    "The reference number matches an invoice and the amount is what it still owes.",
+  ],
   "bank.statusLikely": ["Sopii avoimeen tositteeseen", "Fits an open voucher"],
   "bank.statusAmount": [
     "Summa sopii avoimeen tositteeseen",
