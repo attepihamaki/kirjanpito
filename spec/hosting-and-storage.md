@@ -196,7 +196,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
 
 - localStorage `bookkeeping` — exported as `BOOK_STORAGE_KEY` from
   `stores/book-store.ts`, so nothing hard-codes the string twice:
-  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ctSize, sidebarOpen, exportLang, businessId, businessName, businessPhone, vatPeriod, traderType, bookStart, vatFiled, yearsArchived, archives, archiveYear, overviewLayout, autosave, encrypted, recurring, categoryRules, assetOpening, bankBalance, payMonths }`.
+  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ledgerHidden, ctSize, sidebarOpen, exportLang, businessId, businessName, businessPhone, vatPeriod, traderType, bookStart, vatFiled, yearsArchived, archives, archiveYear, overviewLayout, autosave, encrypted, recurring, categoryRules, assetOpening, bankBalance, payMonths }`.
   The book's settings are kept twice: here, as the working buffer, and in the
   file's `settings.json` (§7.6), as the record. A reload restores them from
   here; opening a file replaces them from there.

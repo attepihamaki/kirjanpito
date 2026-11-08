@@ -1,5 +1,10 @@
 "use client"
 
+import {
+  normalizeHiddenColumns,
+  toggleLedgerColumn,
+  type OptionalLedgerColumn,
+} from "@/lib/domain/ledger-columns"
 import { create, type StateCreator } from "zustand"
 import { persist, type PersistStorage } from "zustand/middleware"
 
@@ -259,6 +264,8 @@ export interface BookState {
   lastType: EntryType
   ledgerSize: PageSize
   ctSize: PageSize
+  /** Ledger columns the user has hidden (§8.4). */
+  ledgerHidden: OptionalLedgerColumn[]
   /** Desktop sidebar expanded or collapsed to icons (§8.2). */
   sidebarOpen: boolean
   /**
@@ -610,6 +617,8 @@ export interface BookActions {
   toggleLedgerSort(key: LedgerSortKey): void
   setLedgerPage(page: number): void
   setLedgerSize(size: PageSize): void
+  /** Show or hide one optional ledger column (§8.4). */
+  setLedgerColumn(column: OptionalLedgerColumn, shown: boolean): void
   clearLedgerFilters(): void
 
   setCatQuery(q: string): void
@@ -642,6 +651,7 @@ function initialState(): BookState {
     lastType: "expense",
     ledgerSize: 10,
     ctSize: 25,
+    ledgerHidden: [],
     sidebarOpen: true,
     exportLang: "fi",
     businessId: null,
@@ -716,6 +726,7 @@ type PersistedBook = Pick<
   | "lastType"
   | "open"
   | "ledgerSize"
+  | "ledgerHidden"
   | "ctSize"
   | "sidebarOpen"
   | "exportLang"
@@ -1484,6 +1495,10 @@ export const useBookStore = create<BookStore>()(
         set({ ledgerSort: nextSort(get().ledgerSort, key), ledgerPage: 1 }),
       setLedgerPage: (ledgerPage) => set({ ledgerPage }),
       setLedgerSize: (ledgerSize) => set({ ledgerSize, ledgerPage: 1 }),
+      setLedgerColumn: (column, shown) =>
+        set({
+          ledgerHidden: toggleLedgerColumn(get().ledgerHidden, column, shown),
+        }),
       clearLedgerFilters: () =>
         set({
           ledgerQuery: "",
@@ -1539,6 +1554,7 @@ export const useBookStore = create<BookStore>()(
         lastType: s.lastType,
         open: s.open,
         ledgerSize: s.ledgerSize,
+        ledgerHidden: s.ledgerHidden,
         ctSize: s.ctSize,
         sidebarOpen: s.sidebarOpen,
         exportLang: s.exportLang,
@@ -1581,6 +1597,7 @@ export const useBookStore = create<BookStore>()(
         return {
           ...current,
           ...stored,
+          ledgerHidden: normalizeHiddenColumns(stored.ledgerHidden),
           payMonths: { ...NO_PAY_MONTHS, ...stored.payMonths },
           taxPayment: { ...NO_TAX_PAYMENT, ...stored.taxPayment },
         }

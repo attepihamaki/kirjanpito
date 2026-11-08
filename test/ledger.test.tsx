@@ -113,6 +113,24 @@ describe("TotalsCards", () => {
 describe("LedgerView with the sample data", () => {
   beforeEach(loadSampleIntoStore)
 
+  it("hides a column the user switches off in the Sarakkeet menu", async () => {
+    useBookStore.setState({ ledgerHidden: [] })
+    const user = userEvent.setup()
+    mount(<LedgerView />)
+    expect(
+      screen.getByRole("columnheader", { name: /Veroton/ })
+    ).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Sarakkeet" }))
+    await user.click(
+      await screen.findByRole("menuitemcheckbox", { name: "Veroton" })
+    )
+    expect(
+      screen.queryByRole("columnheader", { name: /Veroton/ })
+    ).not.toBeInTheDocument()
+    expect(useBookStore.getState().ledgerHidden).toEqual(["net"])
+    useBookStore.setState({ ledgerHidden: [] })
+  })
+
   it("renders the header, period and entry count", () => {
     mount(<LedgerView />)
     expect(

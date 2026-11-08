@@ -1014,6 +1014,7 @@ export const APP_DICT = {
     "Keep the journal and the general ledger until at least {b} (10 years from the end of the financial year), and the vouchers until at least {v} (6 years from the end of the year in which it ended). Accounting Act 2:10.",
   ],
   /* The voucher number (tositenumero, §4). */
+  "ledger.columns": ["Sarakkeet", "Columns"],
   "ledger.colVoucher": ["Nro", "No."],
   "ledger.colDescription": ["Kuvaus", "Description"],
   "ledger.colCategory": ["Luokka", "Category"],

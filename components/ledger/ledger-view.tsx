@@ -15,6 +15,7 @@ import { PrintButton } from "@/components/common/print-button"
 import { Surface } from "@/components/common/surface"
 import { TablePagination } from "@/components/common/table-pagination"
 import { BulkBar } from "@/components/ledger/bulk-bar"
+import { ColumnsMenu } from "@/components/ledger/columns-menu"
 import { LedgerTable } from "@/components/ledger/ledger-table"
 import { LedgerTabs } from "@/components/ledger/ledger-tabs"
 import { MonthChips } from "@/components/ledger/month-chips"
@@ -372,6 +373,8 @@ export function LedgerView() {
                 label={f.t("ledger.checkFilter")}
                 className="w-[14rem]"
               />
+
+              <ColumnsMenu />
 
               {hasFilters ? (
                 <Button variant="ghost" size="sm" onClick={clearFilters}>

@@ -43,6 +43,7 @@ import {
 import { calcEntry, isShare } from "@/lib/domain/calc"
 import { yearOf } from "@/lib/domain/dates"
 import { viewHelp } from "@/lib/domain/field-help"
+import type { OptionalLedgerColumn } from "@/lib/domain/ledger-columns"
 import { entryLock } from "@/lib/domain/period-lock"
 import { reversalLabel } from "@/lib/domain/reversal"
 import { canSplitLine } from "@/lib/domain/split"
@@ -83,6 +84,8 @@ export function LedgerTable({
   const toggleSort = useBookStore((s) => s.toggleLedgerSort)
   const openDialog = useBookStore((s) => s.openDialog)
   const allEntries = useBookStore((s) => s.entries)
+  const hiddenList = useBookStore((s) => s.ledgerHidden)
+  const hidden = React.useMemo(() => new Set(hiddenList), [hiddenList])
   const splitVouchers = React.useMemo(
     () => splitVoucherLabels(allEntries),
     [allEntries]
@@ -130,41 +133,51 @@ export function LedgerTable({
               }
             />
           </TableHead>
-          {header(
-            "voucher",
-            f.t("ledger.colVoucher"),
-            "right",
-            "hidden w-px min-[560px]:table-cell print:table-cell"
-          )}
+          {hidden.has("voucher")
+            ? null
+            : header(
+                "voucher",
+                f.t("ledger.colVoucher"),
+                "right",
+                "hidden w-px min-[560px]:table-cell print:table-cell"
+              )}
           {header("date", f.t("ledger.colDate"))}
-          {header(
-            "type",
-            f.t("common.type"),
-            "left",
-            "hidden min-[560px]:table-cell print:table-cell"
-          )}
+          {hidden.has("type")
+            ? null
+            : header(
+                "type",
+                f.t("common.type"),
+                "left",
+                "hidden min-[560px]:table-cell print:table-cell"
+              )}
           {header("description", f.t("ledger.colDescription"))}
-          {header(
-            "category",
-            f.t("ledger.colCategory"),
-            "left",
-            "hidden min-[1240px]:table-cell print:table-cell",
-            "ledger.category"
-          )}
-          {header(
-            "net",
-            f.t("ledger.colNet"),
-            "right",
-            "hidden min-[560px]:table-cell print:table-cell",
-            "ledger.net"
-          )}
-          {header(
-            "vat",
-            f.t("ledger.colVat"),
-            "right",
-            "hidden min-[560px]:table-cell print:table-cell",
-            "ledger.vat"
-          )}
+          {hidden.has("category")
+            ? null
+            : header(
+                "category",
+                f.t("ledger.colCategory"),
+                "left",
+                "hidden min-[1240px]:table-cell print:table-cell",
+                "ledger.category"
+              )}
+          {hidden.has("net")
+            ? null
+            : header(
+                "net",
+                f.t("ledger.colNet"),
+                "right",
+                "hidden min-[560px]:table-cell print:table-cell",
+                "ledger.net"
+              )}
+          {hidden.has("vat")
+            ? null
+            : header(
+                "vat",
+                f.t("ledger.colVat"),
+                "right",
+                "hidden min-[560px]:table-cell print:table-cell",
+                "ledger.vat"
+              )}
           {header(
             "gross",
             f.t("ledger.colGross"),
@@ -182,6 +195,7 @@ export function LedgerTable({
           <LedgerRow
             key={entry.id}
             entry={entry}
+            hidden={hidden}
             splitWith={splitVouchers.get(entry.id)}
             reverses={reversals.reverses.get(entry.id)}
             reversedBy={reversals.reversedBy.get(entry.id)}
@@ -270,6 +284,7 @@ function reversalLabels(entries: readonly Entry[]): {
 
 function LedgerRow({
   entry,
+  hidden,
   splitWith,
   reverses,
   reversedBy,
@@ -286,6 +301,8 @@ function LedgerRow({
   onViewReceipt,
 }: {
   entry: Entry
+  /** Optional columns the user has hidden (§8.4). */
+  hidden: ReadonlySet<OptionalLedgerColumn>
   /** The voucher numbers of the whole split this entry is part of, if any. */
   splitWith: string | undefined
   /** The voucher this entry reverses, if any. */
@@ -382,20 +399,24 @@ function LedgerRow({
           />
         </TableCell>
 
-        <TableCell className="tabular hidden text-right text-muted-foreground min-[560px]:table-cell print:table-cell">
-          {entry.voucher}
-        </TableCell>
+        {hidden.has("voucher") ? null : (
+          <TableCell className="tabular hidden text-right text-muted-foreground min-[560px]:table-cell print:table-cell">
+            {entry.voucher}
+          </TableCell>
+        )}
 
         <TableCell className="tabular whitespace-nowrap">
           {f.date(entry.date)}
         </TableCell>
 
         {/* The same badge as the categories table, so the two read alike. */}
-        <TableCell className="hidden min-[560px]:table-cell print:table-cell">
-          <Pill tone={income ? "income" : "expense"} className="font-medium">
-            {income ? f.t("common.income") : f.t("common.expense")}
-          </Pill>
-        </TableCell>
+        {hidden.has("type") ? null : (
+          <TableCell className="hidden min-[560px]:table-cell print:table-cell">
+            <Pill tone={income ? "income" : "expense"} className="font-medium">
+              {income ? f.t("common.income") : f.t("common.expense")}
+            </Pill>
+          </TableCell>
+        )}
 
         <TableCell className="group/desc max-w-[22rem]">
           {editingDescription ? (
@@ -508,40 +529,46 @@ function LedgerRow({
         </TableCell>
 
         {/* Its own cell for clicks, so picking a category does not open the entry. */}
-        <TableCell
-          className="hidden max-w-[16rem] min-[1240px]:table-cell print:table-cell"
-          onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
-        >
-          <OptionSelect
-            options={categoryOptions}
-            value={entry.catId}
-            label={f.t("ledger.colCategory")}
-            size="sm"
-            className="w-full border-transparent bg-transparent text-muted-foreground shadow-none hover:border-input print:hidden"
-            onChange={onRecategorize}
-          />
-          <span className="hidden print:inline">
-            {categoryOptions.find((o) => o.value === entry.catId)?.label}
-          </span>
-        </TableCell>
-
-        <TableCell className="hidden text-right min-[560px]:table-cell print:table-cell">
-          <Money cents={net} />
-        </TableCell>
-
-        <TableCell className="hidden text-right min-[560px]:table-cell print:table-cell">
-          {entry.vatRate ? (
-            <span className="flex flex-col items-end leading-tight">
-              <Money cents={vat} />
-              <span className="text-[0.7rem] text-muted-foreground">
-                {f.rate(entry.vatRate)}
-              </span>
+        {hidden.has("category") ? null : (
+          <TableCell
+            className="hidden max-w-[16rem] min-[1240px]:table-cell print:table-cell"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            <OptionSelect
+              options={categoryOptions}
+              value={entry.catId}
+              label={f.t("ledger.colCategory")}
+              size="sm"
+              className="w-full border-transparent bg-transparent text-muted-foreground shadow-none hover:border-input print:hidden"
+              onChange={onRecategorize}
+            />
+            <span className="hidden print:inline">
+              {categoryOptions.find((o) => o.value === entry.catId)?.label}
             </span>
-          ) : (
-            <ZeroDash />
-          )}
-        </TableCell>
+          </TableCell>
+        )}
+
+        {hidden.has("net") ? null : (
+          <TableCell className="hidden text-right min-[560px]:table-cell print:table-cell">
+            <Money cents={net} />
+          </TableCell>
+        )}
+
+        {hidden.has("vat") ? null : (
+          <TableCell className="hidden text-right min-[560px]:table-cell print:table-cell">
+            {entry.vatRate ? (
+              <span className="flex flex-col items-end leading-tight">
+                <Money cents={vat} />
+                <span className="text-[0.7rem] text-muted-foreground">
+                  {f.rate(entry.vatRate)}
+                </span>
+              </span>
+            ) : (
+              <ZeroDash />
+            )}
+          </TableCell>
+        )}
 
         <TableCell className="text-right font-medium">
           <Money cents={gross} signed={!income} />
