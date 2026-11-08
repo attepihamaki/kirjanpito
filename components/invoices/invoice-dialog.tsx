@@ -340,7 +340,11 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
               value={party}
               onChange={setParty}
               disabled={issued}
-              invalidName={showErrors && nameMissing}
+              nameError={
+                showErrors && nameMissing
+                  ? f.t("invoice.customerNeedsName")
+                  : undefined
+              }
             />
             {!issued && customerId === null ? (
               <label className="flex items-center gap-2 text-sm">

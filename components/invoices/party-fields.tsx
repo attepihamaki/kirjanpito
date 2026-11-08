@@ -3,7 +3,12 @@
 import * as React from "react"
 
 import { useFormatters } from "@/components/lang-provider"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import type { Party } from "@/lib/domain/invoice"
 
@@ -16,13 +21,13 @@ export function PartyFields({
   value,
   onChange,
   disabled,
-  invalidName,
+  nameError,
 }: {
   value: Party
   onChange: (party: Party) => void
   disabled?: boolean
-  /** Marks the name as the field an error line is about. */
-  invalidName?: boolean
+  /** What is wrong with the name, shown under it, or nothing. */
+  nameError?: string
 }) {
   const f = useFormatters()
   const id = React.useId()
@@ -38,10 +43,11 @@ export function PartyFields({
           id={`${id}-name`}
           autoComplete="off"
           disabled={disabled}
-          aria-invalid={invalidName || undefined}
+          aria-invalid={nameError ? true : undefined}
           value={value.name}
           onChange={(e) => set({ name: e.target.value })}
         />
+        <FieldError>{nameError}</FieldError>
       </Field>
       <Field>
         <FieldLabel htmlFor={`${id}-street`}>
@@ -55,8 +61,8 @@ export function PartyFields({
           onChange={(e) => set({ street: e.target.value })}
         />
       </Field>
-      <div className="flex flex-wrap items-end gap-3">
-        <Field className="w-32">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-[8rem_1fr_6rem]">
+        <Field>
           <FieldLabel htmlFor={`${id}-postcode`}>
             {f.t("invoice.customerPostcode")}
           </FieldLabel>
@@ -69,7 +75,7 @@ export function PartyFields({
             onChange={(e) => set({ postcode: e.target.value })}
           />
         </Field>
-        <Field className="min-w-40 flex-1">
+        <Field className="col-span-2 sm:col-span-1">
           <FieldLabel htmlFor={`${id}-city`}>
             {f.t("invoice.customerCity")}
           </FieldLabel>
@@ -81,7 +87,7 @@ export function PartyFields({
             onChange={(e) => set({ city: e.target.value })}
           />
         </Field>
-        <Field className="w-24">
+        <Field>
           <FieldLabel htmlFor={`${id}-country`}>
             {f.t("invoice.customerCountry")}
           </FieldLabel>
@@ -97,8 +103,8 @@ export function PartyFields({
           />
         </Field>
       </div>
-      <div className="flex flex-wrap gap-3">
-        <Field className="w-44">
+      <div className="grid gap-3 sm:grid-cols-[11rem_1fr]">
+        <Field>
           <FieldLabel htmlFor={`${id}-vat`}>
             {f.t("invoice.customerVatId")}
           </FieldLabel>
@@ -111,7 +117,7 @@ export function PartyFields({
             onChange={(e) => set({ vatId: e.target.value })}
           />
         </Field>
-        <Field className="min-w-48 flex-1">
+        <Field>
           <FieldLabel htmlFor={`${id}-email`}>
             {f.t("invoice.customerEmail")}
           </FieldLabel>

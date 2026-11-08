@@ -13,12 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldLabel,
-} from "@/components/ui/field"
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { uid } from "@/lib/domain/id"
 import {
@@ -85,7 +80,7 @@ function CustomerForm({ customerId }: { customerId: string | null }) {
 
   return (
     <Dialog open onOpenChange={(open) => !open && closeDialog()}>
-      <DialogContent>
+      <DialogContent className="max-h-[92svh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>
             {existing
@@ -96,13 +91,14 @@ function CustomerForm({ customerId }: { customerId: string | null }) {
         <PartyFields
           value={party}
           onChange={setParty}
-          invalidName={showErrors && nameMissing}
+          nameError={
+            showErrors && nameMissing
+              ? f.t("invoice.customerNeedsName")
+              : undefined
+          }
         />
-        {showErrors && nameMissing ? (
-          <FieldError>{f.t("invoice.customerNeedsName")}</FieldError>
-        ) : null}
-        <div className="flex flex-wrap gap-3">
-          <Field className="w-44">
+        <div className="grid items-start gap-3 sm:grid-cols-[11rem_11rem]">
+          <Field>
             <FieldLabel>{f.t("invoice.customerLanguage")}</FieldLabel>
             <OptionSelect
               label={f.t("invoice.customerLanguage")}
@@ -114,7 +110,7 @@ function CustomerForm({ customerId }: { customerId: string | null }) {
               ]}
             />
           </Field>
-          <Field className="w-40">
+          <Field>
             <FieldLabel htmlFor={termId}>
               {f.t("invoice.customerTerm")}
             </FieldLabel>
