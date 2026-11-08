@@ -3135,6 +3135,21 @@ export const APP_DICT = {
   ],
   "app.archiveBanner": ["Arkisto {y}: vain luku", "Archive {y}: read-only"],
   "app.archiveClose": ["Sulje arkisto", "Close archive"],
+  "app.vatReminderDue": [
+    "{p}: ALV-ilmoitus erääntyy {d}",
+    "{p}: VAT return due {d}",
+  ],
+  "app.vatReminderLate": [
+    "{p}: ALV-ilmoitus on myöhässä, eräpäivä oli {d}",
+    "{p}: VAT return is overdue, it was due {d}",
+  ],
+  "app.vatReminderDays": [
+    pl("Aikaa jäljellä 1 päivä", "Aikaa jäljellä {n} päivää"),
+    pl("1 day left", "{n} days left"),
+  ],
+  "app.vatReminderToday": ["Eräpäivä on tänään", "It is due today"],
+  "app.vatReminderOpen": ["Avaa ilmoitus", "Open the return"],
+  "app.vatReminderHide": ["Piilota", "Hide"],
   "settings.archivesTitle": ["Arkistoidut vuodet", "Archived years"],
   "settings.archivesDesc": [
     "Nämä vuodet ovat omissa ZIP-tiedostoissaan. Avaa arkisto Avaa tiedosto -toiminnolla, niin se avautuu vain luettavana.",

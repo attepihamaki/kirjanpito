@@ -7,6 +7,7 @@ import { AppSidebar } from "@/components/app/app-sidebar"
 import { AppSkeleton } from "@/components/app/app-skeleton"
 import { AppTopbar } from "@/components/app/app-topbar"
 import { ArchiveBanner } from "@/components/app/archive-banner"
+import { VatReminderBanner } from "@/components/app/vat-reminder-banner"
 import { ImportOverlay } from "@/components/app/import-overlay"
 import { ScrollMemory } from "@/components/app/scroll-memory"
 import { ExportDialog } from "@/components/export/export-dialog"
@@ -223,6 +224,7 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
         <SidebarInset className="min-w-0">
           <AppTopbar onOpenFile={pickFile} onExport={openExportDialog} />
           <ArchiveBanner />
+          <VatReminderBanner />
           <div className="min-w-0 flex-1 px-4 py-5 lg:px-6 lg:py-6">
             {children}
           </div>
