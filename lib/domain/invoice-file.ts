@@ -232,6 +232,7 @@ function parseInvoice(value: unknown): Invoice | null {
     language: lang(value.language),
     rows: rows as InvoiceRow[],
     note: text(value.note, 2000),
+    terms: text(value.terms, 2000),
     reference,
     seller,
     issuedAt,

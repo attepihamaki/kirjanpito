@@ -92,6 +92,8 @@ export interface Invoice {
   rows: InvoiceRow[]
   /** A line of text for the customer, printed under the rows. */
   note: string
+  /** The seller's standing terms in the invoice's language, copied from the settings when the invoice is issued. */
+  terms: string
   /** Set on issue. A Finnish reference, or an RF reference. */
   reference: string | null
   /** Set on issue. */

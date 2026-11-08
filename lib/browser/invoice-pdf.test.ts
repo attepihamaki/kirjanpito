@@ -40,6 +40,7 @@ function issued(rows: InvoiceRow[], over: Partial<Invoice> = {}): Invoice {
     language: "fi",
     rows,
     note: "",
+    terms: "",
     reference: null,
     seller: null,
     issuedAt: null,

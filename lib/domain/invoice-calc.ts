@@ -244,6 +244,7 @@ export function buildIssue(input: IssueInput): IssueResult {
       number,
       reference,
       seller,
+      terms: settings.terms[invoice.language],
       issuedAt: input.now,
       entryIds: entries.map((e) => e.id),
     },

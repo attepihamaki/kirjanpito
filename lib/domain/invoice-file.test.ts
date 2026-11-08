@@ -45,6 +45,7 @@ function draft(over: Partial<Invoice> = {}): Invoice {
       },
     ],
     note: "",
+    terms: "",
     reference: null,
     seller: null,
     issuedAt: null,

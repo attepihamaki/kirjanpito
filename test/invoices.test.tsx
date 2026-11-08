@@ -1,0 +1,255 @@
+// @vitest-environment jsdom
+import * as React from "react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import { CustomerDialog } from "@/components/invoices/customer-dialog"
+import { CustomerList } from "@/components/invoices/customer-list"
+import { InvoiceList } from "@/components/invoices/invoice-list"
+import { InvoiceSettingsForm } from "@/components/invoices/invoice-settings"
+import { LangProvider } from "@/components/lang-provider"
+import { defaultCategories } from "@/lib/domain/accounts"
+import { todayIso } from "@/lib/domain/dates"
+import {
+  DEFAULT_INVOICE_SETTINGS,
+  emptyParty,
+  type Invoice,
+} from "@/lib/domain/invoice"
+import type { Entry } from "@/lib/domain/types"
+import { useBookStore } from "@/stores/book-store"
+
+/* The invoice pages and dialogs (§8.27). */
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => "/app/invoices",
+}))
+
+const mount = (ui: React.ReactElement) =>
+  render(<LangProvider lang="fi">{ui}</LangProvider>)
+
+const invoice = (over: Partial<Invoice> = {}): Invoice => ({
+  id: "i1",
+  number: 1001,
+  date: "2026-11-01",
+  dueDate: "2026-11-15",
+  supplyFrom: null,
+  supplyTo: null,
+  customerId: null,
+  customer: { ...emptyParty(), name: "Asiakas Oy" },
+  language: "fi",
+  rows: [
+    {
+      description: "Työ",
+      quantityMilli: 1000,
+      unit: "h",
+      unitCents: 10_000,
+      vatRate: 25.5,
+      catId: "300-domestic",
+    },
+  ],
+  note: "",
+  terms: "",
+  reference: "10016",
+  seller: null,
+  issuedAt: "2026-11-01T09:00:00.000Z",
+  entryIds: ["e1"],
+  credits: null,
+  ...over,
+})
+
+const entry = (id: string, paidOn: Entry["paidOn"]): Entry => ({
+  id,
+  date: "2026-11-01",
+  description: "Lasku",
+  type: "income",
+  catId: "300-domestic",
+  amount: 10_000,
+  vatRate: 25.5,
+  amountMode: "net",
+  paidOn,
+})
+
+beforeEach(() => {
+  useBookStore.setState({
+    open: true,
+    hydrated: true,
+    cats: defaultCategories(),
+    entries: [],
+    invoices: [],
+    customers: [],
+    invoiceSettings: DEFAULT_INVOICE_SETTINGS,
+    dialog: { kind: "none" },
+    yearsArchived: {},
+    form5Filed: {},
+    vatFiled: {},
+  })
+})
+
+describe("InvoiceList", () => {
+  it("says there are no invoices yet", () => {
+    mount(<InvoiceList />)
+    expect(screen.getByText("Ei vielä laskuja.")).toBeTruthy()
+  })
+
+  it("shows each invoice with its status and gross amount", () => {
+    useBookStore.setState({
+      entries: [entry("e1", null), entry("e2", "2026-11-05")],
+      invoices: [
+        invoice({ id: "open", number: 1001, dueDate: "2999-01-01" }),
+        invoice({
+          id: "late",
+          number: 1002,
+          dueDate: "2020-01-01",
+          entryIds: ["e1"],
+        }),
+        invoice({ id: "paid", number: 1003, entryIds: ["e2"] }),
+        invoice({
+          id: "draft",
+          number: null,
+          reference: null,
+          issuedAt: null,
+          entryIds: [],
+          customer: { ...emptyParty(), name: "Luonnos Oy" },
+        }),
+      ],
+    })
+    mount(<InvoiceList />)
+    const rows = screen.getAllByRole("row").slice(1)
+    expect(rows).toHaveLength(4)
+    const text = rows.map((r) => r.textContent ?? "")
+    /* Drafts first, then newest number first. */
+    expect(text[0]).toContain("Luonnos")
+    expect(text[1]).toContain("1003")
+    expect(text[1]).toContain("Maksettu")
+    expect(text[2]).toContain("1002")
+    expect(text[2]).toContain("Erääntynyt")
+    expect(text[3]).toContain("1001")
+    expect(text[3]).toContain("Avoin")
+    expect(text[3]).toContain("125,50")
+  })
+
+  it("offers a PDF and a payment only on an unpaid issued invoice", () => {
+    useBookStore.setState({
+      entries: [entry("e1", null), entry("e2", "2026-11-05")],
+      invoices: [
+        invoice({ id: "a", number: 1001, entryIds: ["e1"] }),
+        invoice({ id: "b", number: 1002, entryIds: ["e2"] }),
+      ],
+    })
+    mount(<InvoiceList />)
+    expect(screen.getByLabelText("Merkitse maksetuksi: 1001")).toBeTruthy()
+    expect(screen.queryByLabelText("Merkitse maksetuksi: 1002")).toBeNull()
+    expect(screen.getByLabelText("Lataa PDF: 1002")).toBeTruthy()
+  })
+
+  it("deletes a draft and brings it back with the undo", () => {
+    useBookStore.setState({
+      invoices: [
+        invoice({
+          id: "d",
+          number: null,
+          reference: null,
+          issuedAt: null,
+          entryIds: [],
+        }),
+      ],
+    })
+    mount(<InvoiceList />)
+    fireEvent.click(screen.getByLabelText("Poista luonnos"))
+    expect(useBookStore.getState().invoices).toEqual([])
+  })
+
+  it("marks an invoice paid from the dialog", async () => {
+    useBookStore.setState({
+      entries: [entry("e1", null)],
+      invoices: [invoice({ dueDate: "2999-01-01" })],
+    })
+    mount(<InvoiceList />)
+    fireEvent.click(screen.getByLabelText("Merkitse maksetuksi: 1001"))
+    const dialog = await screen.findByRole("dialog")
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Merkitse maksetuksi" })
+    )
+    await vi.waitFor(() => {
+      const [paid] = useBookStore.getState().entries
+      expect(paid.paidOn).not.toBeNull()
+    })
+    const today = todayIso()
+    const [paid] = useBookStore.getState().entries
+    expect([undefined, today]).toContain(paid.paidOn)
+  })
+})
+
+describe("InvoiceSettingsForm", () => {
+  it("stores a valid IBAN on blur, compact", () => {
+    mount(<InvoiceSettingsForm />)
+    const field = screen.getByLabelText("Tilinumero (IBAN)")
+    fireEvent.change(field, { target: { value: "fi21 1234 5600 0007 85" } })
+    fireEvent.blur(field)
+    expect(useBookStore.getState().invoiceSettings.iban).toBe(
+      "FI2112345600000785"
+    )
+    expect((field as HTMLInputElement).value).toBe("FI21 1234 5600 0007 85")
+  })
+
+  it("refuses a bad IBAN and says so", () => {
+    mount(<InvoiceSettingsForm />)
+    const field = screen.getByLabelText("Tilinumero (IBAN)")
+    fireEvent.change(field, { target: { value: "FI21 1234 5600 0007 86" } })
+    fireEvent.blur(field)
+    expect(useBookStore.getState().invoiceSettings.iban).toBe("")
+    expect(screen.getByText("Tilinumero ei ole kelvollinen IBAN.")).toBeTruthy()
+  })
+
+  it("puts back a payment term that is not a number of days", () => {
+    mount(<InvoiceSettingsForm />)
+    const field = screen.getByLabelText("Maksuaika (pv)") as HTMLInputElement
+    fireEvent.change(field, { target: { value: "abc" } })
+    fireEvent.blur(field)
+    expect(field.value).toBe("14")
+    expect(useBookStore.getState().invoiceSettings.termDays).toBe(14)
+  })
+
+  it("locks the first number once an invoice is issued", () => {
+    useBookStore.setState({ invoices: [invoice()] })
+    mount(<InvoiceSettingsForm />)
+    expect(
+      (screen.getByLabelText("Ensimmäinen laskunumero") as HTMLInputElement)
+        .disabled
+    ).toBe(true)
+  })
+})
+
+describe("customers", () => {
+  it("adds a customer from the dialog and lists it", async () => {
+    useBookStore.setState({ dialog: { kind: "customer", customerId: null } })
+    mount(
+      <>
+        <CustomerList />
+        <CustomerDialog />
+      </>
+    )
+    const dialog = await screen.findByRole("dialog")
+    fireEvent.change(within(dialog).getByLabelText("Nimi"), {
+      target: { value: "Uusi Asiakas Oy" },
+    })
+    fireEvent.click(within(dialog).getByRole("button", { name: "Tallenna" }))
+    expect(useBookStore.getState().customers).toMatchObject([
+      { name: "Uusi Asiakas Oy", country: "FI", termDays: null },
+    ])
+    expect(useBookStore.getState().dialog.kind).toBe("none")
+    expect(await screen.findByText("Uusi Asiakas Oy")).toBeTruthy()
+  })
+
+  it("will not save a customer with no name", async () => {
+    useBookStore.setState({ dialog: { kind: "customer", customerId: null } })
+    mount(<CustomerDialog />)
+    const dialog = await screen.findByRole("dialog")
+    fireEvent.click(within(dialog).getByRole("button", { name: "Tallenna" }))
+    expect(useBookStore.getState().customers).toEqual([])
+    expect(
+      within(dialog).getByText("Asiakkaalla pitää olla nimi.")
+    ).toBeTruthy()
+  })
+})

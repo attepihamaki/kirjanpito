@@ -57,6 +57,7 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
           { href: SETTINGS_ROUTES.recurring, label: t("recurring.tab") },
           { href: SETTINGS_ROUTES.calendar, label: t("settings.calendarTab") },
           { href: SETTINGS_ROUTES.rules, label: t("settings.rulesTab") },
+          { href: SETTINGS_ROUTES.invoicing, label: t("invoice.settingsTab") },
         ]}
       />
       {children}

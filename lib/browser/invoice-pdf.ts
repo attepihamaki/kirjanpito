@@ -481,7 +481,7 @@ export async function renderInvoicePdf(invoice: Invoice): Promise<Uint8Array> {
   c.y -= 26
 
   /* Notes and terms. */
-  const notes = [invoice.note, labels.lateInterest].filter(
+  const notes = [invoice.note, invoice.terms, labels.lateInterest].filter(
     (n) => n.trim() !== ""
   )
   for (const note of notes) {

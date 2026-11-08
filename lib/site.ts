@@ -93,6 +93,7 @@ export const LANDING_FAQ_ID = "faq"
 export const APP_ROUTES = {
   overview: "/app/overview",
   ledger: "/app/ledger",
+  invoices: "/app/invoices",
   vat: "/app/vat",
   statement: "/app/statement",
   summary: "/app/summary",
@@ -123,6 +124,13 @@ export const SETTINGS_ROUTES = {
   recurring: `${APP_ROUTES.settings}/recurring`,
   calendar: `${APP_ROUTES.settings}/calendar`,
   rules: `${APP_ROUTES.settings}/rules`,
+  invoicing: `${APP_ROUTES.settings}/invoicing`,
+} as const
+
+/** The invoice view's sub-pages (§8.27): the invoices, and the customer register. */
+export const INVOICE_ROUTES = {
+  list: APP_ROUTES.invoices,
+  customers: `${APP_ROUTES.invoices}/customers`,
 } as const
 
 /**

@@ -7,6 +7,7 @@ import {
   CalendarDaysIcon,
   CalculatorIcon,
   FileTextIcon,
+  ReceiptTextIcon,
   BarChart3Icon,
   LayoutDashboardIcon,
   SettingsIcon,
@@ -27,6 +28,7 @@ import type { MessageKey } from "@/lib/i18n/messages"
 const NAV_ITEMS = [
   { href: APP_ROUTES.overview, key: "nav.overview", icon: LayoutDashboardIcon },
   { href: APP_ROUTES.ledger, key: "nav.ledger", icon: BookOpenIcon },
+  { href: APP_ROUTES.invoices, key: "nav.invoices", icon: ReceiptTextIcon },
   { href: APP_ROUTES.vat, key: "nav.vat", icon: CalculatorIcon },
   { href: APP_ROUTES.statement, key: "nav.statement", icon: FileTextIcon },
   { href: APP_ROUTES.summary, key: "nav.summary", icon: BarChart3Icon },

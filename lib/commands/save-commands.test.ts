@@ -188,6 +188,7 @@ describe("saving back to the opened file", () => {
       language: "fi",
       rows: [],
       note: "",
+      terms: "",
       reference: null,
       seller: null,
       issuedAt: null,

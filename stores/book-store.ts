@@ -231,6 +231,10 @@ export type DialogState =
   | { kind: "recurring"; month: string }
   /** Review a bank statement's rows before booking them (§8.16). */
   | { kind: "bank-import"; text: string; fileName: string }
+  /** Write or read an invoice; `null` starts a new draft (§8.27). */
+  | { kind: "invoice"; invoiceId: string | null }
+  /** Add or change a customer; `null` adds one (§8.27). */
+  | { kind: "customer"; customerId: string | null }
   /** Add a custom category (§8.10). */
   | { kind: "category-add" }
   /** Change a custom category's name, line or default VAT (§8.10). */
