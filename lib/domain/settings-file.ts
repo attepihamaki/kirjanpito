@@ -9,6 +9,8 @@ import {
 import { isShare } from "@/lib/domain/calc"
 import { FEATURES, type Feature } from "@/lib/domain/features"
 import { parseBusinessId } from "@/lib/domain/business-id"
+import { parseInvoiceSettings } from "@/lib/domain/invoice-file"
+import type { InvoiceSettings } from "@/lib/domain/invoice"
 import { isVatRate } from "@/lib/domain/money"
 import type { AssetOpening } from "@/lib/domain/assets"
 import type { BankBalance } from "@/lib/domain/bank-balance"
@@ -131,6 +133,8 @@ export interface BookSettings {
   loanOpening: LoanOpening | null
   /** Year (`"2026"`) → what the book cannot supply for Form 5 (§8.8). */
   yearEnd: Record<string, YearEnd>
+  /** The seller details and terms the invoices are written with (§8.27). */
+  invoiceSettings: InvoiceSettings
   /** What has happened to the entries, oldest first (§8.11). */
   changeLog: ChangeRecord[]
 }
@@ -578,6 +582,9 @@ export function parseSettings(text: string): ParsedSettings {
           : null,
     }
   }
+  if (raw.invoiceSettings !== undefined) {
+    out.invoiceSettings = parseInvoiceSettings(raw.invoiceSettings)
+  }
   if (isRecord(raw.pageSize)) {
     const ledger = pageSize(raw.pageSize.ledger)
     const categories = pageSize(raw.pageSize.categories)
@@ -639,6 +646,7 @@ export function serializeSettings(s: BookSettings): string {
     payMonths: s.payMonths,
     loanOpening: s.loanOpening,
     yearEnd: s.yearEnd,
+    invoiceSettings: s.invoiceSettings,
     changeLog: s.changeLog,
   }
   return `${JSON.stringify(file, null, 2)}\n`

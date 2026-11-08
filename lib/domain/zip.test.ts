@@ -159,6 +159,24 @@ describe("packZip", () => {
     expect(unpacked.otherFiles).toEqual(["liitteet/2026/10/lasku.pdf"])
   })
 
+  it("writes invoices.json and customers.json beside settings.json and keeps them out of the receipts", async () => {
+    const bytes = await packZip({
+      ...packInputs([entry()]),
+      invoicesText: '{"invoices":[]}',
+      customersText: '{"customers":[]}',
+    })
+    const unpacked = (await unpackZip(bytes))!
+    expect(unpacked.invoicesText).toBe('{"invoices":[]}')
+    expect(unpacked.customersText).toBe('{"customers":[]}')
+    expect(unpacked.otherFiles).toEqual([])
+  })
+
+  it("writes neither file when none is given", async () => {
+    const unpacked = (await unpackZip(await packZip(packInputs([entry()]))))!
+    expect(unpacked.invoicesText).toBeNull()
+    expect(unpacked.customersText).toBeNull()
+  })
+
   it("reads an archive without settings.json as having none", async () => {
     const { ZipWriter, Uint8ArrayWriter, TextReader } =
       await import("@zip.js/zip.js/index-native.js")

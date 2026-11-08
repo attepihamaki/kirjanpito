@@ -61,3 +61,51 @@ describe("integrity seal", () => {
     ).toEqual(none)
   })
 })
+
+describe("the invoice files", () => {
+  const INVOICES = '{"invoices":[]}\n'
+  const CUSTOMERS = '{"customers":[]}\n'
+
+  it("seals them and finds them unchanged", async () => {
+    const sealed = await sealSettings(SETTINGS, CSV, {
+      invoices: INVOICES,
+      customers: CUSTOMERS,
+    })
+    expect(
+      await checkIntegrity(CSV, sealed, {
+        invoices: INVOICES,
+        customers: CUSTOMERS,
+      })
+    ).toEqual({ status: "ok" })
+  })
+
+  it("names the file that was edited", async () => {
+    const sealed = await sealSettings(SETTINGS, CSV, {
+      invoices: INVOICES,
+      customers: CUSTOMERS,
+    })
+    expect(
+      await checkIntegrity(CSV, sealed, {
+        invoices: '{"invoices":[1]}',
+        customers: CUSTOMERS,
+      })
+    ).toEqual({ status: "edited", csv: false, settings: false, invoices: true })
+  })
+
+  it("reports a sealed file that has gone missing", async () => {
+    const sealed = await sealSettings(SETTINGS, CSV, { customers: CUSTOMERS })
+    expect(await checkIntegrity(CSV, sealed, {})).toEqual({
+      status: "edited",
+      csv: false,
+      settings: false,
+      customers: true,
+    })
+  })
+
+  it("does not check a file the seal never covered", async () => {
+    const sealed = await sealSettings(SETTINGS, CSV)
+    expect(await checkIntegrity(CSV, sealed, { invoices: INVOICES })).toEqual({
+      status: "ok",
+    })
+  })
+})

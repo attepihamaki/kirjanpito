@@ -11,6 +11,12 @@ import {
 import { getReceipt } from "@/lib/browser/receipt-store"
 import { defaultCategories } from "@/lib/domain/accounts"
 import { csvHeaderLine } from "@/lib/domain/csv-header"
+import {
+  DEFAULT_INVOICE_SETTINGS,
+  emptyParty,
+  type Customer,
+  type Invoice,
+} from "@/lib/domain/invoice"
 import { CSV_FILE_NAME } from "@/lib/domain/receipt-path"
 import type { Attachment } from "@/lib/domain/types"
 import { packZip, unpackZip } from "@/lib/domain/zip"
@@ -163,6 +169,76 @@ describe("saving back to the opened file", () => {
     await saveBook(ctx, "kirjanpito")
     expect(picker).toHaveBeenCalledOnce()
     expect(zip.written).toHaveLength(2)
+  })
+
+  it("writes the invoices, the customers and the invoice settings, and reads them back (§7.6)", async () => {
+    const zip = fakeHandle("kirjanpito.zip")
+    stubPickers(zip)
+    linkZip(zip)
+    const party = { ...emptyParty(), name: "Asiakas Oy" }
+    const invoice: Invoice = {
+      id: "i1",
+      number: null,
+      date: "2026-11-01",
+      dueDate: "2026-11-15",
+      supplyFrom: null,
+      supplyTo: null,
+      customerId: "c1",
+      customer: party,
+      language: "fi",
+      rows: [],
+      note: "",
+      reference: null,
+      seller: null,
+      issuedAt: null,
+      entryIds: [],
+      credits: null,
+    }
+    const customer: Customer = {
+      ...party,
+      id: "c1",
+      language: "fi",
+      termDays: null,
+    }
+    useBookStore.getState().setInvoices([invoice])
+    useBookStore.getState().setCustomers([customer])
+    useBookStore.getState().setInvoiceSettings({
+      ...DEFAULT_INVOICE_SETTINGS,
+      city: "Helsinki",
+      iban: "FI2112345600000785",
+    })
+
+    await saveBook(ctx, "kirjanpito")
+    const archive = await unzipped(zip.written[0])
+    expect(archive?.invoicesText).toContain('"i1"')
+    expect(archive?.customersText).toContain('"c1"')
+    expect(archive?.settingsText).toContain('"Helsinki"')
+    expect(archive?.settingsText).toContain('"invoices"')
+
+    useBookStore.getState().setInvoices([])
+    useBookStore.getState().setCustomers([])
+    useBookStore.getState().setInvoiceSettings(DEFAULT_INVOICE_SETTINGS)
+    useBookStore.setState({ dirty: false })
+    const reopened = new File([zip.written[0]], "kirjanpito.zip", {
+      type: "application/zip",
+    })
+    await openFile(ctx, reopened, null)
+    const state = useBookStore.getState()
+    expect(state.invoices).toEqual([invoice])
+    expect(state.customers).toEqual([customer])
+    expect(state.invoiceSettings.city).toBe("Helsinki")
+  })
+
+  it("writes neither invoice file for a book that has none", async () => {
+    const zip = fakeHandle("kirjanpito.zip")
+    stubPickers(zip)
+    linkZip(zip)
+    useBookStore.getState().setInvoices([])
+    useBookStore.getState().setCustomers([])
+    await saveBook(ctx, "kirjanpito")
+    const archive = await unzipped(zip.written[0])
+    expect(archive?.invoicesText).toBeNull()
+    expect(archive?.customersText).toBeNull()
   })
 
   /*

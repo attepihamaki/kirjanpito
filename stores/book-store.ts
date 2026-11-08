@@ -6,6 +6,12 @@ import { persist, type PersistStorage } from "zustand/middleware"
 import { defaultCategories } from "@/lib/domain/accounts"
 import type { AssetOpening } from "@/lib/domain/assets"
 import type { BankBalance } from "@/lib/domain/bank-balance"
+import {
+  DEFAULT_INVOICE_SETTINGS,
+  type Customer,
+  type Invoice,
+  type InvoiceSettings,
+} from "@/lib/domain/invoice"
 import { NO_PAY_MONTHS, type PayMonths } from "@/lib/domain/tax-calendar"
 import type { EntryCheck } from "@/lib/domain/entry-checks"
 import type { CategoryRule } from "@/lib/domain/category-rules"
@@ -321,6 +327,12 @@ export interface BookState {
   loanOpening: LoanOpening | null
   /** Year → what the book cannot supply for Form 5 (§8.8). Saved in settings.json. */
   yearEnd: Record<string, YearEnd>
+  /** The seller details and terms the invoices are written with (§8.27). Saved in settings.json. */
+  invoiceSettings: InvoiceSettings
+  /** The invoices, drafts and issued (§8.27). Saved in invoices.json. */
+  invoices: Invoice[]
+  /** The customer register (§8.27). Saved in customers.json. */
+  customers: Customer[]
   /** What has happened to the entries, oldest first (§8.11). Saved in settings.json. */
   changeLog: ChangeRecord[]
 
@@ -445,6 +457,9 @@ export interface BookActions {
     encrypted?: boolean
     /** The year an archive file holds, or null for a working book (§8.19). */
     archiveYear?: number | null
+    /** What the file's `invoices.json` and `customers.json` carried (§7.6). */
+    invoices?: Invoice[]
+    customers?: Customer[]
     /**
      * What the file's `settings.json` carried. A plain CSV has none: its
      * filed marks start empty and everything else stays as it was.
@@ -471,6 +486,7 @@ export interface BookActions {
       payMonths?: PayMonths
       loanOpening?: LoanOpening | null
       yearEnd?: Record<string, YearEnd>
+      invoiceSettings?: InvoiceSettings
       changeLog?: ChangeRecord[]
       overviewLayout?: OverviewWidget[]
       autosave?: boolean
@@ -572,6 +588,9 @@ export interface BookActions {
   setYearEnd(year: number, values: YearEnd): void
   setAssetOpening(opening: AssetOpening | null): void
   setBankBalance(balance: BankBalance | null): void
+  setInvoiceSettings(settings: InvoiceSettings): void
+  setInvoices(invoices: Invoice[]): void
+  setCustomers(customers: Customer[]): void
   setPayMonths(months: PayMonths): void
 
   upsertCategory(category: Category): void
@@ -645,6 +664,9 @@ function initialState(): BookState {
     payMonths: NO_PAY_MONTHS,
     loanOpening: null,
     yearEnd: {},
+    invoiceSettings: DEFAULT_INVOICE_SETTINGS,
+    invoices: [],
+    customers: [],
     changeLog: [],
 
     hydrated: false,
@@ -717,6 +739,9 @@ type PersistedBook = Pick<
   | "payMonths"
   | "loanOpening"
   | "yearEnd"
+  | "invoiceSettings"
+  | "invoices"
+  | "customers"
   | "changeLog"
 >
 
@@ -887,6 +912,9 @@ const BOOK_DATA_KEYS: readonly (keyof BookState)[] = [
   "payMonths",
   "loanOpening",
   "yearEnd",
+  "invoiceSettings",
+  "invoices",
+  "customers",
   "changeLog",
   "encrypted",
   "overviewLayout",
@@ -981,6 +1009,9 @@ export const useBookStore = create<BookStore>()(
           payMonths: NO_PAY_MONTHS,
           loanOpening: null,
           yearEnd: {},
+          invoiceSettings: DEFAULT_INVOICE_SETTINGS,
+          invoices: [],
+          customers: [],
           changeLog: [],
           onboarding: true,
           undoAttachmentIds: [],
@@ -1037,6 +1068,9 @@ export const useBookStore = create<BookStore>()(
           payMonths: NO_PAY_MONTHS,
           loanOpening: null,
           yearEnd: {},
+          invoiceSettings: DEFAULT_INVOICE_SETTINGS,
+          invoices: [],
+          customers: [],
           changeLog: [],
           dialog: { kind: "none" },
           figure: null,
@@ -1098,6 +1132,9 @@ export const useBookStore = create<BookStore>()(
           payMonths: { ...NO_PAY_MONTHS, ...s.payMonths },
           loanOpening: s.loanOpening ?? null,
           yearEnd: s.yearEnd ?? {},
+          invoiceSettings: s.invoiceSettings ?? DEFAULT_INVOICE_SETTINGS,
+          invoices: next.invoices ?? [],
+          customers: next.customers ?? [],
           changeLog: s.changeLog
             ? relinkChangeLog(s.changeLog, entries)
             : [{ at: new Date().toISOString(), action: "import" }],
@@ -1374,6 +1411,10 @@ export const useBookStore = create<BookStore>()(
       },
       setAssetOpening: (assetOpening) => set({ assetOpening, dirty: true }),
       setBankBalance: (bankBalance) => set({ bankBalance, dirty: true }),
+      setInvoiceSettings: (invoiceSettings) =>
+        set({ invoiceSettings, dirty: true }),
+      setInvoices: (invoices) => set({ invoices, dirty: true }),
+      setCustomers: (customers) => set({ customers, dirty: true }),
       setPayMonths: (payMonths) => set({ payMonths, dirty: true }),
       setTaxPayment: (taxPayment) => set({ taxPayment, dirty: true }),
       setLoanOpening: (loanOpening) => set({ loanOpening, dirty: true }),
@@ -1521,6 +1562,9 @@ export const useBookStore = create<BookStore>()(
         payMonths: s.payMonths,
         loanOpening: s.loanOpening,
         yearEnd: s.yearEnd,
+        invoiceSettings: s.invoiceSettings,
+        invoices: s.invoices,
+        customers: s.customers,
         changeLog: s.changeLog,
       }),
       /*

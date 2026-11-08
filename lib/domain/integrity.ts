@@ -19,6 +19,16 @@ export interface Integrity {
   csv: string
   /** Hash of the settings body without the `integrity` key. */
   settings: string
+  /** Hash of `invoices.json`, present when the book had invoice records (§8.27). */
+  invoices?: string
+  /** Hash of `customers.json`, present when the book had a customer register. */
+  customers?: string
+}
+
+/** The text of the files beside the CSV that the seal covers besides the settings (§7.6). */
+export interface SealedFiles {
+  invoices?: string | null
+  customers?: string | null
 }
 
 export type IntegrityResult =
@@ -26,7 +36,14 @@ export type IntegrityResult =
   | { status: "none" }
   | { status: "ok" }
   /* The part or parts whose hash no longer matches. */
-  | { status: "edited"; csv: boolean; settings: boolean }
+  | {
+      status: "edited"
+      csv: boolean
+      settings: boolean
+      /* Present, and true, only when the seal covered the file and it no longer matches. */
+      invoices?: true
+      customers?: true
+    }
 
 /** SHA-256 of the bytes as lowercase hex. */
 export async function sha256Bytes(bytes: Uint8Array): Promise<string> {
@@ -59,7 +76,8 @@ function settingsBody(raw: Record<string, unknown>): string {
 /** The settings file text with a seal for `csvText` added (or replaced). */
 export async function sealSettings(
   settingsText: string,
-  csvText: string
+  csvText: string,
+  files: SealedFiles = {}
 ): Promise<string> {
   const raw: unknown = JSON.parse(settingsText)
   if (!isRecord(raw)) throw new Error("settings.json is not an object")
@@ -67,6 +85,12 @@ export async function sealSettings(
     algorithm: INTEGRITY_ALGORITHM,
     csv: await sha256Hex(csvText),
     settings: await sha256Hex(settingsBody(raw)),
+    ...(files.invoices != null
+      ? { invoices: await sha256Hex(files.invoices) }
+      : {}),
+    ...(files.customers != null
+      ? { customers: await sha256Hex(files.customers) }
+      : {}),
   }
   return `${JSON.stringify({ ...raw, integrity: seal }, null, 2)}\n`
 }
@@ -76,13 +100,22 @@ function readSeal(value: unknown): Integrity | null {
   const { algorithm, csv, settings } = value
   if (algorithm !== INTEGRITY_ALGORITHM) return null
   if (typeof csv !== "string" || typeof settings !== "string") return null
-  return { algorithm, csv, settings }
+  const optional = (hash: unknown) =>
+    typeof hash === "string" ? hash : undefined
+  return {
+    algorithm,
+    csv,
+    settings,
+    invoices: optional(value.invoices),
+    customers: optional(value.customers),
+  }
 }
 
 /** Compare a file's CSV and settings text with the seal the settings carry. */
 export async function checkIntegrity(
   csvText: string,
-  settingsText: string | null
+  settingsText: string | null,
+  files: SealedFiles = {}
 ): Promise<IntegrityResult> {
   if (!settingsText) return { status: "none" }
   let raw: unknown
@@ -96,7 +129,20 @@ export async function checkIntegrity(
   if (!seal) return { status: "none" }
   const csv = (await sha256Hex(csvText)) !== seal.csv
   const settings = (await sha256Hex(settingsBody(raw))) !== seal.settings
-  return csv || settings
-    ? { status: "edited", csv, settings }
+  /* A file the seal covers must still be there and unchanged. One the seal does not mention is not checked. */
+  const changed = async (
+    hash: string | undefined,
+    text: string | null | undefined
+  ) => hash !== undefined && (text == null || (await sha256Hex(text)) !== hash)
+  const invoices = await changed(seal.invoices, files.invoices)
+  const customers = await changed(seal.customers, files.customers)
+  return csv || settings || invoices || customers
+    ? {
+        status: "edited",
+        csv,
+        settings,
+        ...(invoices ? { invoices: true as const } : {}),
+        ...(customers ? { customers: true as const } : {}),
+      }
     : { status: "ok" }
 }

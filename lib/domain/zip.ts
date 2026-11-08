@@ -12,6 +12,10 @@ import {
 } from "@zip.js/zip.js/index-native.js"
 
 import { decodeCsv } from "@/lib/domain/csv"
+import {
+  CUSTOMERS_FILE_NAME,
+  INVOICES_FILE_NAME,
+} from "@/lib/domain/invoice-file"
 import { SETTINGS_FILE_NAME } from "@/lib/domain/settings-file"
 
 /**
@@ -49,6 +53,10 @@ export interface PackInput {
   read: ReceiptReader
   /** `settings.json`, written beside the CSV (§7.6). */
   settingsText: string
+  /** `invoices.json` (§7.6). Left out of the archive when unset. */
+  invoicesText?: string
+  /** `customers.json` (§7.6). Left out of the archive when unset. */
+  customersText?: string
   /**
    * A receipt's bytes from the file being replaced, for one this browser does
    * not hold (§7.5). Without it, such a receipt is left out.
@@ -88,6 +96,10 @@ export async function packZip(input: PackInput): Promise<Uint8Array> {
    */
   await zip.add(input.csvName, new TextReader(input.csvText))
   await zip.add(SETTINGS_FILE_NAME, new TextReader(input.settingsText))
+  if (input.invoicesText !== undefined)
+    await zip.add(INVOICES_FILE_NAME, new TextReader(input.invoicesText))
+  if (input.customersText !== undefined)
+    await zip.add(CUSTOMERS_FILE_NAME, new TextReader(input.customersText))
 
   /* Whether each path got its bytes, so a path several entries list is read once. */
   const written = new Map<string, boolean>()
@@ -132,6 +144,10 @@ export interface UnpackedZip {
   csvText: string
   /** `settings.json` beside the CSV, or at the root; null when there is none. */
   settingsText: string | null
+  /** `invoices.json` beside the CSV, or at the root; null when there is none. */
+  invoicesText: string | null
+  /** `customers.json`, found the same way. */
+  customersText: string | null
   /** The path of every other file: the receipts. */
   otherFiles: readonly string[]
   /** Whether the archive's entries are encrypted (§7.8). */
@@ -363,26 +379,30 @@ export async function unpackZip(
     await readText(files.get(csvPath)!, limits, password)
   )
   const csvDir = dirOf(csvPath)
-  const settingsPath = [csvDir + SETTINGS_FILE_NAME, SETTINGS_FILE_NAME].find(
-    (p) => files.has(p)
-  )
-  const settingsText = settingsPath
-    ? new TextDecoder().decode(
-        await readText(files.get(settingsPath)!, limits, password)
-      )
-    : null
+  const beside = async (fileName: string) => {
+    const path = [csvDir + fileName, fileName].find((p) => files.has(p))
+    if (!path) return { path: undefined, text: null }
+    const bytes = await readText(files.get(path)!, limits, password)
+    return { path, text: new TextDecoder().decode(bytes) }
+  }
+  const settings = await beside(SETTINGS_FILE_NAME)
+  const invoices = await beside(INVOICES_FILE_NAME)
+  const customers = await beside(CUSTOMERS_FILE_NAME)
+  const jsonPaths = new Set([settings.path, invoices.path, customers.path])
 
   const otherFiles = names.filter(
     (name) =>
       name !== csvPath &&
-      name !== settingsPath &&
+      !jsonPaths.has(name) &&
       !name.split("/").includes("__MACOSX")
   )
 
   return {
     csvPath,
     csvText,
-    settingsText,
+    settingsText: settings.text,
+    invoicesText: invoices.text,
+    customersText: customers.text,
     otherFiles,
     encrypted,
     readReceipt: lookupIn(files, csvDir, limits, password),

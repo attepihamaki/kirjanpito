@@ -1,0 +1,201 @@
+import { describe, expect, it } from "vitest"
+
+import {
+  emptyParty,
+  type Customer,
+  type Invoice,
+  type Seller,
+} from "@/lib/domain/invoice"
+import {
+  parseCustomers,
+  parseInvoiceSettings,
+  parseInvoices,
+  serializeCustomers,
+  serializeInvoices,
+} from "@/lib/domain/invoice-file"
+
+const buyer = { ...emptyParty(), name: "Asiakas Oy", city: "Espoo" }
+const seller: Seller = {
+  ...emptyParty(),
+  name: "Oma Yritys",
+  businessId: "0112038-9",
+  phone: "09 1234567",
+  iban: "FI2112345600000785",
+}
+
+function draft(over: Partial<Invoice> = {}): Invoice {
+  return {
+    id: "i1",
+    number: null,
+    date: "2026-11-01",
+    dueDate: "2026-11-15",
+    supplyFrom: null,
+    supplyTo: null,
+    customerId: null,
+    customer: buyer,
+    language: "fi",
+    rows: [
+      {
+        description: "Työ",
+        quantityMilli: 1500,
+        unit: "h",
+        unitCents: 6000,
+        vatRate: 25.5,
+        catId: "300-domestic",
+      },
+    ],
+    note: "",
+    reference: null,
+    seller: null,
+    issuedAt: null,
+    entryIds: [],
+    credits: null,
+    ...over,
+  }
+}
+
+function issued(over: Partial<Invoice> = {}): Invoice {
+  return draft({
+    number: 1001,
+    reference: "10016",
+    seller,
+    issuedAt: "2026-11-01T09:00:00.000Z",
+    entryIds: ["e1"],
+    ...over,
+  })
+}
+
+describe("invoices.json", () => {
+  it("round-trips a draft and an issued invoice", () => {
+    const list = [issued(), draft({ id: "i2" })]
+    const parsed = parseInvoices(serializeInvoices(list))
+    expect(parsed.skipped).toBe(0)
+    expect(parsed.invoices).toEqual(list)
+  })
+
+  it("writes issued invoices in number order and drafts after them", () => {
+    const text = serializeInvoices([
+      draft({ id: "d" }),
+      issued({ id: "b", number: 1002, reference: "10029" }),
+      issued({ id: "a" }),
+    ])
+    expect(parseInvoices(text).invoices.map((i) => i.id)).toEqual([
+      "a",
+      "b",
+      "d",
+    ])
+  })
+
+  it("is lenient about the file", () => {
+    expect(parseInvoices("not json")).toEqual({ invoices: [], skipped: 0 })
+    expect(parseInvoices("[]")).toEqual({ invoices: [], skipped: 0 })
+    expect(parseInvoices("{}")).toEqual({ invoices: [], skipped: 0 })
+  })
+
+  it("drops and counts an invoice it cannot trust", () => {
+    const good = issued()
+    const text = JSON.stringify({
+      invoices: [
+        good,
+        { ...good, id: "x", date: "1.11.2026" },
+        { ...good, id: "y", number: null },
+        { ...good, id: "z", rows: [{ description: "no price" }] },
+        { ...good, id: "r", rows: [{ ...good.rows[0], vatRate: 250 }] },
+        { ...good, id: good.id },
+        "junk",
+      ],
+    })
+    const parsed = parseInvoices(text)
+    expect(parsed.invoices.map((i) => i.id)).toEqual([good.id])
+    expect(parsed.skipped).toBe(6)
+  })
+
+  it("reads a half-issued invoice as untrustworthy, not as a draft", () => {
+    const half = JSON.stringify({ invoices: [draft({ number: 1001 })] })
+    expect(parseInvoices(half).invoices).toEqual([])
+  })
+
+  it("normalises the customer's VAT number and country", () => {
+    const text = JSON.stringify({
+      invoices: [
+        draft({ customer: { ...buyer, vatId: "fi 0112 0389", country: "fi" } }),
+      ],
+    })
+    expect(parseInvoices(text).invoices[0].customer).toMatchObject({
+      vatId: "FI01120389",
+      country: "FI",
+    })
+  })
+})
+
+describe("customers.json", () => {
+  const customer = (over: Partial<Customer> = {}): Customer => ({
+    ...buyer,
+    id: "c1",
+    language: "en",
+    termDays: 30,
+    ...over,
+  })
+
+  it("round-trips, sorted by name", () => {
+    const list = [customer({ id: "c2", name: "Östman" }), customer()]
+    const parsed = parseCustomers(serializeCustomers(list))
+    expect(parsed.customers.map((c) => c.name)).toEqual([
+      "Asiakas Oy",
+      "Östman",
+    ])
+    expect(parsed.customers[0]).toEqual(customer())
+  })
+
+  it("drops a customer with no id or no name, and a repeated id", () => {
+    const text = JSON.stringify({
+      customers: [
+        customer(),
+        customer({ id: "" }),
+        customer({ id: "c3", name: "" }),
+        customer(),
+      ],
+    })
+    const parsed = parseCustomers(text)
+    expect(parsed.customers).toHaveLength(1)
+    expect(parsed.skipped).toBe(3)
+  })
+
+  it("keeps a term only between 0 and 365 days", () => {
+    const text = JSON.stringify({
+      customers: [
+        customer({ termDays: 400 }),
+        customer({ id: "c2", termDays: 0 }),
+      ],
+    })
+    expect(parseCustomers(text).customers.map((c) => c.termDays)).toEqual([
+      null,
+      0,
+    ])
+  })
+})
+
+describe("parseInvoiceSettings", () => {
+  it("gives the defaults for a value that is not an object", () => {
+    expect(parseInvoiceSettings(null)).toMatchObject({
+      termDays: 14,
+      firstNumber: 1001,
+      iban: "",
+    })
+  })
+
+  it("compacts a valid IBAN and refuses one with a bad check", () => {
+    expect(parseInvoiceSettings({ iban: "fi21 1234 5600 0007 85" }).iban).toBe(
+      "FI2112345600000785"
+    )
+    expect(parseInvoiceSettings({ iban: "FI21 1234 5600 0007 86" }).iban).toBe(
+      ""
+    )
+  })
+
+  it("does not share the default terms object between calls", () => {
+    const a = parseInvoiceSettings(null)
+    a.terms.fi = "changed"
+    expect(parseInvoiceSettings(null).terms.fi).toBe("")
+  })
+})

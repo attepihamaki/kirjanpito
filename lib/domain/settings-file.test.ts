@@ -79,6 +79,16 @@ function settings(): BookSettings {
     loanOpening: { year: 2026, amount: 800_000 },
     changeLog: [{ at: "2026-11-03T10:00:00.000Z", action: "add", voucher: 1 }],
     yearEnd: { "2026": { ...EMPTY_YEAR_END, goods: 120_000, cash: 3_500 } },
+    invoiceSettings: {
+      street: "Esimerkkikatu 1",
+      postcode: "00100",
+      city: "Helsinki",
+      email: "lasku@example.fi",
+      iban: "FI2112345600000785",
+      termDays: 21,
+      terms: { fi: "Maksuehto netto.", en: "Net terms." },
+      firstNumber: 2001,
+    },
     overviewLayout: normalizeLayout([
       { id: "checks", size: "L", hidden: false },
     ]),
@@ -92,6 +102,29 @@ describe("settings.json", () => {
   it("round-trips every field", () => {
     const s = settings()
     expect(parseSettings(serializeSettings(s))).toEqual(s)
+  })
+
+  it("reads a file with no invoice settings as having none, so the book keeps its own", () => {
+    expect(parseSettings("{}").invoiceSettings).toBeUndefined()
+  })
+
+  it("keeps the default of an invoice setting that cannot be read", () => {
+    const parsed = parseSettings(
+      JSON.stringify({
+        invoiceSettings: {
+          iban: "FI00",
+          termDays: -3,
+          firstNumber: 5,
+          city: "Turku",
+        },
+      })
+    )
+    expect(parsed.invoiceSettings).toMatchObject({
+      iban: "",
+      termDays: 14,
+      firstNumber: 1001,
+      city: "Turku",
+    })
   })
 
   it("writes a version and sorts the filed marks", () => {

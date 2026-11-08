@@ -2895,6 +2895,14 @@ export const APP_DICT = {
     "Asetuksia (settings.json) on muutettu.",
     "The settings (settings.json) were changed.",
   ],
+  "io.editedInvoices": [
+    "Laskuja (invoices.json) on muutettu.",
+    "The invoices (invoices.json) were changed.",
+  ],
+  "io.editedCustomers": [
+    "Asiakasrekisteriä (customers.json) on muutettu.",
+    "The customer register (customers.json) was changed.",
+  ],
   "io.settingsNewer": [
     " Tiedosto on tehty uudemmalla versiolla, joten kaikkia asetuksia ei ehkä luettu.",
     " The file was made with a newer version, so some settings may not have been read.",

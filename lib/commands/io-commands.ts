@@ -47,6 +47,13 @@ import {
 } from "@/lib/domain/types"
 import { checkIntegrity, sealSettings } from "@/lib/domain/integrity"
 import {
+  parseCustomers,
+  parseInvoices,
+  serializeCustomers,
+  serializeInvoices,
+} from "@/lib/domain/invoice-file"
+import type { Customer, Invoice } from "@/lib/domain/invoice"
+import {
   parseSettings,
   serializeSettings,
   type BookSettings,
@@ -361,11 +368,23 @@ async function importZip(
     entries,
     { imported, missing },
     settings,
-    { encrypted: unpacked.encrypted, password }
+    {
+      encrypted: unpacked.encrypted,
+      password,
+      invoices: unpacked.invoicesText
+        ? parseInvoices(unpacked.invoicesText).invoices
+        : [],
+      customers: unpacked.customersText
+        ? parseCustomers(unpacked.customersText).customers
+        : [],
+    }
   )
   await reportEdits(
     ctx,
-    await checkIntegrity(unpacked.csvText, unpacked.settingsText)
+    await checkIntegrity(unpacked.csvText, unpacked.settingsText, {
+      invoices: unpacked.invoicesText,
+      customers: unpacked.customersText,
+    })
   )
   return true
 }
@@ -389,6 +408,8 @@ async function reportEdits(
   const parts = [
     result.csv ? ctx.t("io.editedEntries") : null,
     result.settings ? ctx.t("io.editedSettings") : null,
+    result.invoices ? ctx.t("io.editedInvoices") : null,
+    result.customers ? ctx.t("io.editedCustomers") : null,
   ].filter((p): p is string => p !== null)
   await alertDialog({
     title: ctx.t("io.editedTitle"),
@@ -520,12 +541,19 @@ function applyImport(
   entries: Entry[],
   receipts: { imported: number; missing: number },
   settings: ParsedSettings | null,
-  archive: { encrypted: boolean; password?: string }
+  archive: {
+    encrypted: boolean
+    password?: string
+    invoices?: Invoice[]
+    customers?: Customer[]
+  }
 ): void {
   releaseAllObjectUrls()
   useBookStore.getState().replaceBook({
     encrypted: archive.encrypted,
     archiveYear: settings?.archiveOf ?? null,
+    invoices: archive.invoices,
+    customers: archive.customers,
     entries,
     cats: result.categories,
     // The name carries its extension (§7.3).
@@ -563,6 +591,7 @@ function applyImport(
           payMonths: settings.payMonths,
           loanOpening: settings.loanOpening,
           yearEnd: settings.yearEnd,
+          invoiceSettings: settings.invoiceSettings,
           changeLog: settings.changeLog,
           overviewLayout: settings.overviewLayout,
           autosave: settings.autosave,
@@ -631,6 +660,9 @@ function bookVersion() {
     s.payMonths,
     s.loanOpening,
     s.yearEnd,
+    s.invoiceSettings,
+    s.invoices,
+    s.customers,
     s.changeLog,
     s.encrypted,
   ] as const
@@ -680,6 +712,7 @@ function currentSettingsText(over: Partial<BookSettings> = {}): string {
     payMonths: s.payMonths,
     loanOpening: s.loanOpening,
     yearEnd: s.yearEnd,
+    invoiceSettings: s.invoiceSettings,
     changeLog: s.changeLog,
     ...over,
   })
@@ -757,6 +790,12 @@ export async function buildBookFile(
       }
     }
   }
+  /* A book with no invoices or customers writes neither file, so it stays as it was. */
+  const { invoices, customers } = useBookStore.getState()
+  const invoicesText = invoices.length ? serializeInvoices(invoices) : undefined
+  const customersText = customers.length
+    ? serializeCustomers(customers)
+    : undefined
   const bytes = await packZip({
     csvName: CSV_FILE_NAME[exportLang],
     csvText,
@@ -765,8 +804,11 @@ export async function buildBookFile(
     read: async (id) => (await getReceipt(id)) ?? null,
     settingsText: await sealSettings(
       currentSettingsText(only?.settings),
-      csvText
+      csvText,
+      { invoices: invoicesText, customers: customersText }
     ),
+    invoicesText,
+    customersText,
     password: encrypted ? (heldPassword() ?? undefined) : undefined,
     carry: carryFrom(source),
     onAbsent: (key) => {
