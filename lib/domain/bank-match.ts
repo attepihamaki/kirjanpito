@@ -6,6 +6,7 @@ import {
   type CategoryRule,
 } from "@/lib/domain/category-rules"
 import { canBeUnpaid, paidDate } from "@/lib/domain/open-items"
+import { hintCategory } from "@/lib/domain/invoice-text"
 import { periodFromKey } from "@/lib/domain/vat-deadline"
 import type { UnsettledDue } from "@/lib/domain/vat-settlement"
 import type { CategoryMap, Cents, Entry, EntryType } from "@/lib/domain/types"
@@ -41,6 +42,8 @@ export interface NewEntryDraft {
   vatRate: number | null
   /** The VAT period this payment or refund settles (§6.6), when it equals one. */
   settles?: string
+  /** True when `catId` is a guess from the words alone, not a rule or history. */
+  guessed?: boolean
 }
 
 /* -------------------------------------------------------------------------
@@ -194,16 +197,37 @@ function draftFor(
     }
   }
   const hit = findCategoryRule(ctx.rules ?? [], parts.join(" "), ctx.cats, type)
-  const suggestion = hit
+  const known = hit
     ? { catId: hit.catId, vatRate: hit.vatRate }
     : suggestFromHistory(row.counterparty, type, ctx)
+  const guessed = known
+    ? null
+    : suggestFromWords(parts.join(" "), type, ctx.cats)
   return {
     type,
     description: parts.join(" – "),
     amount: Math.abs(row.amount),
-    catId: suggestion?.catId ?? null,
-    vatRate: suggestion?.vatRate ?? null,
+    catId: known?.catId ?? guessed,
+    vatRate: known?.vatRate ?? null,
+    ...(guessed ? { guessed: true } : {}),
   }
+}
+
+/**
+ * A category guessed from the words of a counterparty with no rule and no
+ * history (§8.16). Expenses only, and only an enabled category on the
+ * expense side that is not an EU purchase: money in has no hints, and the
+ * review list must not offer a category the user cannot pick there.
+ */
+export function suggestFromWords(
+  text: string,
+  type: EntryType,
+  cats: CategoryMap
+): string | null {
+  if (type !== "expense") return null
+  const catId = hintCategory(text)
+  const cat = catId ? cats.get(catId) : undefined
+  return cat && cat.enabled && !cat.euPurchase ? cat.id : null
 }
 
 /**

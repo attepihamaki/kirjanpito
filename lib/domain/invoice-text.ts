@@ -520,8 +520,19 @@ const CATEGORY_HINTS: readonly (readonly [string, RegExp])[] = [
  */
 export function suggestCategory(guess: InvoiceGuess): string | null {
   const text = [guess.vendor ?? "", ...guess.items].join("\n")
+  return (
+    hintCategory(text) ?? (guess.items.length || guess.vendor ? "333" : null)
+  )
+}
+
+/**
+ * The expense category that words in the text point at, or null when none
+ * do. Unlike `suggestCategory` there is no goods fallback, so a text that
+ * says nothing stays unsuggested.
+ */
+export function hintCategory(text: string): string | null {
   for (const [catId, re] of CATEGORY_HINTS) if (re.test(text)) return catId
-  return guess.items.length || guess.vendor ? "333" : null
+  return null
 }
 
 const INVOICE_NO_RE =

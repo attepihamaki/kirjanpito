@@ -3395,6 +3395,10 @@ export const APP_DICT = {
     "Luokka aiemmista tositteista",
     "Category from earlier vouchers",
   ],
+  "bank.statusGuessed": [
+    "Luokka arvattu nimestä, tarkista",
+    "Category guessed from the name, check it",
+  ],
   "bank.statusNoCategory": ["Valitse luokka", "Choose a category"],
   "bank.pickCategory": ["Valitse luokka", "Choose a category"],
   "bank.needCategory": [

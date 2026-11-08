@@ -6,6 +6,7 @@ import {
   normalizeName,
   proposeForRows,
   suggestFromHistory,
+  suggestFromWords,
 } from "@/lib/domain/bank-match"
 import { indexCategories, type Entry } from "@/lib/domain/types"
 
@@ -179,6 +180,40 @@ describe("proposeForRows, new entries", () => {
       catId: "333",
       vatRate: 25.5,
     })
+  })
+
+  it("guesses a category from the words of an unseen counterparty", () => {
+    const [p] = proposeForRows(
+      [row({ counterparty: "Elisa Oyj", message: "Liittymä 10/2026" })],
+      ctx([])
+    )
+    expect(p).toMatchObject({
+      kind: "new",
+      draft: { catId: "344-other", vatRate: null, guessed: true },
+    })
+  })
+
+  it("prefers history to a word guess and does not flag it", () => {
+    const history = [
+      entry({ id: "1", description: "Elisa Oyj", catId: "334", vatRate: 25.5 }),
+    ]
+    const [p] = proposeForRows(
+      [row({ counterparty: "Elisa Oyj" })],
+      ctx(history)
+    )
+    expect(p).toMatchObject({ kind: "new", draft: { catId: "334" } })
+    if (p.kind === "new") expect(p.draft.guessed).toBeUndefined()
+  })
+
+  it("guesses nothing for money in, a disabled category or no known word", () => {
+    const [income] = proposeForRows(
+      [row({ amount: 5000, counterparty: "Elisa Oyj" })],
+      ctx([])
+    )
+    if (income.kind === "new") expect(income.draft.catId).toBeNull()
+    expect(suggestFromWords("Elisa", "expense", new Map())).toBeNull()
+    const [none] = proposeForRows([row({ counterparty: "Xyz Oy" })], ctx([]))
+    if (none.kind === "new") expect(none.draft.guessed).toBeUndefined()
   })
 
   it("suggests nothing for an unknown counterparty or the other side", () => {

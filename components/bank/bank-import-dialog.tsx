@@ -457,7 +457,7 @@ function Review({
                         invalid={!plan.catId}
                         onChange={(v) => patch(i, { catId: v })}
                       />
-                    ) : null}
+                    ) : null}{" "}
                   </TableCell>
                 </TableRow>
               )
@@ -508,8 +508,9 @@ function noteFor(
       })
     }
     case "new":
-      return p.draft.catId
-        ? f.t("bank.statusSuggested")
-        : f.t("bank.statusNoCategory")
+      if (!p.draft.catId) return f.t("bank.statusNoCategory")
+      return p.draft.guessed
+        ? f.t("bank.statusGuessed")
+        : f.t("bank.statusSuggested")
   }
 }
