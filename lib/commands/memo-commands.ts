@@ -13,7 +13,7 @@ import type { Attachment, Entry } from "@/lib/domain/types"
 import type { ReportDoc } from "@/lib/domain/year-reports"
 import { useBookStore } from "@/stores/book-store"
 
-function release(id: string): void {
+export function releaseDraftAttachment(id: string): void {
   const store = useBookStore.getState()
   store.setDraftAttachmentIds(store.draftAttachmentIds.filter((d) => d !== id))
 }
@@ -24,7 +24,7 @@ function release(id: string): void {
  * bytes are written, so a receipt sweep cannot take it (§7.4). The caller
  * releases it once an entry or an open dialog holds it.
  */
-async function storePdf(
+export async function storePdf(
   ctx: Ctx,
   name: string,
   render: () => Promise<Uint8Array>
@@ -43,7 +43,7 @@ async function storePdf(
     return { id, name, type: blob.type, size: blob.size }
   } catch (error) {
     console.warn("Generated voucher could not be stored", error)
-    release(id)
+    releaseDraftAttachment(id)
     toast.add({ title: ctx.t("memo.failed") })
     return null
   }
@@ -108,6 +108,6 @@ export async function bookWithMemo(
       title
     )
   } finally {
-    if (att?.id) release(att.id)
+    if (att?.id) releaseDraftAttachment(att.id)
   }
 }

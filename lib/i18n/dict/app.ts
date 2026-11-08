@@ -2903,6 +2903,59 @@ export const APP_DICT = {
     "Asiakasrekisteriä (customers.json) on muutettu.",
     "The customer register (customers.json) was changed.",
   ],
+  "invoice.problemNoRows": [
+    "Laskulla ei ole rivejä.",
+    "The invoice has no rows.",
+  ],
+  "invoice.problemBadRow": [
+    "Jokaisella rivillä pitää olla kuvaus, positiivinen määrä ja hinta.",
+    "Every row needs a description, a positive quantity and a price.",
+  ],
+  "invoice.problemNoCustomer": [
+    "Laskulta puuttuu asiakkaan nimi.",
+    "The customer's name is missing.",
+  ],
+  "invoice.problemCustomerAddress": [
+    "Laskulta puuttuu asiakkaan katuosoite tai kaupunki.",
+    "The customer's street address or city is missing.",
+  ],
+  "invoice.problemSellerName": [
+    "Lisää yrityksen nimi asetuksiin.",
+    "Add the business name in settings.",
+  ],
+  "invoice.problemSellerId": [
+    "Lisää yrityksen Y-tunnus asetuksiin.",
+    "Add the business ID in settings.",
+  ],
+  "invoice.problemSellerAddress": [
+    "Lisää yrityksen osoite laskutusasetuksiin.",
+    "Add the business address in the invoice settings.",
+  ],
+  "invoice.problemSellerIban": [
+    "Lisää tilinumero (IBAN) laskutusasetuksiin.",
+    "Add the account number (IBAN) in the invoice settings.",
+  ],
+  "invoice.problemBadCategory": [
+    "Laskun rivillä on luokka, jota ei voi käyttää myyntilaskulla. Käytä Myynti – Suomi -tyyppistä luokkaa.",
+    "A row uses a category that cannot be used on a sales invoice. Use a domestic sales category.",
+  ],
+  "invoice.problemNoTotal": [
+    "Laskun loppusumma on nolla.",
+    "The invoice total is zero.",
+  ],
+  "invoice.problemDueBeforeDate": [
+    "Eräpäivä on ennen laskun päivämäärää.",
+    "The due date is before the invoice date.",
+  ],
+  "invoice.issued": ["Lasku {n} annettu", "Invoice {n} issued"],
+  "invoice.issueUndone": [
+    "Laskun antaminen peruttu",
+    "Issuing the invoice was undone",
+  ],
+  "invoice.pdfFailed": [
+    "Laskun PDF:ää ei voitu tallentaa, joten tositteet kirjattiin ilman liitettä.",
+    "The invoice PDF could not be stored, so the vouchers were booked without an attachment.",
+  ],
   "io.settingsNewer": [
     " Tiedosto on tehty uudemmalla versiolla, joten kaikkia asetuksia ei ehkä luettu.",
     " The file was made with a newer version, so some settings may not have been read.",
