@@ -15,10 +15,6 @@ export const FEATURES = [
 
 export type Feature = (typeof FEATURES)[number]
 
-export function isFeature(value: unknown): value is Feature {
-  return FEATURES.includes(value as Feature)
-}
-
 /** Income statement lines only one feature uses. */
 const LINE_FEATURE: Readonly<Record<string, Feature>> = {
   "335": "employees",

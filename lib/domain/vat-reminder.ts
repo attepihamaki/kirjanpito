@@ -1,7 +1,7 @@
 import { daysBetween, type TimelinePeriod } from "@/lib/domain/vat-deadline"
 
 /** How many days before the due date the banner starts to show (§8.7). */
-export const VAT_REMINDER_DAYS = 7
+const VAT_REMINDER_DAYS = 7
 
 export interface VatReminder {
   period: TimelinePeriod
