@@ -16,8 +16,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { toast } from "@/components/ui/toast"
 import { useFormatters } from "@/components/lang-provider"
 import type { HelpTopic } from "@/lib/domain/field-help"
-import { formatAmountForCsv } from "@/lib/domain/money"
 import {
+  fieldPlain,
   taxFormSteps,
   type TaxFormField,
   type TaxFormSection,
@@ -84,7 +84,7 @@ export function TaxForm({
 
   async function copy(row: TaxFormField) {
     try {
-      await navigator.clipboard.writeText(formatAmountForCsv(row.value))
+      await navigator.clipboard.writeText(fieldPlain(row))
       setCopied((prev) => new Set(prev).add(row.code))
     } catch {
       toast.add({ title: f.t("common.formCopyFailed") })
@@ -243,7 +243,7 @@ export function TaxForm({
                   </span>
                   <DrillButton row={row} drill={drill} />
                   <span className="font-semibold whitespace-nowrap">
-                    <Money cents={row.value} />
+                    <FieldValue row={row} />
                   </span>
                 </li>
               ))}
@@ -378,7 +378,7 @@ function AllFieldsSection({
             </span>
             <DrillButton row={row} drill={drill} />
             <span className="font-bold whitespace-nowrap">
-              {row.value ? <Money cents={row.value} /> : "–"}
+              {row.value ? <FieldValue row={row} /> : "–"}
             </span>
           </div>
         ) : (
@@ -501,7 +501,7 @@ function CopyButton({
   onCopy: () => void
 }) {
   const f = useFormatters()
-  const plain = formatAmountForCsv(row.value)
+  const plain = fieldPlain(row)
 
   return (
     <button
@@ -519,7 +519,7 @@ function CopyButton({
           : "bg-muted text-foreground hover:bg-muted/70"
       )}
     >
-      <Money cents={row.value} />
+      <FieldValue row={row} />
       <span className="print-hidden inline-flex">
         {copied ? (
           <CheckIcon aria-hidden className="size-4" />
@@ -528,6 +528,17 @@ function CopyButton({
         )}
       </span>
     </button>
+  )
+}
+
+/** A field's value: an amount, or a plain number or percentage. */
+function FieldValue({ row }: { row: TaxFormField }) {
+  if (row.unit === undefined) return <Money cents={row.value} />
+  return (
+    <span className="tabular">
+      {fieldPlain(row)}
+      {row.unit === "percent" ? " %" : ""}
+    </span>
   )
 }
 

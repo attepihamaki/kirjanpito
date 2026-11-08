@@ -1,3 +1,4 @@
+import { formatAmountForCsv } from "@/lib/domain/money"
 import type { Cents, Lang } from "@/lib/domain/types"
 
 export type TaxFormLabel = Readonly<Record<Lang, string>>
@@ -18,6 +19,11 @@ export type TaxFormRow =
       unused: boolean
       /** What to watch for when entering this field. */
       hint?: TaxFormLabel
+      /**
+       * What `value` counts: cents (the default), a plain number such as
+       * kilometres or a choice, or a percentage in hundredths.
+       */
+      unit?: "number" | "percent"
     }
 
 export type TaxFormField = Extract<TaxFormRow, { kind: "field" }>
@@ -49,4 +55,12 @@ export function taxFormSteps(sections: readonly TaxFormSection[]) {
     }
   }
   return { inputs, totals, fieldCount }
+}
+
+/** A field's value as OmaVero takes it: `1234,56` for money, `31,50` for a percentage, a plain number otherwise. */
+export function fieldPlain(row: Pick<TaxFormField, "value" | "unit">): string {
+  if (row.unit === "number") return String(row.value)
+  if (row.unit === "percent")
+    return (row.value / 100).toFixed(2).replace(".", ",")
+  return formatAmountForCsv(row.value)
 }

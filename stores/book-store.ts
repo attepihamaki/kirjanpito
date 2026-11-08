@@ -215,6 +215,7 @@ export type DialogState =
   | { kind: "audit-package" }
   /** The year-end figures typed in on Varat ja velat (§8.8). */
   | { kind: "year-end-figures" }
+  | { kind: "form5-details" }
   /** Carve a part off an entry, as another category or VAT rate (§8.4). */
   | { kind: "split"; entryId: string }
   | { kind: "deduction"; which: "mileage" | "per-diem" | "home-office" }

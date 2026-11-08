@@ -6,6 +6,13 @@ import {
 import { LINE_BY_KEY } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
 import { yearOf } from "@/lib/domain/dates"
+import {
+  form5ExtraSections,
+  interestCalc,
+  ownerTransfers,
+  type InterestCalc,
+  type OwnerTransfers,
+} from "@/lib/domain/form5-extra"
 import { form5Label } from "@/lib/domain/form5-spec"
 import { balancesAt, paidDate } from "@/lib/domain/open-items"
 import type { TaxFormRow, TaxFormSection } from "@/lib/domain/tax-form"
@@ -21,7 +28,10 @@ import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
  * of the fields: 714 is cash in hand and 716 says "no bank deposits".
  */
 
-/** What the user reads off at the end of a year. Every amount defaults to zero. */
+/**
+ * What the user types in for a year: the figures read off at its end, and the
+ * details Form 5 asks for that the book cannot know. Every one defaults to zero.
+ */
 export interface YearEnd {
   /** 708: goods bought for resale. */
   goods: Cents
@@ -39,7 +49,46 @@ export interface YearEnd {
   otherCurrentDebt: Cents
   /** Non-current liabilities beyond loans. */
   otherLongDebt: Cents
+  /** 271: kilometres driven for the business. */
+  carKmBusiness: number
+  /** 273: kilometres driven privately. */
+  carKmPrivate: number
+  /** 381: the car's costs for the year, running costs plus depreciation or leasing. */
+  carCosts: Cents
+  /** 379: 0 for none, then 1 car, 2 van, 3 car and van, 4 other vehicles. */
+  carVehicle: number
+  /** 380: 0 for none, 1 a driving log, 2 other records. */
+  carBasis: number
+  /** 373: the loss to deduct from capital income. */
+  lossToCapital: Cents
+  /** 395: 0 for no claim, 1 capital income at most 10 %, 2 all earned income. */
+  incomeSplit: number
+  /** 871: the operating reserve of the tax year. */
+  operatingReserve: Cents
+  /** 677: revaluations included in equity. */
+  revaluations: Cents
+  /** 650: the year's loss, for the adjusted negative equity. */
+  yearLoss: Cents
+  /** 651: earlier losses with no profits gathered to cover them. */
+  priorLosses: Cents
+  /** 653: the base rate plus 1 %, in hundredths of a percent (3,15 % is 315). */
+  interestRate: number
 }
+
+/**
+ * The figures that describe the end of a year and may start the next one. The
+ * rest of `YearEnd` is about the year itself and is never carried over.
+ */
+export const BALANCE_KEYS = [
+  "goods",
+  "otherCurrent",
+  "otherFixed",
+  "cash",
+  "otherFinancial",
+  "loanCurrent",
+  "otherCurrentDebt",
+  "otherLongDebt",
+] as const satisfies readonly (keyof YearEnd)[]
 
 export const EMPTY_YEAR_END: YearEnd = {
   goods: 0,
@@ -50,6 +99,18 @@ export const EMPTY_YEAR_END: YearEnd = {
   loanCurrent: 0,
   otherCurrentDebt: 0,
   otherLongDebt: 0,
+  carKmBusiness: 0,
+  carKmPrivate: 0,
+  carCosts: 0,
+  carVehicle: 0,
+  carBasis: 0,
+  lossToCapital: 0,
+  incomeSplit: 0,
+  operatingReserve: 0,
+  revaluations: 0,
+  yearLoss: 0,
+  priorLosses: 0,
+  interestRate: 0,
 }
 
 /** The loans outstanding when the book starts. */
@@ -114,6 +175,10 @@ export interface Form5BalanceInput {
   yearEnd: YearEnd
   assetOpening: AssetOpening | null
   loanOpening: LoanOpening | null
+  /** 346 as the income statement holds it, for the interest that is not deductible. */
+  interestExpense?: Cents
+  /** 313 as the income statement holds it, which the driving details must match. */
+  carBooked?: Cents
 }
 
 export interface Form5Balance {
@@ -134,6 +199,9 @@ export interface Form5Balance {
   /** 718 − 725: positive goes on 733, negative on 734. */
   netWorth: Cents
   wages: Cents
+  interest: InterestCalc
+  transfers: OwnerTransfers
+  carBooked: Cents
 }
 
 export function form5Balance(input: Form5BalanceInput): Form5Balance {
@@ -170,6 +238,13 @@ export function form5Balance(input: Form5BalanceInput): Form5Balance {
     liabilities,
     netWorth: assets - liabilities,
     wages: wagesPaid(entries, cats, year),
+    interest: interestCalc(
+      input.interestExpense ?? 0,
+      assets - liabilities,
+      yearEnd
+    ),
+    transfers: ownerTransfers(entries, cats, year),
+    carBooked: input.carBooked ?? 0,
   }
 }
 
@@ -282,6 +357,9 @@ export function form5BalanceSections(
       rows: [
         field(749, "Current liabilities", b.current),
         field(750, "Non-current liabilities", b.nonCurrent),
+        ...(b.interest.active && b.interest.adjusted > 0
+          ? [field(747, "Adjusted negative equity", b.interest.adjusted)]
+          : []),
         field(725, "Total business liabilities", b.liabilities, total),
         field(733, "Positive net worth", Math.max(0, b.netWorth), {
           total: true,
@@ -303,7 +381,13 @@ export function form5BalanceSections(
           b.wages
         ),
       ],
-    }
+    },
+    ...form5ExtraSections({
+      yearEnd,
+      carBooked: b.carBooked,
+      interest: b.interest,
+      transfers: b.transfers,
+    })
   )
   return sections
 }

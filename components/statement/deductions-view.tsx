@@ -95,6 +95,19 @@ export function DeductionsView() {
           note={`${f.t("deductions.statVouchers")}: ${booked.length}`}
         />
       </SettingCard>
+      <SettingCard
+        label={f.t("deductions.detailsCard")}
+        info={f.t("deductions.detailsCardInfo")}
+      >
+        <div className="print-hidden">
+          <Button
+            variant="outline"
+            onClick={() => openDialog({ kind: "form5-details" })}
+          >
+            {f.t("deductions.detailsOpen")}
+          </Button>
+        </div>
+      </SettingCard>
       {shown.has("car")
         ? rates
           ? calculator(

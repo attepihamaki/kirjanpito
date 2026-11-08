@@ -5,11 +5,11 @@ import {
 } from "@/lib/domain/book-limits"
 import type { ChangeRecord } from "@/lib/domain/change-log"
 import { yearOf } from "@/lib/domain/dates"
-import { form5Sections, form5Values } from "@/lib/domain/form5"
+import { form5Report } from "@/lib/domain/form5-report"
+import { form5Values } from "@/lib/domain/form5"
 import {
   EMPTY_YEAR_END,
   form5Balance,
-  form5BalanceSections,
   type LoanOpening,
   type YearEnd,
 } from "@/lib/domain/form5-balance"
@@ -179,21 +179,17 @@ export function bookCheck(input: BookCheckInput): BookFinding[] {
       }
     }
 
-    const yearEnd = input.yearEnd[year] ?? EMPTY_YEAR_END
-    const values = form5Values([
-      ...form5Sections(incomeStatement(basis, cats, year, { depreciationMax })),
-      ...form5BalanceSections(
-        form5Balance({
-          entries,
-          cats,
-          year,
-          yearEnd,
-          assetOpening: input.assetOpening,
-          loanOpening: input.loanOpening,
-        }),
-        yearEnd
-      ),
-    ])
+    const values = form5Values(
+      form5Report({
+        statement: incomeStatement(basis, cats, year, { depreciationMax }),
+        entries,
+        cats,
+        year,
+        yearEnd: input.yearEnd[year],
+        assetOpening: input.assetOpening,
+        loanOpening: input.loanOpening,
+      }).sections
+    )
     for (const finding of evaluate(
       FORM5_RULES,
       (code) => values.get(code) ?? 0

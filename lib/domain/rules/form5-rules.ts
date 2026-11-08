@@ -1,19 +1,23 @@
-import type { Form5Values } from "@/lib/domain/form5-spec"
+import { FORM5_FIELDS, type Form5Values } from "@/lib/domain/form5-spec"
 import { defineRules, type Rule } from "@/lib/domain/rules/engine"
 
 /**
  * The automated checks and remarks of sections 8 and 9 of Verohallinto's 2026
  * data file specification for Form 5, over the fields the book fills. Each
  * rule's `source` is the check's number in the specification. A breach lists
- * the codes involved. Checks on a field the book never fills (the car use
- * detail, the double-entry equity, the spouse split) are not here, since they
- * hold trivially.
+ * the codes involved. The double-entry equity checks (743, #806 and #410) are
+ * not here, since the book is single-entry and never writes 916. A check that
+ * asks for a field to be present, such as #424 or #839, is kept by the file
+ * writer, which always writes those fields.
  */
 export interface Form5Breach {
   codes: readonly number[]
 }
 
 type Form5Rule = Rule<Form5Values, Form5Breach>
+
+/** A percentage field (`D3,2`) holds hundredths, so 100 % is 10 000. */
+const PERCENT_100 = 10_000
 
 function sumRule(
   total: number,
@@ -145,11 +149,48 @@ export const FORM5_RULES = defineRules<Form5Values, Form5Breach>([
     (v) => 10 * v(871) <= 3 * v(394)
   ),
   /*
-   * The kilometres and costs behind the private use of a car are not in the
-   * book, so any amount on 313 breaches this until they are entered in OmaVero.
+   * Private use of a car is entered as the driving details: 396 is 1 when the
+   * private share was deducted in the books, and 313 is then the private share
+   * of the costs (382), which the specification requires to match.
    */
-  rule("carDetail", 1882, "warn", [313, 271, 273, 381, 396], (v) =>
-    v(313) > 0 ? v(273) > 0 && v(381) > 0 : true
+  rule("carDetail", 1882, "blocker", [313, 271, 273, 381, 396], (v) =>
+    v(313) > 0 ? v(396) === 1 && v(273) > 0 && v(381) > 0 : true
+  ),
+  rule("carPrivateShare", 824, "blocker", [313, 382, 396], (v) =>
+    v(396) === 1 ? v(313) > 0 && v(313) === v(382) : true
+  ),
+  rule("carTotalDistance", 825, "blocker", [389, 390], (v) =>
+    v(390) > 0 ? v(389) >= v(390) : true
+  ),
+  rule("netWorthShares", 408, "blocker", [369, 370], (v) =>
+    v(369) !== 0 || v(370) !== 0 ? v(369) + v(370) === PERCENT_100 : true
+  ),
+  rule("workShares", 409, "blocker", [371, 372], (v) =>
+    v(371) !== 0 || v(372) !== 0 ? v(371) + v(372) === PERCENT_100 : true
+  ),
+  /*
+   * A field in the specification's `R` or `+` format takes no minus sign. The
+   * result is the one that can go wrong, which is why 358 and 359 are split.
+   */
+  {
+    id: "form5.unsigned",
+    severity: "blocker",
+    source: "Form 5 spec 2026 section 7, format",
+    check: (v) => {
+      const negative = FORM5_FIELDS.filter(
+        (field) =>
+          (field.format.startsWith("R") || field.format.startsWith("+")) &&
+          v(field.code) < 0
+      ).map((field) => field.code)
+      return negative.length > 0 ? [{ codes: negative }] : []
+    },
+  },
+  rule(
+    "listedCooperative",
+    2048,
+    "warn",
+    [325, 326],
+    (v) => v(325) === 0 && v(326) === 0
   ),
   rule("listedDividend", 1321, "warn", [319, 320], (v) => v(319) >= v(320)),
   rule("otherDividend", 1455, "warn", [321, 322], (v) => v(321) >= v(322)),

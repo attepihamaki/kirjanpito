@@ -11,14 +11,8 @@ import {
   type DateRange,
   type Totals,
 } from "@/lib/domain/books"
-import { form5Sections } from "@/lib/domain/form5"
-import {
-  EMPTY_YEAR_END,
-  form5Balance,
-  form5BalanceSections,
-  type LoanOpening,
-  type YearEnd,
-} from "@/lib/domain/form5-balance"
+import { form5Report } from "@/lib/domain/form5-report"
+import { type LoanOpening, type YearEnd } from "@/lib/domain/form5-balance"
 import type { AssetOpening } from "@/lib/domain/assets"
 import { yearOf } from "@/lib/domain/dates"
 import { incomeStatement } from "@/lib/domain/income-statement"
@@ -688,21 +682,16 @@ function formTable(
   return blocks
 }
 
-function form5Report(f: ReportText, input: YearReportInput): ReportDoc {
-  const cats = indexCategories(input.cats)
-  const yearEnd = input.yearEnd ?? EMPTY_YEAR_END
-  const balance = form5Balance({
+function form5Doc(f: ReportText, input: YearReportInput): ReportDoc {
+  const { sections } = form5Report({
+    statement: statementOf(input),
     entries: input.entries,
-    cats,
+    cats: indexCategories(input.cats),
     year: input.year,
-    yearEnd,
+    yearEnd: input.yearEnd,
     assetOpening: input.assetOpening,
     loanOpening: input.loanOpening,
   })
-  const sections = [
-    ...form5Sections(statementOf(input)),
-    ...form5BalanceSections(balance, yearEnd),
-  ]
   return {
     id: "form5",
     title: f.t("ledger.packForm5Title", { y: input.year }),
@@ -939,6 +928,6 @@ export function yearReports(
     ledgerReport(f, input, input.year),
     accountListReport(f, input, input.year),
     statementReport(f, input),
-    form5Report(f, input),
+    form5Doc(f, input),
   ]
 }

@@ -1,11 +1,7 @@
 import * as React from "react"
 
-import { form5Sections } from "@/lib/domain/form5"
-import {
-  EMPTY_YEAR_END,
-  form5Balance,
-  form5BalanceSections,
-} from "@/lib/domain/form5-balance"
+import { EMPTY_YEAR_END } from "@/lib/domain/form5-balance"
+import { form5Report } from "@/lib/domain/form5-report"
 import { incomeStatement } from "@/lib/domain/income-statement"
 import { indexCategories } from "@/lib/domain/types"
 import { useStatementOptions, useTaxBasisEntries } from "@/hooks/use-tax-basis"
@@ -26,9 +22,10 @@ export function useForm5() {
   const assetOpening = useBookStore((s) => s.assetOpening)
   const loanOpening = useBookStore((s) => s.loanOpening)
 
-  const balance = React.useMemo(
+  const report = React.useMemo(
     () =>
-      form5Balance({
+      form5Report({
+        statement: incomeStatement(basis, indexCategories(cats), year, options),
         entries,
         cats: indexCategories(cats),
         year,
@@ -36,17 +33,8 @@ export function useForm5() {
         assetOpening,
         loanOpening,
       }),
-    [entries, cats, year, yearEnd, assetOpening, loanOpening]
-  )
-  const sections = React.useMemo(
-    () => [
-      ...form5Sections(
-        incomeStatement(basis, indexCategories(cats), year, options)
-      ),
-      ...form5BalanceSections(balance, yearEnd),
-    ],
-    [basis, cats, year, balance, yearEnd, options]
+    [basis, options, entries, cats, year, yearEnd, assetOpening, loanOpening]
   )
 
-  return { year, sections, balance }
+  return { year, sections: report.sections, balance: report.balance }
 }

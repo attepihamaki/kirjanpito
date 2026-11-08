@@ -8,6 +8,7 @@ import { CheckRow } from "@/components/common/check-row"
 import { TaxForm } from "@/components/common/tax-form"
 import { useFormatters } from "@/components/lang-provider"
 import { useDescribeYearEnd } from "@/components/statement/use-describe-year-end"
+import { Form5FileDownload } from "@/components/statement/form5-file-download"
 import { useForm5 } from "@/components/statement/use-form5"
 import { Button } from "@/components/ui/button"
 import {
@@ -211,6 +212,8 @@ function YearEndForm() {
               </p>
             </TaxForm>
           ) : null}
+
+          {step === "values" ? <Form5FileDownload /> : null}
 
           {step === "lock" ? (
             <div className="flex flex-col gap-3">

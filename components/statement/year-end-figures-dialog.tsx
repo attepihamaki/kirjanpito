@@ -185,7 +185,7 @@ function SectionHeading({
   )
 }
 
-function AmountField({
+export function AmountField({
   id,
   label,
   help,

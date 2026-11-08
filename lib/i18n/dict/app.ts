@@ -3528,4 +3528,188 @@ export const APP_DICT = {
     "Verohallinnon tarkistus ({source}) ei päde sovelluksen laskemille luvuille. Tarkista luvut OmaVerossa ennen kuin kopioit ne.",
     "Verohallinto's check ({source}) fails for the figures the app worked out. Check the figures in OmaVero before you copy them.",
   ],
+  "deductions.detailsTitle": [
+    "Veroilmoituksen lisätiedot {y}",
+    "Tax return details {y}",
+  ],
+  "deductions.detailsHint": [
+    "Tiedot, joita kirjanpidosta ei voi laskea ja joita lomake 5 kysyy. Ne tallentuvat vuoden mukana.",
+    "Details Form 5 asks for that the book cannot work out. They are saved with the year.",
+  ],
+  "deductions.detailsFiled": [
+    "Vuosi on merkitty ilmoitetuksi, joten tietoja ei voi muuttaa.",
+    "The year is marked as filed, so these cannot be changed.",
+  ],
+  "deductions.detailsCard": [
+    "Veroilmoituksen lisätiedot",
+    "Tax return details",
+  ],
+  "deductions.detailsCardInfo": [
+    "Auton yksityiskäyttö, vähennyskelvoton korko ja lomakkeen valinnat. Näitä tarvitaan, kun lomake 5 viedään Ilmoitin.fi-tiedostona.",
+    "Private use of a car, non-deductible interest and the form’s choices. Needed when Form 5 goes in as an Ilmoitin.fi file.",
+  ],
+  "deductions.detailsOpen": ["Muokkaa tietoja", "Edit details"],
+  "deductions.detailsCarTitle": [
+    "Auton yksityiskäyttö",
+    "Private use of a car",
+  ],
+  "deductions.detailsCarHint": [
+    "Jos auton kulut on vähennetty kirjanpidossa, yksityisajojen osuus tuloutetaan kohtaan 313. Anna ajot ja kulut, niin osuus lasketaan.",
+    "If the car’s costs are deducted in the books, the private share is added back as income on 313. Enter the driving and the costs and the share is worked out.",
+  ],
+  "deductions.detailsKmBusiness": [
+    "Elinkeinotoiminnan ajot (km)",
+    "Business driving (km)",
+  ],
+  "deductions.detailsKmPrivate": ["Yksityisajot (km)", "Private driving (km)"],
+  "deductions.detailsCarCosts": [
+    "Kulut yhteensä (varsinaiset kulut + poisto tai leasing-vuokra)",
+    "Total costs (running costs + depreciation or leasing)",
+  ],
+  "deductions.detailsVehicle": [
+    "Käyttöomaisuuteen sisältyy",
+    "The fixed assets include",
+  ],
+  "deductions.detailsVehicle0": ["Ei valintaa", "No choice"],
+  "deductions.detailsVehicle1": ["Henkilöauto", "Car"],
+  "deductions.detailsVehicle2": ["Pakettiauto", "Van"],
+  "deductions.detailsVehicle3": ["Henkilö- ja pakettiauto", "Car and van"],
+  "deductions.detailsVehicle4": ["Muita kulkuneuvoja", "Other vehicles"],
+  "deductions.detailsBasis": [
+    "Käyttötiedot perustuvat",
+    "The details are based on",
+  ],
+  "deductions.detailsBasis0": ["Ei valintaa", "No choice"],
+  "deductions.detailsBasis1": ["Ajopäiväkirjaan", "A driving log"],
+  "deductions.detailsBasis2": ["Muuhun käyttöselvitykseen", "Other records"],
+  "deductions.detailsPerKm": ["Kulut kilometriltä", "Cost per kilometre"],
+  "deductions.detailsShare": [
+    "Yksityisajojen osuus kuluista",
+    "Private share of the costs",
+  ],
+  "deductions.detailsBookedCar": ["Kirjattu kohtaan 313", "Booked on 313"],
+  "deductions.detailsBookCar": ["Kirjaa yksityiskäyttö", "Book private use"],
+  "deductions.detailsCarDone": [
+    "Auton yksityiskäyttö kirjattu.",
+    "Private use of the car booked.",
+  ],
+  "deductions.detailsCarMismatch": [
+    "Kirjattu summa ei vastaa laskettua. Muokkaa tai poista aiempi tosite, niin voit kirjata uudelleen.",
+    "The booked amount differs from the calculated one. Edit or delete the earlier voucher to book again.",
+  ],
+  "deductions.detailsCarEntry": [
+    "Auton yksityiskäyttö {y}: {k} km kaikista {t} km",
+    "Private use of the car {y}: {k} km of {t} km",
+  ],
+  "deductions.detailsCarHeading": [
+    "Auton yksityiskäyttö {y}",
+    "Private use of the car {y}",
+  ],
+  "deductions.detailsCarRule": [
+    "Yksityisajojen osuus on yksityisajot kerrottuna kuluilla kilometriä kohden (lomake 5, kohta 382).",
+    "The private share is the private kilometres times the cost per kilometre (Form 5, field 382).",
+  ],
+  "deductions.detailsTotalKm": ["Kokonaiskilometrit", "Total kilometres"],
+  "deductions.detailsInterestTitle": [
+    "Vähennyskelvoton korko",
+    "Non-deductible interest",
+  ],
+  "deductions.detailsInterestHint": [
+    "Oma pääoma on negatiivinen, joten osa koroista ei ole vähennyskelpoista (EVL 18.2 §). OmaVero laskee summan itse, joten tarkista se sieltä.",
+    "Net worth is negative, so part of the interest is not deductible (EVL 18.2 §). OmaVero works the sum out itself, so check it there.",
+  ],
+  "deductions.detailsRate": ["Peruskorko + 1 % (%)", "Base rate + 1 % (%)"],
+  "deductions.detailsRevaluations": [
+    "Omaan pääomaan sisältyvät arvonkorotukset",
+    "Revaluations included in equity",
+  ],
+  "deductions.detailsYearLoss": ["Tilikauden tappio", "Loss of the year"],
+  "deductions.detailsPriorLosses": [
+    "Aiempien vuosien tappiot, joiden kattamiseen ei ole voittovaroja",
+    "Earlier losses with no profits to cover them",
+  ],
+  "deductions.detailsNegativeEquity": [
+    "Negatiivinen oma pääoma",
+    "Negative equity",
+  ],
+  "deductions.detailsAdjusted": [
+    "Oikaistu negatiivinen oma pääoma",
+    "Adjusted negative equity",
+  ],
+  "deductions.detailsDisallowed": [
+    "Vähennyskelvoton korko",
+    "Non-deductible interest",
+  ],
+  "deductions.detailsRateMissing": [
+    "Anna korkokanta, jotta vähennyskelvoton korko voidaan laskea.",
+    "Enter the rate so the non-deductible interest can be worked out.",
+  ],
+  "deductions.detailsOtherTitle": ["Muut valinnat", "Other choices"],
+  "deductions.detailsReserve": ["Toimintavaraus", "Operating reserve"],
+  "deductions.detailsLossToCapital": [
+    "Tappio vähennettäväksi pääomatuloista",
+    "Loss to deduct from capital income",
+  ],
+  "deductions.detailsSplit": [
+    "Vaatimus jaettavasta yritystulosta",
+    "Claim for the business income split",
+  ],
+  "deductions.detailsSplit0": ["Ei vaatimusta (20 %)", "No claim (20 %)"],
+  "deductions.detailsSplit1": [
+    "Pääomatulon enimmäismäärä 10 % nettovarallisuudesta",
+    "Capital income at most 10 % of net worth",
+  ],
+  "deductions.detailsSplit2": [
+    "Koko yritystulo ansiotuloa",
+    "All business income as earned income",
+  ],
+  "deductions.detailsBadNumber": [
+    "Anna kokonaisluku.",
+    "Enter a whole number.",
+  ],
+  "deductions.detailsBadRate": [
+    "Anna prosentti, esim. 3,15.",
+    "Enter a percentage, such as 3.15.",
+  ],
+  "statement.fileTitle": ["Ilmoitin.fi-tiedosto", "Ilmoitin.fi file"],
+  "statement.fileHint": [
+    "Lataa lomake 5 tiedostona ja lähetä se Ilmoitin.fi-palvelussa. Kirjanpito ei lähetä mitään. Tarkista luvut tiedoston lataamisen jälkeen palvelun esikatselusta.",
+    "Download Form 5 as a file and send it through Ilmoitin.fi. The app sends nothing. Check the figures in the service’s preview after you upload.",
+  ],
+  "statement.fileId": [
+    "Henkilötunnus tai Y-tunnus (kohta 010)",
+    "Personal ID or business ID (field 010)",
+  ],
+  "statement.fileIdHelp": [
+    "Toiminimen veroilmoitus annetaan yleensä henkilötunnuksella. Tunnusta ei tallenneta mihinkään.",
+    "A sole trader’s return is usually filed under the personal ID. The ID is not saved anywhere.",
+  ],
+  "statement.fileDownload": [
+    "Lataa Ilmoitin.fi-tiedosto",
+    "Download Ilmoitin.fi file",
+  ],
+  "statement.fileBlockNoBusinessId": [
+    "Lisää Y-tunnus kohdassa Asetukset, Yrityksen tiedot.",
+    "Add the business ID under Settings, Business details.",
+  ],
+  "statement.fileBlockBadId": [
+    "Tunnus ei ole kelvollinen henkilötunnus tai Y-tunnus.",
+    "The ID is not a valid personal ID or business ID.",
+  ],
+  "statement.fileBlockInterestRate": [
+    "Anna peruskorko + 1 % Veroilmoituksen lisätiedoissa (Vähennykset-sivu).",
+    "Enter the base rate + 1 % in the tax return details (Deductions page).",
+  ],
+  "statement.fileBlockChecks": [
+    "Verohallinnon tarkistus ei päde kohdille {codes}. Korjaa luvut ennen tiedoston lataamista.",
+    "Verohallinto’s check fails for {codes}. Fix the figures before you download the file.",
+  ],
+  "statement.fileWarnings": [
+    "Ilmoitin näyttää nämä huomautukset, mutta ne eivät estä lähettämistä:",
+    "Ilmoitin shows these remarks, but they do not stop you from sending:",
+  ],
+  "statement.fileWarning": [
+    "Tarkistus {source}, kohdat {codes}",
+    "Check {source}, fields {codes}",
+  ],
 } as const satisfies Dict

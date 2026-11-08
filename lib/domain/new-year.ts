@@ -4,6 +4,7 @@ import {
   type AssetOpening,
 } from "@/lib/domain/assets"
 import {
+  BALANCE_KEYS,
   EMPTY_YEAR_END,
   loanBalance,
   type LoanOpening,
@@ -98,9 +99,7 @@ export function newYearSummary(input: NewYearInput): NewYearSummary {
 /** Whether any year-end figure has been entered. */
 export function hasYearEndFigures(values: YearEnd | undefined): boolean {
   if (!values) return false
-  return (Object.keys(EMPTY_YEAR_END) as (keyof YearEnd)[]).some(
-    (key) => values[key] !== 0
-  )
+  return BALANCE_KEYS.some((key) => values[key] !== 0)
 }
 
 export interface CarryOver {
@@ -122,7 +121,10 @@ export function carryOverYearEnd(
   const previous = yearEnd[String(year - 1)]
   if (locked || !hasYearEndFigures(previous)) return null
   return {
-    values: { ...EMPTY_YEAR_END, ...previous },
+    values: {
+      ...EMPTY_YEAR_END,
+      ...Object.fromEntries(BALANCE_KEYS.map((key) => [key, previous[key]])),
+    },
     replaces: hasYearEndFigures(yearEnd[String(year)]),
   }
 }

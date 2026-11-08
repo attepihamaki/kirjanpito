@@ -7,10 +7,10 @@ import type { Cents } from "@/lib/domain/types"
 export type Form5Row = TaxFormRow
 export type Form5Section = TaxFormSection
 
-/** Shown on 313: the amount is not typed, OmaVero derives it. */
+/** Shown on 313: OmaVero asks for the driving details beside it. */
 const CAR_HINT = {
-  fi: "OmaVero laskee tämän ajotiedoista (271, 273, 381, 396). Anna ne siellä äläkä kirjaa summaa erikseen.",
-  en: "OmaVero works this out from the driving details (271, 273, 381, 396). Enter those there and do not add the amount separately.",
+  fi: "Täytä myös auton ajotiedot (271, 273, 381, 396). Summan on oltava sama kuin kohta 382. Laske se Vähennykset-sivulla.",
+  en: "Fill in the driving details too (271, 273, 381, 396). The amount must equal field 382. Work it out on the Deductions page.",
 }
 
 /**
@@ -20,14 +20,21 @@ const CAR_HINT = {
  * here for a portion the chart has no line for. Values are the year's net
  * amounts.
  *
- * 338 is the part of 337 the asset register allows and 347 the full 346,
- * because the income statement deducts interest in full (§6.3). 327 and 328 are
+ * 338 is the part of 337 the asset register allows. 347 is 346 less the
+ * interest that negative equity makes non-deductible (383, `interestCalc`),
+ * which the income statement still deducts in full (§6.3); 355 and the result
+ * follow 347. 327 and 328 are
  * the surplus from non-listed co-operatives; 325 and 326 are left out, since
  * the specification says no co-operative was listed in 2026. 364 is the sum of
  * 388, the additional deduction for temporary business trips, and 392, the one
  * for a private car, which the specification requires to match.
  */
-export function form5Sections(s: IncomeStatement): Form5Section[] {
+export function form5Sections(
+  s: IncomeStatement,
+  interestDisallowed: Cents = 0
+): Form5Section[] {
+  const deductible = s.deductibleTotal - interestDisallowed
+  const result = s.revenueTotal - deductible
   const full = (account: number) =>
     s.lines
       .filter((l) => l.line.account === account)
@@ -135,7 +142,12 @@ export function form5Sections(s: IncomeStatement): Form5Section[] {
         line(343, full(343)),
         line(344, full(344)),
         line(346, full(346)),
-        field(347, "Deductible portion", counted(346), portion),
+        field(
+          347,
+          "Deductible portion",
+          counted(346) - interestDisallowed,
+          portion
+        ),
         line(349, full(349)),
         line(353, full(353)),
         field(364, "Additional deductions", full(364)),
@@ -152,12 +164,7 @@ export function form5Sections(s: IncomeStatement): Form5Section[] {
           portion
         ),
         line(354, full(354)),
-        field(
-          355,
-          "Total deductible business expenses",
-          s.deductibleTotal,
-          total
-        ),
+        field(355, "Total deductible business expenses", deductible, total),
       ],
     },
     {
@@ -174,18 +181,14 @@ export function form5Sections(s: IncomeStatement): Form5Section[] {
       number: "",
       title: { fi: "Tulos", en: "Result" },
       rows: [
-        field(
-          358,
-          "Business profit",
-          s.resultLine === "358" ? s.resultMagnitude : 0,
-          { total: true, unused: s.resultLine !== "358" }
-        ),
-        field(
-          359,
-          "Business loss",
-          s.resultLine === "359" ? s.resultMagnitude : 0,
-          { total: true, unused: s.resultLine !== "359" }
-        ),
+        field(358, "Business profit", result >= 0 ? result : 0, {
+          total: true,
+          unused: result < 0,
+        }),
+        field(359, "Business loss", result < 0 ? -result : 0, {
+          total: true,
+          unused: result >= 0,
+        }),
       ],
     },
   ]

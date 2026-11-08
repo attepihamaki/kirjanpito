@@ -33,8 +33,8 @@ Part of the project specification. `CLAUDE.md` is the index and holds the conven
 ## 14. Open questions and ideas not yet done
 
 - Undo for edits beyond the 10-second toast (§8.11), for example a history of an entry's earlier versions. The change log holds the old values but the app can not restore from it. Autosave (§7.5) makes a mistake reach the file within seconds, which is why it is opt-in.
-- Filing through Ilmoitin.fi for Form 5, and corrections (332 to 335) in the VAT file (§8.7). The VAT file itself exists; the user uploads it.
-- Form 5 fields the app does not work out: the car detail (271, 273, 274, 275, 379 to 382, 396) behind 313; 347, the deductible part of interest (346), which it fills with the full amount (§8.8); and surplus from listed co-operatives (325, 326).
+- Corrections (332 to 335) in the VAT file (§8.7). The VAT file itself exists; the user uploads it. The Form 5 file (§8.8) was accepted by Ilmoitin in a test upload on 8 November 2026, with remark #1410 on a full write-off of a small balance.
+- Form 5 fields the app leaves out on purpose: surplus from listed co-operatives (325, 326), since the specification says no co-operative was listed in 2026 (remark #2048); the detail behind 388 and 392 (401 to 420), the home use (431 to 433, 386), the spouse split (369 to 372), 393 and the double-entry equity (748, 741 to 743). None is mandatory (§8.8).
 - The VAT return of a business that stops trading (§6.5).
 - Asset classes other than machinery and equipment, and templates repeating less often than monthly.
 - Whether KPL 2:6's duty reaches the Form 5 fields the book does not hold: the year-end figures typed in on Varat ja velat, and the loan's opening balance. The click-through (§8.18) lists the vouchers behind a figure and says what is typed in. Assumed that a figure made from the books is covered and one typed in is not.

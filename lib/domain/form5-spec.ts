@@ -396,5 +396,9 @@ export function form5Label(code: number): string {
   return label
 }
 
-/** The value of a field by code, in cents; a field the form leaves empty is 0. */
+/**
+ * The value of a field by code; a field the form leaves empty is 0. Money is in
+ * cents, a percentage in hundredths (100 % is 10 000), and a count, a distance
+ * or a choice is the number itself.
+ */
 export type Form5Values = (code: number) => Cents

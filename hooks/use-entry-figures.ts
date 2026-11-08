@@ -13,12 +13,8 @@ import {
   vatFieldSelector,
   type FigureRef,
 } from "@/lib/domain/figure-vouchers"
-import { form5Sections } from "@/lib/domain/form5"
-import {
-  EMPTY_YEAR_END,
-  form5Balance,
-  form5BalanceSections,
-} from "@/lib/domain/form5-balance"
+import { form5Report } from "@/lib/domain/form5-report"
+import {} from "@/lib/domain/form5-balance"
 import { incomeStatement } from "@/lib/domain/income-statement"
 import { filterPeriod } from "@/lib/domain/period"
 import type { TaxFormSection } from "@/lib/domain/tax-form"
@@ -137,20 +133,17 @@ export function useEntryFigures(entryId: string | undefined) {
     const form5Item = (ref: Extract<FigureRef, { kind: "form5" }>) => {
       let fields = form5Fields.get(ref.year)
       if (!fields) {
-        const ye = yearEnd[ref.year] ?? EMPTY_YEAR_END
         const statement = incomeStatement(basis, catMap, ref.year, options)
-        const balance = form5Balance({
+        const { sections } = form5Report({
+          statement,
           entries,
           cats: catMap,
           year: ref.year,
-          yearEnd: ye,
+          yearEnd: yearEnd[ref.year],
           assetOpening,
           loanOpening,
         })
-        fields = fieldsOf(
-          [...form5Sections(statement), ...form5BalanceSections(balance, ye)],
-          f.lang
-        )
+        fields = fieldsOf(sections, f.lang)
         form5Fields.set(ref.year, fields)
       }
       const code = String(ref.code)
