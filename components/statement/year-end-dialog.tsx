@@ -2,7 +2,7 @@
 
 import { form5Help } from "@/lib/domain/field-help"
 import * as React from "react"
-import { CheckIcon, LockIcon } from "lucide-react"
+import { CheckIcon, DownloadIcon, LockIcon } from "lucide-react"
 
 import { CheckRow } from "@/components/common/check-row"
 import { TaxForm } from "@/components/common/tax-form"
@@ -20,20 +20,23 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "@/components/ui/toast"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { useCommandCtx } from "@/hooks/use-commands"
+import { exportRetentionPackage } from "@/lib/commands/retention-commands"
 import { useStatementDrill } from "@/hooks/use-figure-drill"
 import { useToday } from "@/hooks/use-today"
 import { canLockYear, yearEndFindings } from "@/lib/domain/year-end"
 import { indexCategories } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
 
-type Step = "checks" | "values" | "lock"
+type Step = "checks" | "values" | "lock" | "package"
 
-const STEPS: readonly Step[] = ["checks", "values", "lock"]
+const STEPS: readonly Step[] = ["checks", "values", "lock", "package"]
 
 const STEP_LABEL = {
   checks: "statement.yearEndStepChecks",
   values: "statement.yearEndStepValues",
   lock: "statement.yearEndStepLock",
+  package: "statement.yearEndStepPackage",
 } as const satisfies Record<Step, string>
 
 /**
@@ -58,6 +61,7 @@ function YearEndForm() {
   const filedOn = useBookStore((s) => s.form5Filed[String(year)])
   const describeFinding = useDescribeYearEnd()
   const [step, setStep] = React.useState<Step>("checks")
+  const ctx = useCommandCtx()
 
   const entries = useBookStore((s) => s.entries)
   const cats = useBookStore((s) => s.cats)
@@ -103,7 +107,7 @@ function YearEndForm() {
 
   function lock() {
     setForm5Filed(year, today)
-    closeDialog()
+    setStep("package")
     const id = toast.add({
       title: f.t("statement.yearEndLocked", { y: year }),
       actionProps: {
@@ -130,7 +134,7 @@ function YearEndForm() {
 
         <ToggleGroup
           aria-label={f.t("statement.yearEndSteps")}
-          className="grid w-full grid-cols-3 rounded-lg bg-muted p-1"
+          className="grid w-full grid-cols-4 rounded-lg bg-muted p-1"
           value={[step]}
           onValueChange={(next) => {
             const picked = next[0] as Step | undefined
@@ -232,6 +236,33 @@ function YearEndForm() {
               ) : null}
             </div>
           ) : null}
+
+          {step === "package" ? (
+            <div className="flex flex-col gap-3">
+              <h3 className="flex items-center gap-2 font-heading font-semibold">
+                <DownloadIcon aria-hidden className="size-4" />
+                {f.t("statement.yearEndPackageTitle", { y: year })}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {f.t("statement.yearEndPackageHint")}
+              </p>
+              {!filedOn ? (
+                <p className="text-sm text-warning">
+                  {f.t("statement.yearEndPackageLockFirst")}
+                </p>
+              ) : null}
+              <div>
+                <Button
+                  variant="outline"
+                  disabled={!filedOn}
+                  onClick={() => void exportRetentionPackage(ctx, year)}
+                >
+                  <DownloadIcon data-icon="inline-start" />
+                  {f.t("overview.yearPackage")}
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <DialogFooter>
@@ -243,20 +274,27 @@ function YearEndForm() {
               {f.t("statement.yearEndBack")}
             </Button>
           ) : null}
-          {step !== "lock" ? (
+          {step === "checks" || step === "values" ? (
             <Button onClick={() => setStep(STEPS[stepIndex + 1])}>
               {f.t("statement.yearEndNext")}
             </Button>
+          ) : step === "package" ? (
+            <Button onClick={closeDialog}>{f.t("common.close")}</Button>
           ) : filedOn ? (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setForm5Filed(year, null)
-                closeDialog()
-              }}
-            >
-              {f.t("vat.unmarkFiled")}
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setForm5Filed(year, null)
+                  closeDialog()
+                }}
+              >
+                {f.t("vat.unmarkFiled")}
+              </Button>
+              <Button onClick={() => setStep("package")}>
+                {f.t("statement.yearEndNext")}
+              </Button>
+            </>
           ) : (
             <Button disabled={!canLock} onClick={lock}>
               <LockIcon data-icon="inline-start" />

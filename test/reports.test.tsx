@@ -359,7 +359,20 @@ describe("YearEndDialog", () => {
     )
 
     expect(useBookStore.getState().form5Filed["2026"]).toBe("2027-02-10")
-    expect(useBookStore.getState().dialog.kind).toBe("none")
+    // The dialog stays open on the retention package step.
+    expect(useBookStore.getState().dialog.kind).toBe("year-end")
+    expect(
+      screen.getByRole("button", { name: "Säilytyspaketti" })
+    ).toBeEnabled()
+  })
+
+  it("keeps the retention package disabled until the year is filed", () => {
+    openDialog()
+    fireEvent.click(screen.getByRole("button", { name: /Säilytys$/ }))
+
+    expect(
+      screen.getByRole("button", { name: "Säilytyspaketti" })
+    ).toBeDisabled()
   })
 
   it("will not lock a year that has not ended", () => {

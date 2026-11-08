@@ -1738,6 +1738,19 @@ export const APP_DICT = {
   "statement.yearEndStepChecks": ["Tarkistukset", "Checks"],
   "statement.yearEndStepValues": ["Summat", "Amounts"],
   "statement.yearEndStepLock": ["Lukitus", "Lock"],
+  "statement.yearEndStepPackage": ["Säilytys", "Keep"],
+  "statement.yearEndPackageTitle": [
+    "Säilytyspaketti {y}",
+    "Retention package {y}",
+  ],
+  "statement.yearEndPackageHint": [
+    "Lataa vuoden raportit, kirjanpito ja liitteet yhtenä ZIP-tiedostona säilytettäväksi. Kirjanpitolaki edellyttää aineiston säilyttämistä kymmenen vuotta.",
+    "Download the year's reports, books and receipts as one ZIP to keep. The Accounting Act requires the records to be kept for ten years.",
+  ],
+  "statement.yearEndPackageLockFirst": [
+    "Merkitse vuosi ilmoitetuksi ensin, jotta paketti sisältää lopullisen aineiston.",
+    "Mark the year as filed first, so the package holds the final records.",
+  ],
   "statement.yearEndBack": ["Takaisin", "Back"],
   "statement.yearEndNext": ["Seuraava", "Next"],
   "statement.yearEndOpen": ["Avaa", "Open"],
