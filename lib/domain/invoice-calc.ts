@@ -1,6 +1,7 @@
 import { lineOf } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
 import type {
+  Customer,
   Invoice,
   InvoiceLang,
   InvoiceRow,
@@ -104,13 +105,6 @@ export function nextInvoiceNumber(
 ): number {
   const highest = invoices.reduce((max, i) => Math.max(max, i.number ?? 0), 0)
   return Math.max(firstNumber, highest + 1)
-}
-
-/** The ISO date `days` days after `iso`. */
-export function addDays(iso: string, days: number): string {
-  const [y, m, d] = iso.split("-").map(Number)
-  const date = new Date(Date.UTC(y, m - 1, d + days))
-  return date.toISOString().slice(0, 10)
 }
 
 /* -------------------------------------------------------------------------
@@ -343,4 +337,20 @@ export function creditDraft(
     entryIds: [],
     credits: original.id,
   }
+}
+
+/**
+ * The invoices that own at least one of `entries`, and the customers those
+ * invoices were made for. A year archive or an audit package holds only some of
+ * the entries, and carries only the invoices that belong with them (§8.27).
+ */
+export function invoicesOfEntries(
+  entries: readonly Entry[],
+  invoices: readonly Invoice[],
+  customers: readonly Customer[]
+): { invoices: Invoice[]; customers: Customer[] } {
+  const ids = new Set(entries.map((e) => e.id))
+  const kept = invoices.filter((i) => i.entryIds.some((id) => ids.has(id)))
+  const used = new Set(kept.map((i) => i.customerId))
+  return { invoices: kept, customers: customers.filter((c) => used.has(c.id)) }
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { defaultCategories } from "@/lib/domain/accounts"
+import type { Entry } from "@/lib/domain/types"
 import { calcEntry } from "@/lib/domain/calc"
 import { createIdFactory } from "@/lib/domain/id"
 import {
@@ -11,10 +12,10 @@ import {
   type InvoiceSettings,
 } from "@/lib/domain/invoice"
 import {
-  addDays,
   buildIssue,
   creditableAmount,
   creditDraft,
+  invoicesOfEntries,
   creditedAmount,
   invoiceGroups,
   invoiceTotals,
@@ -146,17 +147,6 @@ describe("nextInvoiceNumber", () => {
   it("ignores drafts and never goes below the first number", () => {
     expect(nextInvoiceNumber([draft()], 2000)).toBe(2000)
     expect(nextInvoiceNumber([issued(1001)], 2000)).toBe(2000)
-  })
-})
-
-describe("addDays", () => {
-  it.each([
-    ["2026-11-01", 14, "2026-11-15"],
-    ["2026-12-25", 14, "2027-01-08"],
-    ["2028-02-20", 10, "2028-03-01"],
-    ["2026-11-01", 0, "2026-11-01"],
-  ])("%s plus %i is %s", (from, days, expected) => {
-    expect(addDays(from, days)).toBe(expected)
   })
 })
 
@@ -432,6 +422,42 @@ describe("credit notes", () => {
     it("points a rate it cannot match at the first entry of the invoice", () => {
       const other = note({ rows: [row({ quantityMilli: -1000, vatRate: 14 })] })
       expect(build(other).entries[0].reverses).toBe("oe")
+    })
+  })
+})
+
+describe("invoicesOfEntries", () => {
+  const owned = (id: string, entryIds: string[], customerId: string | null) =>
+    ({ ...draft(), id, number: 1001, entryIds, customerId }) as Invoice
+  const customer = (id: string) => ({
+    ...emptyParty(),
+    id,
+    name: id,
+    language: "fi" as const,
+    termDays: null,
+  })
+  const entries = [{ id: "a" }, { id: "c" }] as Entry[]
+
+  it("keeps the invoices that own one of the entries, and their customers", () => {
+    const result = invoicesOfEntries(
+      entries,
+      [
+        owned("i1", ["a", "b"], "k1"),
+        owned("i2", ["z"], "k2"),
+        owned("i3", ["c"], null),
+      ],
+      [customer("k1"), customer("k2")]
+    )
+    expect(result.invoices.map((i) => i.id)).toEqual(["i1", "i3"])
+    expect(result.customers.map((c) => c.id)).toEqual(["k1"])
+  })
+
+  it("is empty for entries no invoice owns", () => {
+    expect(
+      invoicesOfEntries(entries, [owned("i2", ["z"], "k2")], [customer("k2")])
+    ).toEqual({
+      invoices: [],
+      customers: [],
     })
   })
 })

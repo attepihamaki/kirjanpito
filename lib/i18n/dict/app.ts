@@ -1096,6 +1096,10 @@ export const APP_DICT = {
     "Vuosi {p} on merkitty talletetuksi {d}, joten sen tositteet ovat lukittuja. Tee korjaustosite. Vain maksupäivän voi vielä merkitä.",
     "Year {p} was marked as stored on {d}, so its vouchers are locked. Make a correction voucher. Only the payment date can still be set.",
   ],
+  "entry.lockedInvoice": [
+    "Tosite kuuluu annettuun laskuun {p} (annettu {d}), joten sen summaa, päivää, luokkaa ja verokantaa ei voi muuttaa eikä tositetta poistaa (kirjanpitolaki 2:7). Virhe korjataan hyvityslaskulla Laskut-näkymässä. Vain maksupäivän voi vielä merkitä.",
+    "This voucher belongs to issued invoice {p} (issued {d}), so its amount, date, category and VAT rate cannot be changed and it cannot be deleted (Accounting Act 2:7). A mistake is corrected with a credit note in the Invoices view. Only the payment date can still be set.",
+  ],
   "entry.lockedForm5Paid": [
     "Tosite on maksettu vuonna {p}, ja sen vuoden veroilmoitus (lomake 5) on merkitty ilmoitetuksi {d}. Ilmoitus luki tositteen maksuvuoden mukaan, joten se on lukittu (kirjanpitolaki 2:7). Tee korjaustosite. Jos ilmoitusta ei oikeasti ole annettu, poista merkintä kohdasta Tuloslaskelma, Lomake 5.",
     "This voucher was paid in {p}, and the tax return (Form 5) for that year was marked as filed on {d}. The return counted it by the year it was paid, so it is locked (Accounting Act 2:7). Make a correction voucher. If the return has not really been filed, remove the mark under Income statement, Form 5.",
@@ -3006,7 +3010,7 @@ export const APP_DICT = {
   "invoice.customerStreet": ["Katuosoite", "Street address"],
   "invoice.customerPostcode": ["Postinumero", "Postcode"],
   "invoice.customerCity": ["Kaupunki", "City"],
-  "invoice.customerCountry": ["Maa (2 kirjainta)", "Country (2 letters)"],
+  "invoice.customerCountry": ["Maa", "Country"],
   "invoice.customerVatId": ["ALV-tunnus", "VAT number"],
   "invoice.customerEmail": ["Sähköposti", "Email"],
   "invoice.customerLanguage": ["Laskun kieli", "Invoice language"],
@@ -3132,6 +3136,14 @@ export const APP_DICT = {
   "invoice.sendAttach": [
     "PDF ladattiin. Liitä se avautuneeseen sähköpostiin.",
     "The PDF was downloaded. Attach it to the mail that opened.",
+  ],
+  "io.skippedRecordsTitle": [
+    "Laskuja tai asiakkaita jäi lukematta",
+    "Some invoices or customers were not read",
+  ],
+  "io.skippedRecords": [
+    "{n} laskua tai asiakasta tiedostosta ei voitu lukea, joten ne jätettiin pois. Älä tallenna tiedostoa päälle ennen kuin olet tarkistanut invoices.json ja customers.json, sillä tallennus poistaisi ne.",
+    "{n} invoices or customers in the file could not be read and were left out. Do not save over the file before you check invoices.json and customers.json, because saving would remove them.",
   ],
   "io.settingsNewer": [
     " Tiedosto on tehty uudemmalla versiolla, joten kaikkia asetuksia ei ehkä luettu.",

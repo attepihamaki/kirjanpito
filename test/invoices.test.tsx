@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CustomerDialog } from "@/components/invoices/customer-dialog"
 import { CustomerList } from "@/components/invoices/customer-list"
+import { InvoiceDialog } from "@/components/invoices/invoice-dialog"
 import { InvoiceList } from "@/components/invoices/invoice-list"
 import { InvoiceSettingsForm } from "@/components/invoices/invoice-settings"
 import { LangProvider } from "@/components/lang-provider"
@@ -285,6 +286,35 @@ describe("InvoiceSettingsForm", () => {
       (screen.getByLabelText("Ensimmäinen laskunumero") as HTMLInputElement)
         .disabled
     ).toBe(true)
+  })
+})
+
+describe("InvoiceDialog", () => {
+  it("saves a typed customer to the register once, however often issuing is tried", async () => {
+    useBookStore.setState({ dialog: { kind: "invoice", invoiceId: null } })
+    mount(<InvoiceDialog />)
+    const dialog = await screen.findByRole("dialog")
+    fireEvent.change(within(dialog).getByLabelText("Nimi"), {
+      target: { value: "Uusi Asiakas Oy" },
+    })
+    fireEvent.click(
+      within(dialog).getByRole("checkbox", {
+        name: "Tallenna asiakasrekisteriin",
+      })
+    )
+    /* The seller details are missing, so issuing is refused each time. */
+    fireEvent.click(within(dialog).getByRole("button", { name: "Anna lasku" }))
+    await vi.waitFor(() =>
+      expect(useBookStore.getState().customers).toHaveLength(1)
+    )
+    fireEvent.click(within(dialog).getByRole("button", { name: "Anna lasku" }))
+    await vi.waitFor(() =>
+      expect(useBookStore.getState().invoices).toHaveLength(1)
+    )
+    expect(useBookStore.getState().customers).toHaveLength(1)
+    expect(useBookStore.getState().invoices[0].customerId).toBe(
+      useBookStore.getState().customers[0].id
+    )
   })
 })
 

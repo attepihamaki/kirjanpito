@@ -142,10 +142,10 @@ function carriesReference(row: BankRow, invoice: Invoice): boolean {
 function payingInvoice(
   row: BankRow,
   ctx: BankContext,
+  byId: ReadonlyMap<string, Entry> | null,
   claimed: ReadonlySet<string>
 ): { invoice: Invoice; open: Entry[] } | undefined {
-  if (row.amount <= 0) return undefined
-  const byId = new Map(ctx.entries.map((e) => [e.id, e]))
+  if (row.amount <= 0 || !byId) return undefined
   for (const invoice of ctx.invoices ?? []) {
     if (!carriesReference(row, invoice)) continue
     const open = openEntries(invoice, byId).filter((e) => !claimed.has(e.id))
@@ -160,9 +160,12 @@ function payingInvoice(
  * entries all paid on the row's day and together the row's amount. A one-entry
  * invoice is found by `alreadyBooked`.
  */
-function alreadyPaidInvoice(row: BankRow, ctx: BankContext): Entry | undefined {
-  if (row.amount <= 0) return undefined
-  const byId = new Map(ctx.entries.map((e) => [e.id, e]))
+function alreadyPaidInvoice(
+  row: BankRow,
+  ctx: BankContext,
+  byId: ReadonlyMap<string, Entry> | null
+): Entry | undefined {
+  if (row.amount <= 0 || !byId) return undefined
   for (const invoice of ctx.invoices ?? []) {
     if (!carriesReference(row, invoice)) continue
     const entries = invoice.entryIds.flatMap((id) => byId.get(id) ?? [])
@@ -325,11 +328,15 @@ export function proposeForRows(
 ): BankProposal[] {
   const claimed = new Set<string>()
   const claimedDues = new Set<string>()
+  /* Only a book with invoices needs the entries by id, and then once for all rows. */
+  const byId = ctx.invoices?.length
+    ? new Map(ctx.entries.map((e) => [e.id, e]))
+    : null
   return rows.map((row): BankProposal => {
-    const booked = alreadyBooked(row, ctx) ?? alreadyPaidInvoice(row, ctx)
+    const booked = alreadyBooked(row, ctx) ?? alreadyPaidInvoice(row, ctx, byId)
     if (booked) return { kind: "booked", entryId: booked.id }
 
-    const paying = payingInvoice(row, ctx, claimed)
+    const paying = payingInvoice(row, ctx, byId, claimed)
     if (paying) {
       for (const e of paying.open) claimed.add(e.id)
       return {

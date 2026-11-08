@@ -53,6 +53,7 @@ import {
   serializeInvoices,
 } from "@/lib/domain/invoice-file"
 import type { Customer, Invoice } from "@/lib/domain/invoice"
+import { invoicesOfEntries } from "@/lib/domain/invoice-calc"
 import {
   parseSettings,
   serializeSettings,
@@ -360,6 +361,13 @@ async function importZip(
     entries.push({ ...entry, ...(atts.length ? { atts } : {}) })
   }
 
+  const invoiceRecords = unpacked.invoicesText
+    ? parseInvoices(unpacked.invoicesText)
+    : { invoices: [], skipped: 0 }
+  const customerRecords = unpacked.customersText
+    ? parseCustomers(unpacked.customersText)
+    : { customers: [], skipped: 0 }
+
   applyImport(
     ctx,
     file,
@@ -371,14 +379,18 @@ async function importZip(
     {
       encrypted: unpacked.encrypted,
       password,
-      invoices: unpacked.invoicesText
-        ? parseInvoices(unpacked.invoicesText).invoices
-        : [],
-      customers: unpacked.customersText
-        ? parseCustomers(unpacked.customersText).customers
-        : [],
+      invoices: invoiceRecords.invoices,
+      customers: customerRecords.customers,
     }
   )
+  const skippedRecords = invoiceRecords.skipped + customerRecords.skipped
+  if (skippedRecords > 0) {
+    await alertDialog({
+      title: ctx.t("io.skippedRecordsTitle"),
+      message: ctx.t("io.skippedRecords", { n: skippedRecords }),
+      closeLabel: ctx.t("common.close"),
+    })
+  }
   await reportEdits(
     ctx,
     await checkIntegrity(unpacked.csvText, unpacked.settingsText, {
@@ -791,7 +803,10 @@ export async function buildBookFile(
     }
   }
   /* A book with no invoices or customers writes neither file, so it stays as it was. */
-  const { invoices, customers } = useBookStore.getState()
+  const state = useBookStore.getState()
+  const { invoices, customers } = only
+    ? invoicesOfEntries(only.entries, state.invoices, state.customers)
+    : state
   const invoicesText = invoices.length ? serializeInvoices(invoices) : undefined
   const customersText = customers.length
     ? serializeCustomers(customers)

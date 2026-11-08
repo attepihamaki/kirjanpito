@@ -42,6 +42,14 @@ export function paidDate(entry: Pick<Entry, "date" | "paidOn">): string | null {
   return entry.paidOn === undefined ? entry.date : entry.paidOn
 }
 
+/**
+ * The `paidOn` value that records a payment on `on` for an entry dated `date`:
+ * undefined (paid on its own date) when they are the same day, else `on`.
+ */
+export function paidOnFor(date: string, on: string): string | undefined {
+  return on === date ? undefined : on
+}
+
 /** Whether an entry was dated by `date` and not yet paid then. */
 export function isOpenAt(
   entry: Pick<Entry, "date" | "paidOn">,

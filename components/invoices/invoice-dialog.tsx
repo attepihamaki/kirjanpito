@@ -43,7 +43,8 @@ import {
   type InvoiceLang,
   type InvoiceRow,
 } from "@/lib/domain/invoice"
-import { addDays, invoiceTotals, rowNet } from "@/lib/domain/invoice-calc"
+import { addDays } from "@/lib/domain/dates"
+import { invoiceTotals, rowNet } from "@/lib/domain/invoice-calc"
 import { formatQuantity, parseQuantity } from "@/lib/domain/invoice-input"
 import { formatMoneyPlain } from "@/lib/domain/money"
 import { rateOnDate, validRates } from "@/lib/domain/vat-rates"
@@ -129,7 +130,10 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
   const setCustomers = useBookStore((s) => s.setCustomers)
   const closeDialog = useBookStore((s) => s.closeDialog)
 
-  const existing = invoices.find((i) => i.id === invoiceId)
+  /* A new draft keeps one id however often it is saved, so saving twice is one draft. */
+  const [newId] = React.useState(() => uid())
+  const draftId = invoiceId ?? newId
+  const existing = invoices.find((i) => i.id === draftId)
   const issued = existing !== undefined && existing.number !== null
   /* A credit note takes negative quantities and has no due date. */
   const credit = existing?.credits != null
@@ -230,9 +234,10 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
       }
       setCustomers([...useBookStore.getState().customers, customer])
       register = customer.id
+      setCustomerId(register)
     }
     const draft: Invoice = {
-      id: existing?.id ?? uid(),
+      id: draftId,
       number: null,
       date,
       dueDate,
@@ -420,16 +425,33 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
                   key={row.key}
                   className="flex flex-col gap-2 rounded-lg border p-3"
                 >
-                  <Input
-                    aria-label={`${f.t("invoice.rowDescription")} ${index + 1}`}
-                    placeholder={f.t("invoice.rowDescription")}
-                    disabled={issued}
-                    aria-invalid={bad || undefined}
-                    value={row.description}
-                    onChange={(e) =>
-                      patchRow(row.key, { description: e.target.value })
-                    }
-                  />
+                  <div className="flex items-center gap-2">
+                    <Input
+                      aria-label={`${f.t("invoice.rowDescription")} ${index + 1}`}
+                      placeholder={f.t("invoice.rowDescription")}
+                      disabled={issued}
+                      aria-invalid={bad || undefined}
+                      value={row.description}
+                      onChange={(e) =>
+                        patchRow(row.key, { description: e.target.value })
+                      }
+                    />
+                    {!issued ? (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={f.t("invoice.removeRow", { n: index + 1 })}
+                        disabled={rows.length === 1}
+                        onClick={() =>
+                          setRows((list) =>
+                            list.filter((r) => r.key !== row.key)
+                          )
+                        }
+                      >
+                        <Trash2Icon />
+                      </Button>
+                    ) : null}
+                  </div>
                   <div className="flex flex-wrap items-end gap-2">
                     <Field className="w-20">
                       <FieldLabel className="text-xs">
@@ -446,7 +468,7 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
                         }
                       />
                     </Field>
-                    <Field className="w-20">
+                    <Field className="w-16">
                       <FieldLabel className="text-xs">
                         {f.t("invoice.rowUnit")}
                       </FieldLabel>
@@ -458,7 +480,7 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
                         }
                       />
                     </Field>
-                    <Field className="w-32">
+                    <Field className="w-28">
                       <FieldLabel className="text-xs">
                         {f.t("invoice.rowPrice")}
                       </FieldLabel>
@@ -489,7 +511,7 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
                         ).map((r) => ({ value: String(r), label: f.rate(r) }))}
                       />
                     </Field>
-                    <Field className="min-w-40 flex-1">
+                    <Field className="min-w-36 flex-1">
                       <FieldLabel className="text-xs">
                         {f.t("invoice.rowCategory")}
                       </FieldLabel>
@@ -510,25 +532,9 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
                         }))}
                       />
                     </Field>
-                    <div className="tabular ml-auto min-w-24 pb-2 text-right text-sm">
+                    <div className="tabular flex h-9 min-w-24 items-center justify-end text-sm">
                       {parsed ? <Money cents={rowNet(parsed)} /> : null}
                     </div>
-                    {!issued ? (
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className="mb-1"
-                        aria-label={f.t("invoice.removeRow", { n: index + 1 })}
-                        disabled={rows.length === 1}
-                        onClick={() =>
-                          setRows((list) =>
-                            list.filter((r) => r.key !== row.key)
-                          )
-                        }
-                      >
-                        <Trash2Icon />
-                      </Button>
-                    ) : null}
                   </div>
                   {bad ? (
                     <FieldError>{f.t("invoice.problemBadRow")}</FieldError>
@@ -590,7 +596,7 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
             </dd>
           </dl>
         </div>
-        <DialogFooter className="border-t px-5 py-3">
+        <DialogFooter className="m-0 flex-row flex-wrap items-center gap-2 bg-popover px-5 py-3">
           {issued ? (
             <>
               <Button

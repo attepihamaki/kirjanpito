@@ -637,11 +637,13 @@ function EntryDialogForm({
   const yearsArchived = useBookStore((s) => s.yearsArchived)
   const form5Filed = useBookStore((s) => s.form5Filed)
   const traderType = useBookStore((s) => s.traderType)
+  const invoices = useBookStore((s) => s.invoices)
   const marks = {
     vatFiled: vatFiledMarks,
     yearsArchived,
     form5Filed,
     traderType,
+    invoices,
   }
   // Read-only apart from the payment date (KPL 2:7, §8.11).
   const lock =
@@ -1049,7 +1051,9 @@ function EntryDialogForm({
                       ? "entry.lockedForm5"
                       : lock.kind === "form5Paid"
                         ? "entry.lockedForm5Paid"
-                        : "entry.lockedFiled",
+                        : lock.kind === "invoice"
+                          ? "entry.lockedInvoice"
+                          : "entry.lockedFiled",
                   { p: lock.key, d: f.date(lock.since) }
                 )}
               </InfoPopover>

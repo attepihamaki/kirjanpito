@@ -6,7 +6,9 @@ import {
   LOCK_RULES,
   entryLock,
   lockOn,
+  lockedEntries,
   paidChangeHitsForm5,
+  type LockMarks,
 } from "@/lib/domain/period-lock"
 import { indexCategories, type Entry } from "@/lib/domain/types"
 import { countsOnVatReturn, vatReport } from "@/lib/domain/vat"
@@ -212,5 +214,65 @@ describe("LOCK_RULES", () => {
       marks: { ...marks, traderType: "business" as const },
     }
     expect(evaluate(LOCK_RULES, business)).toEqual([])
+  })
+})
+
+describe("the invoice lock (§8.27)", () => {
+  const entry = (id: string): Entry => ({
+    id,
+    date: "2026-11-01",
+    description: "Lasku 1001",
+    type: "income",
+    catId: "300-domestic",
+    amount: 10_000,
+    vatRate: 25.5,
+    amountMode: "net",
+    paidOn: null,
+  })
+  const marks = (invoices: LockMarks["invoices"]): LockMarks => ({
+    vatFiled: {},
+    yearsArchived: {},
+    form5Filed: {},
+    invoices,
+  })
+  const issued = {
+    number: 1001,
+    issuedAt: "2026-11-01T09:00:00.000Z",
+    entryIds: ["a", "b"],
+  }
+
+  it("locks the entries of an issued invoice, and says which invoice", () => {
+    expect(entryLock(entry("a"), marks([issued]), cats)).toEqual({
+      kind: "invoice",
+      key: "1001",
+      since: "2026-11-01",
+    })
+    expect(entryLock(entry("b"), marks([issued]), cats)?.kind).toBe("invoice")
+  })
+
+  it("leaves other entries and a draft's alone", () => {
+    expect(entryLock(entry("x"), marks([issued]), cats)).toBeNull()
+    const draft = { number: null, issuedAt: null, entryIds: ["a"] }
+    expect(entryLock(entry("a"), marks([draft]), cats)).toBeNull()
+    expect(entryLock(entry("a"), marks(undefined), cats)).toBeNull()
+    expect(entryLock(entry("a"), marks([]), cats)).toBeNull()
+  })
+
+  it("lets a filed period speak first", () => {
+    const lock = entryLock(
+      entry("a"),
+      { ...marks([issued]), yearsArchived: { "2026": "2027-01-10" } },
+      cats
+    )
+    expect(lock?.kind).toBe("year")
+  })
+
+  it("filters a list down to the entries that belong to invoices", () => {
+    const locked = lockedEntries(
+      [entry("a"), entry("x"), entry("b")],
+      marks([issued]),
+      cats
+    )
+    expect(locked.map((e) => e.id)).toEqual(["a", "b"])
   })
 })

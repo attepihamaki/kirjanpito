@@ -1,4 +1,4 @@
-import { isoDate, todayIso } from "@/lib/domain/dates"
+import { addDays, isoDate, todayIso } from "@/lib/domain/dates"
 
 /** Day offsets for the words a date field understands, in both languages. */
 const WORDS: Record<string, number> = {
@@ -17,12 +17,6 @@ const WORDS: Record<string, number> = {
   toissapaivana: -2,
   "day before yesterday": -2,
   förrgår: -2,
-}
-
-function addDays(iso: string, days: number): string {
-  const [y, m, d] = iso.split("-").map(Number)
-  const dt = new Date(Date.UTC(y, m - 1, d + days))
-  return isoDate(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate())!
 }
 
 /** A two-digit year means 20xx. */

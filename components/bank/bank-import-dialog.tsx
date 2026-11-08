@@ -289,11 +289,21 @@ function Review({
 
   const book = async () => {
     const paid: { entryId: string; on: string }[] = []
+    /* Rows the reference proved to pay an invoice, whose other entries are paid with it. */
+    const byReference: { entryId: string; on: string }[] = []
     const added: Entry[] = []
     plans.forEach((plan, i) => {
       const row: BankRow = result.rows[i]
       if (plan.action === "match") {
-        paid.push({ entryId: plan.entryId, on: row.date })
+        const payment = { entryId: plan.entryId, on: row.date }
+        paid.push(payment)
+        const proposal = proposals[i]
+        if (
+          proposal.kind === "match" &&
+          proposal.confidence === "reference" &&
+          proposal.entryId === plan.entryId
+        )
+          byReference.push(payment)
       } else if (plan.action === "new") {
         const draft = proposals[i].kind === "new" ? proposals[i].draft : null
         const cat = catMap.get(plan.catId)
@@ -348,7 +358,12 @@ function Review({
       }
     }
     const done = await bookBankRows(ctx, {
-      paid: withInvoiceEntries(paid, invoices, entries),
+      paid: [
+        ...paid,
+        ...withInvoiceEntries(byReference, invoices, entries).slice(
+          byReference.length
+        ),
+      ],
       added,
     })
     if (held.length) {

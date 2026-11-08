@@ -220,6 +220,14 @@ describe("credit notes", () => {
     expect(note.rows.map((r) => r.quantityMilli)).toEqual([-2000, -1000])
   })
 
+  it("opens the draft already started instead of making another", async () => {
+    const first = await issuedAndCredited()
+    expect(startCreditNote(ctx, "i1")).toBe(first)
+    expect(
+      useBookStore.getState().invoices.filter((i) => i.credits === "i1")
+    ).toHaveLength(1)
+  })
+
   it("will not start one for a draft, for a credit note or for what is fully credited", async () => {
     expect(startCreditNote(ctx, "i1")).toBeNull()
     const id = await issuedAndCredited()

@@ -4,7 +4,7 @@ import { UNDO_TIMEOUT_MS } from "@/lib/commands/book-commands"
 import type { Ctx } from "@/lib/commands/ctx"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
 import { paidChangeHitsForm5 } from "@/lib/domain/period-lock"
-import { paidDate } from "@/lib/domain/open-items"
+import { paidDate, paidOnFor } from "@/lib/domain/open-items"
 import type { Entry } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
 
@@ -43,7 +43,7 @@ export async function bookBankRows(
       return false
     }
     before.push(e)
-    after.push({ ...e, paidOn: on === e.date ? undefined : on })
+    after.push({ ...e, paidOn: paidOnFor(e.date, on) })
   }
 
   const closed = booking.added.filter((e) => {

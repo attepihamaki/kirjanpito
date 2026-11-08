@@ -20,6 +20,7 @@ import {
 import { invoiceFileName } from "@/lib/domain/invoice-labels"
 import { invoiceMail, mailtoUrl } from "@/lib/domain/invoice-mail"
 import { openEntries } from "@/lib/domain/invoice-status"
+import { paidOnFor } from "@/lib/domain/open-items"
 import { paidChangeHitsForm5 } from "@/lib/domain/period-lock"
 import type { Attachment, Entry } from "@/lib/domain/types"
 import type { MessageKey } from "@/lib/i18n/messages"
@@ -96,7 +97,7 @@ export async function issueInvoice(
   const settledBefore = settled ? originalOpen : []
   const settledAfter: Entry[] = settledBefore.map((e) => ({
     ...e,
-    paidOn: draft.date === e.date ? undefined : draft.date,
+    paidOn: paidOnFor(e.date, draft.date),
   }))
 
   const { invoice, entries } = buildIssue({
@@ -262,7 +263,7 @@ export async function markInvoicePaid(
   }
   const after: Entry[] = before.map((e) => ({
     ...e,
-    paidOn: on === e.date ? undefined : on,
+    paidOn: paidOnFor(e.date, on),
   }))
   const changed = new Map(after.map((e) => [e.id, e]))
   const next = state.entries.map((e) => changed.get(e.id) ?? e)
@@ -302,6 +303,11 @@ export function startCreditNote(ctx: Ctx, invoiceId: string): string | null {
     toast.add({ title: ctx.t("invoice.creditNothingLeft") })
     return null
   }
+  /* A draft already started for this invoice is opened again, not copied. */
+  const started = state.invoices.find(
+    (i) => i.credits === original.id && i.number === null
+  )
+  if (started) return started.id
   const draft = creditDraft(original, uid(), todayIso())
   state.setInvoices([...state.invoices, draft])
   return draft.id

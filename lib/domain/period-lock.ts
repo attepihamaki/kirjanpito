@@ -22,6 +22,8 @@ export type PeriodLock =
   /** Dated in an open year, but paid in a year whose Form 5 is filed. */
   | { kind: "form5Paid"; key: string; since: string }
   | { kind: "filed"; key: string; since: string }
+  /** The voucher belongs to an issued invoice, whose number is `key` (§8.27). */
+  | { kind: "invoice"; key: string; since: string }
 
 export interface LockMarks {
   vatFiled: Readonly<Record<string, string>>
@@ -29,6 +31,15 @@ export interface LockMarks {
   form5Filed: Readonly<Record<string, string>>
   /** Absent means an ammatinharjoittaja (§6.3). */
   traderType?: TraderType
+  /** The book's invoices; the entries of an issued one are locked (§8.27). */
+  invoices?: readonly InvoiceRef[]
+}
+
+/** What the invoice lock needs of an invoice. */
+export interface InvoiceRef {
+  number: number | null
+  issuedAt: string | null
+  entryIds: readonly string[]
 }
 
 /** What the lock rules look at: one voucher's dates against the marks. */
@@ -39,6 +50,8 @@ export interface LockContext {
   paid: string | null
   /** Whether the VAT return counts the entry. A filed period holds only these. */
   countsOnVat: boolean
+  /** The issued invoice the entry belongs to, or null. */
+  invoice?: { number: number; since: string } | null
   marks: LockMarks
 }
 
@@ -96,7 +109,54 @@ export const LOCK_RULES = defineRules<LockContext, PeriodLock>([
       return key && since ? [{ kind: "form5Paid", key, since }] : []
     },
   },
+  {
+    id: "invoice",
+    severity: "blocker",
+    source: "KPL 2:7",
+    check: ({ invoice }) =>
+      invoice
+        ? [
+            {
+              kind: "invoice",
+              key: String(invoice.number),
+              since: invoice.since,
+            },
+          ]
+        : [],
+  },
 ])
+
+/**
+ * Each entry's issued invoice, built once per list of invoices: the ledger asks
+ * about every row on every render, and a scan of the invoices for each would
+ * grow with both.
+ */
+const invoiceIndexes = new WeakMap<
+  readonly InvoiceRef[],
+  Map<string, { number: number; since: string }>
+>()
+
+function invoiceOf(
+  invoices: readonly InvoiceRef[] | undefined,
+  entryId: string
+): { number: number; since: string } | null {
+  if (!invoices || invoices.length === 0) return null
+  let index = invoiceIndexes.get(invoices)
+  if (!index) {
+    index = new Map()
+    for (const invoice of invoices) {
+      if (invoice.number === null || invoice.issuedAt === null) continue
+      for (const id of invoice.entryIds) {
+        index.set(id, {
+          number: invoice.number,
+          since: invoice.issuedAt.slice(0, 10),
+        })
+      }
+    }
+    invoiceIndexes.set(invoices, index)
+  }
+  return index.get(entryId) ?? null
+}
 
 /** The first lock that holds the voucher, or null. */
 function firstLock(ctx: LockContext): PeriodLock | null {
@@ -144,6 +204,7 @@ export function entryLock(
     date: entry.date,
     paid: paidDate(entry),
     countsOnVat: countsOnVatReturn(entry, cats),
+    invoice: invoiceOf(marks.invoices, entry.id),
     marks,
   })
 }

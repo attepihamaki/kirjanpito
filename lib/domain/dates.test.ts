@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  addDays,
   formatDate,
   isoDate,
   monthOf,
@@ -115,5 +116,17 @@ describe("lastCompleteMonth", () => {
     [2027, "2026-11-02", 0],
   ])("for %i on %s is %i", (year, today, month) => {
     expect(lastCompleteMonth(year, today)).toBe(month)
+  })
+})
+
+describe("addDays", () => {
+  it.each([
+    ["2026-11-01", 14, "2026-11-15"],
+    ["2026-12-25", 14, "2027-01-08"],
+    ["2028-02-20", 10, "2028-03-01"],
+    ["2026-11-01", 0, "2026-11-01"],
+    ["2026-03-01", -1, "2026-02-28"],
+  ])("%s plus %i is %s", (from, days, expected) => {
+    expect(addDays(from, days)).toBe(expected)
   })
 })

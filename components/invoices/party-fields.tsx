@@ -55,7 +55,7 @@ export function PartyFields({
           onChange={(e) => set({ street: e.target.value })}
         />
       </Field>
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-end gap-3">
         <Field className="w-32">
           <FieldLabel htmlFor={`${id}-postcode`}>
             {f.t("invoice.customerPostcode")}
@@ -90,6 +90,7 @@ export function PartyFields({
             autoComplete="off"
             disabled={disabled}
             maxLength={2}
+            placeholder="FI"
             className="uppercase"
             value={value.country}
             onChange={(e) => set({ country: e.target.value.toUpperCase() })}

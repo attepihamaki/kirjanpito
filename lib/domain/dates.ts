@@ -174,3 +174,12 @@ export function lastCompleteMonth(year: number, today: string): number {
 export function quarterMonths(q: 1 | 2 | 3 | 4): readonly [number, number] {
   return [q * 3 - 2, q * 3]
 }
+
+/** The ISO date `days` days after `iso`, before it for a negative `days`. */
+export function addDays(iso: string, days: number): string {
+  const d = new Date(
+    Date.UTC(yearOf(iso), monthOf(iso) - 1, Number(iso.slice(8, 10)))
+  )
+  d.setUTCDate(d.getUTCDate() + days)
+  return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`
+}

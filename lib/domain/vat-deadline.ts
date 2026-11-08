@@ -1,4 +1,10 @@
-import { isoDate, monthOf, quarterMonths, yearOf } from "@/lib/domain/dates"
+import {
+  addDays,
+  isoDate,
+  monthOf,
+  quarterMonths,
+  yearOf,
+} from "@/lib/domain/dates"
 import type { Period } from "@/lib/domain/period"
 
 /**
@@ -45,14 +51,6 @@ const pad2 = (n: number) => String(n).padStart(2, "0")
 
 function lastDay(year: number, month: number): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate()
-}
-
-function addDays(iso: string, days: number): string {
-  const d = new Date(
-    Date.UTC(yearOf(iso), monthOf(iso) - 1, Number(iso.slice(8, 10)))
-  )
-  d.setUTCDate(d.getUTCDate() + days)
-  return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`
 }
 
 function weekday(iso: string): number {
