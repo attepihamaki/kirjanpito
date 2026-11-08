@@ -6,6 +6,8 @@ import type { InvoiceLang } from "@/lib/domain/invoice"
  */
 export interface InvoiceLabels {
   invoice: string
+  creditNote: string
+  credits: string
   number: string
   date: string
   due: string
@@ -30,12 +32,14 @@ export interface InvoiceLabels {
   payee: string
   toPay: string
   /** Page title, e.g. "Lasku 1001". */
-  title: (number: number) => string
+  title: (number: number, credit: boolean) => string
 }
 
 const LABELS: Record<InvoiceLang, InvoiceLabels> = {
   fi: {
     invoice: "LASKU",
+    creditNote: "HYVITYSLASKU",
+    credits: "Hyvitettävä lasku",
     number: "Laskun numero",
     date: "Laskun päivämäärä",
     due: "Eräpäivä",
@@ -59,10 +63,12 @@ const LABELS: Record<InvoiceLang, InvoiceLabels> = {
     payeeAccount: "Tilinumero",
     payee: "Saaja",
     toPay: "Euroa",
-    title: (n) => `Lasku ${n}`,
+    title: (n, credit) => `${credit ? "Hyvityslasku" : "Lasku"} ${n}`,
   },
   en: {
     invoice: "INVOICE",
+    creditNote: "CREDIT NOTE",
+    credits: "Credited invoice",
     number: "Invoice number",
     date: "Invoice date",
     due: "Due date",
@@ -87,7 +93,7 @@ const LABELS: Record<InvoiceLang, InvoiceLabels> = {
     payeeAccount: "Account",
     payee: "Payee",
     toPay: "EUR",
-    title: (n) => `Invoice ${n}`,
+    title: (n, credit) => `${credit ? "Credit note" : "Invoice"} ${n}`,
   },
 }
 
@@ -99,9 +105,16 @@ export function invoiceLabels(lang: InvoiceLang): InvoiceLabels {
 export function invoiceFileName(
   lang: InvoiceLang,
   number: number,
-  customerName: string
+  customerName: string,
+  credit = false
 ): string {
-  const stem = customerName.replace(/[\\/:*?"<>|]/g, "").trim()
-  const word = lang === "fi" ? "Lasku" : "Invoice"
+  const stem = customerName.replace(/[\/:*?"<>|]/g, "").trim()
+  const word = credit
+    ? lang === "fi"
+      ? "Hyvityslasku"
+      : "Credit note"
+    : lang === "fi"
+      ? "Lasku"
+      : "Invoice"
   return `${word} ${number} - ${stem}.pdf`
 }

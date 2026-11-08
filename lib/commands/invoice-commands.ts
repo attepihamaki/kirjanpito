@@ -4,10 +4,15 @@ import { refuseLocked, UNDO_TIMEOUT_MS } from "@/lib/commands/book-commands"
 import type { Ctx } from "@/lib/commands/ctx"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
 import { releaseDraftAttachment, storePdf } from "@/lib/commands/memo-commands"
+import { calcEntry } from "@/lib/domain/calc"
+import { todayIso } from "@/lib/domain/dates"
 import { uid } from "@/lib/domain/id"
 import type { Invoice } from "@/lib/domain/invoice"
 import {
   buildIssue,
+  creditableAmount,
+  creditDraft,
+  invoiceTotals,
   issueProblems,
   type IssueProblem,
 } from "@/lib/domain/invoice-calc"
@@ -31,6 +36,8 @@ const PROBLEM_MESSAGES: Record<IssueProblem, MessageKey> = {
   badCategory: "invoice.problemBadCategory",
   noTotal: "invoice.problemNoTotal",
   dueBeforeDate: "invoice.problemDueBeforeDate",
+  creditOriginal: "invoice.problemCreditOriginal",
+  creditTooLarge: "invoice.problemCreditTooLarge",
 }
 
 /**
@@ -56,15 +63,44 @@ export async function issueInvoice(
       businessId: state.businessId,
       phone: state.businessPhone,
     },
-    state.cats
+    state.cats,
+    state.invoices
   )
   if (problems.length > 0) {
     toast.add({ title: ctx.t(PROBLEM_MESSAGES[problems[0]]) })
     return false
   }
 
+  /*
+   * A credit note that takes the whole of an invoice nobody has paid cancels
+   * it: both sides are marked paid on the credit's date, so they net to nothing
+   * under either way of counting. A part credit, or a credit of a paid
+   * invoice, leaves the credit open to be settled when the money moves.
+   */
+  const byId = new Map(state.entries.map((e) => [e.id, e]))
+  const original = state.invoices.find((i) => i.id === draft.credits)
+  const originalEntries = original
+    ? original.entryIds.flatMap((id) => byId.get(id) ?? [])
+    : []
+  const originalOpen = original ? openEntries(original, byId) : []
+  const owed = originalOpen.reduce((sum, e) => sum + calcEntry(e).gross, 0)
+  const settled =
+    original !== undefined &&
+    originalEntries.length > 0 &&
+    originalOpen.length === originalEntries.length &&
+    owed === -invoiceTotals(draft.rows).gross &&
+    draft.date >= original.date &&
+    !paidChangeHitsForm5(null, draft.date, state)
+  const settledBefore = settled ? originalOpen : []
+  const settledAfter: Entry[] = settledBefore.map((e) => ({
+    ...e,
+    paidOn: draft.date === e.date ? undefined : draft.date,
+  }))
+
   const { invoice, entries } = buildIssue({
     invoice: draft,
+    originalEntries,
+    settled,
     settings: state.invoiceSettings,
     business: {
       name: state.businessName,
@@ -76,15 +112,22 @@ export async function issueInvoice(
     makeId: uid,
   })
   if (refuseLocked(ctx, entries)) return false
-  if (!(await confirmFiledChange([...state.entries, ...entries]))) return false
+  const changed = new Map(settledAfter.map((e) => [e.id, e]))
+  const next = state.entries.map((e) => changed.get(e.id) ?? e)
+  if (!(await confirmFiledChange([...next, ...entries]))) return false
 
   /* Made last, so a refusal above leaves nothing stored. */
   const att = await storePdf(
     ctx,
-    invoiceFileName(invoice.language, invoice.number!, invoice.customer.name),
+    invoiceFileName(
+      invoice.language,
+      invoice.number!,
+      invoice.customer.name,
+      invoice.credits !== null
+    ),
     async () => {
       const { renderInvoicePdf } = await import("@/lib/browser/invoice-pdf")
-      return renderInvoicePdf(invoice)
+      return renderInvoicePdf(invoice, original?.number ?? null)
     }
   )
   if (!att) toast.add({ title: ctx.t("invoice.pdfFailed") })
@@ -97,11 +140,14 @@ export async function issueInvoice(
     const store = useBookStore.getState()
     const epoch = store.bookEpoch
     store.addEntries(withVoucher)
+    if (settledAfter.length > 0) store.updateEntries(settledAfter)
     store.setInvoices(
       store.invoices.map((i) => (i.id === draft.id ? invoice : i))
     )
     const id = toast.add({
-      title: ctx.t("invoice.issued", { n: invoice.number! }),
+      title: settled
+        ? ctx.t("invoice.creditSettled")
+        : ctx.t("invoice.issued", { n: invoice.number! }),
       timeout: UNDO_TIMEOUT_MS,
       actionProps: {
         children: ctx.t("common.undo"),
@@ -110,6 +156,7 @@ export async function issueInvoice(
           const now = useBookStore.getState()
           if (now.bookEpoch !== epoch) return
           now.removeEntries(entries.map((e) => e.id))
+          if (settledBefore.length > 0) now.updateEntries(settledBefore)
           now.setInvoices(
             now.invoices.map((i) => (i.id === draft.id ? draft : i))
           )
@@ -131,10 +178,18 @@ export async function downloadInvoicePdf(
   if (invoice.number === null) return
   try {
     const { renderInvoicePdf } = await import("@/lib/browser/invoice-pdf")
-    const bytes = await renderInvoicePdf(invoice)
+    const credited = useBookStore
+      .getState()
+      .invoices.find((i) => i.id === invoice.credits)
+    const bytes = await renderInvoicePdf(invoice, credited?.number ?? null)
     saveBlob(
       new Blob([bytes as BlobPart], { type: "application/pdf" }),
-      invoiceFileName(invoice.language, invoice.number, invoice.customer.name)
+      invoiceFileName(
+        invoice.language,
+        invoice.number,
+        invoice.customer.name,
+        invoice.credits !== null
+      )
     )
   } catch (error) {
     console.warn("Invoice PDF could not be made", error)
@@ -188,4 +243,24 @@ export async function markInvoicePaid(
     },
   })
   return true
+}
+
+/**
+ * Start a credit note for an issued invoice (§8.27): a draft with the invoice's
+ * rows turned negative, left for the user to trim before issuing it. Returns
+ * its id, or null with a toast when the invoice cannot be credited, because it
+ * is not issued, is a credit note itself or has nothing left to credit.
+ */
+export function startCreditNote(ctx: Ctx, invoiceId: string): string | null {
+  const state = useBookStore.getState()
+  const original = state.invoices.find((i) => i.id === invoiceId)
+  if (!original || original.number === null || original.credits !== null)
+    return null
+  if (creditableAmount(original, state.invoices) <= 0) {
+    toast.add({ title: ctx.t("invoice.creditNothingLeft") })
+    return null
+  }
+  const draft = creditDraft(original, uid(), todayIso())
+  state.setInvoices([...state.invoices, draft])
+  return draft.id
 }

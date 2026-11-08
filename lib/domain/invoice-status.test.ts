@@ -82,6 +82,55 @@ describe("invoiceStatus", () => {
   })
 })
 
+describe("credit notes", () => {
+  const rows = [
+    {
+      description: "Työ",
+      quantityMilli: 1000,
+      unit: "h",
+      unitCents: 10_000,
+      vatRate: 25.5,
+      catId: "300-domestic",
+    },
+  ]
+  const credit = (quantityMilli: number, id = "c1") =>
+    invoice({
+      id,
+      number: 1002,
+      credits: "i1",
+      rows: rows.map((r) => ({ ...r, quantityMilli })),
+    })
+
+  it("is a credit, whatever its entries say", () => {
+    expect(invoiceStatus(credit(-1000), byId(), "2026-11-02")).toBe("credit")
+  })
+
+  it("makes the invoice credited once the credit notes take all of it", () => {
+    const original = invoice({ rows })
+    expect(invoiceStatus(original, byId(), "2026-11-02", [original])).toBe(
+      "paid"
+    )
+    expect(
+      invoiceStatus(original, byId(), "2026-11-02", [original, credit(-500)])
+    ).toBe("paid")
+    expect(
+      invoiceStatus(original, byId(), "2026-11-02", [
+        original,
+        credit(-500),
+        credit(-500, "c2"),
+      ])
+    ).toBe("credited")
+  })
+
+  it("ignores a credit note that is still a draft", () => {
+    const original = invoice({ rows })
+    const draft = { ...credit(-1000), number: null }
+    expect(
+      invoiceStatus(original, byId(), "2026-11-02", [original, draft])
+    ).toBe("paid")
+  })
+})
+
 describe("openAmount", () => {
   it("adds the gross of the unpaid entries only", () => {
     const entries = byId(

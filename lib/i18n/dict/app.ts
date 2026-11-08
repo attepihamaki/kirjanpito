@@ -3101,6 +3101,33 @@ export const APP_DICT = {
   ],
   "invoice.save": ["Tallenna", "Save"],
   "invoice.close": ["Sulje", "Close"],
+  "invoice.problemCreditOriginal": [
+    "Hyvitettävä lasku puuttuu tai sitä ei ole annettu.",
+    "The invoice to credit is missing or not issued.",
+  ],
+  "invoice.problemCreditTooLarge": [
+    "Hyvitys on suurempi kuin laskusta on vielä hyvitettävissä.",
+    "The credit is larger than what is left to credit on the invoice.",
+  ],
+  "invoice.credit": ["Hyvitä", "Credit"],
+  "invoice.creditNote": ["Hyvityslasku", "Credit note"],
+  "invoice.creditDraftTitle": ["Hyvityslaskun luonnos", "Credit note draft"],
+  "invoice.creditViewTitle": ["Hyvityslasku {n}", "Credit note {n}"],
+  "invoice.credits": ["Hyvitettävä lasku {n}", "Credits invoice {n}"],
+  "invoice.creditHint": [
+    "Poista rivit tai pienennä määriä, jos hyvität vain osan. Määrät ovat miinusmerkkisiä.",
+    "Remove rows or shrink the quantities to credit only part. Quantities are negative.",
+  ],
+  "invoice.creditNothingLeft": [
+    "Laskusta ei ole enää hyvitettävää.",
+    "There is nothing left to credit on this invoice.",
+  ],
+  "invoice.creditSettled": [
+    "Hyvitys ja alkuperäinen lasku kuitattiin maksetuiksi.",
+    "The credit and the original invoice were marked as paid.",
+  ],
+  "invoice.statusCredit": ["Hyvitys", "Credit"],
+  "invoice.statusCredited": ["Hyvitetty", "Credited"],
   "io.settingsNewer": [
     " Tiedosto on tehty uudemmalla versiolla, joten kaikkia asetuksia ei ehkä luettu.",
     " The file was made with a newer version, so some settings may not have been read.",

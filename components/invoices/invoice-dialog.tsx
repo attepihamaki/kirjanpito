@@ -62,11 +62,16 @@ interface RowDraft {
   catId: string
 }
 
-function blankRow(date: string, catId = DEFAULT_CAT, rate = 25.5): RowDraft {
+function blankRow(
+  date: string,
+  catId = DEFAULT_CAT,
+  rate = 25.5,
+  credit = false
+): RowDraft {
   return {
     key: uid(),
     description: "",
-    quantity: "1",
+    quantity: credit ? "-1" : "1",
     unit: "",
     price: "",
     vatRate: rateOnDate(rate, date),
@@ -91,8 +96,8 @@ const isBlank = (r: RowDraft) =>
   r.description.trim() === "" && r.price.trim() === ""
 
 /** The row as numbers, or null when its quantity or price cannot be read. */
-function toRow(draft: RowDraft): InvoiceRow | null {
-  const quantityMilli = parseQuantity(draft.quantity)
+function toRow(draft: RowDraft, credit: boolean): InvoiceRow | null {
+  const quantityMilli = parseQuantity(draft.quantity, credit)
   const unitCents = evalAmount(draft.price)
   if (quantityMilli === null || unitCents === null || unitCents < 0) return null
   return {
@@ -125,6 +130,9 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
 
   const existing = invoices.find((i) => i.id === invoiceId)
   const issued = existing !== undefined && existing.number !== null
+  /* A credit note takes negative quantities and has no due date. */
+  const credit = existing?.credits != null
+  const credited = invoices.find((i) => i.id === existing?.credits)
 
   const [date, setDate] = React.useState(existing?.date ?? todayIso())
   const [dueDate, setDueDate] = React.useState(
@@ -145,7 +153,7 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
   const [rows, setRows] = React.useState<RowDraft[]>(() =>
     existing && existing.rows.length > 0
       ? existing.rows.map(toDraft)
-      : [blankRow(existing?.date ?? todayIso())]
+      : [blankRow(existing?.date ?? todayIso(), undefined, undefined, credit)]
   )
   const [note, setNote] = React.useState(existing?.note ?? "")
   const [showErrors, setShowErrors] = React.useState(false)
@@ -156,11 +164,11 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
     (c) => c.enabled && c.kind === "domestic" && lineOf(c)?.side === "income"
   )
   const rateOptions = validRates(date)
-  const rowErrors = rows.map((r) => !isBlank(r) && toRow(r) === null)
+  const rowErrors = rows.map((r) => !isBlank(r) && toRow(r, credit) === null)
   const readRows = rows
     .filter((r) => !isBlank(r))
     .flatMap((r) => {
-      const row = toRow(r)
+      const row = toRow(r, credit)
       return row ? [row] : []
     })
   const totals = invoiceTotals(readRows)
@@ -168,7 +176,9 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
 
   const changeDate = (iso: string) => {
     setDate(iso)
-    if (!dueTouched.current && iso) {
+    if (credit) {
+      setDueDate(iso)
+    } else if (!dueTouched.current && iso) {
       const customer = customers.find((c) => c.id === customerId)
       setDueDate(addDays(iso, customer?.termDays ?? settings.termDays))
     }
@@ -242,7 +252,7 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
       seller: null,
       issuedAt: null,
       entryIds: [],
-      credits: null,
+      credits: existing?.credits ?? null,
     }
     const all = useBookStore.getState().invoices
     setInvoices(
@@ -271,8 +281,10 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
   }
 
   const title = issued
-    ? f.t("invoice.viewTitle", { n: existing.number ?? 0 })
-    : f.t("invoice.draftTitle")
+    ? f.t(credit ? "invoice.creditViewTitle" : "invoice.viewTitle", {
+        n: existing.number ?? 0,
+      })
+    : f.t(credit ? "invoice.creditDraftTitle" : "invoice.draftTitle")
 
   return (
     <Dialog open onOpenChange={(open) => !open && closeDialog()}>
@@ -285,6 +297,20 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
             <p className="text-sm text-muted-foreground">
               {f.t("invoice.issuedLocked")}
             </p>
+          ) : null}
+          {credit ? (
+            <div className="flex flex-col gap-1 text-sm">
+              {credited?.number != null ? (
+                <p className="font-medium">
+                  {f.t("invoice.credits", { n: credited.number })}
+                </p>
+              ) : null}
+              {!issued ? (
+                <p className="text-muted-foreground">
+                  {f.t("invoice.creditHint")}
+                </p>
+              ) : null}
+            </div>
           ) : null}
 
           <section className="flex flex-col gap-3">
@@ -330,17 +356,19 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
                 disabled={issued}
               />
             </Field>
-            <Field className="w-44">
-              <FieldLabel>{f.t("invoice.dueDate")}</FieldLabel>
-              <DateInput
-                value={dueDate}
-                onValueChange={(iso) => {
-                  dueTouched.current = true
-                  setDueDate(iso)
-                }}
-                disabled={issued}
-              />
-            </Field>
+            {credit ? null : (
+              <Field className="w-44">
+                <FieldLabel>{f.t("invoice.dueDate")}</FieldLabel>
+                <DateInput
+                  value={dueDate}
+                  onValueChange={(iso) => {
+                    dueTouched.current = true
+                    setDueDate(iso)
+                  }}
+                  disabled={issued}
+                />
+              </Field>
+            )}
             <Field className="w-44">
               <FieldLabel htmlFor={ids.language}>
                 {f.t("invoice.language")}
@@ -384,7 +412,7 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
           <section className="flex flex-col gap-2">
             <h3 className="text-sm font-semibold">{f.t("invoice.rows")}</h3>
             {rows.map((row, index) => {
-              const parsed = toRow(row)
+              const parsed = toRow(row, credit)
               const bad = showErrors && rowErrors[index]
               return (
                 <div
@@ -515,7 +543,12 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
                 onClick={() =>
                   setRows((list) => [
                     ...list,
-                    blankRow(date, list.at(-1)?.catId, list.at(-1)?.vatRate),
+                    blankRow(
+                      date,
+                      list.at(-1)?.catId,
+                      list.at(-1)?.vatRate,
+                      credit
+                    ),
                   ])
                 }
               >
@@ -570,9 +603,13 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
             </>
           ) : (
             <>
-              <p className="mr-auto self-center text-xs text-muted-foreground">
-                {f.t("invoice.issueHint")}
-              </p>
+              {credit ? (
+                <span className="mr-auto" />
+              ) : (
+                <p className="mr-auto self-center text-xs text-muted-foreground">
+                  {f.t("invoice.issueHint")}
+                </p>
+              )}
               <Button variant="outline" onClick={save} disabled={busy}>
                 {f.t("invoice.saveDraft")}
               </Button>

@@ -1,7 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { CheckIcon, DownloadIcon, PencilIcon, Trash2Icon } from "lucide-react"
+import {
+  CheckIcon,
+  DownloadIcon,
+  PencilIcon,
+  Trash2Icon,
+  Undo2Icon,
+} from "lucide-react"
 
 import { DateInput } from "@/components/common/date-input"
 import { Money } from "@/components/common/money"
@@ -31,11 +37,16 @@ import { useCommandCtx } from "@/hooks/use-commands"
 import {
   downloadInvoicePdf,
   markInvoicePaid,
+  startCreditNote,
 } from "@/lib/commands/invoice-commands"
 import { todayIso } from "@/lib/domain/dates"
 import type { Invoice } from "@/lib/domain/invoice"
 import { invoiceTotals } from "@/lib/domain/invoice-calc"
-import { invoiceStatus, type InvoiceStatus } from "@/lib/domain/invoice-status"
+import {
+  invoiceStatus,
+  openEntries,
+  type InvoiceStatus,
+} from "@/lib/domain/invoice-status"
 import { useBookStore } from "@/stores/book-store"
 
 const STATUS_TONE = {
@@ -43,6 +54,8 @@ const STATUS_TONE = {
   open: "neutral",
   overdue: "expense",
   paid: "income",
+  credit: "neutral",
+  credited: "neutral",
 } as const satisfies Record<InvoiceStatus, "neutral" | "income" | "expense">
 
 /** Newest first: drafts at the top, then issued invoices by number. */
@@ -149,6 +162,8 @@ export function InvoiceList() {
     open: f.t("invoice.statusOpen"),
     overdue: f.t("invoice.statusOverdue"),
     paid: f.t("invoice.statusPaid"),
+    credit: f.t("invoice.statusCredit"),
+    credited: f.t("invoice.statusCredited"),
   }
 
   return (
@@ -175,7 +190,7 @@ export function InvoiceList() {
           </TableHeader>
           <TableBody>
             {sorted.map((invoice) => {
-              const status = invoiceStatus(invoice, byId, today)
+              const status = invoiceStatus(invoice, byId, today, invoices)
               const draft = status === "draft"
               return (
                 <TableRow key={invoice.id}>
@@ -225,7 +240,21 @@ export function InvoiceList() {
                         >
                           <DownloadIcon />
                         </Button>
-                        {status !== "paid" ? (
+                        {invoice.credits === null && status !== "credited" ? (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`${f.t("invoice.credit")}: ${invoice.number}`}
+                            onClick={() => {
+                              const id = startCreditNote(ctx, invoice.id)
+                              if (id)
+                                openDialog({ kind: "invoice", invoiceId: id })
+                            }}
+                          >
+                            <Undo2Icon />
+                          </Button>
+                        ) : null}
+                        {openEntries(invoice, byId).length > 0 ? (
                           <Button
                             variant="ghost"
                             size="icon-sm"

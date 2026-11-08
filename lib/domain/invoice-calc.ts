@@ -130,6 +130,8 @@ export type IssueProblem =
   | "badCategory"
   | "noTotal"
   | "dueBeforeDate"
+  | "creditOriginal"
+  | "creditTooLarge"
 
 /** The business details outside the invoice settings that an invoice needs. */
 export interface BusinessDetails {
@@ -138,18 +140,46 @@ export interface BusinessDetails {
   phone: string | null
 }
 
+/**
+ * What a credit note has already taken off an invoice, in positive cents: the
+ * gross of every issued credit note that names it (§8.27).
+ */
+export function creditedAmount(
+  invoice: Invoice,
+  invoices: readonly Invoice[]
+): Cents {
+  return invoices
+    .filter((i) => i.credits === invoice.id && i.number !== null)
+    .reduce((sum, i) => sum - invoiceTotals(i.rows).gross, 0)
+}
+
+/** What a credit note may still take off an invoice: its gross less what was credited. */
+export function creditableAmount(
+  invoice: Invoice,
+  invoices: readonly Invoice[]
+): Cents {
+  return Math.max(
+    0,
+    invoiceTotals(invoice.rows).gross - creditedAmount(invoice, invoices)
+  )
+}
+
 export function issueProblems(
   invoice: Invoice,
   settings: InvoiceSettings,
   business: BusinessDetails,
-  cats: readonly Category[]
+  cats: readonly Category[],
+  invoices: readonly Invoice[] = []
 ): IssueProblem[] {
   const problems: IssueProblem[] = []
+  const credit = invoice.credits !== null
   if (invoice.rows.length === 0) problems.push("noRows")
   else if (
     invoice.rows.some(
       (r) =>
-        r.description.trim() === "" || r.quantityMilli <= 0 || r.unitCents < 0
+        r.description.trim() === "" ||
+        (credit ? r.quantityMilli >= 0 : r.quantityMilli <= 0) ||
+        r.unitCents < 0
     )
   )
     problems.push("badRow")
@@ -177,13 +207,24 @@ export function issueProblems(
     )
   }
   if (invoice.rows.some((r) => !usable(r.catId))) problems.push("badCategory")
-  if (invoice.rows.length > 0 && invoiceTotals(invoice.rows).gross <= 0)
+  const gross = invoiceTotals(invoice.rows).gross
+  if (invoice.rows.length > 0 && (credit ? gross >= 0 : gross <= 0))
     problems.push("noTotal")
   if (invoice.dueDate < invoice.date) problems.push("dueBeforeDate")
+  if (credit) {
+    const original = invoices.find((i) => i.id === invoice.credits)
+    if (!original || original.number === null) problems.push("creditOriginal")
+    else if (-gross > creditableAmount(original, invoices))
+      problems.push("creditTooLarge")
+  }
   return problems
 }
 
 const WORD: Record<InvoiceLang, string> = { fi: "Lasku", en: "Invoice" }
+const CREDIT_WORD: Record<InvoiceLang, string> = {
+  fi: "Hyvityslasku",
+  en: "Credit note",
+}
 
 export interface IssueInput {
   invoice: Invoice
@@ -194,6 +235,16 @@ export interface IssueInput {
   /** ISO date-time of the issue. */
   now: string
   makeId: () => string
+  /**
+   * For a credit note: the entries of the invoice it credits, which its own
+   * entries point at (`reverses`).
+   */
+  originalEntries?: readonly Entry[]
+  /**
+   * For a credit note: the entries are booked as paid on their own date,
+   * because the credit cancels an invoice nobody had paid (§8.27).
+   */
+  settled?: boolean
 }
 
 export interface IssueResult {
@@ -225,19 +276,30 @@ export function buildIssue(input: IssueInput): IssueResult {
   }
   const groups = invoiceGroups(invoice.rows)
   const split = groups.length > 1 ? input.makeId() : undefined
-  const description = `${WORD[invoice.language]} ${number} – ${invoice.customer.name.trim()}`
-  const entries: Entry[] = groups.map((group) => ({
-    id: input.makeId(),
-    date: invoice.date,
-    description,
-    type: "income",
-    catId: group.catId,
-    amount: group.net,
-    vatRate: group.vatRate,
-    amountMode: "net",
-    paidOn: null,
-    ...(split ? { split } : {}),
-  }))
+  const credit = invoice.credits !== null
+  const word = (credit ? CREDIT_WORD : WORD)[invoice.language]
+  const description = `${word} ${number} – ${invoice.customer.name.trim()}`
+  const originals = input.originalEntries ?? []
+  const entries: Entry[] = groups.map((group) => {
+    const target = credit
+      ? (originals.find(
+          (e) => e.catId === group.catId && e.vatRate === group.vatRate
+        ) ?? originals[0])
+      : undefined
+    return {
+      id: input.makeId(),
+      date: invoice.date,
+      description,
+      type: "income",
+      catId: group.catId,
+      amount: group.net,
+      vatRate: group.vatRate,
+      amountMode: "net",
+      paidOn: credit && input.settled ? undefined : null,
+      ...(split ? { split } : {}),
+      ...(target ? { reverses: target.id } : {}),
+    }
+  })
   return {
     invoice: {
       ...invoice,
@@ -249,5 +311,36 @@ export function buildIssue(input: IssueInput): IssueResult {
       entryIds: entries.map((e) => e.id),
     },
     entries,
+  }
+}
+
+/**
+ * A draft credit note for an issued invoice: the same customer, language and
+ * rows with their quantities turned negative, dated `today` (§8.27). The user
+ * can then remove or shrink rows to credit part of the invoice.
+ */
+export function creditDraft(
+  original: Invoice,
+  id: string,
+  today: string
+): Invoice {
+  return {
+    id,
+    number: null,
+    date: today,
+    dueDate: today,
+    supplyFrom: null,
+    supplyTo: null,
+    customerId: original.customerId,
+    customer: { ...original.customer },
+    language: original.language,
+    rows: original.rows.map((r) => ({ ...r, quantityMilli: -r.quantityMilli })),
+    note: "",
+    terms: "",
+    reference: null,
+    seller: null,
+    issuedAt: null,
+    entryIds: [],
+    credits: original.id,
   }
 }

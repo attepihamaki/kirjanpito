@@ -21,6 +21,22 @@ describe("parseQuantity", () => {
   )
 })
 
+describe("parseQuantity, signed", () => {
+  it.each([
+    ["-1", -1000],
+    ["-1,5", -1500],
+    ["\u22122", -2000],
+  ])("reads %s as %i thousandths on a credit note", (text, milli) => {
+    expect(parseQuantity(text, true)).toBe(milli)
+  })
+
+  it("refuses a positive or zero quantity on a credit note, and a negative one elsewhere", () => {
+    expect(parseQuantity("1", true)).toBeNull()
+    expect(parseQuantity("0", true)).toBeNull()
+    expect(parseQuantity("-1")).toBeNull()
+  })
+})
+
 describe("formatQuantity", () => {
   it("writes a decimal comma and no trailing zeros", () => {
     expect(formatQuantity(1500)).toBe("1,5")
@@ -32,6 +48,11 @@ describe("formatQuantity", () => {
   it("round-trips what parseQuantity reads", () => {
     for (const milli of [1, 10, 100, 1500, 42_500, 999_999]) {
       expect(parseQuantity(formatQuantity(milli))).toBe(milli)
+      expect(parseQuantity(formatQuantity(-milli), true)).toBe(-milli)
     }
+  })
+
+  it("writes a negative quantity with an ASCII minus", () => {
+    expect(formatQuantity(-1500)).toBe("-1,5")
   })
 })

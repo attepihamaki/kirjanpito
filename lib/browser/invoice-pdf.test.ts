@@ -106,6 +106,17 @@ describe("renderInvoicePdf", () => {
     expect((await renderInvoicePdf(invoice)).length).toBeGreaterThan(1000)
   })
 
+  it("draws a credit note with a credited invoice number and no payment slip", async () => {
+    const plain = await renderInvoicePdf(issued([row(1)]))
+    const note = issued([row(1, { quantityMilli: -1500 })], {
+      credits: "orig",
+    })
+    const bytes = await renderInvoicePdf(note, 1001)
+    expect(await pages(bytes)).toBe(1)
+    /* No barcode or QR code to draw, so the file is smaller. */
+    expect(bytes.length).toBeLessThan(plain.length)
+  })
+
   it("refuses a draft", async () => {
     const draft = { ...issued([row(1)]), number: null }
     await expect(renderInvoicePdf(draft)).rejects.toThrow()

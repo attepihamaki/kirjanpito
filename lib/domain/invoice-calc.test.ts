@@ -13,6 +13,9 @@ import {
 import {
   addDays,
   buildIssue,
+  creditableAmount,
+  creditDraft,
+  creditedAmount,
   invoiceGroups,
   invoiceTotals,
   issueProblems,
@@ -293,5 +296,142 @@ describe("buildIssue", () => {
     const { entries } = build(draft({ rows }))
     const gross = entries.reduce((sum, e) => sum + calcEntry(e).gross, 0)
     expect(gross).toBe(invoiceTotals(rows).gross)
+  })
+})
+
+describe("credit notes", () => {
+  const original = (over: Partial<Invoice> = {}): Invoice => ({
+    ...draft(),
+    id: "orig",
+    number: 1001,
+    reference: "10016",
+    issuedAt: "2026-11-01T09:00:00.000Z",
+    entryIds: ["oe"],
+    ...over,
+  })
+  /* 100,00 + 25,5 % = 125,50 gross. */
+  const note = (over: Partial<Invoice> = {}): Invoice => ({
+    ...creditDraft(original(), "c1", "2026-11-20"),
+    ...over,
+  })
+  const withNote = (n: Invoice, others: Invoice[] = [original()]) =>
+    issueProblems(n, settings, business, cats, [...others, n])
+
+  it("is the invoice rows with their quantities turned negative", () => {
+    const n = creditDraft(original(), "c1", "2026-11-20")
+    expect(n).toMatchObject({
+      number: null,
+      credits: "orig",
+      date: "2026-11-20",
+      dueDate: "2026-11-20",
+      language: "fi",
+    })
+    expect(n.rows.map((r) => r.quantityMilli)).toEqual([-1000])
+    expect(invoiceTotals(n.rows).gross).toBe(-12_550)
+  })
+
+  it("is the exact opposite of its invoice, rounding included", () => {
+    const rows = [
+      row({ quantityMilli: 3000, unitCents: 3333 }),
+      row({ vatRate: 14, unitCents: 999 }),
+    ]
+    const n = creditDraft(original({ rows }), "c1", "2026-11-20")
+    const a = invoiceTotals(rows)
+    const b = invoiceTotals(n.rows)
+    expect(b.net).toBe(-a.net)
+    expect(b.vat).toBe(-a.vat)
+    expect(b.gross).toBe(-a.gross)
+  })
+
+  it("passes when it credits an issued invoice", () => {
+    expect(withNote(note())).toEqual([])
+  })
+
+  it("wants negative quantities and a negative total", () => {
+    expect(withNote(note({ rows: [row()] }))).toContain("badRow")
+    expect(withNote(note({ rows: [row()] }))).toContain("noTotal")
+  })
+
+  it("needs an issued invoice to credit", () => {
+    expect(withNote(note(), [])).toContain("creditOriginal")
+    expect(withNote(note(), [original({ number: null })])).toContain(
+      "creditOriginal"
+    )
+  })
+
+  it("will not credit more than is left on the invoice", () => {
+    const big = note({ rows: [row({ quantityMilli: -2000 })] })
+    expect(withNote(big)).toEqual(["creditTooLarge"])
+    const first = note({ id: "c0", number: 1002 })
+    expect(withNote(note(), [original(), first])).toEqual(["creditTooLarge"])
+  })
+
+  it("counts only issued credit notes", () => {
+    const o = original()
+    const issued = note({ id: "c0", number: 1002 })
+    const unissued = note({ id: "c9" })
+    expect(creditedAmount(o, [o, issued, unissued])).toBe(12_550)
+    expect(creditableAmount(o, [o, issued, unissued])).toBe(0)
+    expect(creditableAmount(o, [o, unissued])).toBe(12_550)
+  })
+
+  describe("when issued", () => {
+    const build = (
+      n: Invoice,
+      extra: Partial<Parameters<typeof buildIssue>[0]> = {}
+    ) =>
+      buildIssue({
+        invoice: n,
+        settings,
+        business,
+        invoices: [original()],
+        now: "2026-11-20T09:00:00.000Z",
+        makeId: createIdFactory("x"),
+        originalEntries: [
+          {
+            id: "oe",
+            date: "2026-11-01",
+            description: "Lasku 1001",
+            type: "income",
+            catId: "300-domestic",
+            amount: 10_000,
+            vatRate: 25.5,
+            amountMode: "net",
+            paidOn: null,
+          },
+        ],
+        ...extra,
+      })
+
+    it("books negative open entries that point at the entry they credit", () => {
+      const { invoice, entries } = build(note())
+      expect(invoice.number).toBe(1002)
+      expect(entries).toHaveLength(1)
+      expect(entries[0]).toMatchObject({
+        type: "income",
+        amount: -10_000,
+        vatRate: 25.5,
+        amountMode: "net",
+        paidOn: null,
+        reverses: "oe",
+        description: "Hyvityslasku 1002 – Asiakas Oy",
+      })
+      expect(calcEntry(entries[0]).gross).toBe(-12_550)
+    })
+
+    it("books them paid on their own date when the credit cancels an unpaid invoice", () => {
+      const { entries } = build(note(), { settled: true })
+      expect(entries[0].paidOn).toBeUndefined()
+    })
+
+    it("words the entry in English for an English credit note", () => {
+      const { entries } = build(note({ language: "en" }))
+      expect(entries[0].description).toBe("Credit note 1002 – Asiakas Oy")
+    })
+
+    it("points a rate it cannot match at the first entry of the invoice", () => {
+      const other = note({ rows: [row({ quantityMilli: -1000, vatRate: 14 })] })
+      expect(build(other).entries[0].reverses).toBe("oe")
+    })
   })
 })

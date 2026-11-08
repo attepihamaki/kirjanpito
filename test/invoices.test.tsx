@@ -143,6 +143,39 @@ describe("InvoiceList", () => {
     expect(screen.getByLabelText("Lataa PDF: 1002")).toBeTruthy()
   })
 
+  it("starts a credit note from an issued invoice and opens it", () => {
+    useBookStore.setState({
+      entries: [entry("e1", null)],
+      invoices: [invoice({ dueDate: "2999-01-01" })],
+    })
+    mount(<InvoiceList />)
+    fireEvent.click(screen.getByLabelText("Hyvitä: 1001"))
+    const { invoices, dialog } = useBookStore.getState()
+    const note = invoices.find((i) => i.credits === "i1")
+    expect(note).toBeDefined()
+    expect(note?.rows[0].quantityMilli).toBe(-1000)
+    expect(dialog).toEqual({ kind: "invoice", invoiceId: note?.id })
+  })
+
+  it("offers no credit on a credit note, and shows it as a credit", () => {
+    useBookStore.setState({
+      entries: [entry("e1", null)],
+      invoices: [
+        invoice({
+          id: "c1",
+          number: 1002,
+          credits: "i1",
+          rows: [{ ...invoice().rows[0], quantityMilli: -1000 }],
+        }),
+      ],
+    })
+    mount(<InvoiceList />)
+    expect(screen.queryByLabelText("Hyvitä: 1002")).toBeNull()
+    const [row] = screen.getAllByRole("row").slice(1)
+    expect(row.textContent).toContain("Hyvitys")
+    expect(row.textContent).toContain("125,50")
+  })
+
   it("deletes a draft and brings it back with the undo", () => {
     useBookStore.setState({
       invoices: [

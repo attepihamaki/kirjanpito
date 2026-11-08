@@ -285,14 +285,23 @@ function drawSlip(c: Cursor, invoice: Invoice, labels: InvoiceLabels): void {
   }
 }
 
-export async function renderInvoicePdf(invoice: Invoice): Promise<Uint8Array> {
+/**
+ * `creditedNumber` is the number of the invoice a credit note credits, printed
+ * under the credit note's own facts. A credit note has no due date, reference
+ * or payment slip, since nothing is paid on it.
+ */
+export async function renderInvoicePdf(
+  invoice: Invoice,
+  creditedNumber: number | null = null
+): Promise<Uint8Array> {
   if (!invoice.seller || invoice.number === null || !invoice.reference) {
     throw new Error("only an issued invoice can be drawn")
   }
   const labels = invoiceLabels(invoice.language)
   const lang = invoice.language
+  const credit = invoice.credits !== null
   const doc = await PDFDocument.create()
-  doc.setTitle(toWinAnsi(labels.title(invoice.number)))
+  doc.setTitle(toWinAnsi(labels.title(invoice.number, credit)))
   doc.setCreator("Kirjanpito")
   doc.setCreationDate(new Date(invoice.issuedAt ?? Date.now()))
   const fonts: Fonts = {
@@ -318,19 +327,33 @@ export async function renderInvoicePdf(invoice: Invoice): Promise<Uint8Array> {
   const facts: [string, string][] = [
     [labels.number, String(invoice.number)],
     [labels.date, formatDate(invoice.date, lang)],
-    [labels.due, formatDate(invoice.dueDate, lang)],
-    [labels.reference, formatReference(invoice.reference)],
   ]
+  if (credit) {
+    if (creditedNumber !== null)
+      facts.push([labels.credits, String(creditedNumber)])
+  } else {
+    facts.push(
+      [labels.due, formatDate(invoice.dueDate, lang)],
+      [labels.reference, formatReference(invoice.reference)]
+    )
+  }
   if (invoice.supplyFrom) {
     const from = formatDate(invoice.supplyFrom, lang)
     const to = invoice.supplyTo ? formatDate(invoice.supplyTo, lang) : null
     facts.push([labels.supply, to && to !== from ? `${from} - ${to}` : from])
   }
-  put(c.page, fonts, labels.invoice, RIGHT, c.y - 14, {
-    size: 16,
-    bold: true,
-    align: "right",
-  })
+  put(
+    c.page,
+    fonts,
+    credit ? labels.creditNote : labels.invoice,
+    RIGHT,
+    c.y - 14,
+    {
+      size: 16,
+      bold: true,
+      align: "right",
+    }
+  )
   c.y -= 26
   for (const [label, value] of facts) {
     put(c.page, fonts, label, 330, c.y - 9, { size: 8, color: MUTED })
@@ -481,20 +504,24 @@ export async function renderInvoicePdf(invoice: Invoice): Promise<Uint8Array> {
   c.y -= 26
 
   /* Notes and terms. */
-  const notes = [invoice.note, invoice.terms, labels.lateInterest].filter(
-    (n) => n.trim() !== ""
-  )
+  const notes = [
+    invoice.note,
+    invoice.terms,
+    credit ? "" : labels.lateInterest,
+  ].filter((n) => n.trim() !== "")
   for (const note of notes) {
     ensure(c, 30, MARGIN)
     paragraph(c, note, MARGIN, RIGHT - MARGIN, { size: 9, color: MUTED })
     c.y -= 4
   }
 
-  /* The slip needs the bottom of a page; add one when the text has run into it. */
-  if (c.y < SLIP_TOP + 12) {
-    c.page = doc.addPage(A4)
-    c.y = A4[1] - MARGIN
+  if (!credit) {
+    /* The slip needs the bottom of a page; add one when the text has run into it. */
+    if (c.y < SLIP_TOP + 12) {
+      c.page = doc.addPage(A4)
+      c.y = A4[1] - MARGIN
+    }
+    drawSlip(c, invoice, labels)
   }
-  drawSlip(c, invoice, labels)
   return doc.save()
 }

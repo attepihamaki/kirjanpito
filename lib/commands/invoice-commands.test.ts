@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { toast } from "@/components/ui/toast"
 import type { Ctx } from "@/lib/commands/ctx"
-import { issueInvoice } from "@/lib/commands/invoice-commands"
+import {
+  issueInvoice,
+  markInvoicePaid,
+  startCreditNote,
+} from "@/lib/commands/invoice-commands"
 import { defaultCategories } from "@/lib/domain/accounts"
 import {
   DEFAULT_INVOICE_SETTINGS,
@@ -179,5 +183,119 @@ describe("issueInvoice", () => {
     const state = useBookStore.getState()
     expect(state.entries).toEqual([])
     expect(state.invoices[0]).toEqual(draft())
+  })
+})
+
+describe("credit notes", () => {
+  /* Issue the draft, then start a credit note for it and return its id. */
+  async function issuedAndCredited(): Promise<string> {
+    await issueInvoice(ctx, "i1")
+    const id = startCreditNote(ctx, "i1")
+    if (!id) throw new Error("no credit note started")
+    return id
+  }
+
+  const credit = () =>
+    useBookStore.getState().invoices.find((i) => i.credits === "i1")!
+
+  it("starts a draft with the rows turned negative and the customer copied", async () => {
+    const id = await issuedAndCredited()
+    const note = credit()
+    expect(note.id).toBe(id)
+    expect(note).toMatchObject({
+      number: null,
+      credits: "i1",
+      language: "fi",
+      customer: { name: "Asiakas Oy" },
+    })
+    expect(note.rows.map((r) => r.quantityMilli)).toEqual([-2000, -1000])
+  })
+
+  it("will not start one for a draft, for a credit note or for what is fully credited", async () => {
+    expect(startCreditNote(ctx, "i1")).toBeNull()
+    const id = await issuedAndCredited()
+    expect(startCreditNote(ctx, id)).toBeNull()
+    expect(await issueInvoice(ctx, id)).toBe(true)
+    vi.mocked(toast.add).mockClear()
+    expect(startCreditNote(ctx, "i1")).toBeNull()
+    expect(messages()).toEqual(["Laskusta ei ole enää hyvitettävää."])
+  })
+
+  it("cancels an unpaid invoice: the credit entries and the invoice entries are all paid", async () => {
+    const id = await issuedAndCredited()
+    expect(await issueInvoice(ctx, id)).toBe(true)
+    const { entries, invoices } = useBookStore.getState()
+    const note = invoices.find((i) => i.id === id)!
+    expect(note.number).toBe(1002)
+    expect(entries).toHaveLength(4)
+    /* The invoice is paid on the credit's date and the credit on its own. */
+    expect(entries.map((e) => e.paidOn)).toEqual([
+      note.date,
+      note.date,
+      undefined,
+      undefined,
+    ])
+    const credits = entries.filter((e) => note.entryIds.includes(e.id))
+    expect(credits.every((e) => e.amount < 0)).toBe(true)
+    expect(credits.map((e) => e.reverses).sort()).toEqual(
+      invoices[0].entryIds.slice().sort()
+    )
+    expect(credits[0].atts?.[0].name).toBe("Hyvityslasku 1002 - Asiakas Oy.pdf")
+  })
+
+  it("leaves the credit open when the invoice was already paid", async () => {
+    await issueInvoice(ctx, "i1")
+    await markInvoicePaid(ctx, "i1", "2026-11-05")
+    const id = startCreditNote(ctx, "i1")!
+    expect(await issueInvoice(ctx, id)).toBe(true)
+    const { entries, invoices } = useBookStore.getState()
+    const note = invoices.find((i) => i.id === id)!
+    expect(
+      entries.filter((e) => !note.entryIds.includes(e.id)).map((e) => e.paidOn)
+    ).toEqual(["2026-11-05", "2026-11-05"])
+    expect(
+      entries.filter((e) => note.entryIds.includes(e.id)).map((e) => e.paidOn)
+    ).toEqual([null, null])
+  })
+
+  it("credits part of an invoice and leaves both sides open", async () => {
+    const id = await issuedAndCredited()
+    const { invoices, setInvoices } = useBookStore.getState()
+    setInvoices(
+      invoices.map((i) => (i.id === id ? { ...i, rows: i.rows.slice(1) } : i))
+    )
+    expect(await issueInvoice(ctx, id)).toBe(true)
+    const { entries } = useBookStore.getState()
+    expect(entries.map((e) => e.paidOn)).toEqual([null, null, null])
+    expect(entries.at(-1)!.amount).toBe(-1000)
+  })
+
+  it("refuses a credit larger than what is left", async () => {
+    const id = await issuedAndCredited()
+    const { invoices, setInvoices } = useBookStore.getState()
+    setInvoices(
+      invoices.map((i) =>
+        i.id === id
+          ? { ...i, rows: i.rows.map((r) => ({ ...r, quantityMilli: -5000 })) }
+          : i
+      )
+    )
+    vi.mocked(toast.add).mockClear()
+    expect(await issueInvoice(ctx, id)).toBe(false)
+    expect(useBookStore.getState().entries).toHaveLength(2)
+    expect(messages()).toEqual([
+      "Hyvitys on suurempi kuin laskusta on vielä hyvitettävissä.",
+    ])
+  })
+
+  it("puts everything back when the toast's undo is used", async () => {
+    const id = await issuedAndCredited()
+    await issueInvoice(ctx, id)
+    const options = vi.mocked(toast.add).mock.calls.at(-1)![0]
+    options.actionProps!.onClick!({} as never)
+    const state = useBookStore.getState()
+    expect(state.entries).toHaveLength(2)
+    expect(state.entries.map((e) => e.paidOn)).toEqual([null, null])
+    expect(state.invoices.find((i) => i.id === id)?.number).toBeNull()
   })
 })
