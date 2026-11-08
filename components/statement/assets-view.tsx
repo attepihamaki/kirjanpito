@@ -8,7 +8,6 @@ import {
 } from "@/components/common/no-entries-state"
 import { EuroInput } from "@/components/common/euro-input"
 import { Pill } from "@/components/common/pill"
-import { PrintButton } from "@/components/common/print-button"
 import {
   SettingCard,
   SettingGrid,
@@ -63,12 +62,6 @@ export function AssetsView() {
 
   return (
     <div className="flex flex-col gap-4">
-      {list.items.length > 0 ? (
-        <div className="print-hidden flex justify-end">
-          <PrintButton />
-        </div>
-      ) : null}
-
       <SettingGrid>
         {poolCards(f, current, year, list.items.length === 0)}
         {list.items.map((item, i) => (
