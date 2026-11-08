@@ -18,6 +18,8 @@ type Props = Omit<
   /** ISO date, or "" for none. */
   value: string
   onValueChange: (iso: string) => void
+  /** Called when the text starts or stops being rejected (unreadable or out of range). */
+  onBadChange?: (bad: boolean) => void
   min?: string
   max?: string
 }
@@ -32,6 +34,7 @@ type Props = Omit<
 export function DateInput({
   value,
   onValueChange,
+  onBadChange,
   min,
   max,
   onBlur,
@@ -46,6 +49,10 @@ export function DateInput({
   const shown = value ? f.date(value) : ""
   const [text, setText] = React.useState(shown)
   const [bad, setBad] = React.useState(false)
+
+  React.useEffect(() => {
+    onBadChange?.(bad)
+  }, [bad, onBadChange])
 
   /* Follow the value when it changes from outside, such as the picker. */
   const [seen, setSeen] = React.useState(shown)

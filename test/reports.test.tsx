@@ -502,9 +502,9 @@ describe("VatReturnDialog", () => {
   it("marks the period on the date chosen and keeps the figures it had", () => {
     openDialog()
     fireEvent.click(screen.getByRole("button", { name: /Merkintä/ }))
-    fireEvent.change(screen.getByLabelText("Ilmoituspäivä"), {
-      target: { value: "2026-11-12" },
-    })
+    const date = screen.getByLabelText("Ilmoituspäivä")
+    fireEvent.change(date, { target: { value: "12.11.2026" } })
+    fireEvent.blur(date)
     fireEvent.click(
       screen.getByRole("button", { name: "Merkitse ilmoitetuksi" })
     )
@@ -522,12 +522,15 @@ describe("VatReturnDialog", () => {
     openDialog()
     fireEvent.click(screen.getByRole("button", { name: /Merkintä/ }))
     const mark = screen.getByRole("button", { name: "Merkitse ilmoitetuksi" })
-    for (const value of ["2026-10-15", "2026-11-21"]) {
-      fireEvent.change(screen.getByLabelText("Ilmoituspäivä"), {
-        target: { value },
-      })
+    const date = screen.getByLabelText("Ilmoituspäivä")
+    for (const value of ["15.10.2026", "21.11.2026"]) {
+      fireEvent.change(date, { target: { value } })
+      fireEvent.blur(date)
       expect(mark).toBeDisabled()
     }
+    fireEvent.change(date, { target: { value: "12.11.2026" } })
+    fireEvent.blur(date)
+    expect(mark).toBeEnabled()
   })
 
   it("shows what changed since the return was filed", () => {

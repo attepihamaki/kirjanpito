@@ -164,6 +164,7 @@ function VatReturnForm() {
   const setVatFiled = useBookStore((s) => s.setVatFiled)
   const filed = filedOn(current, vatFiled)
   const [filingDate, setFilingDate] = React.useState(today)
+  const [filingDateBad, setFilingDateBad] = React.useState(false)
   const filingDateOk =
     /^\d{4}-\d{2}-\d{2}$/.test(filingDate) &&
     filingDate >= current.to &&
@@ -510,8 +511,9 @@ function VatReturnForm() {
                       min={current.to}
                       max={today}
                       value={filingDate}
-                      aria-invalid={!filingDateOk}
+                      aria-invalid={!filingDateOk || filingDateBad}
                       onValueChange={setFilingDate}
+                      onBadChange={setFilingDateBad}
                     />
                     <p className="text-xs text-muted-foreground">
                       {f.t("vat.filingDateHint")}
@@ -578,7 +580,7 @@ function VatReturnForm() {
             ) : (
               <Button
                 variant={lastStep ? "default" : "outline"}
-                disabled={!canMark || !filingDateOk}
+                disabled={!canMark || !filingDateOk || filingDateBad}
                 onClick={() => setVatFiled(current.key, filingDate)}
               >
                 <CheckIcon data-icon="inline-start" />
