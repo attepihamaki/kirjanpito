@@ -2,6 +2,7 @@
 
 import * as React from "react"
 
+import { InfoPopover } from "@/components/common/info-popover"
 import { OptionSelect } from "@/components/common/option-select"
 import { useFormatters } from "@/components/lang-provider"
 import { PartyFields } from "@/components/invoices/party-fields"
@@ -13,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
+import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { uid } from "@/lib/domain/id"
 import {
@@ -97,9 +98,11 @@ function CustomerForm({ customerId }: { customerId: string | null }) {
               : undefined
           }
         />
-        <div className="grid items-start gap-3 sm:grid-cols-[11rem_11rem]">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Field>
-            <FieldLabel>{f.t("invoice.customerLanguage")}</FieldLabel>
+            <div className="flex min-h-6 items-center">
+              <FieldLabel>{f.t("invoice.customerLanguage")}</FieldLabel>
+            </div>
             <OptionSelect
               label={f.t("invoice.customerLanguage")}
               value={language}
@@ -111,9 +114,14 @@ function CustomerForm({ customerId }: { customerId: string | null }) {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor={termId}>
-              {f.t("invoice.customerTerm")}
-            </FieldLabel>
+            <div className="flex min-h-6 items-center gap-1">
+              <FieldLabel htmlFor={termId}>
+                {f.t("invoice.customerTerm")}
+              </FieldLabel>
+              <InfoPopover label={f.t("invoice.customerTerm")}>
+                {f.t("invoice.customerTermHint")}
+              </InfoPopover>
+            </div>
             <Input
               id={termId}
               inputMode="numeric"
@@ -122,9 +130,6 @@ function CustomerForm({ customerId }: { customerId: string | null }) {
               value={term}
               onChange={(e) => setTerm(e.target.value)}
             />
-            <FieldDescription>
-              {f.t("invoice.customerTermHint")}
-            </FieldDescription>
           </Field>
         </div>
         <DialogFooter>
