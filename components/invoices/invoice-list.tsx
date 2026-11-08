@@ -5,6 +5,7 @@ import {
   CheckIcon,
   DownloadIcon,
   PencilIcon,
+  SendIcon,
   Trash2Icon,
   Undo2Icon,
 } from "lucide-react"
@@ -37,6 +38,7 @@ import { useCommandCtx } from "@/hooks/use-commands"
 import {
   downloadInvoicePdf,
   markInvoicePaid,
+  sendInvoice,
   startCreditNote,
 } from "@/lib/commands/invoice-commands"
 import { todayIso } from "@/lib/domain/dates"
@@ -232,6 +234,14 @@ export function InvoiceList() {
                       </Button>
                     ) : (
                       <>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`${f.t("invoice.send")}: ${invoice.number}`}
+                          onClick={() => void sendInvoice(ctx, invoice)}
+                        >
+                          <SendIcon />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon-sm"

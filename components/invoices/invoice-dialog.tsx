@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { DownloadIcon, PlusIcon, Trash2Icon } from "lucide-react"
+import { DownloadIcon, PlusIcon, SendIcon, Trash2Icon } from "lucide-react"
 
 import { AmountInput } from "@/components/common/amount-input"
 import { DateInput } from "@/components/common/date-input"
@@ -30,6 +30,7 @@ import { useCommandCtx } from "@/hooks/use-commands"
 import {
   downloadInvoicePdf,
   issueInvoice,
+  sendInvoice,
 } from "@/lib/commands/invoice-commands"
 import { categoryLabel, lineOf } from "@/lib/domain/accounts"
 import { evalAmount } from "@/lib/domain/amount-expr"
@@ -592,6 +593,13 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
         <DialogFooter className="border-t px-5 py-3">
           {issued ? (
             <>
+              <Button
+                variant="outline"
+                onClick={() => void sendInvoice(ctx, existing)}
+              >
+                <SendIcon data-icon="inline-start" />
+                {f.t("invoice.send")}
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => void downloadInvoicePdf(ctx, existing)}

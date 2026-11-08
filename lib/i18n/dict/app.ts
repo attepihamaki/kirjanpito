@@ -3128,6 +3128,11 @@ export const APP_DICT = {
   ],
   "invoice.statusCredit": ["Hyvitys", "Credit"],
   "invoice.statusCredited": ["Hyvitetty", "Credited"],
+  "invoice.send": ["Lähetä", "Send"],
+  "invoice.sendAttach": [
+    "PDF ladattiin. Liitä se avautuneeseen sähköpostiin.",
+    "The PDF was downloaded. Attach it to the mail that opened.",
+  ],
   "io.settingsNewer": [
     " Tiedosto on tehty uudemmalla versiolla, joten kaikkia asetuksia ei ehkä luettu.",
     " The file was made with a newer version, so some settings may not have been read.",

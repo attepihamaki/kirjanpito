@@ -8,6 +8,7 @@ import { CustomerList } from "@/components/invoices/customer-list"
 import { InvoiceList } from "@/components/invoices/invoice-list"
 import { InvoiceSettingsForm } from "@/components/invoices/invoice-settings"
 import { LangProvider } from "@/components/lang-provider"
+import { shareFile } from "@/lib/browser/share"
 import { defaultCategories } from "@/lib/domain/accounts"
 import { todayIso } from "@/lib/domain/dates"
 import {
@@ -19,6 +20,11 @@ import type { Entry } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
 
 /* The invoice pages and dialogs (§8.27). */
+
+vi.mock("@/lib/browser/share", () => ({
+  shareFile: vi.fn(async () => "shared"),
+  openMailto: vi.fn(),
+}))
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -141,6 +147,34 @@ describe("InvoiceList", () => {
     expect(screen.getByLabelText("Merkitse maksetuksi: 1001")).toBeTruthy()
     expect(screen.queryByLabelText("Merkitse maksetuksi: 1002")).toBeNull()
     expect(screen.getByLabelText("Lataa PDF: 1002")).toBeTruthy()
+  })
+
+  it("sends an issued invoice and offers no send on a draft", async () => {
+    useBookStore.setState({
+      entries: [entry("e1", null)],
+      invoices: [
+        invoice({
+          seller: {
+            ...emptyParty(),
+            name: "Oma Yritys",
+            businessId: "",
+            phone: "",
+            iban: "",
+          },
+        }),
+        invoice({
+          id: "d",
+          number: null,
+          reference: null,
+          issuedAt: null,
+          entryIds: [],
+        }),
+      ],
+    })
+    mount(<InvoiceList />)
+    expect(screen.queryByLabelText("Lähetä: null")).toBeNull()
+    fireEvent.click(screen.getByLabelText("Lähetä: 1001"))
+    await vi.waitFor(() => expect(shareFile).toHaveBeenCalledOnce())
   })
 
   it("starts a credit note from an issued invoice and opens it", () => {

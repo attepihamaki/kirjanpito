@@ -1,5 +1,6 @@
 import { toast } from "@/components/ui/toast"
 import { saveBlob } from "@/lib/browser/download"
+import { openMailto, shareFile } from "@/lib/browser/share"
 import { refuseLocked, UNDO_TIMEOUT_MS } from "@/lib/commands/book-commands"
 import type { Ctx } from "@/lib/commands/ctx"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
@@ -17,6 +18,7 @@ import {
   type IssueProblem,
 } from "@/lib/domain/invoice-calc"
 import { invoiceFileName } from "@/lib/domain/invoice-labels"
+import { invoiceMail, mailtoUrl } from "@/lib/domain/invoice-mail"
 import { openEntries } from "@/lib/domain/invoice-status"
 import { paidChangeHitsForm5 } from "@/lib/domain/period-lock"
 import type { Attachment, Entry } from "@/lib/domain/types"
@@ -170,31 +172,71 @@ export async function issueInvoice(
   }
 }
 
-/** Download an issued invoice's PDF, drawn again from the invoice as it was issued. */
+/** The PDF of an issued invoice, drawn again from the invoice as it was issued, with its file name. */
+async function renderIssued(
+  invoice: Invoice
+): Promise<{ bytes: Uint8Array; name: string; creditedNumber: number | null }> {
+  if (invoice.number === null) throw new Error("not issued")
+  const { renderInvoicePdf } = await import("@/lib/browser/invoice-pdf")
+  const credited = useBookStore
+    .getState()
+    .invoices.find((i) => i.id === invoice.credits)
+  const creditedNumber = credited?.number ?? null
+  return {
+    bytes: await renderInvoicePdf(invoice, creditedNumber),
+    creditedNumber,
+    name: invoiceFileName(
+      invoice.language,
+      invoice.number,
+      invoice.customer.name,
+      invoice.credits !== null
+    ),
+  }
+}
+
+/** Download an issued invoice's PDF. */
 export async function downloadInvoicePdf(
   ctx: Ctx,
   invoice: Invoice
 ): Promise<void> {
   if (invoice.number === null) return
   try {
-    const { renderInvoicePdf } = await import("@/lib/browser/invoice-pdf")
-    const credited = useBookStore
-      .getState()
-      .invoices.find((i) => i.id === invoice.credits)
-    const bytes = await renderInvoicePdf(invoice, credited?.number ?? null)
-    saveBlob(
-      new Blob([bytes as BlobPart], { type: "application/pdf" }),
-      invoiceFileName(
-        invoice.language,
-        invoice.number,
-        invoice.customer.name,
-        invoice.credits !== null
-      )
-    )
+    const { bytes, name } = await renderIssued(invoice)
+    saveBlob(new Blob([bytes as BlobPart], { type: "application/pdf" }), name)
   } catch (error) {
     console.warn("Invoice PDF could not be made", error)
     toast.add({ title: ctx.t("invoice.pdfDownloadFailed") })
   }
+}
+
+/**
+ * Send an issued invoice (§8.27). The app sends nothing itself: where the
+ * browser has a share sheet for files, the PDF goes to it with the subject and
+ * text filled in. Elsewhere the PDF is downloaded and the mail program opens on
+ * a `mailto:` link to the customer, and a toast says to attach the file.
+ */
+export async function sendInvoice(ctx: Ctx, invoice: Invoice): Promise<void> {
+  if (invoice.number === null) return
+  let rendered: Awaited<ReturnType<typeof renderIssued>>
+  try {
+    rendered = await renderIssued(invoice)
+  } catch (error) {
+    console.warn("Invoice PDF could not be made", error)
+    toast.add({ title: ctx.t("invoice.pdfDownloadFailed") })
+    return
+  }
+  const mail = invoiceMail(invoice, rendered.creditedNumber)
+  const file = new File([rendered.bytes as BlobPart], rendered.name, {
+    type: "application/pdf",
+  })
+  const result = await shareFile(file, {
+    title: mail.subject,
+    text: mail.body,
+  })
+  if (result !== "unsupported") return
+  saveBlob(file, rendered.name)
+  openMailto(mailtoUrl(mail))
+  toast.add({ title: ctx.t("invoice.sendAttach") })
 }
 
 /**

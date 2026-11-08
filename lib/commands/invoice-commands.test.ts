@@ -2,10 +2,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { toast } from "@/components/ui/toast"
+import { saveBlob } from "@/lib/browser/download"
+import { openMailto, shareFile } from "@/lib/browser/share"
 import type { Ctx } from "@/lib/commands/ctx"
 import {
   issueInvoice,
   markInvoicePaid,
+  sendInvoice,
   startCreditNote,
 } from "@/lib/commands/invoice-commands"
 import { defaultCategories } from "@/lib/domain/accounts"
@@ -20,6 +23,12 @@ import { useBookStore } from "@/stores/book-store"
 /* Issuing a draft invoice books its entries and stores its PDF (§8.27). */
 
 vi.mock("@/lib/ui/confirm", () => ({ confirm: vi.fn(async () => true) }))
+
+vi.mock("@/lib/browser/share", () => ({
+  shareFile: vi.fn(async () => "unsupported"),
+  openMailto: vi.fn(),
+}))
+vi.mock("@/lib/browser/download", () => ({ saveBlob: vi.fn() }))
 
 const stored = new Map<string, Blob>()
 let failing = false
@@ -297,5 +306,64 @@ describe("credit notes", () => {
     expect(state.entries).toHaveLength(2)
     expect(state.entries.map((e) => e.paidOn)).toEqual([null, null])
     expect(state.invoices.find((i) => i.id === id)?.number).toBeNull()
+  })
+})
+
+describe("sendInvoice", () => {
+  async function issued() {
+    await issueInvoice(ctx, "i1")
+    return useBookStore.getState().invoices[0]
+  }
+
+  beforeEach(() => {
+    vi.mocked(shareFile).mockReset().mockResolvedValue("unsupported")
+    vi.mocked(openMailto).mockReset()
+    vi.mocked(saveBlob).mockReset()
+  })
+
+  it("hands the PDF and the text to the share sheet, and does nothing more", async () => {
+    vi.mocked(shareFile).mockResolvedValue("shared")
+    await sendInvoice(ctx, await issued())
+    expect(shareFile).toHaveBeenCalledOnce()
+    const [file, message] = vi.mocked(shareFile).mock.calls[0]
+    expect(file.name).toBe("Lasku 1001 - Asiakas Oy.pdf")
+    expect(file.type).toBe("application/pdf")
+    expect(message.title).toBe("Lasku 1001 – Oma Yritys")
+    expect(message.text).toContain("Viitenumero: 10016")
+    expect(saveBlob).not.toHaveBeenCalled()
+    expect(openMailto).not.toHaveBeenCalled()
+  })
+
+  it("does nothing more when the user cancels the share sheet", async () => {
+    vi.mocked(shareFile).mockResolvedValue("cancelled")
+    await sendInvoice(ctx, await issued())
+    expect(saveBlob).not.toHaveBeenCalled()
+    expect(openMailto).not.toHaveBeenCalled()
+  })
+
+  it("downloads the PDF and opens a mail where there is no share sheet", async () => {
+    const invoice = await issued()
+    vi.mocked(toast.add).mockClear()
+    await sendInvoice(ctx, {
+      ...invoice,
+      customer: { ...invoice.customer, email: "osto@asiakas.fi" },
+    })
+    expect(saveBlob).toHaveBeenCalledOnce()
+    expect(vi.mocked(saveBlob).mock.calls[0][1]).toBe(
+      "Lasku 1001 - Asiakas Oy.pdf"
+    )
+    const url = vi.mocked(openMailto).mock.calls[0][0]
+    expect(url.startsWith("mailto:osto@asiakas.fi?subject=Lasku%201001")).toBe(
+      true
+    )
+    expect(messages()).toEqual([
+      "PDF ladattiin. Liitä se avautuneeseen sähköpostiin.",
+    ])
+  })
+
+  it("sends nothing for a draft", async () => {
+    await sendInvoice(ctx, useBookStore.getState().invoices[0])
+    expect(shareFile).not.toHaveBeenCalled()
+    expect(openMailto).not.toHaveBeenCalled()
   })
 })
