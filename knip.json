@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignore": [".agents/**"],
+  "ignore": [".agents/**", "server/**"],
   "exclude": ["types"],
   "ignoreIssues": {
     "components/ui/**": ["exports"]

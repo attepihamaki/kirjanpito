@@ -9,6 +9,7 @@ import {
 } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
 import { BankImportButton } from "@/components/bank/bank-import-button"
+import { BankSyncButton } from "@/components/bank/bank-sync-button"
 import { NewEntryButton } from "@/components/common/new-entry-button"
 import { PageHeader } from "@/components/common/page-header"
 import { PrintButton } from "@/components/common/print-button"
@@ -302,6 +303,7 @@ export function LedgerView() {
           <EmptyContent>
             <NewEntryButton />
             <BankImportButton />
+            <BankSyncButton />
           </EmptyContent>
         </Empty>
       </>
@@ -317,6 +319,7 @@ export function LedgerView() {
           <>
             <PrintButton onPrint={() => setPrintAll(true)} />
             <BankImportButton />
+            <BankSyncButton />
             <NewEntryButton />
           </>
         }

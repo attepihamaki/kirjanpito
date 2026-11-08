@@ -3587,6 +3587,25 @@ export const APP_DICT = {
   // --- Bank statement import (§8.16) ---
 
   "bank.import": ["Tuo tiliote", "Import statement"],
+  "bank.syncButton": ["Hae pankista", "Fetch from bank"],
+  "bank.syncHint": [
+    "Yhdistä pankkitili kerran. Tapahtumat tarkistetaan samassa näkymässä kuin tiliote.",
+    "Link the bank account once. Transactions are reviewed in the same view as a statement.",
+  ],
+  "bank.syncToken": ["Välityspalvelimen tunnus", "Proxy token"],
+  "bank.syncNext": ["Hae pankit", "Load banks"],
+  "bank.syncConnect": ["Yhdistä pankki", "Connect bank"],
+  "bank.syncPersonal": ["Henkilökohtainen tili", "Personal account"],
+  "bank.syncFrom": ["Alkaen", "From"],
+  "bank.syncFetch": ["Hae tapahtumat", "Fetch transactions"],
+  "bank.syncFileName": [
+    "Pankista, {n} tapahtumaa",
+    "From the bank, {n} transactions",
+  ],
+  "bank.syncError": [
+    "Pankkihaku epäonnistui: {msg}",
+    "Bank fetch failed: {msg}",
+  ],
   "bank.title": ["Tuo tiliote", "Import bank statement"],
   "bank.fileHint": [
     "{file}: {n} tapahtumaa. Tarkista jokainen rivi. Mitään ei kirjata ennen kuin vahvistat.",

@@ -37,6 +37,19 @@ export const SITE_URL = (
 export const INDEXABLE = false
 
 /**
+ * The account-feed proxy's origin, with a leading space, or "" when the build
+ * names none. Only a build that sets it can reach any host besides the site.
+ */
+const BANK_PROXY_ORIGIN = (() => {
+  try {
+    const url = process.env.NEXT_PUBLIC_BANK_PROXY_URL
+    return url ? ` ${new URL(url).origin}` : ""
+  } catch {
+    return ""
+  }
+})()
+
+/**
  * What a page may load and where it may send data. The bookkeeping stays in the
  * browser (§1), so `connect-src` and `form-action` hold the app to that even if
  * a script gets in.
@@ -53,7 +66,7 @@ export const CONTENT_SECURITY_POLICY = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  "connect-src 'self'",
+  `connect-src 'self'${BANK_PROXY_ORIGIN}`,
   "worker-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
