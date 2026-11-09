@@ -64,6 +64,7 @@ function settings(): BookSettings {
         from: "2026-02",
       },
     ],
+    bankSeen: ["id:A1", "fp:2026-03-02|-1250|k-market||0"],
     categoryRules: [
       { id: "k1", contains: "Elisa", catId: "344-other", vatRate: 25.5 },
       { id: "k2", contains: "Neste", catId: "344-vehicle", vatRate: null },

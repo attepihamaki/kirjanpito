@@ -5,6 +5,7 @@ import type { BankRow } from "@/lib/domain/bank-csv"
 import {
   normalizeName,
   proposeForRows,
+  rowFingerprints,
   suggestFromHistory,
   suggestFromWords,
   withInvoiceEntries,
@@ -128,6 +129,49 @@ describe("proposeForRows, already booked", () => {
   it("uses the payment date, not the invoice date", () => {
     const paid = entry({ id: "p", date: "2026-10-01", paidOn: "2026-10-28" })
     expect(proposeForRows([row({})], ctx([paid]))[0].kind).toBe("booked")
+  })
+})
+
+describe("rowFingerprints", () => {
+  it("uses the bank's own id when the row has one", () => {
+    expect(rowFingerprints([row({ bankId: "A1" })])).toEqual(["id:A1"])
+  })
+
+  it("is the same for the same row in another export", () => {
+    const a = row({ counterparty: "K-Market Oy", message: "Kortti" })
+    const b = row({ counterparty: "k-market", message: "kortti" })
+    expect(rowFingerprints([a])).toEqual(rowFingerprints([b]))
+  })
+
+  it("tells identical rows of one statement apart by their order", () => {
+    const [first, second] = rowFingerprints([row({}), row({})])
+    expect(first).not.toBe(second)
+    expect(
+      rowFingerprints([row({}), row({}), row({ amount: -5 })]).slice(0, 2)
+    ).toEqual([first, second])
+  })
+
+  it("changes with the date or the amount", () => {
+    const base = rowFingerprints([row({})])[0]
+    expect(rowFingerprints([row({ date: "2026-10-02" })])[0]).not.toBe(base)
+    expect(rowFingerprints([row({ amount: -1 })])[0]).not.toBe(base)
+  })
+})
+
+describe("proposeForRows, seen in an earlier import", () => {
+  it("marks a row whose fingerprint is known, whatever else fits", () => {
+    const rows = [row({}), row({ amount: -777 })]
+    const seen = new Set([rowFingerprints(rows)[0]])
+    const out = proposeForRows(rows, { ...ctx([]), seen })
+    expect(out[0]).toEqual({ kind: "seen" })
+    expect(out[1].kind).toBe("new")
+  })
+
+  it("recognises an overlapping statement's old rows only", () => {
+    const old = [row({}), row({})]
+    const seen = new Set(rowFingerprints(old))
+    const out = proposeForRows([...old, row({})], { ...ctx([]), seen })
+    expect(out.map((p) => p.kind)).toEqual(["seen", "seen", "new"])
   })
 })
 

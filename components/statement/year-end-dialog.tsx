@@ -28,6 +28,7 @@ import { useToday } from "@/hooks/use-today"
 import { canLockYear, yearEndFindings } from "@/lib/domain/year-end"
 import { indexCategories } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
+import { useReceiptHashStore } from "@/stores/receipt-hash-store"
 
 type Step = "checks" | "values" | "lock" | "package"
 
@@ -71,6 +72,7 @@ function YearEndForm() {
   const bookStart = useBookStore((s) => s.bookStart)
   const vatFiled = useBookStore((s) => s.vatFiled)
   const changeLog = useBookStore((s) => s.changeLog)
+  const receiptHashes = useReceiptHashStore((s) => s.hashes)
   const assetOpening = useBookStore((s) => s.assetOpening)
   const yearEnd = useBookStore((s) => s.yearEnd[year])
 
@@ -86,6 +88,7 @@ function YearEndForm() {
         bookStart,
         vatFiled,
         changeLog,
+        receiptHashes,
         assetOpening,
         yearEnd,
       }),
@@ -99,6 +102,7 @@ function YearEndForm() {
       bookStart,
       vatFiled,
       changeLog,
+      receiptHashes,
       assetOpening,
       yearEnd,
     ]

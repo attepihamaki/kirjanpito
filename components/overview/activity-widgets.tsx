@@ -61,6 +61,7 @@ import {
   type BookLimitRuleId,
 } from "@/components/common/limit-text"
 import { useBookStore, type CheckFilter } from "@/stores/book-store"
+import { useReceiptHashStore } from "@/stores/receipt-hash-store"
 import { hasReceipt } from "@/stores/selectors"
 
 const RULE_GAP_TEXT = {
@@ -214,6 +215,7 @@ export function ChecksWidget() {
   const dirty = useBookStore((s) => s.dirty)
   const fileName = useBookStore((s) => s.fileName)
   const changeLog = useBookStore((s) => s.changeLog)
+  const receiptHashes = useReceiptHashStore((s) => s.hashes)
   const openDialog = useBookStore((s) => s.openDialog)
   const setVatFiled = useBookStore((s) => s.setVatFiled)
   const yearsArchived = useBookStore((s) => s.yearsArchived)
@@ -254,10 +256,11 @@ export function ChecksWidget() {
           data.yearEntries,
           data.catMap,
           data.today,
-          changeLog
+          changeLog,
+          receiptHashes
         ).size,
       })),
-    [data.yearEntries, data.catMap, data.today, changeLog]
+    [data.yearEntries, data.catMap, data.today, changeLog, receiptHashes]
   )
 
   const items: CheckItem[] = []

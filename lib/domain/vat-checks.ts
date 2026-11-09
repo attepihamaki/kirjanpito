@@ -3,6 +3,7 @@ import { yearOf } from "@/lib/domain/dates"
 import {
   ENTRY_CHECKS,
   flaggedEntryIds,
+  type ReceiptHashes,
   type EntryCheck,
 } from "@/lib/domain/entry-checks"
 import { inPeriod } from "@/lib/domain/period"
@@ -39,6 +40,8 @@ export interface VatCheckInput {
   bookStart: string | null
   vatFiled: Readonly<Record<string, string>>
   changeLog: readonly ChangeRecord[]
+  /** The content hashes of the stored receipts read so far (§8.4). */
+  receiptHashes?: ReceiptHashes
 }
 
 /** What each rule's breach carries, by rule id. */
@@ -110,7 +113,8 @@ const VAT_CHECK_RULES = defineRules<
           yearEntries,
           i.cats,
           i.today,
-          i.changeLog
+          i.changeLog,
+          i.receiptHashes
         )
         let n = 0
         for (const id of ids) if (ownIds.has(id)) n++

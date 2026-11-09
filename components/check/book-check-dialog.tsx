@@ -19,6 +19,7 @@ import { useToday } from "@/hooks/use-today"
 import { bookCheck, type BookFinding } from "@/lib/domain/book-check"
 import { indexCategories } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
+import { useReceiptHashStore } from "@/stores/receipt-hash-store"
 
 /**
  * "Check my book" (§8.23): every rule over the whole book, grouped by year. It
@@ -45,6 +46,7 @@ function BookCheckForm() {
   const bookStart = useBookStore((s) => s.bookStart)
   const vatFiled = useBookStore((s) => s.vatFiled)
   const changeLog = useBookStore((s) => s.changeLog)
+  const receiptHashes = useReceiptHashStore((s) => s.hashes)
   const assetOpening = useBookStore((s) => s.assetOpening)
   const loanOpening = useBookStore((s) => s.loanOpening)
   const yearEnd = useBookStore((s) => s.yearEnd)
@@ -61,6 +63,7 @@ function BookCheckForm() {
         bookStart,
         vatFiled,
         changeLog,
+        receiptHashes,
         assetOpening,
         loanOpening,
         yearEnd,
@@ -75,6 +78,7 @@ function BookCheckForm() {
       bookStart,
       vatFiled,
       changeLog,
+      receiptHashes,
       assetOpening,
       loanOpening,
       yearEnd,

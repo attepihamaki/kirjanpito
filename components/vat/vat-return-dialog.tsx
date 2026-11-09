@@ -56,6 +56,7 @@ import { periodLabel } from "@/lib/i18n/period-label"
 import { APP_ROUTES } from "@/lib/site"
 import { cn } from "@/lib/utils"
 import { useBookStore, type CheckFilter } from "@/stores/book-store"
+import { useReceiptHashStore } from "@/stores/receipt-hash-store"
 
 type Step = "checks" | "guide" | "values" | "file" | "pay"
 
@@ -116,6 +117,7 @@ function VatReturnForm() {
   const vatFiled = useBookStore((s) => s.vatFiled)
   const vatFiledFigures = useBookStore((s) => s.vatFiledFigures)
   const changeLog = useBookStore((s) => s.changeLog)
+  const receiptHashes = useReceiptHashStore((s) => s.hashes)
 
   const items = React.useMemo(
     () =>
@@ -130,6 +132,7 @@ function VatReturnForm() {
         bookStart,
         vatFiled,
         changeLog,
+        receiptHashes,
       }),
     [
       entries,
@@ -142,6 +145,7 @@ function VatReturnForm() {
       bookStart,
       vatFiled,
       changeLog,
+      receiptHashes,
     ]
   )
   const sections = React.useMemo(() => vatReturnSections(report), [report])

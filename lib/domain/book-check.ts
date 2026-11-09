@@ -5,6 +5,7 @@ import {
 } from "@/lib/domain/book-limits"
 import type { ChangeRecord } from "@/lib/domain/change-log"
 import { yearOf } from "@/lib/domain/dates"
+import type { ReceiptHashes } from "@/lib/domain/entry-checks"
 import { form5Report } from "@/lib/domain/form5-report"
 import { form5Values } from "@/lib/domain/form5"
 import {
@@ -54,6 +55,8 @@ export interface BookCheckInput {
   bookStart: string | null
   vatFiled: Readonly<Record<string, string>>
   changeLog: readonly ChangeRecord[]
+  /** The content hashes of the stored receipts read so far (§8.4). */
+  receiptHashes?: ReceiptHashes
   assetOpening: AssetOpening | null
   loanOpening: LoanOpening | null
   /** The figures typed in on Varat ja velat, by year. */
@@ -109,6 +112,7 @@ export function bookCheck(input: BookCheckInput): BookFinding[] {
     bookStart: input.bookStart,
     vatFiled: input.vatFiled,
     changeLog: input.changeLog,
+    receiptHashes: input.receiptHashes,
     assetOpening: input.assetOpening,
     yearEnd: input.yearEnd[year],
   })

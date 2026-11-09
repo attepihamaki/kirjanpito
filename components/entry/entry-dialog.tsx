@@ -111,6 +111,7 @@ import { formatMoneyPlain } from "@/lib/domain/money"
 import { deleteEntry, offerEditUndo } from "@/lib/commands/book-commands"
 import { mergeSplit } from "@/lib/commands/bulk-commands"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
+import { rememberReceiptHash } from "@/lib/commands/receipt-hash-commands"
 import { categorySide, compareCategories } from "@/stores/selectors"
 import type {
   AmountMode,
@@ -126,6 +127,7 @@ import {
   type RecurringEntry,
 } from "@/lib/domain/recurring"
 import { useBookStore, type EntryPrefill } from "@/stores/book-store"
+import { useReceiptHashStore } from "@/stores/receipt-hash-store"
 
 /** A category list this short is scanned whole, so it gets no "most used" group. */
 const MOST_USED_MIN_LIST = 8
@@ -526,6 +528,7 @@ function EntryDialogForm({
           setDraftIds([...useBookStore.getState().draftAttachmentIds, id])
           try {
             await putReceipt(id, file)
+            await rememberReceiptHash(id, file)
             added.push({
               id,
               name: file.name,
@@ -544,7 +547,12 @@ function EntryDialogForm({
           // A hint only: one receipt can cover two entries on purpose.
           const others = useBookStore.getState().entries
           for (const att of added) {
-            const other = entryWithReceipt(att, others, editingId)
+            const other = entryWithReceipt(
+              att,
+              others,
+              editingId,
+              useReceiptHashStore.getState().hashes
+            )
             if (!other) continue
             toast.add({
               title: f.t("receipt.attachedElsewhere", {
@@ -775,7 +783,7 @@ function EntryDialogForm({
           {
             id: editingId ?? "",
             date: form.date,
-            description: "",
+            description: form.description,
             type: form.type,
             catId: form.catId,
             amount: formAmount,

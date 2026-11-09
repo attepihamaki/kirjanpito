@@ -37,6 +37,7 @@ import {
 } from "@/lib/domain/bank-csv"
 import {
   proposeForRows,
+  rowFingerprints,
   withInvoiceEntries,
   type BankProposal,
 } from "@/lib/domain/bank-match"
@@ -208,6 +209,7 @@ function initialPlan(p: BankProposal): Plan {
       return { action: "match", entryId: p.entryId, catId: "", description: "" }
     case "ambiguous":
     case "booked":
+    case "seen":
       return { action: "skip", entryId: "", catId: "", description: "" }
     case "new":
       return {
@@ -237,6 +239,7 @@ function Review({
   const cats = useBookStore((s) => s.cats)
   const closeDialog = useBookStore((s) => s.closeDialog)
   const categoryRules = useBookStore((s) => s.categoryRules)
+  const bankSeen = useBookStore((s) => s.bankSeen)
   const catMap = React.useMemo(() => indexCategories(cats), [cats])
   const byId = React.useMemo(
     () => new Map(entries.map((e) => [e.id, e])),
@@ -250,6 +253,7 @@ function Review({
       invoices,
       cats: catMap,
       rules: categoryRules,
+      seen: new Set(bankSeen),
       dues: unsettledDues(
         entries,
         catMap,
@@ -365,6 +369,7 @@ function Review({
         ),
       ],
       added,
+      seen: rowFingerprints(result.rows),
     })
     if (held.length) {
       const store = useBookStore.getState()
@@ -533,6 +538,8 @@ function noteFor(
         v: e ? `${e.voucher ?? ""} ${e.description}`.trim() : "",
       })
     }
+    case "seen":
+      return f.t("bank.statusSeen")
     case "new":
       if (!p.draft.catId) return f.t("bank.statusNoCategory")
       return p.draft.guessed

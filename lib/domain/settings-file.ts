@@ -123,6 +123,8 @@ export interface BookSettings {
   recurring: RecurringEntry[]
   /** The user's rules for picking a category, in order (§8.17). */
   categoryRules: CategoryRule[]
+  /** Fingerprints of the bank statement rows already reviewed (§8.16). */
+  bankSeen: string[]
   /** The fixed asset balance the register starts from, or null (§8.8). */
   assetOpening: AssetOpening | null
   /** The bank balance as last read, or null (§8.12). */
@@ -491,6 +493,15 @@ export function parseSettings(text: string): ParsedSettings {
       .map(parseCategoryRule)
       .filter((r): r is CategoryRule => r !== null)
   }
+  if (Array.isArray(raw.bankSeen)) {
+    out.bankSeen = [
+      ...new Set(
+        raw.bankSeen.filter(
+          (v): v is string => typeof v === "string" && v !== ""
+        )
+      ),
+    ]
+  }
   if (raw.assetOpening === null) out.assetOpening = null
   else if (
     isRecord(raw.assetOpening) &&
@@ -641,6 +652,7 @@ export function serializeSettings(s: BookSettings): string {
     pageSize: s.pageSize,
     recurring: s.recurring,
     categoryRules: s.categoryRules,
+    bankSeen: s.bankSeen,
     assetOpening: s.assetOpening,
     bankBalance: s.bankBalance,
     payMonths: s.payMonths,

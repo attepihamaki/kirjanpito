@@ -36,6 +36,8 @@ export type BankProposal =
   | { kind: "ambiguous"; entryIds: string[] }
   /* An entry already records this payment. */
   | { kind: "booked"; entryId: string }
+  /* An earlier import already reviewed this row, whatever came of it. */
+  | { kind: "seen" }
   /* No entry fits: book a new one. */
   | { kind: "new"; draft: NewEntryDraft }
 
@@ -83,6 +85,31 @@ function numberTokens(s: string): string[] {
   return s.match(/\d{4,}/g) ?? []
 }
 
+/**
+ * Which statement rows have been reviewed before (§8.16). A row is known by
+ * the bank's own transaction id when the file has one, and otherwise by its
+ * date, amount, counterparty, reference and message. Two identical rows in one
+ * statement are told apart by their order among the identical ones, so a
+ * statement booked once is recognised whole when it is imported again, and a
+ * longer one only shows its new rows. One fingerprint per row, in order.
+ */
+export function rowFingerprints(rows: readonly BankRow[]): string[] {
+  const counts = new Map<string, number>()
+  return rows.map((row) => {
+    if (row.bankId) return `id:${row.bankId}`
+    const base = [
+      row.date,
+      row.amount,
+      normalizeName(row.counterparty),
+      row.reference,
+      normalizeName(row.message),
+    ].join("|")
+    const n = counts.get(base) ?? 0
+    counts.set(base, n + 1)
+    return `fp:${base}|${n}`
+  })
+}
+
 /* -------------------------------------------------------------------------
  * Open entries
  * ---------------------------------------------------------------------- */
@@ -122,6 +149,8 @@ export interface BankContext {
   dues?: readonly UnsettledDue[]
   /** The sales invoices, matched to a row by their reference number (§8.27). */
   invoices?: readonly Invoice[]
+  /** The fingerprints of rows reviewed in earlier imports (`rowFingerprints`). */
+  seen?: ReadonlySet<string>
 }
 
 /** Whether the row carries the invoice's reference number, in its reference field or its message. */
@@ -332,7 +361,9 @@ export function proposeForRows(
   const byId = ctx.invoices?.length
     ? new Map(ctx.entries.map((e) => [e.id, e]))
     : null
-  return rows.map((row): BankProposal => {
+  const fingerprints = ctx.seen?.size ? rowFingerprints(rows) : null
+  return rows.map((row, i): BankProposal => {
+    if (fingerprints && ctx.seen?.has(fingerprints[i])) return { kind: "seen" }
     const booked = alreadyBooked(row, ctx) ?? alreadyPaidInvoice(row, ctx, byId)
     if (booked) return { kind: "booked", entryId: booked.id }
 

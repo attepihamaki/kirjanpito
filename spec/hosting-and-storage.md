@@ -225,6 +225,9 @@ before any file is open, and must not read or write `bookkeeping` to get it.
   seeding only a key that is still empty — the separate key is the newer truth.
 - IndexedDB `bookkeeping-receipts`, store `files`: receipt Blobs keyed by
   attachment id.
+- IndexedDB `bookkeeping-receipt-hash`, store `hash`: the SHA-256 of each
+  receipt, keyed by attachment id (§8.4). A cache derived from the blobs and
+  never written to the file; it is rebuilt by reading the receipts again.
 - IndexedDB `bookkeeping-file`, store `handle`, key `book`: the
   `FileSystemFileHandle` of the opened file (§7.5). Its own database, because
   adding a second object store to the one above would mean a version upgrade.

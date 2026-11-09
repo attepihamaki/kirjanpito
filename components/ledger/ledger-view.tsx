@@ -50,6 +50,7 @@ import {
 } from "@/stores/selectors"
 import { paidDate } from "@/lib/domain/open-items"
 import { useBookStore, type CheckFilter } from "@/stores/book-store"
+import { useReceiptHashStore } from "@/stores/receipt-hash-store"
 import { useReceiptTextStore } from "@/stores/receipt-text-store"
 
 const CHECK_LABEL = {
@@ -72,6 +73,7 @@ export function LedgerView() {
   const f = useFormatters()
   const entries = useBookStore((s) => s.entries)
   const changeLog = useBookStore((s) => s.changeLog)
+  const receiptHashes = useReceiptHashStore((s) => s.hashes)
   const cats = useBookStore((s) => s.cats)
   const year = useBookStore((s) => s.year)
   const month = useBookStore((s) => s.month)
@@ -124,9 +126,10 @@ export function LedgerView() {
               entriesInPeriod(entries, year, 0),
               catMap,
               todayIso(),
-              changeLog
+              changeLog,
+              receiptHashes
             ),
-    [checkFilter, entries, year, catMap, changeLog]
+    [checkFilter, entries, year, catMap, changeLog, receiptHashes]
   )
 
   const filtered = React.useMemo(

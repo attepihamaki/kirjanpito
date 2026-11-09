@@ -6,6 +6,7 @@ import {
   gcReceipts,
   isReceiptStorageSupported,
 } from "@/lib/browser/receipt-store"
+import { pruneReceiptHashes } from "@/lib/browser/receipt-hash-db"
 import { pruneReceiptText } from "@/lib/browser/receipt-text-db"
 import { heldByAnotherTab } from "@/lib/browser/tab-lock"
 import { yearOf } from "@/lib/domain/dates"
@@ -22,6 +23,7 @@ import type { Ctx } from "@/lib/commands/ctx"
 import { useBookStore } from "@/stores/book-store"
 import { useHistoryStore } from "@/stores/history-store"
 import { useLangStore } from "@/stores/lang-store"
+import { useReceiptHashStore } from "@/stores/receipt-hash-store"
 import { useReceiptTextStore } from "@/stores/receipt-text-store"
 
 /**
@@ -65,6 +67,8 @@ export async function sweepReceipts(): Promise<void> {
     if (swept.live) {
       await pruneReceiptText(swept.live)
       useReceiptTextStore.getState().keepOnly(swept.live)
+      await pruneReceiptHashes(swept.live)
+      useReceiptHashStore.getState().keepOnly(swept.live)
     }
   } catch (error) {
     /*

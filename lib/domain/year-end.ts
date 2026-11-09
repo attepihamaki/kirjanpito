@@ -5,6 +5,7 @@ import { lastCompleteMonth, monthOf, yearOf } from "@/lib/domain/dates"
 import {
   ENTRY_CHECKS,
   flaggedEntryIds,
+  type ReceiptHashes,
   type EntryCheck,
 } from "@/lib/domain/entry-checks"
 import type { YearEnd } from "@/lib/domain/form5-balance"
@@ -38,6 +39,8 @@ export interface YearEndInput {
   bookStart: string | null
   vatFiled: Readonly<Record<string, string>>
   changeLog: readonly ChangeRecord[]
+  /** The content hashes of the stored receipts read so far (§8.4). */
+  receiptHashes?: ReceiptHashes
   assetOpening: AssetOpening | null
   /** The figures typed in on Varat ja velat, or undefined while none were. */
   yearEnd: YearEnd | undefined
@@ -110,7 +113,8 @@ export const YEAR_END_RULES = defineRules<
           entries,
           i.cats,
           i.today,
-          i.changeLog
+          i.changeLog,
+          i.receiptHashes
         ).size
         if (n) out.push({ check, n })
       }

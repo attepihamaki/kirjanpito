@@ -3098,6 +3098,10 @@ export const APP_DICT = {
   "invoice.totalGross": ["Maksettava", "Amount due"],
   "invoice.saveDraft": ["Tallenna luonnos", "Save draft"],
   "invoice.issue": ["Anna lasku", "Issue invoice"],
+  "invoice.duplicateOf": [
+    "Samalle asiakkaalle on jo annettu samanlainen lasku {n} ({d}).",
+    "An identical invoice {n} ({d}) has already been issued to this customer.",
+  ],
   "invoice.issueHint": [
     "Annettua laskua ei voi muokata. Virhe korjataan hyvityslaskulla.",
     "An issued invoice cannot be edited. A mistake is corrected with a credit note.",
@@ -3713,6 +3717,10 @@ export const APP_DICT = {
   "bank.statusBooked": [
     "Näyttää jo kirjatulta: {v}",
     "Looks already booked: {v}",
+  ],
+  "bank.statusSeen": [
+    "Tämä rivi on tarkistettu aiemmassa tuonnissa",
+    "This row was reviewed in an earlier import",
   ],
   "bank.statusSuggested": [
     "Luokka aiemmista tositteista",

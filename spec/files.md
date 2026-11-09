@@ -225,6 +225,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
   "pageSize": { "ledger": 10, "categories": 25 },
   "recurring": [{ "id": "r1", "description": "Vuokra", "type": "expense", "catId": "343", "amount": 45000, "vatRate": 25.5, "amountMode": "gross", "day": 20, "from": "2026-02" }],
   "categoryRules": [{ "id": "rule-1", "contains": "Elisa", "catId": "344-other", "vatRate": 25.5 }],
+  "bankSeen": ["id:2026102801234", "fp:2026-10-28|-12450|k market||0"],
   "assetOpening": { "year": 2026, "amount": 300000 },
   "bankBalance": { "amount": 125000, "date": "2026-10-31" },
   "payMonths": { "yel": [1, 7], "advanceTax": [2, 4, 6, 8, 10, 12], "advanceTaxYearly": { "2026": 360000 }, "taxRate": 22.5 },

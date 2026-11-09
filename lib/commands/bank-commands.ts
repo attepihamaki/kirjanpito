@@ -18,6 +18,8 @@ export interface BankBooking {
   paid: readonly { entryId: string; on: string }[]
   /** New entries, built by the dialog. */
   added: readonly Entry[]
+  /** Fingerprints of every row the review covered, to recognise them in a later import (§8.16). */
+  seen?: readonly string[]
 }
 
 /**
@@ -67,6 +69,12 @@ export async function bookBankRows(
   const epoch = store.bookEpoch
   if (after.length > 0) store.updateEntries(after)
   if (booking.added.length > 0) store.addEntries(booking.added)
+  /* Only the rows this booking made known are forgotten again by the undo. */
+  const known = new Set(store.bankSeen)
+  const newlySeen = [...new Set(booking.seen ?? [])].filter(
+    (s) => !known.has(s)
+  )
+  if (newlySeen.length > 0) store.addBankSeen(newlySeen)
 
   const addedIds = booking.added.map((e) => e.id)
   const id = toast.add({
@@ -83,6 +91,7 @@ export async function bookBankRows(
         if (now.bookEpoch !== epoch) return
         if (addedIds.length > 0) now.removeEntries(addedIds)
         if (before.length > 0) now.updateEntries(before)
+        if (newlySeen.length > 0) now.removeBankSeen(newlySeen)
         toast.add({ title: ctx.t("bank.undone") })
       },
     },

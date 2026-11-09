@@ -44,6 +44,7 @@ import {
   type InvoiceRow,
 } from "@/lib/domain/invoice"
 import { addDays } from "@/lib/domain/dates"
+import { duplicateInvoice } from "@/lib/domain/invoice-duplicate"
 import { invoiceTotals, rowNet } from "@/lib/domain/invoice-calc"
 import { formatQuantity, parseQuantity } from "@/lib/domain/invoice-input"
 import { formatMoneyPlain } from "@/lib/domain/money"
@@ -177,6 +178,20 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
       return row ? [row] : []
     })
   const totals = invoiceTotals(readRows)
+  /* A hint only: it never stops the invoice being issued. */
+  const lookalike = issued
+    ? undefined
+    : duplicateInvoice(
+        {
+          id: draftId,
+          date,
+          customerId,
+          customer: party,
+          rows: readRows,
+          credits: existing?.credits ?? null,
+        },
+        invoices
+      )
   const nameMissing = party.name.trim() === ""
 
   const changeDate = (iso: string) => {
@@ -626,7 +641,17 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
             </>
           ) : (
             <>
-              {credit ? (
+              {lookalike ? (
+                <p
+                  role="status"
+                  className="mr-auto self-center text-xs text-warning"
+                >
+                  {f.t("invoice.duplicateOf", {
+                    n: lookalike.number ?? "",
+                    d: f.date(lookalike.date),
+                  })}
+                </p>
+              ) : credit ? (
                 <span className="mr-auto" />
               ) : (
                 <p className="mr-auto self-center text-xs text-muted-foreground">

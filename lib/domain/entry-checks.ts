@@ -1,6 +1,7 @@
 import { LINE_BY_KEY } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
 import type { ChangeRecord } from "@/lib/domain/change-log"
+import { normalizeName } from "@/lib/domain/bank-match"
 import { todayIso } from "@/lib/domain/dates"
 import { paidDate } from "@/lib/domain/open-items"
 import { limitOn } from "@/lib/domain/rule-tables"
@@ -84,9 +85,41 @@ function figuresKey(e: Entry): string {
   return `${e.date}|${e.type}|${calcEntry(e).gross}`
 }
 
-/** A stored receipt file, by what survives storing it: name, type and size. */
-function fileKey(a: Attachment): string | null {
-  return a.id === null ? null : `${a.name}|${a.type}|${a.size}`
+/**
+ * The content hashes of stored receipts by attachment id (§8.4). A cache
+ * derived from the files and never written to the book, so a receipt not yet
+ * read has none.
+ */
+export type ReceiptHashes = ReadonlyMap<string, string>
+
+/**
+ * A stored receipt file, by its content when it has been read and otherwise
+ * by what survives storing it: name, type and size. A renamed copy of the same
+ * file matches by content; two files that only look alike do not.
+ */
+function fileKey(a: Attachment, hashes?: ReceiptHashes): string | null {
+  if (a.id === null) return null
+  const hash = hashes?.get(a.id)
+  return hash ? `sha256:${hash}` : `${a.name}|${a.type}|${a.size}`
+}
+
+/** How many days apart two entries with the same side, amount and description may be and still look like one. */
+export const NEAR_DUPLICATE_DAYS = 3
+
+/**
+ * Whether two entries have the same side, gross amount and description, within
+ * `NEAR_DUPLICATE_DAYS` of each other but not on the same day: the same
+ * receipt booked twice a day or two apart. An empty description never matches.
+ */
+function nearDuplicate(
+  a: Pick<Entry, "date" | "type" | "description"> & { gross: number },
+  b: Pick<Entry, "date" | "type" | "description"> & { gross: number }
+): boolean {
+  if (a.type !== b.type || a.gross !== b.gross || a.date === b.date)
+    return false
+  if (Math.abs(daysFrom(a.date, b.date)) > NEAR_DUPLICATE_DAYS) return false
+  const text = normalizeName(a.description)
+  return text !== "" && text === normalizeName(b.description)
 }
 
 /** Whether two entries are parts of one split receipt, which share figures and files on purpose. */
@@ -95,16 +128,23 @@ function sameSplit(a: Pick<Entry, "split">, b: Pick<Entry, "split">): boolean {
 }
 
 /**
- * Another entry that has the same figures as `entry`, if any. The entry
- * itself, by id, and the other parts of its split never count.
+ * Another entry that has the same figures as `entry`, or the same side,
+ * amount and description a few days apart, if any. The entry itself, by id,
+ * and the other parts of its split never count.
  */
 export function duplicateOf(
   entry: Entry,
   entries: readonly Entry[]
 ): Entry | undefined {
   const key = figuresKey(entry)
-  return entries.find(
-    (e) => e.id !== entry.id && !sameSplit(e, entry) && figuresKey(e) === key
+  const others = entries.filter(
+    (e) => e.id !== entry.id && !sameSplit(e, entry)
+  )
+  const exact = others.find((e) => figuresKey(e) === key)
+  if (exact) return exact
+  const mine = { ...entry, gross: calcEntry(entry).gross }
+  return others.find((e) =>
+    nearDuplicate(mine, { ...e, gross: calcEntry(e).gross })
   )
 }
 
@@ -116,16 +156,17 @@ export function duplicateOf(
 export function entryWithReceipt(
   att: Attachment,
   entries: readonly Entry[],
-  exceptId?: string
+  exceptId?: string,
+  hashes?: ReceiptHashes
 ): Entry | undefined {
-  const key = fileKey(att)
+  const key = fileKey(att, hashes)
   if (key === null) return undefined
   const own = entries.find((e) => e.id === exceptId)
   return entries.find(
     (e) =>
       e.id !== exceptId &&
       !(own && sameSplit(e, own)) &&
-      e.atts?.some((a) => fileKey(a) === key)
+      e.atts?.some((a) => fileKey(a, hashes) === key)
   )
 }
 
@@ -174,6 +215,8 @@ export interface EntryCheckContext {
   today: string
   /** The change log, which says when a cash voucher was booked. */
   log: readonly ChangeRecord[]
+  /** The content hashes of the stored receipts read so far. */
+  hashes?: ReceiptHashes
 }
 
 type EntryRule = Rule<EntryCheckContext, string>
@@ -273,7 +316,23 @@ export const ENTRY_RULES = defineRules<EntryCheckContext, string>([
       }
     }
     group((e) => [figuresKey(e)])
-    group((e) => (e.atts ?? []).map(fileKey))
+    group((e) => (e.atts ?? []).map((a) => fileKey(a, ctx.hashes)))
+    /* Same side, amount and description a few days apart: sorted, so each entry meets only those within reach. */
+    const sorted = ctx.entries
+      .map((e) => ({ e, gross: calcEntry(e).gross }))
+      .sort((a, b) => a.e.date.localeCompare(b.e.date))
+    for (let i = 0; i < sorted.length; i++) {
+      for (let j = i + 1; j < sorted.length; j++) {
+        if (daysFrom(sorted[i].e.date, sorted[j].e.date) > NEAR_DUPLICATE_DAYS)
+          break
+        const [a, b] = [sorted[i], sorted[j]]
+        if (sameSplit(a.e, b.e)) continue
+        if (
+          nearDuplicate({ ...a.e, gross: a.gross }, { ...b.e, gross: b.gross })
+        )
+          out.add(a.e.id).add(b.e.id)
+      }
+    }
     return out
   }),
   entryRule("vatNotDeductible", "AVL 114 § 1 mom. 3 kohta", (ctx) =>
@@ -358,7 +417,10 @@ export function flaggedEntryIds(
   entries: readonly Entry[],
   cats: CategoryMap,
   today: string,
-  log: readonly ChangeRecord[] = []
+  log: readonly ChangeRecord[] = [],
+  hashes?: ReceiptHashes
 ): Set<string> {
-  return new Set(ENTRY_RULES.get(check).check({ entries, cats, today, log }))
+  return new Set(
+    ENTRY_RULES.get(check).check({ entries, cats, today, log, hashes })
+  )
 }

@@ -328,6 +328,8 @@ export interface BookState {
   recurring: RecurringEntry[]
   /** The user's rules for picking a category (§8.17). Saved in settings.json. */
   categoryRules: CategoryRule[]
+  /** Fingerprints of the bank statement rows already reviewed (§8.16). Saved in settings.json. */
+  bankSeen: string[]
   /** The balance the asset register starts from (§8.8). Saved in settings.json. */
   assetOpening: AssetOpening | null
   /** The bank balance as last read (§8.12). Saved in settings.json. */
@@ -492,6 +494,7 @@ export interface BookActions {
       archives?: Record<string, ArchiveStub>
       recurring?: RecurringEntry[]
       categoryRules?: CategoryRule[]
+      bankSeen?: string[]
       assetOpening?: AssetOpening | null
       bankBalance?: BankBalance | null
       payMonths?: PayMonths
@@ -594,6 +597,10 @@ export interface BookActions {
   /** Add a rule at the end, or replace the one with the same id (§8.17). */
   upsertCategoryRule(rule: CategoryRule): void
   removeCategoryRule(id: string): void
+  /** Remember bank statement rows as reviewed (§8.16). */
+  addBankSeen(fingerprints: readonly string[]): void
+  /** Forget rows, as an undone booking does. */
+  removeBankSeen(fingerprints: readonly string[]): void
   /** Move a rule one place earlier (-1) or later (1). The first match wins. */
   moveCategoryRule(id: string, step: -1 | 1): void
   setLoanOpening(loanOpening: LoanOpening | null): void
@@ -674,6 +681,7 @@ function initialState(): BookState {
     encrypted: false,
     recurring: [],
     categoryRules: [],
+    bankSeen: [],
     assetOpening: null,
     bankBalance: null,
     payMonths: NO_PAY_MONTHS,
@@ -750,6 +758,7 @@ type PersistedBook = Pick<
   | "encrypted"
   | "recurring"
   | "categoryRules"
+  | "bankSeen"
   | "assetOpening"
   | "bankBalance"
   | "payMonths"
@@ -923,6 +932,7 @@ const BOOK_DATA_KEYS: readonly (keyof BookState)[] = [
   "archives",
   "recurring",
   "categoryRules",
+  "bankSeen",
   "assetOpening",
   "bankBalance",
   "payMonths",
@@ -1020,6 +1030,7 @@ export const useBookStore = create<BookStore>()(
           archives: {},
           recurring: [],
           categoryRules: [],
+          bankSeen: [],
           assetOpening: null,
           bankBalance: null,
           payMonths: NO_PAY_MONTHS,
@@ -1079,6 +1090,7 @@ export const useBookStore = create<BookStore>()(
           archives: {},
           recurring: [],
           categoryRules: [],
+          bankSeen: [],
           assetOpening: null,
           bankBalance: null,
           payMonths: NO_PAY_MONTHS,
@@ -1143,6 +1155,7 @@ export const useBookStore = create<BookStore>()(
           archiveYear: next.archiveYear ?? null,
           recurring: book.recurring,
           categoryRules: s.categoryRules ?? [],
+          bankSeen: s.bankSeen ?? [],
           assetOpening: s.assetOpening ?? null,
           bankBalance: s.bankBalance ?? null,
           payMonths: { ...NO_PAY_MONTHS, ...s.payMonths },
@@ -1410,6 +1423,18 @@ export const useBookStore = create<BookStore>()(
         else categoryRules.push(rule)
         set({ categoryRules, dirty: true })
       },
+      addBankSeen: (fingerprints) => {
+        const have = new Set(get().bankSeen)
+        const fresh = fingerprints.filter((f) => !have.has(f))
+        if (fresh.length)
+          set({ bankSeen: [...get().bankSeen, ...new Set(fresh)], dirty: true })
+      },
+      removeBankSeen: (fingerprints) => {
+        const drop = new Set(fingerprints)
+        const kept = get().bankSeen.filter((f) => !drop.has(f))
+        if (kept.length !== get().bankSeen.length)
+          set({ bankSeen: kept, dirty: true })
+      },
       removeCategoryRule: (id) =>
         set({
           categoryRules: get().categoryRules.filter((r) => r.id !== id),
@@ -1579,6 +1604,7 @@ export const useBookStore = create<BookStore>()(
         encrypted: s.encrypted,
         recurring: s.recurring,
         categoryRules: s.categoryRules,
+        bankSeen: s.bankSeen,
         assetOpening: s.assetOpening,
         bankBalance: s.bankBalance,
         payMonths: s.payMonths,

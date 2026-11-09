@@ -34,8 +34,9 @@ function entry(over: Partial<Entry>): Entry {
 
 const flagged = (
   check: Parameters<typeof flaggedEntryIds>[0],
-  entries: Entry[]
-) => [...flaggedEntryIds(check, entries, cats, TODAY)]
+  entries: Entry[],
+  hashes?: ReadonlyMap<string, string>
+) => [...flaggedEntryIds(check, entries, cats, TODAY, [], hashes)]
 
 describe("futureDate", () => {
   it("flags an entry dated after today", () => {
@@ -138,7 +139,7 @@ describe("duplicate", () => {
 
   it("leaves a different date, side or amount alone", () => {
     const others = [
-      entry({ id: "a", date: "2026-10-16" }),
+      entry({ id: "a", date: "2026-10-25" }),
       entry({ id: "b", type: "income", catId: "300-domestic" }),
       entry({ id: "c", amount: 10_001 }),
     ]
@@ -151,6 +152,87 @@ describe("duplicate", () => {
       entry({ id: "y", date: "2026-10-20", atts: [{ ...receipt, id: "a2" }] }),
     ]
     expect(flagged("duplicate", pair).sort()).toEqual(["x", "y"])
+  })
+
+  describe("by content", () => {
+    const renamed = { ...receipt, id: "a2", name: "kuitti (1).jpg" }
+    const twin = (a: typeof receipt, b: typeof receipt) => [
+      entry({ atts: [a] }),
+      entry({ id: "y", date: "2026-10-20", atts: [b] }),
+    ]
+
+    it("flags a renamed copy of the same file", () => {
+      const hashes = new Map([
+        ["a1", "abc"],
+        ["a2", "abc"],
+      ])
+      expect(
+        flagged("duplicate", twin(receipt, renamed), hashes).sort()
+      ).toEqual(["x", "y"])
+    })
+
+    it("leaves two files that only look alike, once both are read", () => {
+      const lookalike = { ...receipt, id: "a2" }
+      const hashes = new Map([
+        ["a1", "abc"],
+        ["a2", "def"],
+      ])
+      expect(flagged("duplicate", twin(receipt, lookalike), hashes)).toEqual([])
+    })
+
+    it("falls back to name, type and size for a file not read yet", () => {
+      const lookalike = { ...receipt, id: "a2" }
+      expect(
+        flagged("duplicate", twin(receipt, lookalike), new Map()).sort()
+      ).toEqual(["x", "y"])
+    })
+
+    it("finds the entry holding a freshly attached copy", () => {
+      const x = entry({ atts: [receipt] })
+      const hashes = new Map([
+        ["a1", "abc"],
+        ["a2", "abc"],
+      ])
+      expect(entryWithReceipt(renamed, [x], undefined, hashes)).toBe(x)
+    })
+  })
+
+  describe("a few days apart", () => {
+    const near = (over: Partial<Entry>) =>
+      flagged("duplicate", [entry({}), entry({ id: "y", ...over })]).sort()
+
+    it("flags the same side, amount and description within three days", () => {
+      expect(near({ date: "2026-10-18" })).toEqual(["x", "y"])
+      expect(near({ date: "2026-10-12", description: " testi " })).toEqual([
+        "x",
+        "y",
+      ])
+    })
+
+    it("leaves four days, another description or an empty one alone", () => {
+      expect(near({ date: "2026-10-19" })).toEqual([])
+      expect(near({ date: "2026-10-16", description: "Muu" })).toEqual([])
+      expect(
+        flagged("duplicate", [
+          entry({ description: "" }),
+          entry({ id: "y", date: "2026-10-16", description: "" }),
+        ])
+      ).toEqual([])
+    })
+
+    it("leaves a split receipt's parts alone", () => {
+      expect(
+        flagged("duplicate", [
+          entry({ split: "s" }),
+          entry({ id: "y", date: "2026-10-16", split: "s" }),
+        ])
+      ).toEqual([])
+    })
+
+    it("is found for the dialog", () => {
+      const x = entry({})
+      expect(duplicateOf({ ...x, id: "new", date: "2026-10-17" }, [x])).toBe(x)
+    })
   })
 
   it("ignores receipts missing from the file", () => {
