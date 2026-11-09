@@ -33,7 +33,7 @@ Part of the project specification. `CLAUDE.md` is the index and holds the conven
 ## 14. Open questions and ideas not yet done
 
 - Undo for edits beyond the 10-second toast (§8.11), for example a history of an entry's earlier versions. The change log holds the old values but the app can not restore from it. Autosave (§7.5) makes a mistake reach the file within seconds, which is why it is opt-in.
-- Corrections (332 to 335) in the VAT file (§8.7). The VAT file itself exists; the user uploads it. The Form 5 file (§8.8) was accepted by Ilmoitin in a test upload on 8 November 2026, with remark #1410 on a full write-off of a small balance.
+- The VAT file's corrections (332 to 335) are written as a reason choice (§8.7); the app does not compare a replacement return with the one filed before it beyond the figure changes the filed mark already shows. The Form 5 file (§8.8) was accepted by Ilmoitin in a test upload on 8 November 2026, with remark #1410 on a full write-off of a small balance.
 - Form 5 fields the app leaves out on purpose: surplus from listed co-operatives (325, 326), since the specification says no co-operative was listed in 2026 (remark #2048); the detail behind 388 and 392 (401 to 420), the home use (431 to 433, 386), the spouse split (369 to 372), 393 and the double-entry equity (748, 741 to 743). None is mandatory (§8.8).
 - The VAT return of a business that stops trading (§6.5).
 - Invoicing (§8.27). Open: how a trader who is not registered for VAT invoices (rate 0 and which note), the source and wording of the late-payment interest, whether per-row VAT rounding is needed, and the exact required fields on a Finnish invoice, to be checked on vero.fi before the PDF is laid out.

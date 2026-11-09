@@ -40,6 +40,14 @@ const AMOUNT_CODES = [
   "320",
 ] as const
 
+/**
+ * The reason a replacement return gives for the correction: the fields 332 to
+ * 335 of the specification, each a flag that is `1` when set. At most one
+ * applies; none means the file is an original return.
+ */
+export const CORRECTION_REASONS = ["332", "333", "334", "335"] as const
+export type CorrectionReason = (typeof CORRECTION_REASONS)[number]
+
 /** Why a period cannot be written as a file. */
 export type VatFileBlock =
   /** The business ID is not set, and 010 is required. */
@@ -58,6 +66,8 @@ export interface VatFileInput {
   phone: string | null
   /** When the file is made, for 198. */
   now: Date
+  /** The reason for a replacement return (§8.7), or absent for an original. */
+  correction?: CorrectionReason | null
 }
 
 export type VatFileResult =
@@ -134,6 +144,8 @@ export function vatReturnFile(input: VatFileInput): VatFileResult {
     }
   }
 
+  if (input.correction) lines.push(`${input.correction}:1`)
+
   const phone = vatFilePhone(input.phone)
   if (phone) lines.push(`042:${phone}`)
   lines.push("999:1")
@@ -141,6 +153,6 @@ export function vatReturnFile(input: VatFileInput): VatFileResult {
   return {
     ok: true,
     text: lines.join("\r\n") + "\r\n",
-    fileName: `VSRALVKV-${input.businessId}-${period.key}.txt`,
+    fileName: `VSRALVKV-${input.businessId}-${period.key}${input.correction ? "-korvaava" : ""}.txt`,
   }
 }

@@ -41,7 +41,12 @@ import { useVatPeriod } from "@/hooks/use-vat-period"
 import { useVatReturnReport } from "@/hooks/use-vat-return-report"
 import { downloadReport } from "@/lib/commands/memo-commands"
 import { saveBlob } from "@/lib/browser/download"
-import { vatReturnFile } from "@/lib/domain/vat-file"
+import {
+  CORRECTION_REASONS,
+  vatReturnFile,
+  type CorrectionReason,
+} from "@/lib/domain/vat-file"
+import { OptionSelect } from "@/components/common/option-select"
 import { indexCategories } from "@/lib/domain/types"
 import type { RuleSeverity } from "@/lib/domain/rules/engine"
 import {
@@ -151,6 +156,9 @@ function VatReturnForm() {
   const sections = React.useMemo(() => vatReturnSections(report), [report])
   const businessId = useBookStore((s) => s.businessId)
   const businessPhone = useBookStore((s) => s.businessPhone)
+  const [correction, setCorrection] = React.useState<CorrectionReason | null>(
+    null
+  )
   const file = React.useMemo(
     () =>
       currentStatus === "open" || currentStatus === "future"
@@ -161,8 +169,9 @@ function VatReturnForm() {
             businessId,
             phone: businessPhone,
             now: new Date(),
+            correction,
           }),
-    [report, current, currentStatus, businessId, businessPhone]
+    [report, current, currentStatus, businessId, businessPhone, correction]
   )
   const canMark = canMarkFiled(items)
   const setVatFiled = useBookStore((s) => s.setVatFiled)
@@ -525,6 +534,32 @@ function VatReturnForm() {
                   </div>
                 </>
               )}
+              {currentStatus !== "before" ? (
+                <div className="flex max-w-md flex-col gap-1.5">
+                  <span className="text-sm font-medium">
+                    {f.t("vat.correctionLabel")}
+                  </span>
+                  <OptionSelect
+                    label={f.t("vat.correctionLabel")}
+                    value={correction ?? "none"}
+                    onChange={(v) =>
+                      setCorrection(
+                        v === "none" ? null : (v as CorrectionReason)
+                      )
+                    }
+                    options={[
+                      { value: "none", label: f.t("vat.correctionNone") },
+                      ...CORRECTION_REASONS.map((code) => ({
+                        value: code,
+                        label: `${code} ${f.t(`vat.correction${code}`)}`,
+                      })),
+                    ]}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {f.t("vat.correctionHint")}
+                  </p>
+                </div>
+              ) : null}
             </div>
           ) : null}
 

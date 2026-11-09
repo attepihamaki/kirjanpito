@@ -168,4 +168,28 @@ describe("vatFilePhone", () => {
     expect(vatFilePhone("abc")).toBeNull()
     expect(vatFilePhone(null)).toBeNull()
   })
+
+  it("writes the reason of a replacement return as a 1 flag before 042 and 999", () => {
+    const period = vatPeriods("month", 2026)[9]
+    const report = vatReport(filterPeriod(sample, asPeriod(period)), cats)
+    const r = vatReturnFile({
+      report,
+      period,
+      businessId: "0112038-9",
+      phone: "040 1234567",
+      now,
+      correction: "333",
+    })
+    if (!r.ok) throw new Error(r.reason)
+    const lines = r.text.trim().split("\r\n")
+    expect(lines.slice(-3)).toEqual(["333:1", "042:040 1234567", "999:1"])
+    expect(lines.filter((l) => /^33[2-5]:/.test(l))).toEqual(["333:1"])
+    expect(r.fileName).toContain("korvaava")
+  })
+
+  it("writes no reason field for an original return", () => {
+    const r = make(sample, "month", 10)
+    if (!r.ok) throw new Error(r.reason)
+    expect(r.text).not.toMatch(/^33[2-5]:/m)
+  })
 })

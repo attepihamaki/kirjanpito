@@ -1488,6 +1488,28 @@ export const APP_DICT = {
     "Lataa Ilmoitin.fi-tiedosto",
     "Download Ilmoitin.fi file",
   ],
+  "vat.correctionLabel": [
+    "Korvaava ilmoitus: korjauksen syy",
+    "Replacement return: reason for the correction",
+  ],
+  "vat.correctionNone": [
+    "Ei korjaus, alkuperäinen ilmoitus",
+    "Not a correction, an original return",
+  ],
+  "vat.correction332": [
+    "Laskuvirhe / ilmoituksen täyttövirhe",
+    "Calculation or filling-in error",
+  ],
+  "vat.correction333": [
+    "Verotarkastuksessa saatu ohjaus",
+    "Guidance given in a tax audit",
+  ],
+  "vat.correction334": ["Oikeuskäytännön muutos", "Change in case law"],
+  "vat.correction335": ["Laintulkintavirhe", "Error in interpreting the law"],
+  "vat.correctionHint": [
+    "Korvaava ilmoitus antaa kaikki kauden tiedot uudelleen ja korvaa aiemman. Valitse syy vain silloin, kun korjaat jo annettua ilmoitusta.",
+    "A replacement return gives all of the period's figures again and replaces the earlier one. Choose a reason only when you are correcting a return already given.",
+  ],
   "vat.fileHint": [
     "Tiedosto ladataan Ilmoitin.fi-palveluun itse. Kirjanpito ei lähetä mitään.",
     "You upload the file to Ilmoitin.fi yourself. The app sends nothing.",
