@@ -3102,6 +3102,50 @@ export const APP_DICT = {
     "Samalle asiakkaalle on jo annettu samanlainen lasku {n} ({d}).",
     "An identical invoice {n} ({d}) has already been issued to this customer.",
   ],
+  "invoice.paidAmount": ["Maksettu summa", "Amount paid"],
+  "invoice.paidAmountHint": [
+    "Avoinna {n}. Pienempi summa jakaa laskun osamaksuksi.",
+    "{n} is open. A smaller amount records a part payment.",
+  ],
+  "invoice.stillOwed": ["Avoinna {n}", "{n} open"],
+  "invoice.reminder": ["Maksumuistutus", "Payment reminder"],
+  "invoice.reminderMade": [
+    "Maksumuistutus laskusta {n} tehty",
+    "Payment reminder for invoice {n} made",
+  ],
+  "invoice.reminderDate": ["Muistutuksen päivä", "Reminder date"],
+  "invoice.reminderFee": ["Muistutusmaksu", "Reminder fee"],
+  "invoice.reminderRate": [
+    "Viivästyskorko, % vuodessa",
+    "Late payment interest, % a year",
+  ],
+  "invoice.reminderNoRate": [
+    "Tälle päivälle ei ole tallennettua korkolain mukaista korkoa. Anna korko itse tai aseta se laskutuksen asetuksissa.",
+    "There is no stored statutory rate for this date. Enter a rate here or set one in the invoicing settings.",
+  ],
+  "invoice.reminderSummary": [
+    "Avoinna {open} + korko {interest} ({days} pv) + maksu {fee} = {total}. Uusi eräpäivä {due}.",
+    "{open} open + interest {interest} ({days} days) + fee {fee} = {total}. New due date {due}.",
+  ],
+  "invoice.reminderCreate": ["Tee muistutus", "Make reminder"],
+  "invoice.remindersSent": [
+    "{n} muistutusta, viimeisin {d}",
+    "{n} reminders, latest {d}",
+  ],
+  "invoice.settingsReminderFee": ["Muistutusmaksu, €", "Reminder fee, €"],
+  "invoice.settingsInterest": [
+    "Viivästyskorko, % (tyhjä = korkolain mukainen)",
+    "Late payment interest, % (empty = statutory)",
+  ],
+  "invoice.tabAging": ["Saatavat", "Receivables"],
+  "invoice.agingEmpty": ["Ei maksamattomia laskuja.", "No unpaid invoices."],
+  "invoice.agingNotDue": ["Ei erääntynyt", "Not yet due"],
+  "invoice.agingLate14": ["1–14 pv", "1–14 days"],
+  "invoice.agingLate30": ["15–30 pv", "15–30 days"],
+  "invoice.agingLate60": ["31–60 pv", "31–60 days"],
+  "invoice.agingLater": ["Yli 60 pv", "Over 60 days"],
+  "invoice.agingTotal": ["Yhteensä", "Total"],
+  "invoice.agingItem": ["Lasku {n}, eräpäivä {d}", "Invoice {n}, due {d}"],
   "invoice.issueHint": [
     "Annettua laskua ei voi muokata. Virhe korjataan hyvityslaskulla.",
     "An issued invoice cannot be edited. A mistake is corrected with a credit note.",
@@ -3701,6 +3745,10 @@ export const APP_DICT = {
   "bank.actionSkip": ["Ohita", "Skip"],
   "bank.actionNew": ["Uusi tosite", "New voucher"],
   "bank.actionPaid": ["Maksettu: {v}", "Paid: {v}"],
+  "bank.statusPartial": [
+    "Osamaksu laskulle: kirjataan vain saatu summa",
+    "Part payment of an invoice: only the amount received is recorded",
+  ],
   "bank.statusReference": [
     "Viitenumero täsmää laskuun, ja summa on sen avoin määrä.",
     "The reference number matches an invoice and the amount is what it still owes.",

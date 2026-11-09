@@ -19,6 +19,10 @@ export interface InvoiceSettings {
   terms: Record<InvoiceLang, string>
   /** The number the series starts from; later numbers are the highest used plus one. */
   firstNumber: number
+  /** The fee a payment reminder charges, in cents. */
+  reminderFee: number
+  /** The late-payment rate in percent a reminder charges, or null for the statutory rate. */
+  interestRate: number | null
 }
 
 export const DEFAULT_INVOICE_SETTINGS: InvoiceSettings = {
@@ -30,6 +34,8 @@ export const DEFAULT_INVOICE_SETTINGS: InvoiceSettings = {
   termDays: 14,
   terms: { fi: "", en: "" },
   firstNumber: 1001,
+  reminderFee: 500,
+  interestRate: null,
 }
 
 /** The postal address and contact of a party on an invoice. */
@@ -109,6 +115,23 @@ export interface Invoice {
    * number it held, which issuing it again takes back. Absent otherwise.
    */
   reservedNumber?: number
+  /** The payment reminders made for it, oldest first (§8.27). Absent while none was made. */
+  reminders?: Reminder[]
+}
+
+/** One payment reminder, kept as a record of what the customer was asked to pay. */
+export interface Reminder {
+  id: string
+  /** ISO date the reminder was made. */
+  date: string
+  /** The balance owed when it was made, in cents. */
+  open: number
+  /** The late-payment rate charged, in percent a year. */
+  rate: number
+  interest: number
+  fee: number
+  /** The due date the reminder gave. */
+  newDueDate: string
 }
 
 /** A party with nothing filled in but the country, for the editor to start from. */

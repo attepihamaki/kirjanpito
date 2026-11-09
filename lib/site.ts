@@ -144,6 +144,7 @@ export const SETTINGS_ROUTES = {
 export const INVOICE_ROUTES = {
   list: APP_ROUTES.invoices,
   customers: `${APP_ROUTES.invoices}/customers`,
+  aging: `${APP_ROUTES.invoices}/aging`,
 } as const
 
 /**

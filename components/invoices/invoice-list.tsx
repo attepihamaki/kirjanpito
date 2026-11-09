@@ -4,6 +4,7 @@ import * as React from "react"
 import {
   CheckIcon,
   DownloadIcon,
+  BellIcon,
   FilePenLineIcon,
   PencilIcon,
   SendIcon,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react"
 
 import { DateInput } from "@/components/common/date-input"
+import { EuroInput } from "@/components/common/euro-input"
 import { Money } from "@/components/common/money"
 import { Panel } from "@/components/common/panel"
 import { Pill } from "@/components/common/pill"
@@ -26,6 +28,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Empty, EmptyDescription } from "@/components/ui/empty"
+import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -39,19 +42,24 @@ import { useCommandCtx } from "@/hooks/use-commands"
 import {
   deleteIssuedInvoice,
   downloadInvoicePdf,
-  markInvoicePaid,
+  makeReminder,
+  recordInvoicePayment,
   reopenIssuedInvoice,
   sendInvoice,
   startCreditNote,
 } from "@/lib/commands/invoice-commands"
+import { evalAmount } from "@/lib/domain/amount-expr"
 import { todayIso } from "@/lib/domain/dates"
 import type { Invoice } from "@/lib/domain/invoice"
 import { invoiceTotals } from "@/lib/domain/invoice-calc"
+import { reminderFigures, reminderRate } from "@/lib/domain/invoice-reminder"
+import { owedOn, partlyPaid } from "@/lib/domain/invoice-payment"
 import {
   invoiceStatus,
   openEntries,
   type InvoiceStatus,
 } from "@/lib/domain/invoice-status"
+import { formatMoneyPlain } from "@/lib/domain/money"
 import { useBookStore } from "@/stores/book-store"
 
 const STATUS_TONE = {
@@ -86,13 +94,20 @@ function MarkPaidDialog({
     const today = todayIso()
     return today < invoice.date ? invoice.date : today
   })
+  const owed = useBookStore((s) =>
+    owedOn(invoice, new Map(s.entries.map((e) => [e.id, e])))
+  )
+  const [amount, setAmount] = React.useState(formatMoneyPlain(owed))
   const [bad, setBad] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
+  const cents = evalAmount(amount)
+  const amountBad = cents == null || cents <= 0 || cents > owed
 
   const confirm = async () => {
+    if (cents == null || amountBad) return
     setBusy(true)
     try {
-      const done = await markInvoicePaid(ctx, invoice.id, on)
+      const done = await recordInvoicePayment(ctx, invoice.id, cents, on)
       if (done) onClose()
     } finally {
       setBusy(false)
@@ -109,6 +124,17 @@ function MarkPaidDialog({
           <DialogDescription>{f.t("invoice.markPaid")}</DialogDescription>
         </DialogHeader>
         <label className="flex flex-col gap-1.5 text-sm font-medium">
+          {f.t("invoice.paidAmount")}
+          <EuroInput
+            value={amount}
+            aria-invalid={amountBad}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+          <span className="text-xs font-normal text-muted-foreground">
+            {f.t("invoice.paidAmountHint", { n: f.money(owed) })}
+          </span>
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm font-medium">
           {f.t("invoice.paidOn")}
           <DateInput
             value={on}
@@ -121,8 +147,117 @@ function MarkPaidDialog({
           <Button variant="outline" onClick={onClose}>
             {f.t("common.cancel")}
           </Button>
-          <Button disabled={bad || on === "" || busy} onClick={confirm}>
+          <Button
+            disabled={bad || on === "" || amountBad || busy}
+            onClick={confirm}
+          >
             {f.t("invoice.markPaid")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** Ask for the day, fee and rate of a payment reminder, then make it (§8.27). */
+function ReminderDialog({
+  invoice,
+  onClose,
+}: {
+  invoice: Invoice
+  onClose: () => void
+}) {
+  const f = useFormatters()
+  const ctx = useCommandCtx()
+  const settings = useBookStore((s) => s.invoiceSettings)
+  const owed = useBookStore((s) =>
+    owedOn(invoice, new Map(s.entries.map((e) => [e.id, e])))
+  )
+  const [on, setOn] = React.useState(todayIso())
+  const [bad, setBad] = React.useState(false)
+  const [fee, setFee] = React.useState(formatMoneyPlain(settings.reminderFee))
+  const stored = reminderRate(settings, on)
+  const [rate, setRate] = React.useState<string | null>(null)
+  const rateText =
+    rate ?? (stored === null ? "" : String(stored).replace(".", ","))
+  const rateValue = Number(rateText.replace(",", "."))
+  const rateBad =
+    rateText.trim() === "" || !(rateValue >= 0 && rateValue <= 100)
+  const feeCents = evalAmount(fee)
+  const figures =
+    !rateBad && feeCents != null && feeCents >= 0 && !bad && on !== ""
+      ? reminderFigures(invoice, owed, on, rateValue, feeCents)
+      : null
+  const [busy, setBusy] = React.useState(false)
+
+  const make = async () => {
+    if (!figures) return
+    setBusy(true)
+    try {
+      if (await makeReminder(ctx, invoice.id, figures, on)) onClose()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {f.t("invoice.viewTitle", { n: invoice.number ?? 0 })}
+          </DialogTitle>
+          <DialogDescription>{f.t("invoice.reminder")}</DialogDescription>
+        </DialogHeader>
+        <label className="flex flex-col gap-1.5 text-sm font-medium">
+          {f.t("invoice.reminderDate")}
+          <DateInput
+            value={on}
+            onValueChange={setOn}
+            onBadChange={setBad}
+            min={invoice.dueDate}
+          />
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm font-medium">
+          {f.t("invoice.reminderRate")}
+          <Input
+            inputMode="decimal"
+            value={rateText}
+            aria-invalid={rateBad}
+            onChange={(e) => setRate(e.target.value)}
+          />
+          {stored === null && rate === null ? (
+            <span className="text-xs font-normal text-warning">
+              {f.t("invoice.reminderNoRate")}
+            </span>
+          ) : null}
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm font-medium">
+          {f.t("invoice.reminderFee")}
+          <EuroInput
+            value={fee}
+            aria-invalid={feeCents == null}
+            onChange={(e) => setFee(e.target.value)}
+          />
+        </label>
+        {figures ? (
+          <p className="text-sm text-muted-foreground">
+            {f.t("invoice.reminderSummary", {
+              open: f.money(figures.open),
+              interest: f.money(figures.interest),
+              days: figures.days,
+              fee: f.money(figures.fee),
+              total: f.money(figures.total),
+              due: f.date(figures.newDueDate),
+            })}
+          </p>
+        ) : null}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            {f.t("common.cancel")}
+          </Button>
+          <Button disabled={!figures || busy} onClick={make}>
+            {f.t("invoice.reminderCreate")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -139,6 +274,7 @@ export function InvoiceList() {
   const setInvoices = useBookStore((s) => s.setInvoices)
   const openDialog = useBookStore((s) => s.openDialog)
   const [paying, setPaying] = React.useState<Invoice | null>(null)
+  const [reminding, setReminding] = React.useState<Invoice | null>(null)
 
   const today = todayIso()
   const byId = React.useMemo(
@@ -211,9 +347,24 @@ export function InvoiceList() {
                   </TableCell>
                   <TableCell className="text-right">
                     <Money cents={invoiceTotals(invoice.rows).gross} />
+                    {partlyPaid(invoice, byId) ? (
+                      <div className="text-xs text-muted-foreground">
+                        {f.t("invoice.stillOwed", {
+                          n: f.money(owedOn(invoice, byId)),
+                        })}
+                      </div>
+                    ) : null}
                   </TableCell>
                   <TableCell>
                     <Pill tone={STATUS_TONE[status]}>{label[status]}</Pill>
+                    {invoice.reminders?.length ? (
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {f.t("invoice.remindersSent", {
+                          n: invoice.reminders.length,
+                          d: f.date(invoice.reminders.at(-1)!.date),
+                        })}
+                      </div>
+                    ) : null}
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
                     <Button
@@ -296,6 +447,16 @@ export function InvoiceList() {
                             <Trash2Icon />
                           </Button>
                         ) : null}
+                        {status === "overdue" && invoice.credits === null ? (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`${f.t("invoice.reminder")}: ${invoice.number}`}
+                            onClick={() => setReminding(invoice)}
+                          >
+                            <BellIcon />
+                          </Button>
+                        ) : null}
                         {openEntries(invoice, byId).length > 0 ? (
                           <Button
                             variant="ghost"
@@ -317,6 +478,12 @@ export function InvoiceList() {
       )}
       {paying ? (
         <MarkPaidDialog invoice={paying} onClose={() => setPaying(null)} />
+      ) : null}
+      {reminding ? (
+        <ReminderDialog
+          invoice={reminding}
+          onClose={() => setReminding(null)}
+        />
       ) : null}
     </Panel>
   )

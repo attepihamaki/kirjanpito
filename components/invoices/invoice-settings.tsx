@@ -2,6 +2,7 @@
 
 import * as React from "react"
 
+import { EuroInput } from "@/components/common/euro-input"
 import { Panel } from "@/components/common/panel"
 import { useFormatters } from "@/components/lang-provider"
 import {
@@ -12,6 +13,8 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { evalAmount } from "@/lib/domain/amount-expr"
+import { formatMoneyPlain } from "@/lib/domain/money"
 import { isFinnishIban, parseIban, formatIban } from "@/lib/domain/iban"
 import type { InvoiceSettings } from "@/lib/domain/invoice"
 import { useBookStore } from "@/stores/book-store"
@@ -39,6 +42,11 @@ export function InvoiceSettingsForm() {
     termsFi: settings.terms.fi,
     termsEn: settings.terms.en,
     firstNumber: String(settings.firstNumber),
+    reminderFee: formatMoneyPlain(settings.reminderFee),
+    interestRate:
+      settings.interestRate === null
+        ? ""
+        : String(settings.interestRate).replace(".", ","),
   })
   const [ibanInvalid, setIbanInvalid] = React.useState(false)
   const set = (patch: Partial<typeof drafts>) =>
@@ -58,6 +66,8 @@ export function InvoiceSettingsForm() {
     termsFi: React.useId(),
     termsEn: React.useId(),
     first: React.useId(),
+    fee: React.useId(),
+    interest: React.useId(),
   }
 
   const commitText = (key: TextKey) => {
@@ -85,6 +95,28 @@ export function InvoiceSettingsForm() {
     if (Number.isInteger(days) && days >= 0 && days <= 365)
       save({ termDays: days })
     else set({ termDays: String(settings.termDays) })
+  }
+  const commitFee = () => {
+    const cents = evalAmount(drafts.reminderFee)
+    if (cents != null && cents >= 0 && cents <= 100_000)
+      save({ reminderFee: cents })
+    else set({ reminderFee: formatMoneyPlain(settings.reminderFee) })
+  }
+  const commitInterest = () => {
+    const text = drafts.interestRate.trim()
+    if (text === "") {
+      save({ interestRate: null })
+      return
+    }
+    const rate = Number(text.replace(",", "."))
+    if (rate >= 0 && rate <= 100) save({ interestRate: rate })
+    else
+      set({
+        interestRate:
+          settings.interestRate === null
+            ? ""
+            : String(settings.interestRate).replace(".", ","),
+      })
   }
   const commitFirst = () => {
     const n = Number(drafts.firstNumber)
@@ -219,6 +251,30 @@ export function InvoiceSettingsForm() {
               set({ termsEn: en })
               save({ terms: { ...settings.terms, en } })
             }}
+          />
+        </Field>
+        <Field className="w-60">
+          <FieldLabel htmlFor={ids.fee}>
+            {f.t("invoice.settingsReminderFee")}
+          </FieldLabel>
+          <EuroInput
+            id={ids.fee}
+            value={drafts.reminderFee}
+            onChange={(e) => set({ reminderFee: e.target.value })}
+            onBlur={commitFee}
+          />
+        </Field>
+        <Field className="w-60">
+          <FieldLabel htmlFor={ids.interest}>
+            {f.t("invoice.settingsInterest")}
+          </FieldLabel>
+          <Input
+            id={ids.interest}
+            inputMode="decimal"
+            className="tabular"
+            value={drafts.interestRate}
+            onChange={(e) => set({ interestRate: e.target.value })}
+            onBlur={commitInterest}
           />
         </Field>
         <Field className="w-40">

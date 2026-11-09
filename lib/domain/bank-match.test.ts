@@ -400,11 +400,15 @@ describe("proposeForRows, invoices (§8.27)", () => {
     expect(proposals[1].kind).not.toBe("match")
   })
 
-  it("does not match a part payment or an overpayment by reference", () => {
+  it("proposes a part payment as such and leaves an overpayment alone", () => {
     const ctxWith = withInvoices([sale("a", null)], [invoice()])
-    expect(proposeForRows([incoming({ amount: 5000 })], ctxWith)[0].kind).toBe(
-      "new"
-    )
+    expect(
+      proposeForRows([incoming({ amount: 5000 })], ctxWith)[0]
+    ).toMatchObject({
+      kind: "match",
+      confidence: "reference",
+      partial: { invoiceId: "i1" },
+    })
     expect(
       proposeForRows([incoming({ amount: 20_000 })], ctxWith)[0].kind
     ).toBe("new")

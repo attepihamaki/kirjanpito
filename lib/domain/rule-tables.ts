@@ -29,6 +29,8 @@ export const LIMIT_KEYS = [
   "depreciationSmallBalance",
   "smallPurchaseItem",
   "smallPurchaseYear",
+  /* The general late-payment rate, in percent, from the reference rate set half-yearly. */
+  "lateInterestRate",
 ] as const
 
 export type LimitKey = (typeof LIMIT_KEYS)[number]

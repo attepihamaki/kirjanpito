@@ -109,9 +109,7 @@
     "singleEntryTurnover": [
       { "from": null, "value": 20000000, "source": "KPL 1:1a" }
     ],
-    "microAssets": [
-      { "from": null, "value": 45000000, "source": "KPL 1:4b" }
-    ],
+    "microAssets": [{ "from": null, "value": 45000000, "source": "KPL 1:4b" }],
     "microTurnover": [
       { "from": null, "value": 90000000, "source": "KPL 1:4b" }
     ],
@@ -134,6 +132,13 @@
         "from": null,
         "value": 360000,
         "source": "vero.fi, Poistot ja pienhankinnat"
+      }
+    ],
+    "lateInterestRate": [
+      {
+        "from": "2026-07-01",
+        "value": 9.5,
+        "source": "Korkolaki 4 § 1 mom.: viitekorko 2,5 % + 7 %-yksikköä; Suomen Pankki 30.6.2026, korkolain mukainen viitekorko 1.7.-31.12.2026"
       }
     ],
     "depreciationSmallBalance": [

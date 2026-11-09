@@ -8,14 +8,18 @@ import {
 import qrcode from "qrcode-generator"
 
 import { code128C } from "@/lib/domain/code128"
-import { formatDate } from "@/lib/domain/dates"
+import { daysBetween, formatDate } from "@/lib/domain/dates"
 import { formatIban } from "@/lib/domain/iban"
-import type { Invoice } from "@/lib/domain/invoice"
+import type { Invoice, Reminder } from "@/lib/domain/invoice"
 import { invoiceTotals, rowNet } from "@/lib/domain/invoice-calc"
 import { virtualBarcode } from "@/lib/domain/invoice-barcode"
 import { epcPayload } from "@/lib/domain/invoice-epc"
 import { formatReference } from "@/lib/domain/invoice-reference"
-import { invoiceLabels, type InvoiceLabels } from "@/lib/domain/invoice-labels"
+import {
+  invoiceLabels,
+  reminderLabels,
+  type InvoiceLabels,
+} from "@/lib/domain/invoice-labels"
 import { toWinAnsi } from "@/lib/domain/memo-voucher"
 import { formatMoneyPlain } from "@/lib/domain/money"
 
@@ -198,10 +202,16 @@ function qrRows(payload: string): boolean[][] {
 }
 
 /** The payment slip, drawn in the bottom area of the page the cursor is on. */
-function drawSlip(c: Cursor, invoice: Invoice, labels: InvoiceLabels): void {
+function drawSlip(
+  c: Cursor,
+  invoice: Invoice,
+  labels: InvoiceLabels,
+  pay?: { cents: number; dueDate: string }
+): void {
   const { page, fonts } = c
   const seller = invoice.seller!
-  const totals = invoiceTotals(invoice.rows)
+  const totals = { gross: pay?.cents ?? invoiceTotals(invoice.rows).gross }
+  const dueDate = pay?.dueDate ?? invoice.dueDate
   const reference = invoice.reference!
   const left = MARGIN
   let y = SLIP_TOP
@@ -223,16 +233,9 @@ function drawSlip(c: Cursor, invoice: Invoice, labels: InvoiceLabels): void {
   put(page, fonts, formatReference(reference), left + 90, y, { bold: true })
   y -= 15
   put(page, fonts, labels.due, left, y, { size: 8, color: MUTED })
-  put(
-    page,
-    fonts,
-    formatDate(invoice.dueDate, invoice.language),
-    left + 90,
-    y,
-    {
-      bold: true,
-    }
-  )
+  put(page, fonts, formatDate(dueDate, invoice.language), left + 90, y, {
+    bold: true,
+  })
   y -= 15
   put(page, fonts, labels.toPay, left, y, { size: 8, color: MUTED })
   put(page, fonts, formatMoneyPlain(totals.gross), left + 90, y, {
@@ -263,7 +266,7 @@ function drawSlip(c: Cursor, invoice: Invoice, labels: InvoiceLabels): void {
     iban: seller.iban,
     cents: totals.gross,
     reference,
-    dueDate: invoice.dueDate,
+    dueDate,
   })
   const bars = code ? code128C(code) : null
   if (code && bars) {
@@ -523,5 +526,114 @@ export async function renderInvoicePdf(
     }
     drawSlip(c, invoice, labels)
   }
+  return doc.save()
+}
+
+/**
+ * A payment reminder for an issued invoice (§8.27): the seller and buyer as
+ * on the invoice, the open balance, interest and fee, and a payment slip for
+ * the total with the new due date.
+ */
+export async function renderReminderPdf(
+  invoice: Invoice,
+  reminder: Reminder
+): Promise<Uint8Array> {
+  if (!invoice.seller || invoice.number === null || !invoice.reference) {
+    throw new Error("only an issued invoice can be reminded")
+  }
+  const labels = invoiceLabels(invoice.language)
+  const words = reminderLabels(invoice.language)
+  const lang = invoice.language
+  const doc = await PDFDocument.create()
+  doc.setTitle(toWinAnsi(words.title))
+  doc.setCreator("Kirjanpito")
+  const fonts: Fonts = {
+    regular: await doc.embedFont(StandardFonts.Helvetica),
+    bold: await doc.embedFont(StandardFonts.HelveticaBold),
+  }
+  const c: Cursor = { doc, page: doc.addPage(A4), fonts, y: A4[1] - MARGIN }
+  const { seller } = invoice
+
+  const top = c.y
+  paragraph(c, seller.name, MARGIN, 260, { size: 14, bold: true })
+  for (const line of partyLines(seller, seller.businessId, labels).slice(1)) {
+    paragraph(c, line, MARGIN, 260, { size: 9, color: MUTED })
+  }
+  const sellerBottom = c.y
+  c.y = top
+  put(c.page, fonts, words.title, RIGHT, c.y - 14, {
+    size: 16,
+    bold: true,
+    align: "right",
+  })
+  c.y -= 26
+  const facts: [string, string][] = [
+    [labels.number, String(invoice.number)],
+    [labels.date, formatDate(reminder.date, lang)],
+    [labels.reference, formatReference(invoice.reference)],
+  ]
+  for (const [label, value] of facts) {
+    put(c.page, fonts, label, 330, c.y - 9, { size: 8, color: MUTED })
+    put(c.page, fonts, value, RIGHT, c.y - 9, {
+      size: 10,
+      bold: true,
+      align: "right",
+    })
+    c.y -= 14
+  }
+  c.y = Math.min(c.y, sellerBottom) - 14
+
+  paragraph(c, labels.buyer, MARGIN, 260, { size: 8, color: MUTED })
+  paragraph(c, invoice.customer.name, MARGIN, 260, { bold: true })
+  for (const line of partyLines(invoice.customer, null, labels).slice(1)) {
+    paragraph(c, line, MARGIN, 260, { size: 9 })
+  }
+  c.y -= 18
+
+  paragraph(
+    c,
+    words.intro(invoice.number, formatDate(invoice.dueDate, lang)),
+    MARGIN,
+    RIGHT - MARGIN
+  )
+  c.y -= 12
+
+  const days = Math.max(0, daysBetween(invoice.dueDate, reminder.date))
+  const lines: [string, number][] = [
+    [words.openBalance, reminder.open],
+    [
+      words.interest(String(reminder.rate).replace(".", ","), days),
+      reminder.interest,
+    ],
+    [words.fee, reminder.fee],
+  ]
+  for (const [label, cents] of lines) {
+    put(c.page, fonts, label, MARGIN, c.y - 10, { size: 10 })
+    put(c.page, fonts, formatMoneyPlain(cents), RIGHT, c.y - 10, {
+      align: "right",
+    })
+    c.y -= 15
+  }
+  rule(c)
+  const total = reminder.open + reminder.interest + reminder.fee
+  put(c.page, fonts, words.total, MARGIN, c.y - 12, { size: 12, bold: true })
+  put(c.page, fonts, formatMoneyPlain(total), RIGHT, c.y - 12, {
+    size: 12,
+    bold: true,
+    align: "right",
+  })
+  c.y -= 22
+  put(c.page, fonts, words.newDue, MARGIN, c.y - 10, { size: 10 })
+  put(c.page, fonts, formatDate(reminder.newDueDate, lang), RIGHT, c.y - 10, {
+    bold: true,
+    align: "right",
+  })
+  c.y -= 26
+  paragraph(c, words.closing, MARGIN, RIGHT - MARGIN, {
+    size: 9,
+    color: MUTED,
+  })
+
+  drawSlip(c, invoice, labels, { cents: total, dueDate: reminder.newDueDate })
   return doc.save()
 }

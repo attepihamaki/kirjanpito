@@ -296,12 +296,26 @@ function Review({
     /* Rows the reference proved to pay an invoice, whose other entries are paid with it. */
     const byReference: { entryId: string; on: string }[] = []
     const added: Entry[] = []
+    /* Rows that pay an invoice in part, recorded as that amount and no more (§8.27). */
+    const partial: { invoiceId: string; amount: number; on: string }[] = []
     plans.forEach((plan, i) => {
       const row: BankRow = result.rows[i]
       if (plan.action === "match") {
+        const proposal = proposals[i]
+        if (
+          proposal.kind === "match" &&
+          proposal.partial &&
+          proposal.entryId === plan.entryId
+        ) {
+          partial.push({
+            invoiceId: proposal.partial.invoiceId,
+            amount: row.amount,
+            on: row.date,
+          })
+          return
+        }
         const payment = { entryId: plan.entryId, on: row.date }
         paid.push(payment)
-        const proposal = proposals[i]
         if (
           proposal.kind === "match" &&
           proposal.confidence === "reference" &&
@@ -369,6 +383,7 @@ function Review({
         ),
       ],
       added,
+      partial,
       seen: rowFingerprints(result.rows),
     })
     if (held.length) {
@@ -525,6 +540,7 @@ function noteFor(
 ): string {
   switch (p.kind) {
     case "match":
+      if (p.partial) return f.t("bank.statusPartial")
       return p.confidence === "reference"
         ? f.t("bank.statusReference")
         : p.confidence === "likely"

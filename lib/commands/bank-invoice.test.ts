@@ -135,3 +135,49 @@ describe("paying an invoice from a bank statement", () => {
     ])
   })
 })
+
+describe("paying an invoice in part from a bank statement", () => {
+  const PART = STATEMENT.replace("182,50", "100,00")
+
+  it("is proposed as a part payment by reference", () => {
+    const parsed = parseBankCsv(PART)
+    if (!parsed.ok) throw new Error("statement not read")
+    const state = useBookStore.getState()
+    const [proposal] = proposeForRows(parsed.rows, {
+      entries: state.entries,
+      invoices: state.invoices,
+      cats: indexCategories(state.cats),
+    })
+    expect(proposal).toMatchObject({
+      kind: "match",
+      confidence: "reference",
+      partial: { invoiceId: "i1" },
+    })
+  })
+
+  it("books only what arrived, leaves the rest open and undoes whole", async () => {
+    expect(
+      await bookBankRows(ctx, {
+        paid: [],
+        added: [],
+        partial: [{ invoiceId: "i1", amount: 10_000, on: "2026-11-10" }],
+      })
+    ).toBe(true)
+
+    const after = useBookStore.getState()
+    const byId = new Map(after.entries.map((e) => [e.id, e]))
+    const open = after.entries.filter((e) => e.paidOn === null)
+    const paid = after.entries.filter((e) => e.paidOn !== null)
+    expect(paid.reduce((s, e) => s + e.amount, 0)).toBeGreaterThan(0)
+    expect(after.invoices[0].entryIds).toHaveLength(after.entries.length)
+    expect(open.length).toBeGreaterThan(0)
+    expect(invoiceStatus(after.invoices[0], byId, "2026-11-20")).toBe("overdue")
+
+    const undo = vi.mocked(toast.add).mock.calls.at(-1)![0].actionProps!
+    undo.onClick!({} as never)
+    const undone = useBookStore.getState()
+    expect(undone.entries.map((e) => e.id)).toEqual(["a", "b"])
+    expect(undone.invoices[0].entryIds).toEqual(["a", "b"])
+    expect(undone.entries.every((e) => e.paidOn === null)).toBe(true)
+  })
+})

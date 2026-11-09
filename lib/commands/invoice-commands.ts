@@ -17,14 +17,20 @@ import {
   issueProblems,
   type IssueProblem,
 } from "@/lib/domain/invoice-calc"
-import { invoiceFileName } from "@/lib/domain/invoice-labels"
-import { invoiceMail, mailtoUrl } from "@/lib/domain/invoice-mail"
+import { invoiceFileName, reminderLabels } from "@/lib/domain/invoice-labels"
+import { invoiceMail, mailtoUrl, reminderMail } from "@/lib/domain/invoice-mail"
+import {
+  reminderRecord,
+  type ReminderFigures,
+} from "@/lib/domain/invoice-reminder"
+import { applyInvoicePayment, owedOn } from "@/lib/domain/invoice-payment"
 import { openEntries } from "@/lib/domain/invoice-status"
 import { paidOnFor } from "@/lib/domain/open-items"
 import { lockedEntries, paidChangeHitsForm5 } from "@/lib/domain/period-lock"
 import {
   indexCategories,
   type Attachment,
+  type Cents,
   type Entry,
 } from "@/lib/domain/types"
 import type { MessageKey } from "@/lib/i18n/messages"
@@ -246,37 +252,134 @@ export async function sendInvoice(ctx: Ctx, invoice: Invoice): Promise<void> {
 }
 
 /**
- * Mark every unpaid entry of an invoice paid on `on` (§8.27). Paying changes
- * nothing the VAT return counts, so a filed VAT period does not stop it, but a
- * year whose Form 5 is filed does (§8.11). One toast undoes all of them.
- * Returns whether anything was marked.
+ * Make a payment reminder for an issued invoice (§8.27): draw the letter, hand
+ * it to the share sheet or download it, and keep a record of it on the invoice.
+ * Nothing is booked. The record stays when the letter was only downloaded, since
+ * the user has it either way, and one toast undoes it. Returns whether it was made.
  */
-export async function markInvoicePaid(
+export async function makeReminder(
   ctx: Ctx,
   invoiceId: string,
+  figures: ReminderFigures,
+  on: string
+): Promise<boolean> {
+  const state = useBookStore.getState()
+  const invoice = state.invoices.find((i) => i.id === invoiceId)
+  if (!invoice || invoice.number === null || invoice.credits !== null)
+    return false
+  const reminder = reminderRecord(uid(), on, figures)
+  let bytes: Uint8Array
+  try {
+    const { renderReminderPdf } = await import("@/lib/browser/invoice-pdf")
+    bytes = await renderReminderPdf(invoice, reminder)
+  } catch (error) {
+    console.warn("Reminder PDF could not be made", error)
+    toast.add({ title: ctx.t("invoice.pdfDownloadFailed") })
+    return false
+  }
+  const name = reminderLabels(invoice.language).fileName(
+    invoice.number,
+    invoice.customer.name
+  )
+  const mail = reminderMail(invoice, reminder)
+  const file = new File([bytes as BlobPart], name, { type: "application/pdf" })
+
+  const store = useBookStore.getState()
+  const epoch = store.bookEpoch
+  const before = store.invoices
+  store.setInvoices(
+    before.map((i) =>
+      i.id === invoice.id
+        ? { ...i, reminders: [...(i.reminders ?? []), reminder] }
+        : i
+    )
+  )
+  const id = toast.add({
+    title: ctx.t("invoice.reminderMade", { n: invoice.number }),
+    timeout: UNDO_TIMEOUT_MS,
+    actionProps: {
+      children: ctx.t("common.undo"),
+      onClick: () => {
+        toast.close(id)
+        const now = useBookStore.getState()
+        if (now.bookEpoch !== epoch) return
+        now.setInvoices(
+          now.invoices.map((i) => {
+            if (i.id !== invoice.id) return i
+            const { reminders, ...rest } = i
+            const left = (reminders ?? []).filter((r) => r.id !== reminder.id)
+            return left.length > 0 ? { ...rest, reminders: left } : rest
+          })
+        )
+      },
+    },
+  })
+
+  const result = await shareFile(file, { title: mail.subject, text: mail.body })
+  if (result === "unsupported") {
+    saveBlob(file, name)
+    openMailto(mailtoUrl(mail))
+    toast.add({ title: ctx.t("invoice.sendAttach") })
+  }
+  return true
+}
+
+/**
+ * Record `amount` received for an invoice on `on` (§8.27). The unpaid entries
+ * are settled in book order, and an entry the money only reaches in part is
+ * split in two (`applyInvoicePayment`). Paying changes nothing the VAT return
+ * counts when it settles whole entries, so a filed VAT period does not stop it,
+ * but a year whose Form 5 is filed does (§8.11). One toast undoes all of it.
+ * Returns whether anything was recorded.
+ */
+export async function recordInvoicePayment(
+  ctx: Ctx,
+  invoiceId: string,
+  amount: Cents,
   on: string
 ): Promise<boolean> {
   const state = useBookStore.getState()
   const invoice = state.invoices.find((i) => i.id === invoiceId)
   if (!invoice) return false
   const byId = new Map(state.entries.map((e) => [e.id, e]))
-  const before = openEntries(invoice, byId)
-  if (before.length === 0) return false
-  if (paidChangeHitsForm5(null, on, state)) {
+  const payment = applyInvoicePayment(
+    invoice,
+    byId,
+    amount,
+    on,
+    () => `e-${uid()}`
+  )
+  if (!payment) return false
+  const before = payment.updated.flatMap((e) => byId.get(e.id) ?? [])
+  if (before.length > 0 && paidChangeHitsForm5(null, on, state)) {
     toast.add({ title: ctx.t("bank.paidInFiledYear") })
     return false
   }
-  const after: Entry[] = before.map((e) => ({
-    ...e,
-    paidOn: paidOnFor(e.date, on),
-  }))
-  const changed = new Map(after.map((e) => [e.id, e]))
-  const next = state.entries.map((e) => changed.get(e.id) ?? e)
+  const closed = payment.added.filter((e) => {
+    const year = e.date.slice(0, 4)
+    return state.yearsArchived[year] || state.form5Filed[year]
+  })
+  if (closed.length > 0) {
+    toast.add({ title: ctx.t("entry.lockedRefused", { n: closed.length }) })
+    return false
+  }
+  const changed = new Map(payment.updated.map((e) => [e.id, e]))
+  const next = [
+    ...state.entries.map((e) => changed.get(e.id) ?? e),
+    ...payment.added,
+  ]
   if (!(await confirmFiledChange(next))) return false
 
   const store = useBookStore.getState()
   const epoch = store.bookEpoch
-  store.updateEntries(after)
+  store.updateEntries(payment.updated)
+  if (payment.added.length > 0) store.addEntries(payment.added)
+  store.setInvoices(
+    store.invoices.map((i) =>
+      i.id === invoice.id ? { ...i, entryIds: payment.entryIds } : i
+    )
+  )
+  const addedIds = payment.added.map((e) => e.id)
   const id = toast.add({
     title: ctx.t("invoice.paidMarked", { n: invoice.number ?? 0 }),
     timeout: UNDO_TIMEOUT_MS,
@@ -286,11 +389,30 @@ export async function markInvoicePaid(
         toast.close(id)
         const now = useBookStore.getState()
         if (now.bookEpoch !== epoch) return
+        if (addedIds.length > 0) now.removeEntries(addedIds)
         now.updateEntries(before)
+        now.setInvoices(
+          now.invoices.map((i) =>
+            i.id === invoice.id ? { ...i, entryIds: invoice.entryIds } : i
+          )
+        )
       },
     },
   })
   return true
+}
+
+/** Mark every unpaid entry of an invoice paid on `on` (§8.27). */
+export async function markInvoicePaid(
+  ctx: Ctx,
+  invoiceId: string,
+  on: string
+): Promise<boolean> {
+  const state = useBookStore.getState()
+  const invoice = state.invoices.find((i) => i.id === invoiceId)
+  if (!invoice) return false
+  const owed = owedOn(invoice, new Map(state.entries.map((e) => [e.id, e])))
+  return recordInvoicePayment(ctx, invoiceId, owed, on)
 }
 
 /**

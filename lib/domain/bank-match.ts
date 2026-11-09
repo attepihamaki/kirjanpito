@@ -31,6 +31,11 @@ export type BankProposal =
        * too, `amount` when only the amount does.
        */
       confidence: "likely" | "amount" | "reference"
+      /**
+       * Set when the money is less than the invoice owes: only that much is
+       * recorded, and the entry it reaches is split (§8.27).
+       */
+      partial?: { invoiceId: string }
     }
   /* Several open entries fit and nothing tells them apart. */
   | { kind: "ambiguous"; entryIds: string[] }
@@ -180,6 +185,25 @@ function payingInvoice(
     const open = openEntries(invoice, byId).filter((e) => !claimed.has(e.id))
     const owed = open.reduce((sum, e) => sum + calcEntry(e).gross, 0)
     if (open.length > 0 && owed === row.amount) return { invoice, open }
+  }
+  return undefined
+}
+
+/**
+ * The issued invoice this row pays in part: money in that carries the
+ * invoice's reference and is less than what the invoice still owes (§8.27).
+ */
+function payingInvoicePartly(
+  row: BankRow,
+  ctx: BankContext,
+  byId: ReadonlyMap<string, Entry> | null
+): { invoice: Invoice; first: Entry } | undefined {
+  if (row.amount <= 0 || !byId) return undefined
+  for (const invoice of ctx.invoices ?? []) {
+    if (invoice.credits !== null || !carriesReference(row, invoice)) continue
+    const open = openEntries(invoice, byId)
+    const owed = open.reduce((sum, e) => sum + calcEntry(e).gross, 0)
+    if (open.length > 0 && row.amount < owed) return { invoice, first: open[0] }
   }
   return undefined
 }
@@ -374,6 +398,16 @@ export function proposeForRows(
         kind: "match",
         entryId: paying.open[0].id,
         confidence: "reference",
+      }
+    }
+
+    const partly = payingInvoicePartly(row, ctx, byId)
+    if (partly) {
+      return {
+        kind: "match",
+        entryId: partly.first.id,
+        confidence: "reference",
+        partial: { invoiceId: partly.invoice.id },
       }
     }
 

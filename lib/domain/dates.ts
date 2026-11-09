@@ -183,3 +183,10 @@ export function addDays(iso: string, days: number): string {
   d.setUTCDate(d.getUTCDate() + days)
   return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`
 }
+
+/** Whole days from one ISO date to another: positive when `to` is later. */
+export function daysBetween(from: string, to: string): number {
+  const utc = (iso: string) =>
+    Date.UTC(yearOf(iso), monthOf(iso) - 1, Number(iso.slice(8, 10)))
+  return Math.round((utc(to) - utc(from)) / 86_400_000)
+}

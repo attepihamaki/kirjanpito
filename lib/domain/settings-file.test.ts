@@ -89,6 +89,8 @@ function settings(): BookSettings {
       termDays: 21,
       terms: { fi: "Maksuehto netto.", en: "Net terms." },
       firstNumber: 2001,
+      reminderFee: 700,
+      interestRate: 11.5,
     },
     overviewLayout: normalizeLayout([
       { id: "checks", size: "L", hidden: false },

@@ -7,6 +7,7 @@ import {
   type InvoiceRow,
   type InvoiceSettings,
   type Party,
+  type Reminder,
   type Seller,
 } from "@/lib/domain/invoice"
 
@@ -68,6 +69,24 @@ function parseParty(value: unknown): Party | null {
  * Invoice settings
  * ---------------------------------------------------------------------- */
 
+function cents(value: unknown): number | null {
+  return typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value <= 100_000
+    ? value
+    : null
+}
+
+function percentOrNull(value: unknown): number | null {
+  return typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= 0 &&
+    value <= 100
+    ? value
+    : null
+}
+
 /** The invoice settings from a parsed `settings.json` value. A missing or unreadable field keeps its default. */
 export function parseInvoiceSettings(value: unknown): InvoiceSettings {
   const base = DEFAULT_INVOICE_SETTINGS
@@ -89,6 +108,8 @@ export function parseInvoiceSettings(value: unknown): InvoiceSettings {
       first <= 999_999_999
         ? first
         : base.firstNumber,
+    reminderFee: cents(value.reminderFee) ?? base.reminderFee,
+    interestRate: percentOrNull(value.interestRate),
   }
 }
 
@@ -183,6 +204,35 @@ function parseSeller(value: unknown): Seller | null {
   }
 }
 
+function parseReminder(value: unknown): Reminder | null {
+  if (!isRecord(value) || typeof value.id !== "string" || value.id === "")
+    return null
+  const date = isoDate(value.date)
+  const newDueDate = isoDate(value.newDueDate)
+  const open = value.open
+  const interest = cents(value.interest)
+  const fee = cents(value.fee)
+  const rate = percentOrNull(value.rate)
+  if (
+    !date ||
+    !newDueDate ||
+    !Number.isInteger(open) ||
+    interest === null ||
+    fee === null ||
+    rate === null
+  )
+    return null
+  return {
+    id: value.id,
+    date,
+    open: open as number,
+    rate,
+    interest,
+    fee,
+    newDueDate,
+  }
+}
+
 function parseInvoice(value: unknown): Invoice | null {
   if (!isRecord(value) || typeof value.id !== "string" || value.id === "")
     return null
@@ -227,6 +277,10 @@ function parseInvoice(value: unknown): Invoice | null {
     value.reservedNumber > 0
       ? value.reservedNumber
       : undefined
+  const reminders =
+    issued && Array.isArray(value.reminders)
+      ? value.reminders.flatMap((r) => parseReminder(r) ?? [])
+      : []
   return {
     id: value.id,
     number,
@@ -251,6 +305,7 @@ function parseInvoice(value: unknown): Invoice | null {
         ? value.credits
         : null,
     ...(reserved !== undefined ? { reservedNumber: reserved } : {}),
+    ...(reminders.length > 0 ? { reminders } : {}),
   }
 }
 

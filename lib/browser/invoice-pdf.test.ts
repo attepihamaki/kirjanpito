@@ -1,7 +1,7 @@
 import { PDFDocument } from "pdf-lib"
 import { describe, expect, it } from "vitest"
 
-import { renderInvoicePdf } from "@/lib/browser/invoice-pdf"
+import { renderInvoicePdf, renderReminderPdf } from "@/lib/browser/invoice-pdf"
 import { createIdFactory } from "@/lib/domain/id"
 import {
   DEFAULT_INVOICE_SETTINGS,
@@ -120,5 +120,37 @@ describe("renderInvoicePdf", () => {
   it("refuses a draft", async () => {
     const draft = { ...issued([row(1)]), number: null }
     await expect(renderInvoicePdf(draft)).rejects.toThrow()
+  })
+})
+
+describe("renderReminderPdf", () => {
+  const reminder = {
+    id: "r1",
+    date: "2026-11-20",
+    open: 12_550,
+    rate: 9.5,
+    interest: 71,
+    fee: 500,
+    newDueDate: "2026-11-27",
+  }
+
+  it("draws a Finnish and an English reminder on one page with the slip", async () => {
+    for (const language of ["fi", "en"] as const) {
+      const bytes = await renderReminderPdf(
+        issued([row(1)], { language }),
+        reminder
+      )
+      expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-")
+      expect(await pages(bytes)).toBe(1)
+    }
+  })
+
+  it("refuses a draft", async () => {
+    await expect(
+      renderReminderPdf(
+        { ...issued([row(1)]), number: null, reference: null },
+        reminder
+      )
+    ).rejects.toThrow()
   })
 })

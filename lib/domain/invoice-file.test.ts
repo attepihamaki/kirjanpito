@@ -74,6 +74,26 @@ describe("invoices.json", () => {
     expect(parsed.invoices).toEqual(list)
   })
 
+  it("round-trips the reminders of an issued invoice and drops unreadable ones", () => {
+    const reminder = {
+      id: "r1",
+      date: "2026-11-20",
+      open: 12_550,
+      rate: 9.5,
+      interest: 120,
+      fee: 500,
+      newDueDate: "2026-11-27",
+    }
+    const list = [issued({ reminders: [reminder] })]
+    expect(parseInvoices(serializeInvoices(list)).invoices).toEqual(list)
+
+    const broken = JSON.parse(serializeInvoices(list))
+    broken.invoices[0].reminders.push({ id: "r2", date: "nope" })
+    expect(parseInvoices(JSON.stringify(broken)).invoices[0].reminders).toEqual(
+      [reminder]
+    )
+  })
+
   it("keeps the number a reopened draft reserves, and drops it from an issued invoice", () => {
     const reopened = draft({ id: "r", reservedNumber: 1001 })
     const stray = issued({ id: "s", reservedNumber: 1001 })
@@ -192,7 +212,18 @@ describe("parseInvoiceSettings", () => {
       termDays: 14,
       firstNumber: 1001,
       iban: "",
+      reminderFee: 500,
+      interestRate: null,
     })
+  })
+
+  it("reads the reminder fee and rate, and refuses what makes no sense", () => {
+    expect(
+      parseInvoiceSettings({ reminderFee: 700, interestRate: 11.5 })
+    ).toMatchObject({ reminderFee: 700, interestRate: 11.5 })
+    expect(
+      parseInvoiceSettings({ reminderFee: -1, interestRate: 250 })
+    ).toMatchObject({ reminderFee: 500, interestRate: null })
   })
 
   it("compacts a valid IBAN and refuses one with a bad check", () => {

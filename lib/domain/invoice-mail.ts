@@ -1,6 +1,6 @@
 import { formatDate } from "@/lib/domain/dates"
 import { formatIban } from "@/lib/domain/iban"
-import type { Invoice } from "@/lib/domain/invoice"
+import type { Invoice, Reminder } from "@/lib/domain/invoice"
 import { invoiceTotals } from "@/lib/domain/invoice-calc"
 import { formatReference } from "@/lib/domain/invoice-reference"
 import { formatMoney } from "@/lib/domain/money"
@@ -74,4 +74,37 @@ export function mailtoUrl(mail: InvoiceMail): string {
     `body=${encodeURIComponent(mail.body).replace(/%0A/g, "%0D%0A")}`,
   ].join("&")
   return `mailto:${encodeURIComponent(mail.to).replace(/%40/g, "@")}?${query}`
+}
+
+/** The mail a payment reminder is sent with, in the invoice's language (§8.27). */
+export function reminderMail(
+  invoice: Invoice,
+  reminder: Pick<Reminder, "open" | "interest" | "fee" | "newDueDate">
+): InvoiceMail {
+  const { language: lang, number, seller } = invoice
+  if (number === null || !seller)
+    throw new Error("only an issued invoice can be reminded")
+  const fi = lang === "fi"
+  const total = formatMoney(reminder.open + reminder.interest + reminder.fee)
+  const subject = `${fi ? "Maksumuistutus" : "Payment reminder"}: ${fi ? "lasku" : "invoice"} ${number} – ${seller.name}`
+  const lines: string[] = [
+    fi ? "Hei," : "Hello,",
+    "",
+    fi
+      ? `Oheisena maksumuistutus laskusta ${number}. Maksettava yhteensä ${total}, uusi eräpäivä ${formatDate(reminder.newDueDate, lang)}.`
+      : `Attached is a payment reminder for invoice ${number}. The total to pay is ${total}, due ${formatDate(reminder.newDueDate, lang)}.`,
+  ]
+  if (invoice.reference && seller.iban) {
+    lines.push(
+      "",
+      fi
+        ? `Tilinumero: ${formatIban(seller.iban)}`
+        : `Account: ${formatIban(seller.iban)}`,
+      fi
+        ? `Viitenumero: ${formatReference(invoice.reference)}`
+        : `Reference number: ${formatReference(invoice.reference)}`
+    )
+  }
+  lines.push("", fi ? "Ystävällisin terveisin," : "Kind regards,", seller.name)
+  return { to: invoice.customer.email.trim(), subject, body: lines.join("\n") }
 }
