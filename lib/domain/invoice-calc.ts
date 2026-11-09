@@ -97,13 +97,17 @@ export function invoiceTotals(rows: readonly InvoiceRow[]): InvoiceTotals {
 
 /**
  * The next invoice number: one past the highest number used, and never below
- * the series' first number. Drafts hold no number, and a number is never reused.
+ * the series' first number. A draft holds no number, except one reopened for
+ * correction, whose number stays reserved. A number is never reused.
  */
 export function nextInvoiceNumber(
   invoices: readonly Invoice[],
   firstNumber: number
 ): number {
-  const highest = invoices.reduce((max, i) => Math.max(max, i.number ?? 0), 0)
+  const highest = invoices.reduce(
+    (max, i) => Math.max(max, i.number ?? i.reservedNumber ?? 0),
+    0
+  )
   return Math.max(firstNumber, highest + 1)
 }
 
@@ -253,7 +257,9 @@ export interface IssueResult {
  */
 export function buildIssue(input: IssueInput): IssueResult {
   const { invoice, settings, business } = input
-  const number = nextInvoiceNumber(input.invoices, settings.firstNumber)
+  const number =
+    invoice.reservedNumber ??
+    nextInvoiceNumber(input.invoices, settings.firstNumber)
   const reference = finnishReference(number)
   if (reference === null) throw new Error("invoice number out of range")
   const seller: Seller = {
@@ -294,18 +300,18 @@ export function buildIssue(input: IssueInput): IssueResult {
       ...(target ? { reverses: target.id } : {}),
     }
   })
-  return {
-    invoice: {
-      ...invoice,
-      number,
-      reference,
-      seller,
-      terms: settings.terms[invoice.language],
-      issuedAt: input.now,
-      entryIds: entries.map((e) => e.id),
-    },
-    entries,
+  const issued: Invoice = {
+    ...invoice,
+    number,
+    reference,
+    seller,
+    terms: settings.terms[invoice.language],
+    issuedAt: input.now,
+    entryIds: entries.map((e) => e.id),
   }
+  /* The reserved number is spent. */
+  delete issued.reservedNumber
+  return { invoice: issued, entries }
 }
 
 /**

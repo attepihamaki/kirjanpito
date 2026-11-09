@@ -7,8 +7,10 @@ import {
   record,
   stepBack,
   stepForward,
+  unchangedInvoices,
   type Snapshot,
 } from "@/lib/domain/history"
+import type { Invoice } from "@/lib/domain/invoice"
 import type { Entry } from "@/lib/domain/types"
 
 function entry(id: string, extra: Partial<Entry> = {}): Entry {
@@ -25,7 +27,11 @@ function entry(id: string, extra: Partial<Entry> = {}): Entry {
   }
 }
 
-const snap = (...entries: Entry[]): Snapshot => ({ entries, cats: [] })
+const snap = (...entries: Entry[]): Snapshot => ({
+  entries,
+  cats: [],
+  invoices: [],
+})
 
 describe("history", () => {
   it("steps back and forward through recorded states", () => {
@@ -76,5 +82,14 @@ describe("history", () => {
       future: [snap(entry("2", { atts: [att("b"), att("a")] }))],
     }
     expect(historyAttachmentIds(h).sort()).toEqual(["a", "b"])
+  })
+
+  it("leaves only the invoices both versions share to lock their entries", () => {
+    const kept = { id: "a" } as Invoice
+    const issued = { id: "b", number: 1 } as Invoice
+    const draft = { id: "b", number: null } as Invoice
+    expect(unchangedInvoices([kept, issued], [kept, draft])).toEqual([kept])
+    expect(unchangedInvoices([kept, issued], [kept])).toEqual([kept])
+    expect(unchangedInvoices([kept], [kept, issued])).toEqual([kept])
   })
 })

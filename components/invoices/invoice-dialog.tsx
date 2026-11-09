@@ -259,6 +259,9 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
       issuedAt: null,
       entryIds: [],
       credits: existing?.credits ?? null,
+      ...(existing?.reservedNumber !== undefined
+        ? { reservedNumber: existing.reservedNumber }
+        : {}),
     }
     const all = useBookStore.getState().invoices
     setInvoices(
@@ -290,7 +293,9 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
     ? f.t(credit ? "invoice.creditViewTitle" : "invoice.viewTitle", {
         n: existing.number ?? 0,
       })
-    : f.t(credit ? "invoice.creditDraftTitle" : "invoice.draftTitle")
+    : existing?.reservedNumber !== undefined
+      ? f.t("invoice.reopenedTitle", { n: existing.reservedNumber })
+      : f.t(credit ? "invoice.creditDraftTitle" : "invoice.draftTitle")
 
   return (
     <Dialog open onOpenChange={(open) => !open && closeDialog()}>

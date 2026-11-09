@@ -3000,6 +3000,55 @@ export const APP_DICT = {
     "The invoice PDF could not be made.",
   ],
   "invoice.deleteDraft": ["Poista luonnos", "Delete draft"],
+  "invoice.reopenIssued": ["Avaa muokattavaksi", "Reopen to edit"],
+  "invoice.reopenCredited": [
+    "Hyvityslaskua tai hyvitettyä laskua ei voi avata muokattavaksi. Korjaa se uudella hyvityksellä.",
+    "A credit note, or an invoice that has been credited, cannot be reopened. Correct it with a new credit note instead.",
+  ],
+  "invoice.reopenConfirmTitle": [
+    "Avataanko lasku {n} muokattavaksi?",
+    "Reopen invoice {n} to edit?",
+  ],
+  "invoice.reopenConfirmMessage": [
+    "Laskun tositteet poistetaan kirjanpidosta ja lasku muuttuu luonnokseksi, joka säilyttää numeronsa. Kun annat sen uudelleen, se saa saman numeron ja uudet tositteet. Jos olet jo lähettänyt laskun, asiakkaalla on vanha versio. Avaaminen on kumottavissa.",
+    "The invoice's vouchers are removed from the books and it becomes a draft that keeps its number. When you issue it again it takes the same number and new vouchers. If you have already sent it, the customer holds the old version. You can undo this.",
+  ],
+  "invoice.reopenConfirm": ["Avaa muokattavaksi", "Reopen"],
+  "invoice.reopened": [
+    "Lasku {n} on nyt luonnos",
+    "Invoice {n} is now a draft",
+  ],
+  "invoice.reopenUndone": [
+    "Laskun avaaminen peruttu",
+    "Reopening the invoice was undone",
+  ],
+  "invoice.reopenUndoChanged": [
+    "Luonnosta on muutettu, joten avaamista ei voi kumota tästä.",
+    "The draft has been changed since, so the reopening cannot be undone from here.",
+  ],
+  "invoice.reopenedTitle": [
+    "Lasku {n} – muokattavana",
+    "Invoice {n} – being edited",
+  ],
+  "invoice.deleteIssued": ["Poista lasku", "Delete invoice"],
+  "invoice.deleteCredited": [
+    "Hyvityslaskua tai hyvitettyä laskua ei voi poistaa. Poista ensin hyvityslasku tai korjaa uudella hyvityksellä.",
+    "A credit note, or an invoice that has been credited, cannot be deleted. Correct it with a new credit note instead.",
+  ],
+  "invoice.deleteConfirmTitle": [
+    "Poistetaanko lasku {n}?",
+    "Delete invoice {n}?",
+  ],
+  "invoice.deleteConfirmMessage": [
+    "Lasku ja sen tositteet poistetaan. Laskun numeroa ei käytetä uudelleen, joten numerosarjaan jää aukko, ellei lasku ole uusin. Poiston voi kumota.",
+    "The invoice and its vouchers are removed. The number is not reused, so the series gets a gap unless this is the newest invoice. You can undo this.",
+  ],
+  "invoice.deleteConfirm": ["Poista lasku", "Delete invoice"],
+  "invoice.deleted": ["Lasku {n} poistettu", "Invoice {n} deleted"],
+  "invoice.deleteUndone": [
+    "Laskun poisto peruttu",
+    "Deleting the invoice was undone",
+  ],
   "invoice.draftDeleted": ["Luonnos poistettu", "Draft deleted"],
   "invoice.draftSaved": ["Luonnos tallennettu", "Draft saved"],
   "invoice.draftTitle": ["Laskun luonnos", "Invoice draft"],

@@ -21,9 +21,14 @@ import { invoiceFileName } from "@/lib/domain/invoice-labels"
 import { invoiceMail, mailtoUrl } from "@/lib/domain/invoice-mail"
 import { openEntries } from "@/lib/domain/invoice-status"
 import { paidOnFor } from "@/lib/domain/open-items"
-import { paidChangeHitsForm5 } from "@/lib/domain/period-lock"
-import type { Attachment, Entry } from "@/lib/domain/types"
+import { lockedEntries, paidChangeHitsForm5 } from "@/lib/domain/period-lock"
+import {
+  indexCategories,
+  type Attachment,
+  type Entry,
+} from "@/lib/domain/types"
 import type { MessageKey } from "@/lib/i18n/messages"
+import { confirm } from "@/lib/ui/confirm"
 import { useBookStore } from "@/stores/book-store"
 
 /** The message that tells the user what stops an invoice from being issued. */
@@ -311,4 +316,166 @@ export function startCreditNote(ctx: Ctx, invoiceId: string): string | null {
   const draft = creditDraft(original, uid(), todayIso())
   state.setInvoices([...state.invoices, draft])
   return draft.id
+}
+
+/**
+ * Delete an issued invoice with its entries (§8.27). A credit note and an
+ * invoice that has an issued credit note are refused, since the credit settles
+ * against it; a stored year or a filed return still holds the entries. The user
+ * is asked first, because the number is not reused. The toast and Ctrl+Z (§8.20)
+ * bring back the invoice and its entries as they were. Returns whether it was
+ * deleted.
+ */
+export async function deleteIssuedInvoice(
+  ctx: Ctx,
+  invoiceId: string
+): Promise<boolean> {
+  const state = useBookStore.getState()
+  const invoice = state.invoices.find((i) => i.id === invoiceId)
+  if (!invoice || invoice.number === null) return false
+  if (
+    invoice.credits !== null ||
+    state.invoices.some((i) => i.credits === invoice.id && i.number !== null)
+  ) {
+    toast.add({ title: ctx.t("invoice.deleteCredited") })
+    return false
+  }
+
+  const ids = new Set(invoice.entryIds)
+  const removed = state.entries.filter((e) => ids.has(e.id))
+  /* Without the invoice, so only a filed period or a stored year can hold them. */
+  const others = state.invoices.filter((i) => i.id !== invoice.id)
+  const locked = lockedEntries(
+    removed,
+    { ...state, invoices: others },
+    indexCategories(state.cats)
+  )
+  if (locked.length > 0) {
+    toast.add({ title: ctx.t("entry.lockedRefused", { n: locked.length }) })
+    return false
+  }
+
+  const confirmed = await confirm({
+    title: ctx.t("invoice.deleteConfirmTitle", { n: invoice.number }),
+    message: ctx.t("invoice.deleteConfirmMessage"),
+    confirmLabel: ctx.t("invoice.deleteConfirm"),
+    cancelLabel: ctx.t("common.cancel"),
+  })
+  if (!confirmed) return false
+
+  const store = useBookStore.getState()
+  const epoch = store.bookEpoch
+  const held = removed.flatMap((e) =>
+    (e.atts ?? []).flatMap((a) => (a.id ? [a.id] : []))
+  )
+  store.holdUndoAttachments(held)
+  store.removeEntries(removed.map((e) => e.id))
+  store.setInvoices(store.invoices.filter((i) => i.id !== invoice.id))
+  const id = toast.add({
+    title: ctx.t("invoice.deleted", { n: invoice.number }),
+    timeout: UNDO_TIMEOUT_MS,
+    actionProps: {
+      children: ctx.t("common.undo"),
+      onClick: () => {
+        toast.close(id)
+        const now = useBookStore.getState()
+        if (now.bookEpoch !== epoch) return
+        now.restoreEntries(removed)
+        now.setInvoices([...now.invoices, invoice])
+        toast.add({ title: ctx.t("invoice.deleteUndone") })
+      },
+    },
+    onRemove: () => useBookStore.getState().releaseUndoAttachments(held),
+  })
+  return true
+}
+
+/**
+ * Reopen an issued invoice as a draft to correct it (§8.27). Its entries are
+ * removed and the number is kept on the draft (`reservedNumber`), so issuing it
+ * again takes the same number and the series has no gap. The same invoices are
+ * refused as for a delete, and so is anything a filed period or stored year
+ * holds. The toast and Ctrl+Z (§8.20) put the issued invoice back as it was.
+ * Returns the draft's id, or null when nothing was reopened.
+ */
+export async function reopenIssuedInvoice(
+  ctx: Ctx,
+  invoiceId: string
+): Promise<string | null> {
+  const state = useBookStore.getState()
+  const invoice = state.invoices.find((i) => i.id === invoiceId)
+  if (!invoice || invoice.number === null) return null
+  if (
+    invoice.credits !== null ||
+    state.invoices.some((i) => i.credits === invoice.id)
+  ) {
+    toast.add({ title: ctx.t("invoice.reopenCredited") })
+    return null
+  }
+
+  const ids = new Set(invoice.entryIds)
+  const removed = state.entries.filter((e) => ids.has(e.id))
+  const others = state.invoices.filter((i) => i.id !== invoice.id)
+  const locked = lockedEntries(
+    removed,
+    { ...state, invoices: others },
+    indexCategories(state.cats)
+  )
+  if (locked.length > 0) {
+    toast.add({ title: ctx.t("entry.lockedRefused", { n: locked.length }) })
+    return null
+  }
+
+  const confirmed = await confirm({
+    title: ctx.t("invoice.reopenConfirmTitle", { n: invoice.number }),
+    message: ctx.t("invoice.reopenConfirmMessage"),
+    confirmLabel: ctx.t("invoice.reopenConfirm"),
+    cancelLabel: ctx.t("common.cancel"),
+  })
+  if (!confirmed) return null
+
+  const draft: Invoice = {
+    ...invoice,
+    number: null,
+    reference: null,
+    seller: null,
+    issuedAt: null,
+    entryIds: [],
+    terms: "",
+    reservedNumber: invoice.number,
+  }
+  const store = useBookStore.getState()
+  const epoch = store.bookEpoch
+  const held = removed.flatMap((e) =>
+    (e.atts ?? []).flatMap((a) => (a.id ? [a.id] : []))
+  )
+  store.holdUndoAttachments(held)
+  store.removeEntries(removed.map((e) => e.id))
+  store.setInvoices(
+    store.invoices.map((i) => (i.id === invoice.id ? draft : i))
+  )
+  const id = toast.add({
+    title: ctx.t("invoice.reopened", { n: invoice.number }),
+    timeout: UNDO_TIMEOUT_MS,
+    actionProps: {
+      children: ctx.t("common.undo"),
+      onClick: () => {
+        toast.close(id)
+        const now = useBookStore.getState()
+        if (now.bookEpoch !== epoch) return
+        const current = now.invoices.find((i) => i.id === invoice.id)
+        if (!current || JSON.stringify(current) !== JSON.stringify(draft)) {
+          toast.add({ title: ctx.t("invoice.reopenUndoChanged") })
+          return
+        }
+        now.restoreEntries(removed)
+        now.setInvoices(
+          now.invoices.map((i) => (i.id === invoice.id ? invoice : i))
+        )
+        toast.add({ title: ctx.t("invoice.reopenUndone") })
+      },
+    },
+    onRemove: () => useBookStore.getState().releaseUndoAttachments(held),
+  })
+  return invoice.id
 }

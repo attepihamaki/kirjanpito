@@ -4,6 +4,7 @@ import * as React from "react"
 import {
   CheckIcon,
   DownloadIcon,
+  FilePenLineIcon,
   PencilIcon,
   SendIcon,
   Trash2Icon,
@@ -36,8 +37,10 @@ import {
 import { toast } from "@/components/ui/toast"
 import { useCommandCtx } from "@/hooks/use-commands"
 import {
+  deleteIssuedInvoice,
   downloadInvoicePdf,
   markInvoicePaid,
+  reopenIssuedInvoice,
   sendInvoice,
   startCreditNote,
 } from "@/lib/commands/invoice-commands"
@@ -197,7 +200,7 @@ export function InvoiceList() {
               return (
                 <TableRow key={invoice.id}>
                   <TableCell className="tabular font-medium">
-                    {invoice.number ?? "–"}
+                    {invoice.number ?? invoice.reservedNumber ?? "–"}
                   </TableCell>
                   <TableCell>{invoice.customer.name || "–"}</TableCell>
                   <TableCell className="tabular whitespace-nowrap">
@@ -262,6 +265,35 @@ export function InvoiceList() {
                             }}
                           >
                             <Undo2Icon />
+                          </Button>
+                        ) : null}
+                        {invoice.credits === null && status !== "credited" ? (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`${f.t("invoice.reopenIssued")}: ${invoice.number}`}
+                            onClick={async () => {
+                              const id = await reopenIssuedInvoice(
+                                ctx,
+                                invoice.id
+                              )
+                              if (id)
+                                openDialog({ kind: "invoice", invoiceId: id })
+                            }}
+                          >
+                            <FilePenLineIcon />
+                          </Button>
+                        ) : null}
+                        {invoice.credits === null && status !== "credited" ? (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`${f.t("invoice.deleteIssued")}: ${invoice.number}`}
+                            onClick={() =>
+                              void deleteIssuedInvoice(ctx, invoice.id)
+                            }
+                          >
+                            <Trash2Icon />
                           </Button>
                         ) : null}
                         {openEntries(invoice, byId).length > 0 ? (

@@ -1,6 +1,6 @@
 import { toast } from "@/components/ui/toast"
 
-import { changedEntries } from "@/lib/domain/history"
+import { changedEntries, unchangedInvoices } from "@/lib/domain/history"
 import { lockedEntries } from "@/lib/domain/period-lock"
 import { indexCategories } from "@/lib/domain/types"
 import type { Ctx } from "@/lib/commands/ctx"
@@ -27,7 +27,7 @@ function step(ctx: Ctx, direction: "undo" | "redo"): boolean {
     const state = useBookStore.getState()
     const locked = lockedEntries(
       changedEntries(from.entries, to.entries),
-      state,
+      { ...state, invoices: unchangedInvoices(from.invoices, to.invoices) },
       indexCategories(state.cats)
     )
     refused = locked.length > 0

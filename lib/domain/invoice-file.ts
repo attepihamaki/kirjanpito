@@ -220,6 +220,13 @@ function parseInvoice(value: unknown): Invoice | null {
     seller === null &&
     reference === null
   if (!issued && !draft) return null
+  const reserved =
+    draft &&
+    typeof value.reservedNumber === "number" &&
+    Number.isInteger(value.reservedNumber) &&
+    value.reservedNumber > 0
+      ? value.reservedNumber
+      : undefined
   return {
     id: value.id,
     number,
@@ -243,6 +250,7 @@ function parseInvoice(value: unknown): Invoice | null {
       typeof value.credits === "string" && value.credits !== ""
         ? value.credits
         : null,
+    ...(reserved !== undefined ? { reservedNumber: reserved } : {}),
   }
 }
 

@@ -104,6 +104,11 @@ export interface Invoice {
   entryIds: string[]
   /** The id of the invoice this one credits, or null. */
   credits: string | null
+  /**
+   * On a draft that was an issued invoice and is being corrected (§8.27): the
+   * number it held, which issuing it again takes back. Absent otherwise.
+   */
+  reservedNumber?: number
 }
 
 /** A party with nothing filled in but the country, for the editor to start from. */

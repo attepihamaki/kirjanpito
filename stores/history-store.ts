@@ -17,8 +17,8 @@ import { useBookStore } from "@/stores/book-store"
 export const useHistoryStore = create<History>()(() => EMPTY_HISTORY)
 
 const current = (): Snapshot => {
-  const { entries, cats } = useBookStore.getState()
-  return { entries, cats }
+  const { entries, cats, invoices } = useBookStore.getState()
+  return { entries, cats, invoices }
 }
 
 /** Set while an undo or redo writes, so the write is not recorded as a change. */
@@ -58,7 +58,8 @@ function clearHistory(): void {
 }
 
 /**
- * Record every change to the entries or the categories as one undo step. Sets
+ * Record every change to the entries, the categories or the invoices as one
+ * undo step. Sets
  * made in the same task (a split writes twice, a bank import three times)
  * count as one step, with the state before the first as the way back.
  *
@@ -82,9 +83,18 @@ export function startRecordingHistory(): () => void {
       return
     }
     if (applying) return
-    if (next.entries === prev.entries && next.cats === prev.cats) return
+    if (
+      next.entries === prev.entries &&
+      next.cats === prev.cats &&
+      next.invoices === prev.invoices
+    )
+      return
     if (base) return
-    base = { entries: prev.entries, cats: prev.cats }
+    base = {
+      entries: prev.entries,
+      cats: prev.cats,
+      invoices: prev.invoices,
+    }
     queueMicrotask(() => {
       const before = base
       base = null

@@ -531,6 +531,7 @@ export interface BookActions {
   restoreSnapshot(snapshot: {
     entries: readonly Entry[]
     cats: readonly Category[]
+    invoices: readonly Invoice[]
   }): void
   holdUndoAttachments(ids: readonly string[]): void
   releaseUndoAttachments(ids: readonly string[]): void
@@ -1258,10 +1259,11 @@ export const useBookStore = create<BookStore>()(
           gcTick: get().gcTick + 1,
         })
       },
-      restoreSnapshot: ({ entries, cats }) =>
+      restoreSnapshot: ({ entries, cats, invoices }) =>
         set({
           ...withLog(get(), [...entries], "restore"),
           cats: [...cats],
+          invoices: [...invoices],
           dirty: true,
           gcTick: get().gcTick + 1,
         }),

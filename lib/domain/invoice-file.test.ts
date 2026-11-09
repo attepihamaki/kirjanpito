@@ -74,6 +74,16 @@ describe("invoices.json", () => {
     expect(parsed.invoices).toEqual(list)
   })
 
+  it("keeps the number a reopened draft reserves, and drops it from an issued invoice", () => {
+    const reopened = draft({ id: "r", reservedNumber: 1001 })
+    const stray = issued({ id: "s", reservedNumber: 1001 })
+    const parsed = parseInvoices(serializeInvoices([reopened, stray]))
+    expect(parsed.invoices.find((i) => i.id === "r")?.reservedNumber).toBe(1001)
+    expect(
+      parsed.invoices.find((i) => i.id === "s")?.reservedNumber
+    ).toBeUndefined()
+  })
+
   it("writes issued invoices in number order and drafts after them", () => {
     const text = serializeInvoices([
       draft({ id: "d" }),

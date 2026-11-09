@@ -144,6 +144,12 @@ describe("nextInvoiceNumber", () => {
     ).toBe(1006)
   })
 
+  it("counts a number reserved by a reopened draft as used", () => {
+    expect(
+      nextInvoiceNumber([issued(1001), draft({ reservedNumber: 1002 })], 1001)
+    ).toBe(1003)
+  })
+
   it("ignores drafts and never goes below the first number", () => {
     expect(nextInvoiceNumber([draft()], 2000)).toBe(2000)
     expect(nextInvoiceNumber([issued(1001)], 2000)).toBe(2000)
@@ -239,6 +245,15 @@ describe("buildIssue", () => {
       iban: "FI2112345600000785",
       city: "Helsinki",
     })
+  })
+
+  it("takes the reserved number back and spends it", () => {
+    const { invoice } = build(draft({ reservedNumber: 1003 }), [
+      draft({ id: "o", number: 1004 }),
+    ])
+    expect(invoice.number).toBe(1003)
+    expect(invoice.reference).toBe("10032")
+    expect(invoice.reservedNumber).toBeUndefined()
   })
 
   it("books one open income entry per group, net, dated on the invoice date", () => {

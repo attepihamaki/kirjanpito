@@ -1,9 +1,11 @@
+import type { Invoice } from "@/lib/domain/invoice"
 import type { Category, Entry } from "@/lib/domain/types"
 
 /** The part of the book that Ctrl+Z moves back and forth (§8.20). */
 export interface Snapshot {
   entries: readonly Entry[]
   cats: readonly Category[]
+  invoices: readonly Invoice[]
 }
 
 /** Undo and redo stacks, the newest step last. */
@@ -76,6 +78,19 @@ export function changedEntries(
     if (!before.has(id)) changed.push(e)
   }
   return changed
+}
+
+/**
+ * The invoices a move from `from` to `to` leaves as they are. Only an issued
+ * invoice that is the same in both versions locks its entries (§8.27): one that
+ * the move issues, undoes or deletes is the very change being made.
+ */
+export function unchangedInvoices(
+  from: readonly Invoice[],
+  to: readonly Invoice[]
+): Invoice[] {
+  const after = new Set(to)
+  return from.filter((i) => after.has(i))
 }
 
 /** Every receipt id the stacks can bring back, so the sweep keeps their files. */
