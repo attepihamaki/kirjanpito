@@ -1,4 +1,5 @@
 import { yearOf } from "@/lib/domain/dates"
+import { EMPTY_YEAR_END, type YearEnd } from "@/lib/domain/form5-balance"
 import type { Cents, Entry } from "@/lib/domain/types"
 
 /**
@@ -240,4 +241,90 @@ export function stockProblems(item: StockItem): StockProblem[] {
   if (item.lowerUnitCents !== null && item.lowerReason.trim() === "")
     found.push("lower-without-reason")
   return found
+}
+
+/**
+ * The stock figures a counted year gives Form 5, or null when the year has no
+ * counted rows and its figures stay as typed (§8.28).
+ */
+export function stockFigures(
+  inventory: Inventory,
+  year: number | string
+): { goods: Cents; otherCurrent: Cents } | null {
+  const totals = inventoryTotals(
+    inventory.years[String(year)] ?? [],
+    inventory.method
+  )
+  return totals.rows > 0
+    ? { goods: totals.goods, otherCurrent: totals.materials }
+    : null
+}
+
+export interface GoodsMarginInput {
+  /** Taxable revenue of the year, excluding VAT. */
+  sales: Cents
+  /** Purchases on line 333, excluding VAT and excluding the stock-change entry itself. */
+  purchases: Cents
+  /** Stock at the start of the year (708 plus 709 of the year before). */
+  opening: Cents
+  /** Stock at the end of the year (708 plus 709). */
+  closing: Cents
+}
+
+export interface GoodsMargin extends GoodsMarginInput {
+  /** `opening + purchases - closing`: what the goods sold cost. */
+  cogs: Cents
+  /** `sales - cogs`. */
+  gross: Cents
+  /** The gross margin as a percentage of sales, one decimal, or null with no sales. */
+  percent: number | null
+  /** Days the average stock would last at this rate of sales, or null with no cost of goods. */
+  stockDays: number | null
+}
+
+/** The cost of goods sold and the gross margin of a year (§8.28). */
+export function goodsMargin(input: GoodsMarginInput): GoodsMargin {
+  const cogs = input.opening + input.purchases - input.closing
+  const gross = input.sales - cogs
+  return {
+    ...input,
+    cogs,
+    gross,
+    percent:
+      input.sales > 0 ? Math.round((gross / input.sales) * 1000) / 10 : null,
+    stockDays:
+      cogs > 0
+        ? Math.round(((input.opening + input.closing) / 2 / cogs) * 365)
+        : null,
+  }
+}
+
+/**
+ * The year-end figures with 708 and 709 taken from every counted year. This is
+ * the one place the list reaches the figures, so Form 5, the reports, the new
+ * year and the book check all read the same numbers with no change of their
+ * own. A year with no counted rows is left as it was, and so is a year whose
+ * Form 5 is filed (§8.11), since the figures it was filed with do not move. The
+ * same object comes back when nothing moved.
+ */
+export function syncYearEnd(
+  yearEnd: Readonly<Record<string, YearEnd>>,
+  inventory: Inventory,
+  filed: Readonly<Record<string, unknown>> = {}
+): Record<string, YearEnd> {
+  let next: Record<string, YearEnd> | null = null
+  for (const year of Object.keys(inventory.years)) {
+    if (year in filed) continue
+    const figures = stockFigures(inventory, year)
+    if (!figures) continue
+    const now = yearEnd[year] ?? EMPTY_YEAR_END
+    if (
+      now.goods === figures.goods &&
+      now.otherCurrent === figures.otherCurrent
+    )
+      continue
+    next ??= { ...yearEnd }
+    next[year] = { ...now, ...figures }
+  }
+  return next ?? (yearEnd as Record<string, YearEnd>)
 }

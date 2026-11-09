@@ -4121,6 +4121,10 @@ export const APP_DICT = {
     "Tarkistus {source}, kohdat {codes}",
     "Check {source}, fields {codes}",
   ],
+  "balance.fromStocktake": [
+    "Luku tulee varastolaskennasta, joten sitä muutetaan sivulla Varasto.",
+    "The figure comes from the stocktake, so it is changed on the Inventory page.",
+  ],
   "inventory.tab": ["Varasto", "Inventory"],
   "inventory.intro": [
     "Laske varasto vuoden viimeisenä päivänä ja anna jokaiselle riville määrä ja hankintameno. Summat ovat lomakkeen 5 kohdat 708 ja 709.",
@@ -4152,8 +4156,8 @@ export const APP_DICT = {
     "709 Materials and supplies",
   ],
   "inventory.statHint": [
-    "Anna nämä luvut kohtaan Muokkaa lukuja sivulla Varat ja velat.",
-    "Enter these figures under Edit figures on the Assets and liabilities page.",
+    "Luku siirtyy automaattisesti sivulle Varat ja velat ja lomakkeelle 5.",
+    "The figure carries over to the Assets and liabilities page and to Form 5 by itself.",
   ],
   "inventory.add": ["Lisää rivi", "Add a row"],
   "inventory.import": ["Tuo CSV", "Import CSV"],
@@ -4252,5 +4256,57 @@ export const APP_DICT = {
   "inventory.reportFooter": [
     "Lista on elinkeinonharjoittajan oma laskelma.",
     "The list is the trader's own calculation.",
+  ],
+  "statement.yearEndStockMissing": [
+    "Tavaroita on ostettu {a}, mutta varastoa ei ole kirjattu vuoden lopussa",
+    "Goods worth {a} were bought, but no stock is recorded at the year end",
+  ],
+  "statement.yearEndStockMissingSub": [
+    "Jos varasto on tyhjä, tämä on oikein. Muuten laske varasto Varasto-sivulla, sillä se vaikuttaa kohtaan 333 ja lomakkeen 5 kohtiin 708 ja 709.",
+    "If the stock is empty this is right. Otherwise count it on the Inventory page, since it changes line 333 and Form 5 fields 708 and 709.",
+  ],
+  "statement.yearEndStockTooHigh": [
+    "Laskettu varasto {a} on suurempi kuin alkuvarasto ja ostot yhteensä, {b}",
+    "The counted stock {a} is more than the opening stock and the purchases together, {b}",
+  ],
+  "statement.yearEndStockTooHighSub": [
+    "Varastoa ei voi olla enempää kuin on ostettu. Tarkista määrät ja yksikköhinnat, tai kirjaa puuttuvat ostot.",
+    "There cannot be more stock than was bought. Check the quantities and unit costs, or book the missing purchases.",
+  ],
+  "statement.yearEndStockRows": [
+    "Varastolistan {n} riviä tarvitsee huomiota",
+    "{n} rows of the stocktake need attention",
+  ],
+  "statement.yearEndStockRowsSub": [
+    "Rivillä puuttuu nimi tai hinta, tai alemmalle arvolle ei ole annettu syytä.",
+    "A row has no name or cost, or a lower value has no reason.",
+  ],
+  "inventory.marginSales": ["Liikevaihto", "Revenue"],
+  "inventory.marginPurchases": ["Ostot (333)", "Purchases (333)"],
+  "inventory.marginCogs": [
+    "Myytyjen tavaroiden hankintameno",
+    "Cost of goods sold",
+  ],
+  "inventory.marginCogsHint": [
+    "Alkuvarasto {o} plus ostot {p} miinus loppuvarasto {c}.",
+    "Opening stock {o} plus purchases {p} less closing stock {c}.",
+  ],
+  "inventory.marginGross": ["Myyntikate", "Gross margin"],
+  "inventory.marginGrossHint": [
+    "Liikevaihto miinus myytyjen tavaroiden hankintameno.",
+    "Revenue less the cost of goods sold.",
+  ],
+  "inventory.marginPercent": [
+    "Myyntikate, prosenttia liikevaihdosta",
+    "Gross margin as a share of revenue",
+  ],
+  "inventory.marginDays": ["Varaston riittävyys, päivää", "Days of stock"],
+  "inventory.marginDaysHint": [
+    "Keskivarasto jaettuna päivän myytyjen tavaroiden hankintamenolla.",
+    "Average stock divided by one day of cost of goods sold.",
+  ],
+  "inventory.bookedChanged": [
+    "Kirjattu varaston muutos on {a}, mutta nykyinen lista antaa {b}.",
+    "The booked stock change is {a}, but the list now gives {b}.",
   ],
 } as const satisfies Dict

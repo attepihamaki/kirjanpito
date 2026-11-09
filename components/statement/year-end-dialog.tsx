@@ -75,6 +75,8 @@ function YearEndForm() {
   const receiptHashes = useReceiptHashStore((s) => s.hashes)
   const assetOpening = useBookStore((s) => s.assetOpening)
   const yearEnd = useBookStore((s) => s.yearEnd[year])
+  const previousYearEnd = useBookStore((s) => s.yearEnd[year - 1])
+  const inventory = useBookStore((s) => s.inventory)
 
   const items = React.useMemo(
     () =>
@@ -91,6 +93,10 @@ function YearEndForm() {
         receiptHashes,
         assetOpening,
         yearEnd,
+        inventory,
+        openingStock: previousYearEnd
+          ? previousYearEnd.goods + previousYearEnd.otherCurrent
+          : 0,
       }),
     [
       entries,
@@ -105,6 +111,8 @@ function YearEndForm() {
       receiptHashes,
       assetOpening,
       yearEnd,
+      previousYearEnd,
+      inventory,
     ]
   )
   const canLock = canLockYear(items)

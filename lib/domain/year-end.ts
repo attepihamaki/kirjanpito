@@ -9,6 +9,11 @@ import {
   type EntryCheck,
 } from "@/lib/domain/entry-checks"
 import type { YearEnd } from "@/lib/domain/form5-balance"
+import {
+  stockFigures,
+  stockProblems,
+  type Inventory,
+} from "@/lib/domain/inventory"
 import { balancesAt } from "@/lib/domain/open-items"
 import {
   defineRules,
@@ -44,6 +49,10 @@ export interface YearEndInput {
   assetOpening: AssetOpening | null
   /** The figures typed in on Varat ja velat, or undefined while none were. */
   yearEnd: YearEnd | undefined
+  /** The stocktake (§8.28). Without it the stock rules say nothing about a count. */
+  inventory?: Inventory
+  /** Stock at the start of the year: the year before's 708 plus 709. */
+  openingStock?: Cents
 }
 
 /** What each rule's breach carries, by rule id. */
@@ -66,6 +75,12 @@ export interface YearEndData {
    */
   privateCar: { amount: Cents }
   yearEndFigures: undefined
+  /** Goods were bought in the year but no stock is recorded at its end. */
+  stockMissing: { purchases: Cents }
+  /** The counted stock is more than the opening stock and the year's purchases. */
+  stockTooHigh: { closing: Cents; available: Cents }
+  /** Rows of the stocktake that need attention. */
+  stockRows: { n: number }
   openItems: { n: number; receivables: Cents; payables: Cents }
   emptyMonths: { months: readonly number[] }
 }
@@ -76,6 +91,19 @@ export type YearEndFinding = {
 
 const yearEntriesOf = (i: YearEndInput) =>
   i.entries.filter((e) => yearOf(e.date) === i.year)
+
+/**
+ * What the year's goods purchases cost, excluding VAT: the positive entries on
+ * line 333. The stock-change entry is negative when stock grows, which is the
+ * only case the rules about a larger stock look at, so it never counts here.
+ */
+function goodsPurchases(i: YearEndInput): Cents {
+  return yearEntriesOf(i)
+    .filter((e) => i.cats.get(e.catId)?.line === "333")
+    .map((e) => calcEntry(e).net)
+    .filter((net) => net > 0)
+    .reduce((sum, net) => sum + net, 0)
+}
 
 /** Listed in the order the dialog shows them within a severity. */
 export const YEAR_END_RULES = defineRules<
@@ -188,6 +216,38 @@ export const YEAR_END_RULES = defineRules<
     severity: "info",
     source: "app",
     check: (i) => (i.yearEnd ? [] : [undefined]),
+  },
+  {
+    id: "stockMissing",
+    severity: "info",
+    source: "app",
+    check: (i) => {
+      const purchases = goodsPurchases(i)
+      const recorded = i.yearEnd ? i.yearEnd.goods + i.yearEnd.otherCurrent : 0
+      return purchases > 0 && recorded === 0 ? [{ purchases }] : []
+    },
+  },
+  {
+    id: "stockTooHigh",
+    severity: "warn",
+    source: "app",
+    check: (i) => {
+      const counted = i.inventory && stockFigures(i.inventory, i.year)
+      if (!counted) return []
+      const closing = counted.goods + counted.otherCurrent
+      const available = (i.openingStock ?? 0) + goodsPurchases(i)
+      return closing > available ? [{ closing, available }] : []
+    },
+  },
+  {
+    id: "stockRows",
+    severity: "warn",
+    source: "app",
+    check: (i) => {
+      const rows = i.inventory?.years[String(i.year)] ?? []
+      const n = rows.filter((r) => stockProblems(r).length > 0).length
+      return n ? [{ n }] : []
+    },
   },
   {
     id: "openItems",

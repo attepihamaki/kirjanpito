@@ -18,6 +18,7 @@ import { useMemoVoucher } from "@/components/statement/use-memo-voucher"
 import { Button } from "@/components/ui/button"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { storeMemo, storeReport } from "@/lib/commands/memo-commands"
+import { calcEntry } from "@/lib/domain/calc"
 import { EMPTY_YEAR_END, inventoryChange } from "@/lib/domain/form5-balance"
 import { inventoryTotals } from "@/lib/domain/inventory"
 import { stocktakeReport } from "@/lib/domain/inventory-report"
@@ -111,9 +112,11 @@ function InventoryCard({ year }: { year: number }) {
   const closing = yearEnds[year] ?? EMPTY_YEAR_END
   const change = inventoryChange(opening, closing)
   const description = f.t("balance.inventoryEntry", { y: year })
-  const booked = entries.some(
+  const bookedEntry = entries.find(
     (e) => e.catId === "333" && e.description === description
   )
+  const booked = !!bookedEntry
+  const bookedAmount = bookedEntry ? calcEntry(bookedEntry).net : 0
   const filed = !!useBookStore((s) => s.form5Filed[String(year)])
 
   return (
@@ -123,6 +126,14 @@ function InventoryCard({ year }: { year: number }) {
     >
       <SettingValue value={f.money(change)} />
       <div className="print-hidden">
+        {booked && bookedAmount !== change ? (
+          <p className="text-sm text-destructive">
+            {f.t("inventory.bookedChanged", {
+              a: f.money(bookedAmount),
+              b: f.money(change),
+            })}
+          </p>
+        ) : null}
         {booked ? (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <CheckIcon className="size-4 text-primary" aria-hidden />

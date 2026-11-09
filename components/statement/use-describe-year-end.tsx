@@ -119,6 +119,35 @@ export function useDescribeYearEnd() {
               go(STATEMENT_ROUTES.balance)
             ),
           }
+        case "stockMissing":
+          return {
+            title: f.t("statement.yearEndStockMissing", {
+              a: f.money(item.data.purchases),
+            }),
+            sub: f.t("statement.yearEndStockMissingSub"),
+            action: link(f.t("statement.yearEndOpen"), () =>
+              go(STATEMENT_ROUTES.inventory)
+            ),
+          }
+        case "stockTooHigh":
+          return {
+            title: f.t("statement.yearEndStockTooHigh", {
+              a: f.money(item.data.closing),
+              b: f.money(item.data.available),
+            }),
+            sub: f.t("statement.yearEndStockTooHighSub"),
+            action: link(f.t("statement.yearEndOpen"), () =>
+              go(STATEMENT_ROUTES.inventory)
+            ),
+          }
+        case "stockRows":
+          return {
+            title: f.t("statement.yearEndStockRows", { n: item.data.n }),
+            sub: f.t("statement.yearEndStockRowsSub"),
+            action: link(f.t("statement.yearEndOpen"), () =>
+              go(STATEMENT_ROUTES.inventory)
+            ),
+          }
         case "openItems":
           return {
             title: f.t("overview.openItems", { n: item.data.n }),

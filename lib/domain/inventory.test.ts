@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest"
 
+import { EMPTY_YEAR_END } from "@/lib/domain/form5-balance"
 import {
   carryOver,
+  goodsMargin,
   inventoryOfEntries,
   inventoryTotals,
+  stockFigures,
+  syncYearEnd,
   itemCost,
   itemValue,
   lineValue,
@@ -176,5 +180,80 @@ describe("inventoryOfEntries", () => {
     const out = inventoryOfEntries([{ date: "2026-02-01" }], inv)
     expect(Object.keys(out.years)).toEqual(["2026"])
     expect(out.method).toBe("fifo")
+  })
+})
+
+describe("syncYearEnd", () => {
+  const inv = {
+    method: "fifo" as const,
+    years: {
+      "2026": [
+        item(),
+        item({ id: "s2", kind: "materials", quantityMilli: 2_000 }),
+      ],
+      "2025": [item({ quantityMilli: 0 })],
+    },
+  }
+
+  it("has no figures for a year with no counted rows", () => {
+    expect(stockFigures(inv, 2025)).toBeNull()
+    expect(stockFigures(inv, 2024)).toBeNull()
+    expect(stockFigures(inv, "2026")).toEqual({
+      goods: 5000,
+      otherCurrent: 1000,
+    })
+  })
+
+  it("sets 708 and 709 and keeps every other figure", () => {
+    const out = syncYearEnd({ "2026": { ...EMPTY_YEAR_END, cash: 700 } }, inv)
+    expect(out["2026"]).toMatchObject({
+      goods: 5000,
+      otherCurrent: 1000,
+      cash: 700,
+    })
+    expect(out["2025"]).toBeUndefined()
+  })
+
+  it("leaves typed figures of an uncounted year alone", () => {
+    const typed = { "2025": { ...EMPTY_YEAR_END, goods: 123 } }
+    const uncounted = { ...inv, years: { "2025": inv.years["2025"] } }
+    expect(syncYearEnd(typed, uncounted)).toBe(typed)
+  })
+
+  it("returns the same object when nothing moved", () => {
+    const once = syncYearEnd({}, inv)
+    expect(syncYearEnd(once, inv)).toBe(once)
+  })
+
+  it("never rewrites a year whose Form 5 is filed", () => {
+    const filed = { "2026": { ...EMPTY_YEAR_END, goods: 1 } }
+    expect(syncYearEnd(filed, inv, { "2026": "2027-03-01" })).toBe(filed)
+  })
+})
+
+describe("goodsMargin", () => {
+  it("works out the cost of goods sold, the margin and the days of stock", () => {
+    const m = goodsMargin({
+      sales: 100_000,
+      purchases: 60_000,
+      opening: 10_000,
+      closing: 30_000,
+    })
+    expect(m.cogs).toBe(40_000)
+    expect(m.gross).toBe(60_000)
+    expect(m.percent).toBe(60)
+    expect(m.stockDays).toBe(Math.round((20_000 / 40_000) * 365))
+  })
+
+  it("has no percentage without sales and no days without a cost", () => {
+    const m = goodsMargin({
+      sales: 0,
+      purchases: 0,
+      opening: 0,
+      closing: 5_000,
+    })
+    expect(m.cogs).toBe(-5_000)
+    expect(m.percent).toBeNull()
+    expect(m.stockDays).toBeNull()
   })
 })

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { EMPTY_YEAR_END, type YearEnd } from "@/lib/domain/form5-balance"
+import { stockFigures } from "@/lib/domain/inventory"
 import type { MessageKey } from "@/lib/i18n/messages"
 import { formatMoneyPlain } from "@/lib/domain/money"
 import { evalAmount } from "@/lib/domain/amount-expr"
@@ -77,22 +78,30 @@ function FiguresForm() {
   const loanOpening = useBookStore((s) => s.loanOpening)
   const setLoanOpening = useBookStore((s) => s.setLoanOpening)
   const filed = !!useBookStore((s) => s.form5Filed[String(year)])
+  const inventory = useBookStore((s) => s.inventory)
   const values = yearEnds[year] ?? EMPTY_YEAR_END
+  /* A counted stocktake sets 708 and 709, so they are not typed (§8.28). */
+  const counted = stockFigures(inventory, year) !== null
 
   const group = (
     fields: readonly (readonly [keyof YearEnd, MessageKey, MessageKey])[]
   ) =>
-    fields.map(([key, label, help]) => (
-      <AmountField
-        key={key}
-        id={`year-end-${key}`}
-        label={f.t(label)}
-        help={f.t(help)}
-        cents={values[key]}
-        disabled={filed}
-        onCommit={(cents) => setYearEnd(year, { ...values, [key]: cents })}
-      />
-    ))
+    fields.map(([key, label, help]) => {
+      const derived = counted && (key === "goods" || key === "otherCurrent")
+      return (
+        <AmountField
+          key={key}
+          id={`year-end-${key}`}
+          label={f.t(label)}
+          help={
+            derived ? `${f.t(help)} ${f.t("balance.fromStocktake")}` : f.t(help)
+          }
+          cents={values[key]}
+          disabled={filed || derived}
+          onCommit={(cents) => setYearEnd(year, { ...values, [key]: cents })}
+        />
+      )
+    })
 
   return (
     <Dialog open onOpenChange={(open) => !open && closeDialog()}>

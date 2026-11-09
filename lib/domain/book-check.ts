@@ -5,6 +5,7 @@ import {
 } from "@/lib/domain/book-limits"
 import type { ChangeRecord } from "@/lib/domain/change-log"
 import { yearOf } from "@/lib/domain/dates"
+import type { Inventory } from "@/lib/domain/inventory"
 import type { ReceiptHashes } from "@/lib/domain/entry-checks"
 import { form5Report } from "@/lib/domain/form5-report"
 import { form5Values } from "@/lib/domain/form5"
@@ -61,6 +62,8 @@ export interface BookCheckInput {
   loanOpening: LoanOpening | null
   /** The figures typed in on Varat ja velat, by year. */
   yearEnd: Readonly<Record<string, YearEnd>>
+  /** The stocktake (§8.28). */
+  inventory?: Inventory
 }
 
 /**
@@ -89,10 +92,20 @@ const ABOUT_LOCKING = ["yearOngoing", "noEntries"]
  * year has ended: its depreciation is not unused yet, and its figures are not
  * due.
  */
-const AFTER_YEAR_END = ["yearEndFigures", "depreciation", "openItems"]
+const AFTER_YEAR_END = [
+  "yearEndFigures",
+  "depreciation",
+  "openItems",
+  "stockMissing",
+]
 
 /** Unsaved changes belong to the book, so they are reported once. */
 const ABOUT_THE_BOOK = ["unsaved"]
+
+/** 708 plus 709 of a year-end, or zero when none was entered. */
+function stockOn(yearEnd: YearEnd | undefined): number {
+  return yearEnd ? yearEnd.goods + yearEnd.otherCurrent : 0
+}
 
 /**
  * Every breach in the book. The book's own findings come first, then each year
@@ -115,6 +128,8 @@ export function bookCheck(input: BookCheckInput): BookFinding[] {
     receiptHashes: input.receiptHashes,
     assetOpening: input.assetOpening,
     yearEnd: input.yearEnd[year],
+    inventory: input.inventory,
+    openingStock: stockOn(input.yearEnd[year - 1]),
   })
 
   const assetsOf = (year: number) =>

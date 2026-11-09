@@ -17,7 +17,11 @@ import {
   type Invoice,
   type InvoiceSettings,
 } from "@/lib/domain/invoice"
-import { EMPTY_INVENTORY, type Inventory } from "@/lib/domain/inventory"
+import {
+  EMPTY_INVENTORY,
+  syncYearEnd,
+  type Inventory,
+} from "@/lib/domain/inventory"
 import { NO_PAY_MONTHS, type PayMonths } from "@/lib/domain/tax-calendar"
 import type { EntryCheck } from "@/lib/domain/entry-checks"
 import type { CategoryRule } from "@/lib/domain/category-rules"
@@ -1171,7 +1175,11 @@ export const useBookStore = create<BookStore>()(
           bankBalance: s.bankBalance ?? null,
           payMonths: { ...NO_PAY_MONTHS, ...s.payMonths },
           loanOpening: s.loanOpening ?? null,
-          yearEnd: s.yearEnd ?? {},
+          yearEnd: syncYearEnd(
+            s.yearEnd ?? {},
+            next.inventory ?? EMPTY_INVENTORY,
+            s.form5Filed ?? {}
+          ),
           invoiceSettings: s.invoiceSettings ?? DEFAULT_INVOICE_SETTINGS,
           invoices: next.invoices ?? [],
           customers: next.customers ?? [],
@@ -1469,7 +1477,12 @@ export const useBookStore = create<BookStore>()(
         set({ invoiceSettings, dirty: true }),
       setInvoices: (invoices) => set({ invoices, dirty: true }),
       setCustomers: (customers) => set({ customers, dirty: true }),
-      setInventory: (inventory) => set({ inventory, dirty: true }),
+      setInventory: (inventory) =>
+        set((s) => ({
+          inventory,
+          yearEnd: syncYearEnd(s.yearEnd, inventory, s.form5Filed),
+          dirty: true,
+        })),
       setPayMonths: (payMonths) => set({ payMonths, dirty: true }),
       setTaxPayment: (taxPayment) => set({ taxPayment, dirty: true }),
       setLoanOpening: (loanOpening) => set({ loanOpening, dirty: true }),

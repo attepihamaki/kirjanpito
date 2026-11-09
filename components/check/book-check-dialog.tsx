@@ -50,6 +50,7 @@ function BookCheckForm() {
   const assetOpening = useBookStore((s) => s.assetOpening)
   const loanOpening = useBookStore((s) => s.loanOpening)
   const yearEnd = useBookStore((s) => s.yearEnd)
+  const inventory = useBookStore((s) => s.inventory)
 
   const findings = React.useMemo(
     () =>
@@ -67,6 +68,7 @@ function BookCheckForm() {
         assetOpening,
         loanOpening,
         yearEnd,
+        inventory,
       }),
     [
       entries,
@@ -82,6 +84,7 @@ function BookCheckForm() {
       assetOpening,
       loanOpening,
       yearEnd,
+      inventory,
     ]
   )
 

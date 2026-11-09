@@ -37,9 +37,14 @@ import { toast } from "@/components/ui/toast"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { saveBlob } from "@/lib/browser/download"
 import { downloadReport } from "@/lib/commands/memo-commands"
+import { calcEntry } from "@/lib/domain/calc"
+import { EMPTY_YEAR_END } from "@/lib/domain/form5-balance"
 import { uid } from "@/lib/domain/id"
+import { incomeStatement } from "@/lib/domain/income-statement"
+import { taxBasisEntries } from "@/lib/domain/open-items"
 import {
   carryOver,
+  goodsMargin,
   inventoryTotals,
   itemValue,
   stockProblems,
@@ -56,6 +61,7 @@ import {
 } from "@/lib/domain/inventory-csv"
 import { stocktakeReport } from "@/lib/domain/inventory-report"
 import { formatMoneyPlain, parseAmount } from "@/lib/domain/money"
+import { indexCategories } from "@/lib/domain/types"
 import type { MessageKey } from "@/lib/i18n/messages"
 import { confirm } from "@/lib/ui/confirm"
 import { useBookStore, type PageSize } from "@/stores/book-store"
@@ -96,6 +102,10 @@ export function InventoryView() {
   const businessName = useBookStore((s) => s.businessName)
   const businessId = useBookStore((s) => s.businessId)
   const locked = !!useBookStore((s) => s.form5Filed[String(year)])
+  const entries = useBookStore((s) => s.entries)
+  const cats = useBookStore((s) => s.cats)
+  const traderType = useBookStore((s) => s.traderType)
+  const yearEnds = useBookStore((s) => s.yearEnd)
 
   const [query, setQuery] = React.useState("")
   const [page, setPage] = React.useState(1)
@@ -113,6 +123,37 @@ export function InventoryView() {
     () => inventoryTotals(rows, method),
     [rows, method]
   )
+
+  const margin = React.useMemo(() => {
+    const catMap = indexCategories(cats)
+    const statement = incomeStatement(
+      taxBasisEntries(entries, traderType),
+      catMap,
+      year
+    )
+    const description = f.t("balance.inventoryEntry", { y: year })
+    /* The booked stock change is on line 333 too, so it is taken out of the purchases. */
+    const bookedEntries = entries.filter(
+      (e) =>
+        e.catId === "333" &&
+        e.description === description &&
+        e.date.startsWith(`${year}-`)
+    )
+    const booked = bookedEntries.reduce((sum, e) => sum + calcEntry(e).net, 0)
+    const line333 = statement.lines.find((l) => l.line.key === "333")?.net ?? 0
+    const stock = (y: number) => {
+      const figures = yearEnds[y] ?? EMPTY_YEAR_END
+      return figures.goods + figures.otherCurrent
+    }
+    return goodsMargin({
+      sales: statement.revenueTotal,
+      purchases: line333 - booked,
+      opening: stock(year - 1),
+      closing: stock(year),
+    })
+  }, [entries, cats, traderType, year, yearEnds, f])
+  const showMargin =
+    margin.purchases !== 0 || margin.opening !== 0 || margin.closing !== 0
 
   const setRows = (next: StockItem[]) =>
     setInventory({ ...inventory, years: { ...inventory.years, [key]: next } })
@@ -234,6 +275,50 @@ export function InventoryView() {
           <SettingValue value={f.money(totals.materials)} />
         </SettingCard>
       </SettingGrid>
+
+      {showMargin ? (
+        <SettingGrid>
+          <SettingCard label={f.t("inventory.marginSales")}>
+            <SettingValue value={f.money(margin.sales)} />
+          </SettingCard>
+          <SettingCard label={f.t("inventory.marginPurchases")}>
+            <SettingValue value={f.money(margin.purchases)} />
+          </SettingCard>
+          <SettingCard
+            label={f.t("inventory.marginCogs")}
+            info={f.t("inventory.marginCogsHint", {
+              o: f.money(margin.opening),
+              p: f.money(margin.purchases),
+              c: f.money(margin.closing),
+            })}
+          >
+            <SettingValue value={f.money(margin.cogs)} />
+          </SettingCard>
+          <SettingCard
+            label={f.t("inventory.marginGross")}
+            info={f.t("inventory.marginGrossHint")}
+          >
+            <SettingValue value={f.money(margin.gross)} />
+          </SettingCard>
+          <SettingCard label={f.t("inventory.marginPercent")}>
+            <SettingValue
+              value={
+                margin.percent === null
+                  ? "-"
+                  : `${String(margin.percent).replace(".", f.lang === "fi" ? "," : ".")} %`
+              }
+            />
+          </SettingCard>
+          <SettingCard
+            label={f.t("inventory.marginDays")}
+            info={f.t("inventory.marginDaysHint")}
+          >
+            <SettingValue
+              value={margin.stockDays === null ? "-" : String(margin.stockDays)}
+            />
+          </SettingCard>
+        </SettingGrid>
+      ) : null}
 
       {locked ? (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">

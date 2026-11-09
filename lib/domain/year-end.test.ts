@@ -141,3 +141,74 @@ describe("yearEndFindings", () => {
     expect(found).toMatchObject({ data: { months: [11] } })
   })
 })
+
+describe("stock rules (§8.28)", () => {
+  const row = (over = {}) => ({
+    id: "s1",
+    name: "Kahvi",
+    sku: "",
+    unit: "kpl",
+    kind: "goods" as const,
+    quantityMilli: 10_000,
+    unitCents: 500,
+    layers: [],
+    lowerUnitCents: null,
+    lowerReason: "",
+    ...over,
+  })
+  const counted = (rows: ReturnType<typeof row>[]) => ({
+    method: "average" as const,
+    years: { "2025": rows },
+  })
+  /* Purchases of 100 + 79,15 = 179,15 € net: 12 550 and 9 900 gross at 25,5 %. */
+  const purchases = 10_000 + 7_888
+
+  it("says goods were bought when no stock is recorded", () => {
+    const found = yearEndFindings(input()).find(
+      (i) => i.ruleId === "stockMissing"
+    )
+    expect(found?.severity).toBe("info")
+    expect(found?.data).toEqual({ purchases })
+  })
+
+  it("is quiet once a stock figure is recorded", () => {
+    expect(ids({ yearEnd: { ...EMPTY_YEAR_END, goods: 1 } })).not.toContain(
+      "stockMissing"
+    )
+  })
+
+  it("warns when the counted stock is more than opening plus purchases", () => {
+    const found = yearEndFindings(
+      input({
+        inventory: counted([row({ quantityMilli: 100_000 })]),
+        openingStock: 1_000,
+      })
+    ).find((i) => i.ruleId === "stockTooHigh")
+    expect(found?.severity).toBe("warn")
+    expect(found?.data).toEqual({
+      closing: 50_000,
+      available: 1_000 + purchases,
+    })
+  })
+
+  it("accepts a stock the purchases and opening stock cover", () => {
+    expect(ids({ inventory: counted([row()]), openingStock: 0 })).not.toContain(
+      "stockTooHigh"
+    )
+  })
+
+  it("counts the rows that need attention", () => {
+    const found = yearEndFindings(
+      input({
+        inventory: counted([row({ unitCents: 0 }), row({ id: "s2" })]),
+      })
+    ).find((i) => i.ruleId === "stockRows")
+    expect(found?.data).toEqual({ n: 1 })
+  })
+
+  it("says nothing about a count when there is no stocktake", () => {
+    const rules = ids({ openingStock: 5 })
+    expect(rules).not.toContain("stockTooHigh")
+    expect(rules).not.toContain("stockRows")
+  })
+})
