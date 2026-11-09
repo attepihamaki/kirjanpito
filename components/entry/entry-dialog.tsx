@@ -1441,7 +1441,8 @@ function EntryDialogForm({
 
             <TabsContent value="payment" className="min-h-72 px-5 py-5">
               <FieldGroup>
-                <fieldset disabled={!!lock} className="contents">
+                {/* The payment date stays open on a locked voucher (§8.11). */}
+                <fieldset className="contents">
                   {unpayable ? (
                     <Field>
                       <div className="flex items-center gap-1">
@@ -1497,164 +1498,170 @@ function EntryDialogForm({
                     </Field>
                   ) : null}
 
-                  {periodApplies ? (
-                    <Field data-invalid={invalid("period")}>
-                      <div className="flex items-center gap-1">
-                        <FieldLabel>{f.t("entry.period")}</FieldLabel>
-                        <InfoPopover label={f.t("entry.periodInfo")}>
-                          {f.t("entry.periodInfoText")}
-                        </InfoPopover>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <DateInput
-                          aria-label={f.t("entry.periodFrom")}
-                          aria-invalid={invalid("period")}
-                          value={form.periodFrom}
-                          onValueChange={(iso) => update({ periodFrom: iso })}
-                          className="w-44"
-                        />
-                        <span className="text-sm text-muted-foreground">–</span>
-                        <DateInput
-                          aria-label={f.t("entry.periodTo")}
-                          aria-invalid={invalid("period")}
-                          value={form.periodTo}
-                          onValueChange={(iso) => update({ periodTo: iso })}
-                          className="w-44"
-                        />
-                      </div>
-                      <FieldDescription>
-                        {f.t("entry.periodHint")}
-                      </FieldDescription>
-                    </Field>
-                  ) : null}
+                  <fieldset disabled={!!lock} className="contents">
+                    {periodApplies ? (
+                      <Field data-invalid={invalid("period")}>
+                        <div className="flex items-center gap-1">
+                          <FieldLabel>{f.t("entry.period")}</FieldLabel>
+                          <InfoPopover label={f.t("entry.periodInfo")}>
+                            {f.t("entry.periodInfoText")}
+                          </InfoPopover>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <DateInput
+                            aria-label={f.t("entry.periodFrom")}
+                            aria-invalid={invalid("period")}
+                            value={form.periodFrom}
+                            onValueChange={(iso) => update({ periodFrom: iso })}
+                            className="w-44"
+                          />
+                          <span className="text-sm text-muted-foreground">
+                            –
+                          </span>
+                          <DateInput
+                            aria-label={f.t("entry.periodTo")}
+                            aria-invalid={invalid("period")}
+                            value={form.periodTo}
+                            onValueChange={(iso) => update({ periodTo: iso })}
+                            className="w-44"
+                          />
+                        </div>
+                        <FieldDescription>
+                          {f.t("entry.periodHint")}
+                        </FieldDescription>
+                      </Field>
+                    ) : null}
 
-                  {shareApplies ? (
-                    <Field data-invalid={invalid("share")}>
-                      <div className="flex items-center gap-1">
-                        <FieldLabel htmlFor="entry-share">
-                          {f.t("entry.share")}
-                        </FieldLabel>
-                        <InfoPopover label={f.t("entry.shareInfo")}>
-                          {f.t("entry.shareInfoText")}
-                        </InfoPopover>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          id="entry-share"
-                          inputMode="numeric"
-                          placeholder="100"
-                          value={form.share}
-                          aria-invalid={invalid("share")}
-                          onChange={(e) => {
-                            keepShare.current = true
-                            update({
-                              share: e.target.value.replace(/[^\d]/g, ""),
-                            })
-                          }}
-                          className="tabular w-24 text-right"
-                        />
-                        <span className="text-sm text-muted-foreground">%</span>
-                      </div>
-                    </Field>
-                  ) : null}
+                    {shareApplies ? (
+                      <Field data-invalid={invalid("share")}>
+                        <div className="flex items-center gap-1">
+                          <FieldLabel htmlFor="entry-share">
+                            {f.t("entry.share")}
+                          </FieldLabel>
+                          <InfoPopover label={f.t("entry.shareInfo")}>
+                            {f.t("entry.shareInfoText")}
+                          </InfoPopover>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="entry-share"
+                            inputMode="numeric"
+                            placeholder="100"
+                            value={form.share}
+                            aria-invalid={invalid("share")}
+                            onChange={(e) => {
+                              keepShare.current = true
+                              update({
+                                share: e.target.value.replace(/[^\d]/g, ""),
+                              })
+                            }}
+                            className="tabular w-24 text-right"
+                          />
+                          <span className="text-sm text-muted-foreground">
+                            %
+                          </span>
+                        </div>
+                      </Field>
+                    ) : null}
 
-                  <div className="flex flex-col divide-y rounded-lg border">
-                    {unpayable && form.paid !== "open" ? (
+                    <div className="flex flex-col divide-y rounded-lg border">
+                      {unpayable && form.paid !== "open" ? (
+                        <Field orientation="horizontal" className="p-3">
+                          <Checkbox
+                            id="entry-cash"
+                            checked={form.cash}
+                            onCheckedChange={(checked) =>
+                              update({ cash: checked === true })
+                            }
+                          />
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1">
+                              <FieldLabel
+                                htmlFor="entry-cash"
+                                className="font-normal"
+                              >
+                                {f.t("entry.cashLabel")}
+                              </FieldLabel>
+                              <InfoPopover label={f.t("entry.cashInfo")}>
+                                {f.t("entry.cashInfoText", {
+                                  d: CASH_BOOKING_DAYS,
+                                })}
+                              </InfoPopover>
+                            </div>
+                            <FieldDescription>
+                              {f.t("entry.cashDesc")}
+                            </FieldDescription>
+                          </div>
+                        </Field>
+                      ) : null}
+
                       <Field orientation="horizontal" className="p-3">
                         <Checkbox
-                          id="entry-cash"
-                          checked={form.cash}
+                          id="entry-repeat"
+                          checked={form.repeat}
                           onCheckedChange={(checked) =>
-                            update({ cash: checked === true })
+                            update({ repeat: checked === true })
                           }
                         />
                         <div className="flex flex-col gap-0.5">
                           <div className="flex items-center gap-1">
                             <FieldLabel
-                              htmlFor="entry-cash"
+                              htmlFor="entry-repeat"
                               className="font-normal"
                             >
-                              {f.t("entry.cashLabel")}
+                              {f.t("recurring.repeat")}
                             </FieldLabel>
-                            <InfoPopover label={f.t("entry.cashInfo")}>
-                              {f.t("entry.cashInfoText", {
-                                d: CASH_BOOKING_DAYS,
-                              })}
+                            <InfoPopover label={f.t("recurring.repeatInfo")}>
+                              {f.t("recurring.repeatHint")}
                             </InfoPopover>
                           </div>
                           <FieldDescription>
-                            {f.t("entry.cashDesc")}
+                            {f.t("entry.repeatDesc")}
                           </FieldDescription>
                         </div>
                       </Field>
-                    ) : null}
+                    </div>
 
-                    <Field orientation="horizontal" className="p-3">
-                      <Checkbox
-                        id="entry-repeat"
-                        checked={form.repeat}
-                        onCheckedChange={(checked) =>
-                          update({ repeat: checked === true })
-                        }
-                      />
-                      <div className="flex flex-col gap-0.5">
+                    {assetSale ? (
+                      <Field>
                         <div className="flex items-center gap-1">
-                          <FieldLabel
-                            htmlFor="entry-repeat"
-                            className="font-normal"
-                          >
-                            {f.t("recurring.repeat")}
-                          </FieldLabel>
-                          <InfoPopover label={f.t("recurring.repeatInfo")}>
-                            {f.t("recurring.repeatHint")}
+                          <FieldLabel>{f.t("entry.sells")}</FieldLabel>
+                          <InfoPopover label={f.t("entry.sellsInfo")}>
+                            {f.t("entry.sellsInfoText")}
                           </InfoPopover>
                         </div>
-                        <FieldDescription>
-                          {f.t("entry.repeatDesc")}
-                        </FieldDescription>
-                      </div>
-                    </Field>
-                  </div>
+                        <VoucherPicker
+                          options={sellOptions}
+                          value={sold ? form.sells : ""}
+                          label={f.t("entry.sells")}
+                          noneLabel={f.t("entry.sellsNone")}
+                          searchPlaceholder={f.t("entry.reversesSearch")}
+                          emptyText={f.t("entry.reversesEmpty")}
+                          moreText={(n) => f.t("entry.reversesMore", { n })}
+                          onChange={(value) => update({ sells: value })}
+                        />
+                      </Field>
+                    ) : null}
 
-                  {assetSale ? (
                     <Field>
                       <div className="flex items-center gap-1">
-                        <FieldLabel>{f.t("entry.sells")}</FieldLabel>
-                        <InfoPopover label={f.t("entry.sellsInfo")}>
-                          {f.t("entry.sellsInfoText")}
+                        <FieldLabel>{f.t("entry.reverses")}</FieldLabel>
+                        <InfoPopover label={f.t("entry.reversesInfo")}>
+                          {f.t("entry.reversesInfoText")}
                         </InfoPopover>
                       </div>
                       <VoucherPicker
-                        options={sellOptions}
-                        value={sold ? form.sells : ""}
-                        label={f.t("entry.sells")}
-                        noneLabel={f.t("entry.sellsNone")}
+                        options={reversalOptions}
+                        value={reversed ? form.reverses : ""}
+                        label={f.t("entry.reverses")}
+                        noneLabel={f.t("entry.reversesNone")}
                         searchPlaceholder={f.t("entry.reversesSearch")}
                         emptyText={f.t("entry.reversesEmpty")}
                         moreText={(n) => f.t("entry.reversesMore", { n })}
-                        onChange={(value) => update({ sells: value })}
+                        onChange={(value) => update({ reverses: value })}
                       />
                     </Field>
-                  ) : null}
-
-                  <Field>
-                    <div className="flex items-center gap-1">
-                      <FieldLabel>{f.t("entry.reverses")}</FieldLabel>
-                      <InfoPopover label={f.t("entry.reversesInfo")}>
-                        {f.t("entry.reversesInfoText")}
-                      </InfoPopover>
-                    </div>
-                    <VoucherPicker
-                      options={reversalOptions}
-                      value={reversed ? form.reverses : ""}
-                      label={f.t("entry.reverses")}
-                      noneLabel={f.t("entry.reversesNone")}
-                      searchPlaceholder={f.t("entry.reversesSearch")}
-                      emptyText={f.t("entry.reversesEmpty")}
-                      moreText={(n) => f.t("entry.reversesMore", { n })}
-                      onChange={(value) => update({ reverses: value })}
-                    />
-                  </Field>
+                  </fieldset>
                 </fieldset>
 
                 {reversed ? (
