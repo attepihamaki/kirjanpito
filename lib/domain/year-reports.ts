@@ -99,7 +99,14 @@ export type ReportBlock =
 
 export interface ReportDoc {
   /** Stable key for the file: the order in the package and its name. */
-  id: "journal" | "ledger" | "accounts" | "statement" | "form5" | "vat"
+  id:
+    | "journal"
+    | "ledger"
+    | "accounts"
+    | "statement"
+    | "form5"
+    | "vat"
+    | "stocktake"
   /** The document title, also the PDF's title. */
   title: string
   /** Lines under the title: the business, the period. */

@@ -34,6 +34,10 @@ export function StatementShell({ children }: { children: React.ReactNode }) {
           tabs={[
             { href: STATEMENT_ROUTES.sheet, label: t("statement.sheetTab") },
             { href: STATEMENT_ROUTES.balance, label: t("balance.tab") },
+            {
+              href: STATEMENT_ROUTES.inventory,
+              label: t("inventory.tab"),
+            },
             { href: STATEMENT_ROUTES.assets, label: t("assets.tab") },
             { href: STATEMENT_ROUTES.deductions, label: t("deductions.tab") },
           ]}

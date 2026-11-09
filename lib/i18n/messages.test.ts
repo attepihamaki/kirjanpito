@@ -52,6 +52,7 @@ describe("dictionary integrity", () => {
       "empty",
       "entry",
       "file",
+      "inventory",
       "invoice",
       "io",
       "landing",

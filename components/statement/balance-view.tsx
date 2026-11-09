@@ -17,8 +17,10 @@ import {
 import { useMemoVoucher } from "@/components/statement/use-memo-voucher"
 import { Button } from "@/components/ui/button"
 import { useCommandCtx } from "@/hooks/use-commands"
-import { storeMemo } from "@/lib/commands/memo-commands"
+import { storeMemo, storeReport } from "@/lib/commands/memo-commands"
 import { EMPTY_YEAR_END, inventoryChange } from "@/lib/domain/form5-balance"
+import { inventoryTotals } from "@/lib/domain/inventory"
+import { stocktakeReport } from "@/lib/domain/inventory-report"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -98,6 +100,9 @@ function InventoryCard({ year }: { year: number }) {
   const f = useFormatters()
   const yearEnds = useBookStore((s) => s.yearEnd)
   const entries = useBookStore((s) => s.entries)
+  const inventory = useBookStore((s) => s.inventory)
+  const businessName = useBookStore((s) => s.businessName)
+  const businessId = useBookStore((s) => s.businessId)
   const openDialog = useBookStore((s) => s.openDialog)
   const ctx = useCommandCtx()
   const memoVoucher = useMemoVoucher()
@@ -164,11 +169,30 @@ function InventoryCard({ year }: { year: number }) {
                 [f.t("memo.inventoryRule"), f.t("memo.keepCount")]
               )
               const att = await storeMemo(ctx, memo)
+              /*
+               * A counted stock goes in as the second voucher, so the memo's
+               * figures rest on the list they came from (§8.28).
+               */
+              const rows = inventory.years[String(year)] ?? []
+              const list =
+                inventoryTotals(rows, inventory.method).rows > 0
+                  ? await storeReport(
+                      ctx,
+                      stocktakeReport(f, {
+                        year,
+                        items: rows,
+                        method: inventory.method,
+                        businessName: businessName ?? "",
+                        businessId: businessId ?? "",
+                      })
+                    )
+                  : null
+              const atts = [att, list].filter((a) => a !== null)
               setBusy(false)
               openDialog({
                 kind: "entry",
                 mode: "new",
-                prefill: { ...prefill, ...(att ? { atts: [att] } : {}) },
+                prefill: { ...prefill, ...(atts.length ? { atts } : {}) },
               })
             }}
           >

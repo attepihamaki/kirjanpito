@@ -171,10 +171,21 @@ describe("packZip", () => {
     expect(unpacked.otherFiles).toEqual([])
   })
 
-  it("writes neither file when none is given", async () => {
+  it("writes inventory.json beside settings.json and keeps it out of the receipts", async () => {
+    const bytes = await packZip({
+      ...packInputs([entry()]),
+      inventoryText: '{"years":{}}',
+    })
+    const unpacked = (await unpackZip(bytes))!
+    expect(unpacked.inventoryText).toBe('{"years":{}}')
+    expect(unpacked.otherFiles).toEqual([])
+  })
+
+  it("writes no optional file when none is given", async () => {
     const unpacked = (await unpackZip(await packZip(packInputs([entry()]))))!
     expect(unpacked.invoicesText).toBeNull()
     expect(unpacked.customersText).toBeNull()
+    expect(unpacked.inventoryText).toBeNull()
   })
 
   it("reads an archive without settings.json as having none", async () => {

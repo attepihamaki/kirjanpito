@@ -17,6 +17,7 @@ import {
   type Invoice,
   type InvoiceSettings,
 } from "@/lib/domain/invoice"
+import { EMPTY_INVENTORY, type Inventory } from "@/lib/domain/inventory"
 import { NO_PAY_MONTHS, type PayMonths } from "@/lib/domain/tax-calendar"
 import type { EntryCheck } from "@/lib/domain/entry-checks"
 import type { CategoryRule } from "@/lib/domain/category-rules"
@@ -346,6 +347,8 @@ export interface BookState {
   invoices: Invoice[]
   /** The customer register (§8.27). Saved in customers.json. */
   customers: Customer[]
+  /** The stocktake and its cost method (§8.28). Saved in inventory.json. */
+  inventory: Inventory
   /** What has happened to the entries, oldest first (§8.11). Saved in settings.json. */
   changeLog: ChangeRecord[]
 
@@ -473,6 +476,8 @@ export interface BookActions {
     /** What the file's `invoices.json` and `customers.json` carried (§7.6). */
     invoices?: Invoice[]
     customers?: Customer[]
+    /** What the file's `inventory.json` carried (§7.6). */
+    inventory?: Inventory
     /**
      * What the file's `settings.json` carried. A plain CSV has none: its
      * filed marks start empty and everything else stays as it was.
@@ -610,6 +615,7 @@ export interface BookActions {
   setInvoiceSettings(settings: InvoiceSettings): void
   setInvoices(invoices: Invoice[]): void
   setCustomers(customers: Customer[]): void
+  setInventory(inventory: Inventory): void
   setPayMonths(months: PayMonths): void
 
   upsertCategory(category: Category): void
@@ -690,6 +696,7 @@ function initialState(): BookState {
     invoiceSettings: DEFAULT_INVOICE_SETTINGS,
     invoices: [],
     customers: [],
+    inventory: EMPTY_INVENTORY,
     changeLog: [],
 
     hydrated: false,
@@ -767,6 +774,7 @@ type PersistedBook = Pick<
   | "invoiceSettings"
   | "invoices"
   | "customers"
+  | "inventory"
   | "changeLog"
 >
 
@@ -941,6 +949,7 @@ const BOOK_DATA_KEYS: readonly (keyof BookState)[] = [
   "invoiceSettings",
   "invoices",
   "customers",
+  "inventory",
   "changeLog",
   "encrypted",
   "overviewLayout",
@@ -1039,6 +1048,7 @@ export const useBookStore = create<BookStore>()(
           invoiceSettings: DEFAULT_INVOICE_SETTINGS,
           invoices: [],
           customers: [],
+          inventory: EMPTY_INVENTORY,
           changeLog: [],
           onboarding: true,
           undoAttachmentIds: [],
@@ -1099,6 +1109,7 @@ export const useBookStore = create<BookStore>()(
           invoiceSettings: DEFAULT_INVOICE_SETTINGS,
           invoices: [],
           customers: [],
+          inventory: EMPTY_INVENTORY,
           changeLog: [],
           dialog: { kind: "none" },
           figure: null,
@@ -1164,6 +1175,7 @@ export const useBookStore = create<BookStore>()(
           invoiceSettings: s.invoiceSettings ?? DEFAULT_INVOICE_SETTINGS,
           invoices: next.invoices ?? [],
           customers: next.customers ?? [],
+          inventory: next.inventory ?? EMPTY_INVENTORY,
           changeLog: s.changeLog
             ? relinkChangeLog(s.changeLog, entries)
             : [{ at: new Date().toISOString(), action: "import" }],
@@ -1457,6 +1469,7 @@ export const useBookStore = create<BookStore>()(
         set({ invoiceSettings, dirty: true }),
       setInvoices: (invoices) => set({ invoices, dirty: true }),
       setCustomers: (customers) => set({ customers, dirty: true }),
+      setInventory: (inventory) => set({ inventory, dirty: true }),
       setPayMonths: (payMonths) => set({ payMonths, dirty: true }),
       setTaxPayment: (taxPayment) => set({ taxPayment, dirty: true }),
       setLoanOpening: (loanOpening) => set({ loanOpening, dirty: true }),
@@ -1613,6 +1626,7 @@ export const useBookStore = create<BookStore>()(
         invoiceSettings: s.invoiceSettings,
         invoices: s.invoices,
         customers: s.customers,
+        inventory: s.inventory,
         changeLog: s.changeLog,
       }),
       /*

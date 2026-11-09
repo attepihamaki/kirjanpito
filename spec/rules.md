@@ -144,3 +144,15 @@ A phone, a car or a home internet line serves the business and the owner. `Entry
 - **The entry dialog** shows "Yrityksen osuus" on the Maksu tab, under the payment date, on a cost, with an info popover. Empty means the whole voucher. The receipt preview prints the whole voucher and, beneath it, the business net and the deductible VAT. The ledger shows an "Osuus 50 %" pill.
 - **A split part starts without a share**, since it sits in another category. A copy keeps the share. The change log records it as "Yrityksen osuus".
 - **Not handled:** deriving the share from a logbook or a bill breakdown, a share that differs between the VAT deduction and the income tax deduction, and the adjustment of deducted VAT on fixed assets when use changes later (AVL 117 §).
+
+### 6.13 Stock valuation
+
+Stock is valued at its acquisition cost, or at a lower probable sale or replacement price when that is below cost. The book keeps one cost method for all years (`CostMethod`, `lib/domain/inventory.ts`), and the choice is shown on the stocktake list. The wording of EVL and KPL on valuation has to be checked against the specification before this rule is relied on, and it is not yet.
+
+- **A row's cost** is worked out from the quantity counted, the unit cost and the purchase layers, oldest first. With no layers it is `round(quantity × unit cost)`.
+- **FIFO** takes the units still in stock from the newest purchases backwards, since the oldest were sold first.
+- **Weighted average** prices every unit at the mean of all the layers.
+- **Units the layers do not cover** are priced at the unit cost under both methods.
+- **A lower value** per unit gives a write-down of `cost − round(quantity × lower value)` when that is positive, and zero otherwise. The value that goes in the balance is the cost less the write-down.
+- **Totals.** A row's value joins 708 when it is goods and 709 when it is materials. The change on line 333 is still opening minus closing (§8.8).
+- **Problems the row shows.** No name, a quantity with no cost, and a lower value with no reason (`stockProblems`).

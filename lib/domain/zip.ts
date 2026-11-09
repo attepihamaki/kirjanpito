@@ -16,6 +16,7 @@ import {
   CUSTOMERS_FILE_NAME,
   INVOICES_FILE_NAME,
 } from "@/lib/domain/invoice-file"
+import { INVENTORY_FILE_NAME } from "@/lib/domain/inventory-file"
 import { SETTINGS_FILE_NAME } from "@/lib/domain/settings-file"
 
 /**
@@ -57,6 +58,8 @@ export interface PackInput {
   invoicesText?: string
   /** `customers.json` (§7.6). Left out of the archive when unset. */
   customersText?: string
+  /** `inventory.json` (§7.6). Left out of the archive when unset. */
+  inventoryText?: string
   /**
    * A receipt's bytes from the file being replaced, for one this browser does
    * not hold (§7.5). Without it, such a receipt is left out.
@@ -100,6 +103,8 @@ export async function packZip(input: PackInput): Promise<Uint8Array> {
     await zip.add(INVOICES_FILE_NAME, new TextReader(input.invoicesText))
   if (input.customersText !== undefined)
     await zip.add(CUSTOMERS_FILE_NAME, new TextReader(input.customersText))
+  if (input.inventoryText !== undefined)
+    await zip.add(INVENTORY_FILE_NAME, new TextReader(input.inventoryText))
 
   /* Whether each path got its bytes, so a path several entries list is read once. */
   const written = new Map<string, boolean>()
@@ -148,6 +153,8 @@ export interface UnpackedZip {
   invoicesText: string | null
   /** `customers.json`, found the same way. */
   customersText: string | null
+  /** `inventory.json`, found the same way. */
+  inventoryText: string | null
   /** The path of every other file: the receipts. */
   otherFiles: readonly string[]
   /** Whether the archive's entries are encrypted (§7.8). */
@@ -388,7 +395,13 @@ export async function unpackZip(
   const settings = await beside(SETTINGS_FILE_NAME)
   const invoices = await beside(INVOICES_FILE_NAME)
   const customers = await beside(CUSTOMERS_FILE_NAME)
-  const jsonPaths = new Set([settings.path, invoices.path, customers.path])
+  const inventory = await beside(INVENTORY_FILE_NAME)
+  const jsonPaths = new Set([
+    settings.path,
+    invoices.path,
+    customers.path,
+    inventory.path,
+  ])
 
   const otherFiles = names.filter(
     (name) =>
@@ -403,6 +416,7 @@ export async function unpackZip(
     settingsText: settings.text,
     invoicesText: invoices.text,
     customersText: customers.text,
+    inventoryText: inventory.text,
     otherFiles,
     encrypted,
     readReceipt: lookupIn(files, csvDir, limits, password),

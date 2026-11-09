@@ -149,12 +149,13 @@ export const INVOICE_ROUTES = {
 
 /**
  * The income statement's sub-pages (§8.8): the sheet itself, the same figures
- * as Form 5's fields for copying into OmaVero, the fixed asset register and
- * the calculated deductions.
+ * as Form 5's fields for copying into OmaVero, the stocktake, the fixed asset
+ * register and the calculated deductions.
  */
 export const STATEMENT_ROUTES = {
   sheet: APP_ROUTES.statement,
   balance: `${APP_ROUTES.statement}/balance`,
+  inventory: `${APP_ROUTES.statement}/inventory`,
   assets: `${APP_ROUTES.statement}/assets`,
   deductions: `${APP_ROUTES.statement}/deductions`,
 } as const

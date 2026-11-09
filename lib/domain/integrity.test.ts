@@ -109,3 +109,28 @@ describe("the invoice files", () => {
     })
   })
 })
+
+describe("the stocktake file", () => {
+  const INVENTORY = '{"years":{}}\n'
+
+  it("seals it and finds it unchanged", async () => {
+    const sealed = await sealSettings(SETTINGS, CSV, { inventory: INVENTORY })
+    expect(await checkIntegrity(CSV, sealed, { inventory: INVENTORY })).toEqual(
+      { status: "ok" }
+    )
+  })
+
+  it("reports it when edited or gone", async () => {
+    const sealed = await sealSettings(SETTINGS, CSV, { inventory: INVENTORY })
+    const edited = {
+      status: "edited",
+      csv: false,
+      settings: false,
+      inventory: true,
+    }
+    expect(
+      await checkIntegrity(CSV, sealed, { inventory: '{"years":{"2026":[]}}' })
+    ).toEqual(edited)
+    expect(await checkIntegrity(CSV, sealed, {})).toEqual(edited)
+  })
+})

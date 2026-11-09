@@ -58,6 +58,7 @@ export function useAutosave() {
   const invoiceSettings = useBookStore((s) => s.invoiceSettings)
   const invoices = useBookStore((s) => s.invoices)
   const customers = useBookStore((s) => s.customers)
+  const inventory = useBookStore((s) => s.inventory)
   const changeLog = useBookStore((s) => s.changeLog)
 
   React.useEffect(() => {
@@ -95,6 +96,7 @@ export function useAutosave() {
     invoiceSettings,
     invoices,
     customers,
+    inventory,
     changeLog,
   ])
 }

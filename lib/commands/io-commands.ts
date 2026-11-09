@@ -53,6 +53,13 @@ import {
   serializeInvoices,
 } from "@/lib/domain/invoice-file"
 import type { Customer, Invoice } from "@/lib/domain/invoice"
+import {
+  EMPTY_INVENTORY,
+  hasInventory,
+  inventoryOfEntries,
+  type Inventory,
+} from "@/lib/domain/inventory"
+import { parseInventory, serializeInventory } from "@/lib/domain/inventory-file"
 import { invoicesOfEntries } from "@/lib/domain/invoice-calc"
 import {
   parseSettings,
@@ -367,6 +374,9 @@ async function importZip(
   const customerRecords = unpacked.customersText
     ? parseCustomers(unpacked.customersText)
     : { customers: [], skipped: 0 }
+  const inventoryRecords = unpacked.inventoryText
+    ? parseInventory(unpacked.inventoryText)
+    : { inventory: EMPTY_INVENTORY, skipped: 0 }
 
   applyImport(
     ctx,
@@ -381,9 +391,11 @@ async function importZip(
       password,
       invoices: invoiceRecords.invoices,
       customers: customerRecords.customers,
+      inventory: inventoryRecords.inventory,
     }
   )
-  const skippedRecords = invoiceRecords.skipped + customerRecords.skipped
+  const skippedRecords =
+    invoiceRecords.skipped + customerRecords.skipped + inventoryRecords.skipped
   if (skippedRecords > 0) {
     await alertDialog({
       title: ctx.t("io.skippedRecordsTitle"),
@@ -396,6 +408,7 @@ async function importZip(
     await checkIntegrity(unpacked.csvText, unpacked.settingsText, {
       invoices: unpacked.invoicesText,
       customers: unpacked.customersText,
+      inventory: unpacked.inventoryText,
     })
   )
   return true
@@ -422,6 +435,7 @@ async function reportEdits(
     result.settings ? ctx.t("io.editedSettings") : null,
     result.invoices ? ctx.t("io.editedInvoices") : null,
     result.customers ? ctx.t("io.editedCustomers") : null,
+    result.inventory ? ctx.t("io.editedInventory") : null,
   ].filter((p): p is string => p !== null)
   await alertDialog({
     title: ctx.t("io.editedTitle"),
@@ -558,6 +572,7 @@ function applyImport(
     password?: string
     invoices?: Invoice[]
     customers?: Customer[]
+    inventory?: Inventory
   }
 ): void {
   releaseAllObjectUrls()
@@ -566,6 +581,7 @@ function applyImport(
     archiveYear: settings?.archiveOf ?? null,
     invoices: archive.invoices,
     customers: archive.customers,
+    inventory: archive.inventory,
     entries,
     cats: result.categories,
     // The name carries its extension (§7.3).
@@ -677,6 +693,7 @@ function bookVersion() {
     s.invoiceSettings,
     s.invoices,
     s.customers,
+    s.inventory,
     s.changeLog,
     s.encrypted,
   ] as const
@@ -814,6 +831,13 @@ export async function buildBookFile(
   const customersText = customers.length
     ? serializeCustomers(customers)
     : undefined
+  /* A book with no stocktake writes no `inventory.json`. */
+  const inventory = only
+    ? inventoryOfEntries(only.entries, state.inventory)
+    : state.inventory
+  const inventoryText = hasInventory(inventory)
+    ? serializeInventory(inventory)
+    : undefined
   const bytes = await packZip({
     csvName: CSV_FILE_NAME[exportLang],
     csvText,
@@ -823,10 +847,15 @@ export async function buildBookFile(
     settingsText: await sealSettings(
       currentSettingsText(only?.settings),
       csvText,
-      { invoices: invoicesText, customers: customersText }
+      {
+        invoices: invoicesText,
+        customers: customersText,
+        inventory: inventoryText,
+      }
     ),
     invoicesText,
     customersText,
+    inventoryText,
     password: encrypted ? (heldPassword() ?? undefined) : undefined,
     carry: carryFrom(source),
     onAbsent: (key) => {

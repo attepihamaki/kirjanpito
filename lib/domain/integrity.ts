@@ -23,12 +23,15 @@ export interface Integrity {
   invoices?: string
   /** Hash of `customers.json`, present when the book had a customer register. */
   customers?: string
+  /** Hash of `inventory.json`, present when the book had a stocktake (§8.28). */
+  inventory?: string
 }
 
 /** The text of the files beside the CSV that the seal covers besides the settings (§7.6). */
 export interface SealedFiles {
   invoices?: string | null
   customers?: string | null
+  inventory?: string | null
 }
 
 export type IntegrityResult =
@@ -43,6 +46,7 @@ export type IntegrityResult =
       /* Present, and true, only when the seal covered the file and it no longer matches. */
       invoices?: true
       customers?: true
+      inventory?: true
     }
 
 /** SHA-256 of the bytes as lowercase hex. */
@@ -91,6 +95,9 @@ export async function sealSettings(
     ...(files.customers != null
       ? { customers: await sha256Hex(files.customers) }
       : {}),
+    ...(files.inventory != null
+      ? { inventory: await sha256Hex(files.inventory) }
+      : {}),
   }
   return `${JSON.stringify({ ...raw, integrity: seal }, null, 2)}\n`
 }
@@ -108,6 +115,7 @@ function readSeal(value: unknown): Integrity | null {
     settings,
     invoices: optional(value.invoices),
     customers: optional(value.customers),
+    inventory: optional(value.inventory),
   }
 }
 
@@ -136,13 +144,15 @@ export async function checkIntegrity(
   ) => hash !== undefined && (text == null || (await sha256Hex(text)) !== hash)
   const invoices = await changed(seal.invoices, files.invoices)
   const customers = await changed(seal.customers, files.customers)
-  return csv || settings || invoices || customers
+  const inventory = await changed(seal.inventory, files.inventory)
+  return csv || settings || invoices || customers || inventory
     ? {
         status: "edited",
         csv,
         settings,
         ...(invoices ? { invoices: true as const } : {}),
         ...(customers ? { customers: true as const } : {}),
+        ...(inventory ? { inventory: true as const } : {}),
       }
     : { status: "ok" }
 }
