@@ -18,7 +18,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { toast } from "@/components/ui/toast"
-import { categoryLabel } from "@/lib/domain/accounts"
 import { formatMoneyPlain } from "@/lib/domain/money"
 import { evalAmount } from "@/lib/domain/amount-expr"
 import type { RecurringEntry } from "@/lib/domain/recurring"
@@ -115,7 +114,7 @@ export function RecurringSettings() {
               <TableRow key={r.id}>
                 <TableCell className="font-medium">{r.description}</TableCell>
                 <TableCell className="text-muted-foreground">
-                  {categoryLabel(catMap.get(r.catId), f.lang)}
+                  {f.catLabel(catMap.get(r.catId))}
                 </TableCell>
                 <TableCell className="text-right">
                   <RecurringAmountInput template={r} />

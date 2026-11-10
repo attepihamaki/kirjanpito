@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/dialog"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { addEntriesWithUndo } from "@/lib/commands/bulk-commands"
-import { categoryLabel } from "@/lib/domain/accounts"
 import { todayIso, yearOf } from "@/lib/domain/dates"
 import { uid } from "@/lib/domain/id"
 import {
@@ -150,7 +149,7 @@ function RecurringDialogForm({ month }: { month: string }) {
                   <span className="block truncate text-xs text-muted-foreground">
                     {f.date(recurringDate(r.day, month))}
                     {" · "}
-                    {categoryLabel(catMap.get(r.catId), f.lang)}
+                    {f.catLabel(catMap.get(r.catId))}
                   </span>
                 </span>
                 <Money cents={r.amount} />

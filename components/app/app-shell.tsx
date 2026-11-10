@@ -65,8 +65,9 @@ import { cn } from "@/lib/utils"
 import { syncBookFromStorage, useBookStore } from "@/stores/book-store"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const showAccounts = useBookStore((s) => s.showAccounts)
   return (
-    <LangRoot>
+    <LangRoot showAccounts={showAccounts}>
       <AppShellInner>{children}</AppShellInner>
     </LangRoot>
   )

@@ -98,6 +98,7 @@ function settings(): BookSettings {
     autosave: true,
     categories,
     pageSize: { ledger: 25, categories: 50 },
+    showAccounts: false,
   }
 }
 
@@ -178,6 +179,7 @@ describe("settings.json", () => {
         vatFiled: { "2026-09": "2026-11-10", "2026-13": "2026-01-01", x: 1 },
         yearsArchived: { "2025": "2026-01-20", "25": "2026-01-20", "2024": 1 },
         pageSize: { ledger: 7, categories: 25 },
+        showAccounts: "no",
       })
     )
     expect(parsed).toEqual({

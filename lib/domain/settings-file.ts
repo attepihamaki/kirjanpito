@@ -119,6 +119,8 @@ export interface BookSettings {
   /** The full category list: the defaults as the user left them, plus custom ones. */
   categories: Category[]
   pageSize: { ledger: PageSize; categories: PageSize }
+  /** Category labels lead with the account number (§8.10). */
+  showAccounts: boolean
   /** Monthly templates (§8.5). */
   recurring: RecurringEntry[]
   /** The user's rules for picking a category, in order (§8.17). */
@@ -601,6 +603,7 @@ export function parseSettings(text: string): ParsedSettings {
     const categories = pageSize(raw.pageSize.categories)
     if (ledger && categories) out.pageSize = { ledger, categories }
   }
+  if (typeof raw.showAccounts === "boolean") out.showAccounts = raw.showAccounts
   return out
 }
 
@@ -650,6 +653,7 @@ export function serializeSettings(s: BookSettings): string {
       custom: c.custom,
     })),
     pageSize: s.pageSize,
+    showAccounts: s.showAccounts,
     recurring: s.recurring,
     categoryRules: s.categoryRules,
     bankSeen: s.bankSeen,

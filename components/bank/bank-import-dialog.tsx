@@ -26,7 +26,7 @@ import {
 import { useCommandCtx } from "@/hooks/use-commands"
 import { bookBankRows } from "@/lib/commands/bank-commands"
 import { storeReport } from "@/lib/commands/memo-commands"
-import { LINE_BY_KEY, categoryLabel } from "@/lib/domain/accounts"
+import { LINE_BY_KEY } from "@/lib/domain/accounts"
 import {
   mappingComplete,
   parseBankCsv,
@@ -278,7 +278,7 @@ function Review({
           c.id === current ||
           (c.enabled && !c.euPurchase && LINE_BY_KEY.get(c.line)?.side === type)
       )
-      .map((c) => ({ value: c.id, label: categoryLabel(c, f.lang) }))
+      .map((c) => ({ value: c.id, label: f.catLabel(c) }))
 
   const missingCategory = plans.filter(
     (p) => p.action === "new" && !p.catId

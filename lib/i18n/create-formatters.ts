@@ -38,6 +38,7 @@ export interface Formatters {
   rate(r: number): string
   size(bytes: number): string
   catName(c: Category): string
+  /** "333 Ostot", or just the name when account numbers are hidden. */
   catLabel(c: Category | undefined): string
   lineName(l: AccountLine): string
   groupName(l: AccountLine): string | null
@@ -45,10 +46,15 @@ export interface Formatters {
   collator: Intl.Collator
 }
 
-const cache = new Map<Lang, Formatters>()
+const cache = new Map<string, Formatters>()
 
-export function createFormatters(lang: Lang): Formatters {
-  const cached = cache.get(lang)
+/**
+ * `showAccounts` puts the account number in front of a category label (§8.10).
+ * Reports and exported files always build with it on.
+ */
+export function createFormatters(lang: Lang, showAccounts = true): Formatters {
+  const key = `${lang}:${showAccounts}`
+  const cached = cache.get(key)
   if (cached) return cached
 
   const formatters: Formatters = {
@@ -61,7 +67,8 @@ export function createFormatters(lang: Lang): Formatters {
     rate: (r) => formatRate(r, lang),
     size: (bytes) => formatFileSize(bytes, lang),
     catName: (c) => categoryName(c, lang),
-    catLabel: (c) => categoryLabel(c, lang),
+    catLabel: (c) =>
+      showAccounts ? categoryLabel(c, lang) : c ? categoryName(c, lang) : "",
     lineName: (l) => lineName(l, lang),
     groupName: (l) => groupName(l, lang),
     month: (index, short = false) =>
@@ -69,6 +76,6 @@ export function createFormatters(lang: Lang): Formatters {
     collator: new Intl.Collator(lang, { numeric: true, sensitivity: "base" }),
   }
 
-  cache.set(lang, formatters)
+  cache.set(key, formatters)
   return formatters
 }

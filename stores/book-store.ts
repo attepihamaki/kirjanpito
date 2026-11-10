@@ -277,6 +277,8 @@ export interface BookState {
   lastType: EntryType
   ledgerSize: PageSize
   ctSize: PageSize
+  /** Category labels lead with the account number, "333 Ostot" (§8.10). */
+  showAccounts: boolean
   /** Ledger columns the user has hidden (§8.4). */
   ledgerHidden: OptionalLedgerColumn[]
   /** Desktop sidebar expanded or collapsed to icons (§8.2). */
@@ -523,6 +525,7 @@ export interface BookActions {
       autosave?: boolean
       ledgerSize?: PageSize
       ctSize?: PageSize
+      showAccounts?: boolean
     }
   }): void
   upsertEntry(entry: Entry): void
@@ -652,6 +655,7 @@ export interface BookActions {
   toggleCatSort(key: CatSortKey): void
   setCatPage(page: number): void
   setCatSize(size: PageSize): void
+  setShowAccounts(on: boolean): void
 
   setVatIndex(index: number): void
 
@@ -677,6 +681,7 @@ function initialState(): BookState {
     lastType: "expense",
     ledgerSize: 10,
     ctSize: 25,
+    showAccounts: true,
     ledgerHidden: [],
     sidebarOpen: true,
     exportLang: "fi",
@@ -756,6 +761,7 @@ type PersistedBook = Pick<
   | "ledgerSize"
   | "ledgerHidden"
   | "ctSize"
+  | "showAccounts"
   | "sidebarOpen"
   | "exportLang"
   | "businessId"
@@ -1203,6 +1209,7 @@ export const useBookStore = create<BookStore>()(
           onboarding: false,
           ledgerSize: s.ledgerSize ?? get().ledgerSize,
           ctSize: s.ctSize ?? get().ctSize,
+          showAccounts: s.showAccounts ?? get().showAccounts,
           undoAttachmentIds: [],
           bookEpoch: get().bookEpoch + 1,
           gcTick: get().gcTick + 1,
@@ -1575,6 +1582,7 @@ export const useBookStore = create<BookStore>()(
         set({ catSort: nextSort(get().catSort, key), catPage: 1 }),
       setCatPage: (catPage) => set({ catPage }),
       setCatSize: (ctSize) => set({ ctSize, catPage: 1 }),
+      setShowAccounts: (showAccounts) => set({ showAccounts }),
 
       setVatIndex: (vatIndex) => set({ vatIndex }),
 
@@ -1617,6 +1625,7 @@ export const useBookStore = create<BookStore>()(
         ledgerSize: s.ledgerSize,
         ledgerHidden: s.ledgerHidden,
         ctSize: s.ctSize,
+        showAccounts: s.showAccounts,
         sidebarOpen: s.sidebarOpen,
         exportLang: s.exportLang,
         businessId: s.businessId,

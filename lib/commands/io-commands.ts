@@ -626,6 +626,7 @@ function applyImport(
           autosave: settings.autosave,
           ledgerSize: settings.pageSize?.ledger,
           ctSize: settings.pageSize?.categories,
+          showAccounts: settings.showAccounts,
         }
       : undefined,
   })
@@ -736,6 +737,7 @@ function currentSettingsText(over: Partial<BookSettings> = {}): string {
     encrypted: s.encrypted,
     categories: s.cats,
     pageSize: { ledger: s.ledgerSize, categories: s.ctSize },
+    showAccounts: s.showAccounts,
     recurring: s.recurring,
     categoryRules: s.categoryRules,
     bankSeen: s.bankSeen,

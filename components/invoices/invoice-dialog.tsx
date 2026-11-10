@@ -32,7 +32,7 @@ import {
   issueInvoice,
   sendInvoice,
 } from "@/lib/commands/invoice-commands"
-import { categoryLabel, lineOf } from "@/lib/domain/accounts"
+import { lineOf } from "@/lib/domain/accounts"
 import { evalAmount } from "@/lib/domain/amount-expr"
 import { todayIso } from "@/lib/domain/dates"
 import { uid } from "@/lib/domain/id"
@@ -555,7 +555,7 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
                             ]
                         ).map((c) => ({
                           value: c.id,
-                          label: categoryLabel(c, f.lang),
+                          label: f.catLabel(c),
                         }))}
                       />
                     </Field>

@@ -17,7 +17,6 @@ import {
 import { toast } from "@/components/ui/toast"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useToday } from "@/hooks/use-today"
-import { categoryLabel } from "@/lib/domain/accounts"
 import { EMPTY_YEAR_END, type YearEnd } from "@/lib/domain/form5-balance"
 import {
   carryOverYearEnd,
@@ -348,7 +347,7 @@ function RecurringStep() {
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{r.description}</p>
               <p className="truncate text-xs text-muted-foreground">
-                {categoryLabel(catMap.get(r.catId), f.lang)}
+                {f.catLabel(catMap.get(r.catId))}
               </p>
             </div>
             <RecurringAmountInput template={r} />

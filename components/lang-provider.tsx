@@ -15,32 +15,54 @@ const LangContext = React.createContext<Formatters>(createFormatters("fi"))
  */
 export function LangProvider({
   lang,
+  showAccounts = true,
   children,
 }: {
   lang: Lang
+  showAccounts?: boolean
   children: React.ReactNode
 }) {
-  const formatters = React.useMemo(() => createFormatters(lang), [lang])
+  const formatters = React.useMemo(
+    () => createFormatters(lang, showAccounts),
+    [lang, showAccounts]
+  )
   return (
     <LangContext.Provider value={formatters}>{children}</LangContext.Provider>
   )
 }
 
 /** The app's provider: language comes from the stored preference. */
-function AppLangProvider({ children }: { children: React.ReactNode }) {
+function AppLangProvider({
+  showAccounts,
+  children,
+}: {
+  showAccounts?: boolean
+  children: React.ReactNode
+}) {
   const lang = useLangStore((s) => s.lang)
-  return <LangProvider lang={lang}>{children}</LangProvider>
+  return (
+    <LangProvider lang={lang} showAccounts={showAccounts}>
+      {children}
+    </LangProvider>
+  )
 }
 
 /**
  * The root of a rendered document: the app shell, the landing page and the
  * 404 all start with this. It binds the subtree to the stored language and
  * keeps `<html lang>` in step, which every one of them needs and none of them
- * may do differently.
+ * may do differently. `showAccounts` is the bookkeeping's label preference (§8.10); the app shell
+ * passes it, and pages without a bookkeeping leave it at the default.
  */
-export function LangRoot({ children }: { children: React.ReactNode }) {
+export function LangRoot({
+  showAccounts,
+  children,
+}: {
+  showAccounts?: boolean
+  children: React.ReactNode
+}) {
   return (
-    <AppLangProvider>
+    <AppLangProvider showAccounts={showAccounts}>
       <LangHtmlAttr />
       {children}
     </AppLangProvider>

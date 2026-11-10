@@ -15,6 +15,7 @@ import { SortableHeader } from "@/components/common/sortable-header"
 import { TablePagination } from "@/components/common/table-pagination"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Field, FieldLabel } from "@/components/ui/field"
 import {
   Table,
   TableBody,
@@ -48,6 +49,7 @@ export function CategorySettings() {
   return (
     <div className="flex flex-col gap-6">
       <CategoryTable />
+      <AccountNumberSetting />
       <ResetCategories />
     </div>
   )
@@ -304,6 +306,35 @@ function ShareSelect({ cat }: { cat: Category }) {
         if (share === current) return
         upsertCategory({ ...cat, share: share === 100 ? undefined : share })
       }}
+    />
+  )
+}
+
+/**
+ * Whether category labels lead with the account number. Only the labels in
+ * menus and lists follow it; reports keep their account column (§8.10).
+ */
+function AccountNumberSetting() {
+  const f = useFormatters()
+  const showAccounts = useBookStore((s) => s.showAccounts)
+  const setShowAccounts = useBookStore((s) => s.setShowAccounts)
+
+  return (
+    <Panel
+      title={f.t("settings.catLabels")}
+      description={f.t("settings.showAccountsHint")}
+      footer={
+        <Field orientation="horizontal">
+          <Checkbox
+            id="settings-show-accounts"
+            checked={showAccounts}
+            onCheckedChange={(checked) => setShowAccounts(checked === true)}
+          />
+          <FieldLabel htmlFor="settings-show-accounts" className="font-normal">
+            {f.t("settings.showAccounts")}
+          </FieldLabel>
+        </Field>
+      }
     />
   )
 }

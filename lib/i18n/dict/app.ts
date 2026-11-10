@@ -2789,6 +2789,15 @@ export const APP_DICT = {
     "Oletus-ALV päivitetty: {c} {r}.",
     "Default VAT updated: {c} {r}.",
   ],
+  "settings.catLabels": ["Luokkien nimet", "Category names"],
+  "settings.showAccounts": [
+    "Näytä tilinumero luokan nimen edessä",
+    "Show the account number before the category name",
+  ],
+  "settings.showAccountsHint": [
+    "Esimerkiksi ”333 Ostot” tai pelkkä ”Ostot” valikoissa ja listoissa. Tuloslaskelma ja muut raportit näyttävät tilinumerot aina.",
+    "For example “333 Purchases” or just “Purchases” in menus and lists. The income statement and other reports always show account numbers.",
+  ],
   "settings.defaultCategories": ["Oletusluokat", "Default categories"],
   "settings.resetCategories": [
     "Palauta oletusluokat",

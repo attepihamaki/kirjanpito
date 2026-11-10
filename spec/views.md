@@ -260,7 +260,7 @@ See §6.4. Wide tables scroll horizontally with a sticky first column. The chart
 Every section is a `Panel` (§11). The page is split into two sub-pages, so the categories table does not bury the handful of book-wide settings:
 
 - **Yleiset** at `/app/settings`: the VAT period, the start month, saving, the voucher numbers (§4), and deleting the bookkeeping.
-- **Luokat** at `/app/settings/categories`: the categories table, with adding in a dialog, and restoring the defaults.
+- **Luokat** at `/app/settings/categories`: the categories table, with adding in a dialog, whether labels show account numbers, and restoring the defaults.
 - **Toistuvat** at `/app/settings/recurring`: the monthly templates (§8.5).
 - **Säännöt** at `/app/settings/rules`: the category rules (§8.17).
 - **Osapuolet** at `/app/settings/parties`: the counterparty register (§8.29), with "Lisää osapuoli" in the header.
@@ -304,6 +304,7 @@ On **Luokat**:
   - **A name is unique on its account and side**, in the dialog, adding or editing (`categoryNameTaken`), a default's English and former names included. The CSV finds a category by these, so two with one name would merge when the file is next opened.
   - **Delete** (`lib/commands/category-commands.ts`) removes an unused category at once. One with entries or templates opens a dialog that asks where they move, among the enabled categories the bulk bar would offer (`categoriesToMoveTo`, §8.4). Each entry keeps its VAT rate and voucher number. A locked entry on the category refuses the delete (§8.11), and a change to a filed return asks first. Both kinds can be undone from the toast for 10 seconds, and only what still sits on the target goes back.
   - Pagination with a default of 25 rows, laid out as on the ledger (§8.4).
+- **"Luokkien nimet"**, under the table: the "Näytä tilinumero luokan nimen edessä" checkbox, on by default. It sets `showAccounts`, saved in `settings.json`, which decides whether `catLabel` reads "333 Ostot" or "Ostot". It covers labels in menus and lists only: the entry dialog, the ledger, the bulk bar, rules, recurring templates, invoices and bank import. Reports, the general ledger, the categories table's Tili column, memo vouchers and exported files always carry the account number, because there it is part of the record. Like the page sizes it is a preference: changing it does not make the book dirty, and an archive book (§8.19) may change it.
 - **"Oletusluokat"**, under the table: a description of what restoring does, and "Palauta oletusluokat" (`outline`) on the footer. It restores the defaults and keeps custom categories that an entry or a recurring template uses. It is reversible and routine, so it sits beside the table it changes; deleting the bookkeeping is not, so it is on the other page, in the title row's menu.
 
 ### 8.11 Confirmations and unsaved-change rules (apply everywhere)

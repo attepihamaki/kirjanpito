@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { toast } from "@/components/ui/toast"
-import { categoryLabel, LINE_BY_KEY } from "@/lib/domain/accounts"
+import { LINE_BY_KEY } from "@/lib/domain/accounts"
 import {
   foldText,
   MIN_RULE_TEXT,
@@ -62,7 +62,7 @@ export function RuleSettings() {
           LINE_BY_KEY.get(c.line)?.side === "income"
             ? f.t("common.income")
             : f.t("common.expense")
-        }: ${categoryLabel(c, f.lang)}`,
+        }: ${f.catLabel(c)}`,
       }))
 
   const valid = validRates(todayIso())
