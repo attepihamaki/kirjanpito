@@ -95,7 +95,7 @@ const VAT_FIELDS: Record<string, HelpTopic> = {
   },
   "311": {
     text: {
-      fi: "Tavaramyynnit arvonlisäverovelvollisille ostajille muissa EU-maissa (yhteisömyynti). Lasku ilman veroa, ja myynnit ilmoitetaan myös yhteenvetoilmoituksella.",
+      fi: "Tavaramyynnit arvonlisäverovelvollisille ostajille muissa EU-maissa (yhteisömyynti). Lasku tehdään ilman veroa, ja myynnit ilmoitetaan myös yhteenvetoilmoituksella.",
       en: "Sales of goods to VAT-registered buyers in other EU countries. The invoice carries no VAT, and the sales also go on the EC Sales List.",
     },
     source: VAT_RETURN,
@@ -196,7 +196,7 @@ const FORM5_FIELDS: Record<string, HelpTopic> = {
   "322": dividends,
   "327": {
     text: {
-      fi: "Osuuskunnan ylijäämästä on veronalaista 25 % ensimmäisistä 5 000 eurosta ja 75 % sen ylittävästä osasta. Helpotus on yksi henkilöä ja vuotta kohti.",
+      fi: "Osuuskunnan ylijäämästä on veronalaista 25 % ensimmäisistä 5 000 eurosta ja 75 % sen ylittävästä osasta. Huojennuksen saa kerran vuodessa henkilöä kohti.",
       en: "25% of a co-operative surplus is taxable up to 5,000 euro, and 75% of the rest. The relief is one per person per year.",
     },
     source: FORM5,
@@ -224,7 +224,7 @@ const FORM5_FIELDS: Record<string, HelpTopic> = {
   },
   "338": {
     text: {
-      fi: "Poistojen enimmäismäärä, jonka verotus sallii. Kirjanpidon poisto vähennetään tähän asti.",
+      fi: "Poistojen enimmäismäärä, jonka verotus sallii. Kirjanpidon poisto vähennetään tähän määrään asti.",
       en: "The most depreciation that tax allows. The depreciation in the books is deducted up to this amount.",
     },
     source: FORM5,
@@ -317,13 +317,13 @@ const VIEW_TOPICS: Record<string, HelpTopic> = {
   },
   "overview.bank": {
     text: {
-      fi: "Sovellus ei näe pankkiasi. Arvio on kirjoittamasi saldo plus sen jälkeen maksetut tositteet. Verojen ja muiden maksujen, joita ei ole kirjattu, määrä puuttuu.",
+      fi: "Sovellus ei näe pankkiasi. Arvio on kirjoittamasi saldo plus sen jälkeen maksetut tositteet. Kirjaamattomat verot ja muut maksut eivät ole mukana.",
       en: "The app cannot see your bank. The estimate is the balance you typed in plus the vouchers paid since. Taxes and other payments that are not booked are missing.",
     },
   },
   "ledger.net": {
     text: {
-      fi: "Veroton hinta eli arvonlisäveron osuutta vailla oleva summa. Tuloslaskelma ja lomake 5 lasketaan tästä summasta.",
+      fi: "Veroton hinta eli summa ilman arvonlisäveroa. Tuloslaskelma ja lomake 5 lasketaan tästä summasta.",
       en: "The price without VAT. The income statement and Form 5 are calculated from this amount.",
     },
     source: FORM5,

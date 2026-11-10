@@ -47,11 +47,11 @@ describe("the business setting", () => {
     expect(useBookStore.getState().businessId).toBeNull()
     expect(useBookStore.getState().dirty).toBe(false)
     expect(idField().getAttribute("aria-invalid")).toBe("true")
-    expect(screen.getByText(/Tarkista y-tunnus/)).toBeTruthy()
+    expect(screen.getByText(/Tarkista Y-tunnus/)).toBeTruthy()
 
     fireEvent.change(idField(), { target: { value: "0112038-" } })
     expect(idField().getAttribute("aria-invalid")).toBeNull()
-    expect(screen.queryByText(/Tarkista y-tunnus/)).toBeNull()
+    expect(screen.queryByText(/Tarkista Y-tunnus/)).toBeNull()
   })
 
   it("removes the values when the fields are emptied", () => {

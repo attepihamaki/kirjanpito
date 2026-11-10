@@ -118,7 +118,7 @@ describe("dropping a file on the landing page (§8.3)", () => {
     fireEvent.dragEnter(window, { dataTransfer: { types: ["Files"] } })
 
     expect(
-      screen.getByText("Pudota CSV- tai ZIP-tiedosto avataksesi sen")
+      screen.getByText("Avaa CSV- tai ZIP-tiedosto pudottamalla se tähän")
     ).toBeVisible()
   })
 

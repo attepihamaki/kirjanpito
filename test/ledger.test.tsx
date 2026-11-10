@@ -197,7 +197,7 @@ describe("LedgerView with the sample data", () => {
     ).toBeInTheDocument()
     expect(
       screen.queryByLabelText(
-        "Hae kuvauksesta, luokasta, numerolla tai kuitista"
+        "Hae kuvauksella, luokalla, numerolla tai kuitin tekstillä"
       )
     ).not.toBeInTheDocument()
     expect(
@@ -211,7 +211,7 @@ describe("LedgerView with the sample data", () => {
 
     await user.type(
       screen.getByLabelText(
-        "Hae kuvauksesta, luokasta, numerolla tai kuitista"
+        "Hae kuvauksella, luokalla, numerolla tai kuitin tekstillä"
       ),
       "vuokra"
     )
@@ -226,7 +226,7 @@ describe("LedgerView with the sample data", () => {
 
     await user.type(
       screen.getByLabelText(
-        "Hae kuvauksesta, luokasta, numerolla tai kuitista"
+        "Hae kuvauksella, luokalla, numerolla tai kuitin tekstillä"
       ),
       "14"
     )
@@ -365,7 +365,7 @@ describe("the period slice drives the totals, not the filters", () => {
 
     await user.type(
       screen.getByLabelText(
-        "Hae kuvauksesta, luokasta, numerolla tai kuitista"
+        "Hae kuvauksella, luokalla, numerolla tai kuitin tekstillä"
       ),
       "vuokra"
     )

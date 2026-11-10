@@ -31,9 +31,9 @@ export const LANDING_DICT = {
   "file.open": ["Avaa tiedosto", "Open file"],
   "file.openElsewhere": [
     "Kirjanpito on auki toisessa välilehdessä.",
-    "The bookkeeping is open in another tab.",
+    "The books are open in another tab.",
   ],
-  "file.untitled": ["Uusi kirjanpito", "New bookkeeping"],
+  "file.untitled": ["Uusi kirjanpito", "New books"],
   "file.dirty": ["Tallentamattomia muutoksia", "Unsaved changes"],
   "ledger.entryCount": [
     pl("1 tosite", "{n} tositetta"),
@@ -48,23 +48,23 @@ export const LANDING_DICT = {
     "Kirjaa tulot ja kulut kuukausittain. Kirjanpito laskee arvonlisäveron ja tuloslaskelman valmiiksi veroilmoitusta varten, ja tiedot pysyvät omalla koneellasi CSV-tiedostossa.",
     "Record income and expenses month by month. The app works out your VAT and income statement for the tax return, and your data stays on your own computer in a CSV file.",
   ],
-  "landing.start": ["Aloita uusi kirjanpito", "Start new bookkeeping"],
+  "landing.start": ["Aloita uusi kirjanpito", "Start new books"],
   "landing.open": ["Avaa tiedosto", "Open a file"],
   "landing.demoLead": ["Haluatko ensin katsoa?", "Want to look around first?"],
-  "landing.demo": ["Avaa esimerkkikirjanpito", "Open the demo bookkeeping"],
+  "landing.demo": ["Avaa esimerkkikirjanpito", "Open the demo books"],
   "landing.continue": ["Jatka kirjanpitoa", "Continue bookkeeping"],
-  "landing.toApp": ["Avaa kirjanpito", "Open bookkeeping"],
+  "landing.toApp": ["Avaa kirjanpito", "Open the books"],
   "landing.drop": [
     "Pudota CSV- tai ZIP-tiedosto tähän tai valitse se koneeltasi",
     "Drop a CSV or ZIP file here or choose it from your computer",
   ],
   "landing.dropSub": [
     "Avaa aiemmin viety kirjanpito ja jatka siitä, mihin jäit.",
-    "Open bookkeeping you exported earlier and pick up where you left off.",
+    "Open books you exported earlier and pick up where you left off.",
   ],
 
   "landing.dropHere": [
-    "Pudota CSV- tai ZIP-tiedosto avataksesi sen",
+    "Avaa CSV- tai ZIP-tiedosto pudottamalla se tähän",
     "Drop a CSV or ZIP file to open it",
   ],
   "landing.dropNotBook": [
@@ -107,7 +107,7 @@ export const LANDING_DICT = {
   ],
   "landing.feat1Title": ["Arvonlisävero", "VAT"],
   "landing.feat1": [
-    "Myynnin ja ostojen vero verokannoittain sekä maksettava tai palautettava määrä. EU-myynnit ja käänteinen verotus omilla riveillään.",
+    "Myynnin ja ostojen vero verokannoittain sekä maksettava tai palautettava määrä. EU-myynnit ja käännetty verovelvollisuus omilla riveillään.",
     "VAT on sales and purchases by rate, and the amount payable or refundable. EU sales and reverse charge on their own lines.",
   ],
   "landing.feat2Title": ["Tuloslaskelma", "Income statement"],
@@ -152,7 +152,7 @@ export const LANDING_DICT = {
   "landing.q1": ["Kenelle kirjanpito on tarkoitettu?", "Who is it for?"],
   "landing.a1": [
     "Toiminimiyrittäjälle, joka pitää yhdenkertaista kirjanpitoa ja ilmoittaa arvonlisäveron ja elinkeinotoiminnan tuloksen itse OmaVerossa.",
-    "Sole traders who keep single-entry books and file their VAT and business income themselves in OmaVero.",
+    "Sole traders who keep single-entry books and file their VAT and business income themselves in MyTax.",
   ],
   "landing.q2": [
     "Lähettääkö sovellus ilmoitukset Verohallinnolle?",
@@ -160,7 +160,7 @@ export const LANDING_DICT = {
   ],
   "landing.a2": [
     "Ei. Sovellus laskee luvut, jotka ilmoitat itse OmaVerossa. Tarkista ne ennen ilmoittamista.",
-    "No. The app works out the figures, and you file them yourself in OmaVero. Check them before filing.",
+    "No. The app works out the figures, and you file them yourself in MyTax. Check them before filing.",
   ],
   "landing.q3": [
     "Voinko siirtää vanhan Excel-kirjanpitoni?",
@@ -175,7 +175,7 @@ export const LANDING_DICT = {
     "What happens if I close the browser?",
   ],
   "landing.a4": [
-    "Tositteet säilyvät tässä selaimessa, kunnes suljet tiedoston tai tyhjennät selaimen tiedot. Tallenna työsi tiedostoon säännöllisesti, niin kirjanpitosi on aina tallessa. Chromessa ja Edgessä sovellus kirjoittaa suoraan avaamaasi tiedostoon; muissa selaimissa lataat kopion. Tiedostoon kulkee myös muutosloki, joka kertoo sovelluksen käytöstä, mutta ei todista, ettei tiedostoa ole muokattu muuten.",
+    "Tositteet säilyvät tässä selaimessa, kunnes suljet tiedoston tai tyhjennät selaimen tiedot. Tallenna työsi tiedostoon säännöllisesti, niin kirjanpitosi on aina tallessa. Chromessa ja Edgessä sovellus kirjoittaa suoraan avaamaasi tiedostoon; muissa selaimissa lataat kopion. Tiedostoon tallentuu myös muutosloki, joka kertoo sovelluksen käytöstä, mutta ei todista, ettei tiedostoa ole muokattu muuten.",
     "Vouchers stay in this browser until you close the file or clear your browser data. Save your work to a file regularly so your bookkeeping is always safe. In Chrome and Edge the app writes straight back to the file you opened; in other browsers you download a copy. The file also carries a change log, which records use of the app but does not prove the file was not edited in other ways.",
   ],
   "landing.q5": [
@@ -183,7 +183,7 @@ export const LANDING_DICT = {
     "What happens to the books if I close the business?",
   ],
   "landing.a5": [
-    "Kirjanpito on säilytettävä samat ajat kuin toiminnan aikana: kirjanpidot 10 vuotta ja tositteet 6 vuotta. Lopettamisilmoituksessa (Y6-lomake YTJ:ssä) ilmoitetaan, kuka kirjanpitoaineistoa säilyttää ja missä (kirjanpitolaki 2:10). Tallenna viimeinen tiedosto ja pidä siitä kopio, jota et enää muokkaa.",
+    "Kirjanpitoaineisto on säilytettävä yhtä kauan kuin toiminnan jatkuessa: kirjanpitokirjat 10 vuotta ja tositteet 6 vuotta. Lopettamisilmoituksessa (Y6-lomake YTJ:ssä) ilmoitetaan, kuka kirjanpitoaineistoa säilyttää ja missä (kirjanpitolaki 2:10). Tallenna viimeinen tiedosto ja pidä siitä kopio, jota et enää muokkaa.",
     "The books must be kept as long as while trading: the books 10 years and the vouchers 6 years. The closure notice (form Y6 in YTJ) names who keeps the bookkeeping material and where (Accounting Act 2:10). Save the last file and keep a copy of it that you no longer edit.",
   ],
 
@@ -208,7 +208,7 @@ export const LANDING_DICT = {
   ],
   "privacy.back": ["Takaisin etusivulle", "Back to the home page"],
 
-  "privacy.whoTitle": ["Kuka tietoja pitää hallussaan", "Who holds the data"],
+  "privacy.whoTitle": ["Kenellä tiedot ovat", "Who holds the data"],
   "privacy.who1": [
     "Sovelluksen tekijä ei saa kirjanpitotietojasi eikä säilytä niistä kopiota. Sovelluksella ei ole tiliä, palvelinta eikä tietokantaa.",
     "The author of the app receives none of your bookkeeping and keeps no copy. There is no account, no server and no database.",
@@ -229,8 +229,8 @@ export const LANDING_DICT = {
   ],
   "privacy.lsTitle": ["Selaimen localStorage", "Browser localStorage"],
   "privacy.ls": [
-    "Tositteet, kirjanpidon asetukset, yrityksen nimi ja Y-tunnus sekä muutosloki avaimella bookkeeping. Kieli ja teema omilla avaimillaan, lang ja theme. Pelkkä etusivun katsominen ei tallenna kirjanpitoa.",
-    "The entries, the book's settings, the business name and ID and the change log under the key bookkeeping. Language and theme under their own keys, lang and theme. Only looking at the home page stores no bookkeeping.",
+    "Tositteet, kirjanpidon asetukset, yrityksen nimi ja Y-tunnus sekä muutosloki avaimella bookkeeping. Kieli ja teema omilla avaimillaan, lang ja theme. Pelkkä etusivulla käynti ei tallenna mitään.",
+    "The entries, the book's settings, the business name and ID and the change log under the key bookkeeping. Language and theme under their own keys, lang and theme. Just viewing the home page stores nothing.",
   ],
   "privacy.idbTitle": ["Selaimen IndexedDB", "Browser IndexedDB"],
   "privacy.idb": [
@@ -239,8 +239,8 @@ export const LANDING_DICT = {
   ],
   "privacy.cacheTitle": ["Selaimen välimuisti", "Browser cache"],
   "privacy.cache": [
-    "Kun avaat kirjanpidon, selain tallentaa sovelluksen omat tiedostot (sivut, skriptit, fontit ja kuvakkeet), jotta sovellus toimii ilman verkkoyhteyttä ja sen voi asentaa. Välimuistissa ei ole kirjanpitoasi. Pelkkä etusivun katsominen ei tallenna sitäkään.",
-    "When you open a bookkeeping, the browser stores the app's own files (pages, scripts, fonts and icons), so that the app works offline and can be installed. The cache holds none of your books. Only looking at the home page does not store it either.",
+    "Kun avaat kirjanpidon, selain tallentaa sovelluksen omat tiedostot (sivut, skriptit, fontit ja kuvakkeet), jotta sovellus toimii ilman verkkoyhteyttä ja sen voi asentaa. Välimuistissa ei ole kirjanpitoasi. Pelkkä etusivulla käynti ei tallenna sitäkään.",
+    "When you open your books, the browser stores the app's own files (pages, scripts, fonts and icons), so that the app works offline and can be installed. The cache holds none of your books. Just viewing the home page does not store it either.",
   ],
   "privacy.fileTitle": ["Tiedosto, jonka tallennat", "The file you save"],
   "privacy.file": [
@@ -276,17 +276,17 @@ export const LANDING_DICT = {
     "Encryption does not hide file names, sizes or dates. The browser's working copy is not encrypted, so it does not protect against someone using the same browser profile.",
   ],
   "privacy.seal": [
-    "Jokainen tallennus kirjoittaa tiedostoon SHA-256-eheysleiman. Se paljastaa tiedoston vahingossa muuttuneen, mutta ei todista mitään, koska sen voi laskea uudelleen tahallisen muokkauksen jälkeen.",
+    "Jokainen tallennus kirjoittaa tiedostoon SHA-256-eheysleiman. Se paljastaa, jos tiedosto on muuttunut vahingossa, mutta ei todista mitään, koska sen voi laskea uudelleen tahallisen muokkauksen jälkeen.",
     "Every save writes a SHA-256 integrity seal into the file. It reveals an accidental change, but proves nothing, because anyone who edits the file on purpose can recompute it.",
   ],
 
   "privacy.clearTitle": ["Tietojen poistaminen", "Removing the data"],
   "privacy.clear1": [
-    "Valinta Sulje tiedosto tyhjentää selaimen työkopion. Voit myös poistaa sivuston tiedot selaimen asetuksista.",
+    "Sulje tiedosto -toiminto tyhjentää selaimen työkopion. Voit myös poistaa sivuston tiedot selaimen asetuksista.",
     "Close file empties the browser's working copy. You can also clear the site's data in the browser's settings.",
   ],
   "privacy.clear2": [
-    "Tallentamasi tiedosto säilyy omalla levyllä, ja sen poistaminen on sinun asiasi. Tallenna tiedosto ennen kuin tyhjennät selaimen tiedot, koska ennen ensimmäistä tallennusta selaimen työkopio on ainoa kopio.",
+    "Tallentamasi tiedosto säilyy omalla levylläsi, ja sen poistaminen on sinun asiasi. Tallenna tiedosto ennen kuin tyhjennät selaimen tiedot, koska ennen ensimmäistä tallennusta selaimen työkopio on ainoa kopio.",
     "The file you saved stays on your disk, and deleting it is up to you. Save before you clear the browser's data, because until the first save the working copy is the only copy.",
   ],
 
@@ -300,8 +300,8 @@ export const LANDING_DICT = {
     "This page could not be found.",
   ],
   "notFound.lead": [
-    "Osoite ei vastaa mitään kirjanpidon sivua. Linkki voi olla vanha tai osoitteessa voi olla kirjoitusvirhe. Tositteesi ovat tallessa tässä selaimessa – pääset niihin etusivun kautta.",
-    "That address doesn’t match any page in the app. The link may be old, or the address mistyped. Your vouchers are safe in this browser — you can get back to them from the home page.",
+    "Osoite ei vastaa mitään kirjanpidon sivua. Linkki voi olla vanha tai osoitteessa voi olla kirjoitusvirhe. Tositteesi ovat tallessa tässä selaimessa. Pääset niihin etusivun kautta.",
+    "That address doesn’t match any page in the app. The link may be old, or the address mistyped. Your vouchers are safe in this browser. You can get back to them from the home page.",
   ],
   "notFound.home": ["Takaisin etusivulle", "Back to the home page"],
 
@@ -314,5 +314,5 @@ export const LANDING_DICT = {
   "receipt.salesBadge": ["Kasvattaa myynnin veroa", "Adds to VAT on sales"],
   "ledger.colVat": ["ALV", "VAT"],
   "statement.profit": ["358 Elinkeinotoiminnan tulos", "358 Business profit"],
-  "summary.reverseCharge": ["Käänteinen", "Reverse charge"],
+  "summary.reverseCharge": ["Käännetty", "Reverse charge"],
 } as const satisfies Dict

@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     template: "%s – Kirjanpito",
   },
   description:
-    "Selaimessa toimiva yhdenkertainen kirjanpito toiminimelle. Laskee arvonlisäveron ja tuloslaskelman veroilmoitusta varten. Ei tiliä, ei tietokantaa – tiedot pysyvät omalla koneellasi.",
+    "Selaimessa toimiva yhdenkertainen kirjanpito toiminimelle. Laskee arvonlisäveron ja tuloslaskelman veroilmoitusta varten. Ei tiliä, ei tietokantaa. Tiedot pysyvät omalla koneellasi.",
   // iOS reads its home-screen icon from this link, not from the manifest.
   icons: { apple: appIconUrl("apple-touch-icon.png") },
 }

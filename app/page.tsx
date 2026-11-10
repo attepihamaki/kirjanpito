@@ -18,7 +18,7 @@ const ogImage = {
 export const metadata: Metadata = {
   title: "Kirjanpito – toiminimen yhdenkertainen kirjanpito selaimessa",
   description:
-    "Kirjaa toiminimen tulot ja kulut kuukausittain. Kirjanpito laskee arvonlisäveron ja tuloslaskelman valmiiksi veroilmoitusta varten. Ei tiliä eikä tietokantaa – tiedot pysyvät omalla koneellasi CSV-tiedostossa.",
+    "Kirjaa toiminimen tulot ja kulut kuukausittain. Kirjanpito laskee arvonlisäveron ja tuloslaskelman valmiiksi veroilmoitusta varten. Ei tiliä eikä tietokantaa. Tiedot pysyvät omalla koneellasi CSV-tiedostossa.",
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",

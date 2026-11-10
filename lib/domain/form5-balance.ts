@@ -251,11 +251,11 @@ export function form5Balance(input: Form5BalanceInput): Form5Balance {
 /* OmaVero carries the pool over and works out its end, so these are checks. */
 const OPENING_HINT = {
   fi: "OmaVero tuo tämän edellisen vahvistetun vuoden lopusta. Anna se vain, jos se puuttuu, ja tarkista muuten, että luku täsmää.",
-  en: "OmaVero carries this over from the last confirmed year. Enter it only if it is missing, and otherwise check that it matches.",
+  en: "MyTax carries this over from the last confirmed year. Enter it only if it is missing, and otherwise check that it matches.",
 }
 const CLOSING_HINT = {
   fi: "OmaVero laskee tämän itse ja vie sen kohtaan 704. Tarkista, että luku täsmää.",
-  en: "OmaVero works this out itself and carries it to 704. Check that it matches.",
+  en: "MyTax works this out itself and carries it to 704. Check that it matches.",
 }
 
 export function form5BalanceSections(
