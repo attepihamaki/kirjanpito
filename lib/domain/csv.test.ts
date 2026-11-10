@@ -1147,6 +1147,13 @@ describe("decodeCsv", () => {
     expect(decodeCsv(bytes)).toBe(TEXT)
   })
 
+  it("maps the whole 0x80 to 0x9F range of the Windows code page", () => {
+    const bytes = new Uint8Array([
+      0x80, 0x84, 0x93, 0x94, 0x96, 0x97, 0x9f, 0xff,
+    ])
+    expect(decodeCsv(bytes)).toBe("€„“”–—Ÿÿ")
+  })
+
   it("reads UTF-16 in both byte orders", () => {
     const units = [...TEXT].map((c) => c.charCodeAt(0))
     const le = units.flatMap((u) => [u & 0xff, u >> 8])

@@ -303,8 +303,26 @@ export function decodeCsv(bytes: Uint8Array): string {
       bytes
     )
   } catch {
-    return new TextDecoder("windows-1252").decode(bytes)
+    return decodeWindows1252(bytes)
   }
+}
+
+/*
+ * windows-1252 is Latin-1 except for 0x80 to 0x9F, where it has €, the
+ * curly quotes, the dashes and a few letters. Not every runtime's
+ * `TextDecoder` honours that range (some read it as Latin-1 control
+ * characters), so it is mapped here. The five bytes the code page leaves
+ * undefined stay as their control characters, as the WHATWG decoder does.
+ */
+const CP1252_HIGH = "€\u0081‚ƒ„…†‡ˆ‰Š‹Œ\u008DŽ\u008F\u0090‘’“”•–—˜™š›œ\u009DžŸ"
+
+function decodeWindows1252(bytes: Uint8Array): string {
+  let out = ""
+  for (const b of bytes) {
+    out +=
+      b >= 0x80 && b <= 0x9f ? CP1252_HIGH[b - 0x80] : String.fromCharCode(b)
+  }
+  return out
 }
 
 /** The rate in the `vat` column, or null when it is not a usable one. */
