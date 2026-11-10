@@ -350,7 +350,7 @@ export const ENTRY_RULES = defineRules<EntryCheckContext, string>([
   entryRule("vatNotDeductible", "AVL 114 § 1 mom. 3 kohta", (ctx) =>
     idsWhere(ctx, (e) => vatNotDeductible(e, ctx.cats))
   ),
-  entryRule("privateUseNoVat", "AVL 21 §", (ctx) => {
+  entryRule("privateUseNoVat", "AVL 21 §, 22 a §", (ctx) => {
     // Line 314 only: a car's private use depends on how much of it was deducted.
     const goods = ctx.entries.filter(
       (e) => ctx.cats.get(e.catId)?.line === "314"
