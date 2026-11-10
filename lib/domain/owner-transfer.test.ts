@@ -54,7 +54,7 @@ describe("the owner's transfers", () => {
     expect(j.income.net).toBe(0)
     expect(j.expense.net).toBe(0)
     const accounts = generalLedger(entries, cats, 2026)
-    expect(accounts.map((a) => a.line.account)).toEqual([2000, 2000])
+    expect(accounts.map((a) => a.line.account)).toEqual([2365, 2361])
   })
 
   it("move the bank balance", () => {

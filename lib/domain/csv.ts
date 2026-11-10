@@ -3,6 +3,7 @@ import Papa from "papaparse"
 import {
   DEFAULT_CATEGORY_FOR_ACCOUNT,
   DEFAULT_EN_NAMES,
+  FORMER_ACCOUNTS,
   FORMER_NAMES,
   ALL_LINES,
   LINE_BY_KEY,
@@ -518,7 +519,11 @@ export function parseCsv(
 
     const name = restoreFormula(get("category"))
     const accountRaw = get("account")
-    const account = /^\d+$/.test(accountRaw) ? Number(accountRaw) : null
+    const written = /^\d+$/.test(accountRaw) ? Number(accountRaw) : null
+    const account =
+      written == null
+        ? null
+        : (FORMER_ACCOUNTS[`${written}:${type}`] ?? written)
 
     const resolved = resolveCategory({
       account,

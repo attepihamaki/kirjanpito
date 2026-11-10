@@ -941,13 +941,33 @@ describe("VAT settlements", () => {
   it("tells the owner's withdrawal and investment apart on one account", () => {
     const rows = [
       HEADER,
-      "1;2026-03-02;Oma raha;tulo;2000;Yksityissijoitus;5000;0;brutto;;",
-      "2;2026-06-30;Nosto;kulu;2000;;1200;0;brutto;;",
+      "1;2026-03-02;Oma raha;tulo;2361;Yksityissijoitus;5000;0;brutto;;",
+      "2;2026-06-30;Nosto;kulu;2365;;1200;0;brutto;;",
     ].join("\n")
     const [investment, withdrawal] = ok(parseCsv(rows, baseCats)).entries
 
     expect(investment.catId).toBe("owner-investment")
     expect(withdrawal.catId).toBe("owner-withdrawal")
+  })
+
+  it.each([
+    ["tulo;2000;", "owner-investment"],
+    ["kulu;2000;", "owner-withdrawal"],
+    ["tulo;2939;", "vat-refund"],
+    ["kulu;2939;", "vat-payment"],
+    ["tulo;2600;", "loan-drawdown"],
+    ["kulu;2600;", "loan-repayment"],
+    ["kulu;1100;", "asset-purchase"],
+    ["tulo;1100;", "asset-sale"],
+  ])("reads the older account in %s as its line", (row, id) => {
+    const r = ok(
+      parseCsv(
+        [HEADER, `1;2026-06-30;X;${row};100;0;brutto;;`].join("\n"),
+        baseCats
+      )
+    )
+    expect(r.entries[0].catId).toBe(id)
+    expect(r.warnings).toEqual([])
   })
 })
 

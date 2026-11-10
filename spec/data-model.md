@@ -189,11 +189,11 @@ The table order is also the display order of the income statement. **It is not q
 
 **`300-eu`, "Myynti – EU", is retired.** The return asks for goods (311) and services (312) separately, and an entry on this category does not say which it was, so nothing moves it automatically. It stays in the list, disabled, so older entries and files keep it (`RETIRED_CATEGORY_ID`; a CSV row with that name still matches it). The VAT views show its total on a row of its own while any entry uses it, and the return's row says to change the category.
 
-**Fixed assets are off the statement.** `CAPITAL_LINES` holds two more lines, both on account 1100: `asset-purchase` "Koneiden ja kaluston hankinta" (expense) and `asset-sale` "Koneiden ja kaluston myynti" (income), each at 25,5 %. Their VAT goes on the VAT return like any other entry's, but they are neither income nor an expense: the income statement, Form 5, the summary and the ledger's totals cards all leave them out, and the journal's totals too, though its rows and the general ledger list them. The cost reaches the result as depreciation (§8.8). `LINES` stays the statement's 33 lines, and `ALL_LINES` is what a category can sit on. Custom categories cannot be added to these two.
+**Fixed assets are off the statement.** `CAPITAL_LINES` holds two more lines, both on account 1161 "Koneet ja laitteet": `asset-purchase` "Koneiden ja kaluston hankinta" (expense) and `asset-sale` "Koneiden ja kaluston myynti" (income), each at 25,5 %. Their VAT goes on the VAT return like any other entry's, but they are neither income nor an expense: the income statement, Form 5, the summary and the ledger's totals cards all leave them out, and the journal's totals too, though its rows and the general ledger list them. The cost reaches the result as depreciation (§8.8). `LINES` stays the statement's 33 lines, and `ALL_LINES` is what a category can sit on. Custom categories cannot be added to these two.
 
-**VAT payments and refunds are off the statement too.** `SETTLEMENT_LINES` holds `vat-payment` "Arvonlisäveron maksu" (expense) and `vat-refund` "Arvonlisäveron palautus" (income), both on account 2939 at 0 %. Single-entry books have no balance sheet, so 2939 is the app's own number for the CSV's `account` column; it is not one Form 5 asks for and was not checked against a published chart. `AccountLine.settlement` marks them, and `offStatement` is the one test for "capital or settlement" that the statement, the summary, the journal's totals and the ledger's totals cards use. The VAT report skips settlement lines whatever their rate (§6.6).
+**VAT payments and refunds are off the statement too.** `SETTLEMENT_LINES` holds `vat-payment` "Arvonlisäveron maksu" (expense) on account 2939 and `vat-refund` "Arvonlisäveron palautus" (income) on account 1763, both at 0 %. Single-entry books have no balance sheet, so the CSV's `account` column borrows the standard Finnish chart (§5.1): 2939 is "Arvonlisäverovelka" and 1763 "Arvonlisäverosaamiset". Form 5 asks for neither. `AccountLine.settlement` marks them, and `offStatement` is the one test for "capital or settlement" that the statement, the summary, the journal's totals and the ledger's totals cards use. The VAT report skips settlement lines whatever their rate (§6.6).
 
-**So are the owner's own transfers.** `OWNER_LINES` holds `owner-withdrawal` "Yksityisotto" (expense) and `owner-investment` "Yksityissijoitus" (income), both on account 2000 at 0 %. Like 2939, 2000 is the app's own number and was not checked against a published chart. `AccountLine.owner` marks them, `offStatement` covers them, and the VAT report skips them like settlements (§6.7). `ALL_LINES` is the 30 statement lines and these, with the loan lines of §6.8.
+**So are the owner's own transfers.** `OWNER_LINES` holds `owner-withdrawal` "Yksityisotto" (expense) and `owner-investment` "Yksityissijoitus" (income), on accounts 2365 "Yksityisnostot rahana" and 2361 "Yksityissijoitukset rahana" at 0 %, the standard chart's private accounts for a sole trader (§5.1). `AccountLine.owner` marks them, `offStatement` covers them, and the VAT report skips them like settlements (§6.7). `ALL_LINES` is the 30 statement lines and these, with the loan lines of §6.8.
 
 **EU purchases have categories of their own**, the counterpart of the EU sales (§6.9):
 
@@ -213,3 +213,18 @@ Three more sit on the same lines, for purchases whose tax the buyer reports with
 **VAT rates offered** in the entry dialog: 25.5, 24, 14, 13.5, 10, 0, plus the entry's own rate if it differs. Background: the general rate rose to 25.5 % on 1 September 2024, and the 14 % rate was lowered to 13.5 % at the start of 2026. Older rates are kept for older entries and corrections.
 
 **The rate follows the entry's date.** `data/rules.json` holds the two changes (§6.11), 24 % → 25,5 % on 1.9.2024 and 14 % → 13,5 % on 1.1.2026, both confirmed on vero.fi. `rateOnDate` maps a rate to the one in force on a date; `rateMismatch` says why a rate does not fit. What decides the rate is when the tax falls due, normally the delivery date, so the entry's date is a stand-in: a mismatch is a hint and never blocks saving, because corrections and credit notes can carry an older rate on purpose. See §8.5 for the dialog, §8.4 for the ledger filter and §8.12 for the checklist.
+
+### 5.1 Off-statement account numbers
+
+A single-entry book has no balance sheet, so the off-statement lines need account numbers only for the CSV's `account` column and the general ledger. They borrow the standard Finnish double-entry chart (Taloushallintoliitto's base chart, as Asteri, Tilitin and Netvisor use it), so an accountant reading the file recognises them:
+
+| line | account | name in the standard chart |
+| ---- | ------- | -------------------------- |
+| `asset-purchase`, `asset-sale` | 1161 | Koneet ja laitteet |
+| `vat-payment` | 2939 | Arvonlisäverovelka |
+| `vat-refund` | 1763 | Arvonlisäverosaamiset |
+| `owner-withdrawal` | 2365 | Yksityisnostot rahana |
+| `owner-investment` | 2361 | Yksityissijoitukset rahana |
+| `loan-drawdown`, `loan-repayment` | 2621 | Lainat rahoituslaitoksilta |
+
+Files written before these numbers used 1100, 2939 for refunds, 2000 and 2600. The import reads those as the lines above (`FORMER_ACCOUNTS`, §7.1), and the next export writes the new numbers.

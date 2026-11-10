@@ -2426,8 +2426,8 @@ export const APP_DICT = {
     "Balance after this depreciation",
   ],
   "memo.depreciationRule": [
-    "Koneiden ja kaluston poisto on enintään 25 % poistopohjasta, ja enintään 1 200 euron poistopohjan voi poistaa kokonaan (elinkeinoverolaki 30 §). Hankinnat ja myynnit ovat omina tositteinaan tilillä 1100.",
-    "Depreciation of machinery and equipment is at most 25% of the base, and a base of €1,200 or less can be written off in full (Business Income Tax Act 30 §). Purchases and sales are vouchers of their own on account 1100.",
+    "Koneiden ja kaluston poisto on enintään 25 % poistopohjasta, ja enintään 1 200 euron poistopohjan voi poistaa kokonaan (elinkeinoverolaki 30 §). Hankinnat ja myynnit ovat omina tositteinaan tilillä 1161.",
+    "Depreciation of machinery and equipment is at most 25% of the base, and a base of €1,200 or less can be written off in full (Business Income Tax Act 30 §). Purchases and sales are vouchers of their own on account 1161.",
   ],
   "memo.mileageHeading": ["Kilometrivähennys {y}", "Mileage deduction {y}"],
   "memo.perDiemHeading": ["Päivärahavähennys {y}", "Per diem deduction {y}"],

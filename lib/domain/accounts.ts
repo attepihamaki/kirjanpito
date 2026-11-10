@@ -443,14 +443,15 @@ export const LINES: readonly AccountLine[] = [
 
 /**
  * Machinery and equipment, in and out (§8.8). Kept out of `LINES`, which is
- * the income statement. The account is the usual balance sheet one, because
- * the CSV needs a number and Form 5 has none for these.
+ * the income statement. 1161 "Koneet ja laitteet" is the balance sheet
+ * account the standard Finnish charts use for it, because the CSV needs a
+ * number and Form 5 has none for these.
  */
 const CAPITAL_LINES: readonly AccountLine[] = [
   {
     ...l(
       "asset-purchase",
-      1100,
+      1161,
       "expense",
       "Koneiden ja kaluston hankinta",
       "Purchase of machinery and equipment",
@@ -462,7 +463,7 @@ const CAPITAL_LINES: readonly AccountLine[] = [
   {
     ...l(
       "asset-sale",
-      1100,
+      1161,
       "income",
       "Koneiden ja kaluston myynti",
       "Sale of machinery and equipment",
@@ -476,8 +477,9 @@ const CAPITAL_LINES: readonly AccountLine[] = [
 /**
  * The VAT a return leaves to pay or to receive (§6.6), each payment or refund
  * an entry with its own voucher number. Single-entry books have no balance
- * sheet, so 2939 is the app's own account for the CSV's `tili` column, not one
- * Form 5 asks for.
+ * sheet, so the CSV's `tili` column borrows the standard chart's accounts:
+ * 2939 "Arvonlisäverovelka" for a payment and 1763 "Arvonlisäverosaamiset"
+ * for a refund. Form 5 asks for neither.
  */
 const SETTLEMENT_LINES: readonly AccountLine[] = [
   {
@@ -495,7 +497,7 @@ const SETTLEMENT_LINES: readonly AccountLine[] = [
   {
     ...l(
       "vat-refund",
-      2939,
+      1763,
       "income",
       "Arvonlisäveron palautus",
       "VAT refund",
@@ -509,14 +511,15 @@ const SETTLEMENT_LINES: readonly AccountLine[] = [
 /**
  * The owner's own money going into the business and out of it (§6.7). Vero
  * places these on the private account (yksityistili), part of equity. Single-
- * entry books have no balance sheet, so 2000 is the app's own account for the
- * CSV's `tili` column, not one Form 5 asks for.
+ * entry books have no balance sheet, so the CSV's `tili` column borrows the
+ * standard chart's sole-trader accounts: 2365 "Yksityisnostot rahana" and
+ * 2361 "Yksityissijoitukset rahana". Form 5 asks for neither.
  */
 const OWNER_LINES: readonly AccountLine[] = [
   {
     ...l(
       "owner-withdrawal",
-      2000,
+      2365,
       "expense",
       "Yksityisotto",
       "Owner’s withdrawal",
@@ -528,7 +531,7 @@ const OWNER_LINES: readonly AccountLine[] = [
   {
     ...l(
       "owner-investment",
-      2000,
+      2361,
       "income",
       "Yksityissijoitus",
       "Owner’s investment",
@@ -541,14 +544,15 @@ const OWNER_LINES: readonly AccountLine[] = [
 
 /**
  * Loans drawn and repaid (§6.8). KPL 2:1 has the books record financing
- * transactions. Single-entry books have no balance sheet, so 2600 is the app's
- * own account for the CSV's `account` column, not one Form 5 asks for.
+ * transactions. Single-entry books have no balance sheet, so the CSV's
+ * `account` column borrows the standard chart's 2621 "Lainat
+ * rahoituslaitoksilta". Form 5 asks for none.
  */
 const LOAN_LINES: readonly AccountLine[] = [
   {
     ...l(
       "loan-drawdown",
-      2600,
+      2621,
       "income",
       "Lainan nosto",
       "Loan drawdown",
@@ -560,7 +564,7 @@ const LOAN_LINES: readonly AccountLine[] = [
   {
     ...l(
       "loan-repayment",
-      2600,
+      2621,
       "expense",
       "Lainan lyhennys",
       "Loan repayment",
@@ -774,6 +778,21 @@ export const DEFAULT_CATEGORY_FOR_ACCOUNT: Readonly<Record<number, string>> = {
   300: "300-domestic",
   344: "344-other",
   364: "364-travel",
+}
+
+/**
+ * Account numbers older files use for the off-statement lines, keyed by
+ * account and side, with the number each now reads as (§7.1). Without it a
+ * row on one of them would land on 301 or 344 as an unknown account.
+ */
+export const FORMER_ACCOUNTS: Readonly<Record<string, number>> = {
+  "1100:expense": 1161,
+  "1100:income": 1161,
+  "2939:income": 1763,
+  "2000:expense": 2365,
+  "2000:income": 2361,
+  "2600:income": 2621,
+  "2600:expense": 2621,
 }
 
 /**
