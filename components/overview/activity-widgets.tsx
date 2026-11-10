@@ -31,24 +31,22 @@ import {
 } from "@/components/overview/overview-data"
 import { useCanSaveToFile, useSaveBook } from "@/hooks/use-save-book"
 import { calcEntry } from "@/lib/domain/calc"
-import { dueRecurring } from "@/lib/domain/recurring"
-import { lastCompleteMonth, monthOf } from "@/lib/domain/dates"
-import { daysBetween } from "@/lib/domain/vat-deadline"
 import { ENTRY_CHECKS, flaggedEntryIds } from "@/lib/domain/entry-checks"
 import { APP_ROUTES } from "@/lib/site"
 import { cn } from "@/lib/utils"
 import { toast } from "@/components/ui/toast"
-import { newYearDue, newYearTarget } from "@/lib/domain/new-year"
-import { retentionDates, yearsToArchive } from "@/lib/domain/retention"
 import { archiveClosedYear } from "@/lib/commands/io-commands"
 import { exportRetentionPackage } from "@/lib/commands/retention-commands"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { BOOK_LIMIT_RULES } from "@/lib/domain/book-limits"
 import { evaluate, type RuleSeverity } from "@/lib/domain/rules/engine"
 import { EMPTY_YEAR_END, form5Balance } from "@/lib/domain/form5-balance"
-import { balancesAt } from "@/lib/domain/open-items"
-import { RULES, ruleGaps } from "@/lib/domain/rule-tables"
-import { form5Reminder } from "@/lib/domain/tax-return-deadline"
+import { RULES } from "@/lib/domain/rule-tables"
+import {
+  overviewFindings,
+  type OverviewFinding,
+  type OverviewRuleId,
+} from "@/lib/domain/overview-rules"
 import {
   VAT_LIMIT_RULES,
   type VatPeriodOverLimit,
@@ -299,27 +297,53 @@ export function ChecksWidget() {
       {f.t("overview.filed")}
     </Button>
   )
-  for (const p of data.timeline) {
-    if (p.status === "overdue") {
-      items.push({
-        key: p.key,
-        tone: "crit",
-        title: f.t("overview.vatOverdue", { p: periodLabel(f, p) }),
-        sub: f.t("overview.vatOverdueSub", { d: f.date(p.due) }),
-        action: fileButton(p.key),
-      })
-    } else if (p.status === "due" && daysBetween(data.today, p.due) <= 30) {
-      items.push({
-        key: p.key,
-        tone: "warn",
-        title: f.t("overview.vatDue", {
-          p: periodLabel(f, p),
-          d: f.date(p.due),
-        }),
-        sub: f.t("overview.daysLeft", { n: daysBetween(data.today, p.due) }),
-        action: fileButton(p.key),
-      })
-    }
+
+  const vatPeriod = useBookStore((s) => s.vatPeriod)
+  const form5Filed = useBookStore((s) => s.form5Filed)
+  const yearEnds = useBookStore((s) => s.yearEnd)
+  const assetOpening = useBookStore((s) => s.assetOpening)
+  const loanOpening = useBookStore((s) => s.loanOpening)
+  const tone = (severity: RuleSeverity): CheckTone =>
+    severity === "blocker" ? "crit" : severity
+
+  const found = overviewFindings({
+    entries: data.entries,
+    yearEntries: data.yearEntries,
+    cats: data.catMap,
+    year: data.year,
+    today: data.today,
+    bookStart: data.bookStart,
+    timeline: data.timeline,
+    form5Filed,
+    yearEnd: yearEnds,
+    recurring,
+    yearsArchived,
+  })
+  const overview = <K extends OverviewRuleId>(id: K) =>
+    found.filter(
+      (x): x is Extract<OverviewFinding, { ruleId: K }> => x.ruleId === id
+    )
+
+  for (const { severity, data: d } of overview("vatOverdue")) {
+    items.push({
+      key: d.period.key,
+      tone: tone(severity),
+      title: f.t("overview.vatOverdue", { p: periodLabel(f, d.period) }),
+      sub: f.t("overview.vatOverdueSub", { d: f.date(d.period.due) }),
+      action: fileButton(d.period.key),
+    })
+  }
+  for (const { severity, data: d } of overview("vatDueSoon")) {
+    items.push({
+      key: d.period.key,
+      tone: tone(severity),
+      title: f.t("overview.vatDue", {
+        p: periodLabel(f, d.period),
+        d: f.date(d.period.due),
+      }),
+      sub: f.t("overview.daysLeft", { n: d.days }),
+      action: fileButton(d.period.key),
+    })
   }
 
   for (const { check, n } of checkCounts) {
@@ -338,40 +362,32 @@ export function ChecksWidget() {
     })
   }
 
-  const vatPeriod = useBookStore((s) => s.vatPeriod)
-  const form5Filed = useBookStore((s) => s.form5Filed)
-  const yearEnds = useBookStore((s) => s.yearEnd)
-  const assetOpening = useBookStore((s) => s.assetOpening)
-  const loanOpening = useBookStore((s) => s.loanOpening)
-  const tone = (severity: RuleSeverity): CheckTone =>
-    severity === "blocker" ? "crit" : severity
   const limitCtx = {
     entries: data.entries,
     cats: data.catMap,
     vatPeriod,
     today: data.today,
   }
-  for (const found of evaluate(VAT_LIMIT_RULES, limitCtx, [
+  for (const limit of evaluate(VAT_LIMIT_RULES, limitCtx, [
     "vatThresholdOver",
     "vatThresholdNear",
     "vatThresholdBelow",
   ])) {
     items.push({
       key: "vatThreshold",
-      tone: tone(found.severity),
-      ...vatThresholdText(f, found.data as VatThreshold),
+      tone: tone(limit.severity),
+      ...vatThresholdText(f, limit.data as VatThreshold),
     })
   }
 
-  const unpaid = balancesAt(data.entries, data.catMap, data.today)
-  if (unpaid.count) {
+  for (const { severity, data: d } of overview("openItems")) {
     items.push({
       key: "openItems",
-      tone: "info",
-      title: f.t("overview.openItems", { n: unpaid.count }),
+      tone: tone(severity),
+      title: f.t("overview.openItems", { n: d.count }),
       sub: f.t("overview.openItemsSub", {
-        r: f.money(unpaid.receivables),
-        p: f.money(unpaid.payables),
+        r: f.money(d.receivables),
+        p: f.money(d.payables),
       }),
       action: (
         <Button variant="ghost" size="sm" onClick={() => showInLedger("open")}>
@@ -381,11 +397,11 @@ export function ChecksWidget() {
     })
   }
 
-  for (const found of evaluate(VAT_LIMIT_RULES, limitCtx, ["vatPeriodLimit"])) {
+  for (const limit of evaluate(VAT_LIMIT_RULES, limitCtx, ["vatPeriodLimit"])) {
     items.push({
       key: "vatPeriodLimit",
-      tone: tone(found.severity),
-      ...vatPeriodLimitText(f, found.data as VatPeriodOverLimit),
+      tone: tone(limit.severity),
+      ...vatPeriodLimitText(f, limit.data as VatPeriodOverLimit),
     })
   }
 
@@ -403,92 +419,70 @@ export function ChecksWidget() {
       }).assets,
     today: data.today,
   }
-  for (const found of evaluate(BOOK_LIMIT_RULES, bookLimitCtx)) {
-    const text = BOOK_LIMIT_TEXT[found.ruleId as BookLimitRuleId]
+  for (const limit of evaluate(BOOK_LIMIT_RULES, bookLimitCtx)) {
+    const text = BOOK_LIMIT_TEXT[limit.ruleId as BookLimitRuleId]
     items.push({
       key: text.key,
-      tone: tone(found.severity),
-      title: f.t(text.title, { y: found.data.year }),
+      tone: tone(limit.severity),
+      title: f.t(text.title, { y: limit.data.year }),
       sub: f.t(text.sub),
     })
   }
 
-  const form5 = form5Reminder(data.entries, data.today, form5Filed)
-  if (form5) {
+  for (const { severity, data: d } of overview("form5Due")) {
     items.push({
       key: "form5Due",
-      tone: "info",
-      title: f.t("overview.form5Due", { y: form5.taxYear }),
-      sub: form5.due
-        ? f.t("overview.form5DueOn", { d: f.date(form5.due) })
+      tone: tone(severity),
+      title: f.t("overview.form5Due", { y: d.taxYear }),
+      sub: d.due
+        ? f.t("overview.form5DueOn", { d: f.date(d.due) })
         : f.t("overview.form5DueUnknown"),
     })
   }
 
-  const gaps = ruleGaps(data.today)
-  if (gaps.length) {
+  for (const { severity, data: d } of overview("rulesStale")) {
     items.push({
       key: "rulesStale",
-      tone: "info",
+      tone: tone(severity),
       title: f.t("overview.rulesStale", { y: data.today.slice(0, 4) }),
       sub: f.t("overview.rulesStaleSub", {
-        what: gaps.map((g) => f.t(RULE_GAP_TEXT[g])).join(", "),
+        what: d.gaps.map((g) => f.t(RULE_GAP_TEXT[g])).join(", "),
         d: f.date(RULES.checkedOn),
       }),
     })
   }
 
-  const missing = data.yearEntries.reduce(
-    (n, e) => n + (e.atts ?? []).filter((a) => a.missing).length,
-    0
-  )
-  if (missing) {
+  for (const { severity, data: d } of overview("missingReceipts")) {
     items.push({
       key: "missing",
-      tone: "warn",
-      title: f.t("overview.missingFiles", { n: missing }),
+      tone: tone(severity),
+      title: f.t("overview.missingFiles", { n: d.count }),
       sub: f.t("overview.missingFilesSub"),
     })
   }
 
-  /*
-   * Empty months, from the book's first month in this year up to the last
-   * complete one. A month still running is not empty yet, and a month before
-   * the start month set in Settings was never meant to have entries.
-   */
-  const used = new Set(data.yearEntries.map((e) => monthOf(e.date)))
-  const lastComplete = lastCompleteMonth(data.year, data.today)
-  const emptyMonths: string[] = []
-  for (let m = Math.min(...used); m <= lastComplete; m++) {
-    const key = `${data.year}-${String(m).padStart(2, "0")}`
-    if (data.bookStart && key < data.bookStart) continue
-    if (!used.has(m)) emptyMonths.push(f.month(m - 1, true).toLowerCase())
-  }
-  if (emptyMonths.length) {
+  for (const { severity, data: d } of overview("emptyMonths")) {
     items.push({
       key: "empty",
-      tone: "info",
-      title: f.t("overview.emptyMonths", { m: emptyMonths.join(", ") }),
+      tone: tone(severity),
+      title: f.t("overview.emptyMonths", {
+        m: d.months.map((m) => f.month(m - 1, true).toLowerCase()).join(", "),
+      }),
       sub: f.t("overview.emptyMonthsSub"),
     })
   }
 
-  // The year being prepared, whichever year is selected: it is a job for today.
-  const nextYear = newYearTarget(data.today)
-  const previousHasEntries = data.entries.some((e) =>
-    e.date.startsWith(`${nextYear - 1}-`)
-  )
-  if (newYearDue(yearEnds, data.today, previousHasEntries)) {
+  for (const { severity, data: d } of overview("newYear")) {
     items.push({
       key: "newYear",
-      tone: "info",
-      title: f.t("newYear.dueTitle", { y: nextYear }),
+      tone: tone(severity),
+      title: f.t("newYear.dueTitle", { y: d.year }),
       sub: f.t("newYear.dueSub"),
       action: (
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => openDialog({ kind: "new-year", year: nextYear })}
+          onClick={() => openDialog({ kind: "new-year", year: d.year })}
         >
           {f.t("newYear.start")}
         </Button>
@@ -496,20 +490,17 @@ export function ChecksWidget() {
     })
   }
 
-  // This calendar month's, whatever year is selected: it is a job for today.
-  const thisMonth = data.today.slice(0, 7)
-  const dueNow = dueRecurring(recurring, thisMonth, data.entries)
-  if (dueNow.length) {
+  for (const { severity, data: d } of overview("recurringDue")) {
     items.push({
       key: "recurring",
-      tone: "info",
-      title: f.t("recurring.dueTitle", { n: dueNow.length }),
-      sub: dueNow.map((r) => r.description).join(", "),
+      tone: tone(severity),
+      title: f.t("recurring.dueTitle", { n: d.items.length }),
+      sub: d.items.map((r) => r.description).join(", "),
       action: (
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => openDialog({ kind: "recurring", month: thisMonth })}
+          onClick={() => openDialog({ kind: "recurring", month: d.month })}
         >
           {f.t("common.add")}
         </Button>
@@ -521,15 +512,15 @@ export function ChecksWidget() {
    * A reminder rather than a problem, so it stays out of the open count. The
    * file is the only real copy (§1), and it stays mutable after the year ends.
    */
-  for (const y of yearsToArchive(data.entries, data.today, yearsArchived)) {
-    const { books, vouchers } = retentionDates(y)
+  for (const { severity, data: d } of overview("yearToArchive")) {
+    const y = d.year
     items.push({
       key: `archive-${y}`,
-      tone: "info",
+      tone: tone(severity),
       title: f.t("overview.yearClosed", { y }),
       sub: f.t("overview.yearClosedSub", {
-        b: f.date(books),
-        v: f.date(vouchers),
+        b: f.date(d.books),
+        v: f.date(d.vouchers),
       }),
       action: (
         <div className="flex gap-1">
