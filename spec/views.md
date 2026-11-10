@@ -10,6 +10,7 @@ Part of the project specification. `CLAUDE.md` is the index and holds the conven
 - When **no bookkeeping is open**, every route shows the **landing page**.
 - Views: landing, overview, ledger, VAT return, income statement, summary, calendar, settings. The prototype used Finnish hash routes (`etusivu`, `kirjanpito`, `alv`, `tulos`, `yhteenveto`, `asetukset`); the real app uses **English** Next.js routes — see §11b. Only the visible labels are translated.
 - The app logo / brand links to the landing page.
+- **A page that fails to render** shows `ErrorRecovery` (`components/app/error-recovery.tsx`) in its place, from `app/app/error.tsx` inside the shell, so the sidebar and file menu still work, and from `app/error.tsx` for the shell or the landing. It says the bookkeeping is safe in the browser, says whether changes are still unsaved or names the file that has them, and offers "Yritä uudelleen", "Lataa kopio kirjanpidosta" (the export of §7.3) and "Lataa sivu uudelleen". Its heading takes focus. "Virheen tiedot" holds the message and a download of the browser's stored data as JSON, for a bug report. `app/global-error.tsx`, for a failure of the root layout itself, reads no state, says the same in both languages and offers the reload and the JSON.
 - Persisted UI preferences: language, theme, selected year, last amount mode and type used in the entry dialog, rows per page for each table, and whether the sidebar is collapsed. Language and theme each have their own localStorage key; the rest live with the bookkeeping (§12).
 
 ### 8.2 Shell (sidebar + top bar)
@@ -263,7 +264,6 @@ Every section is a `Panel` (§11). The page is split into two sub-pages, so the 
 - **Luokat** at `/app/settings/categories`: the categories table, with adding in a dialog, whether labels show account numbers, and restoring the defaults.
 - **Toistuvat** at `/app/settings/recurring`: the monthly templates (§8.5).
 - **Säännöt** at `/app/settings/rules`: the category rules (§8.17).
-- **Osapuolet** at `/app/settings/parties`: the counterparty register (§8.29), with "Lisää osapuoli" in the header.
 - **Kalenteri** at `/app/settings/calendar`: the calendar's inputs (§8.22), below.
 
 `app/app/settings/layout.tsx` renders `SettingsShell` (`components/settings/settings-shell.tsx`): the page title and a row of tab links shaped like the month chips (§8.4). The current tab is `bg-muted` with `aria-current="page"`, not filled with the primary colour, because it marks a place rather than a filter. The routes are `SETTINGS_ROUTES` in `lib/site.ts`. The sidebar keeps Asetukset lit on any path below it.
@@ -284,6 +284,7 @@ On **Kalenteri**:
 
 - **"YEL-maksun kuukaudet" and "Ennakkoveron kuukaudet"**: month toggles that set `payMonths` (§8.22), which the calendar reads.
 - **"Ennakkoveropäätös {vuosi}"**: the yearly advance tax amount and a tax rate for the estimate (§8.22). Each saves when it loses focus; empty clears it.
+- **"Veroarvion tiedot"**: the municipal and church tax rates, the confirmed YEL work income, the starter discount and the other earned income, which the income tax and YEL estimate reads (§6.14). Each saves when it loses focus; an empty municipal rate turns the estimate off.
 
 On **Luokat**:
 

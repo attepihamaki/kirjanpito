@@ -67,6 +67,55 @@
       "source": "vero.fi, Vero's confirmed amounts for the home office deduction"
     }
   ],
+  "incomeTax": [
+    {
+      "year": 2026,
+      "stateScale": [
+        {
+          "from": 0,
+          "base": 0,
+          "rate": 12.64
+        },
+        {
+          "from": 2200000,
+          "base": 278080,
+          "rate": 19
+        },
+        {
+          "from": 3260000,
+          "base": 479480,
+          "rate": 30.25
+        },
+        {
+          "from": 4010000,
+          "base": 706355,
+          "rate": 33.25
+        },
+        {
+          "from": 5210000,
+          "base": 1105355,
+          "rate": 37.5
+        }
+      ],
+      "basicDeduction": 426500,
+      "basicDeductionReduction": 18,
+      "workCreditRate": 18,
+      "workCreditMax": 343000,
+      "workCreditReduceFrom": 3500000,
+      "workCreditReduceTo": 5055000,
+      "workCreditReduceRate": 2,
+      "incomeAcquisition": 75000,
+      "entrepreneurDeduction": 5,
+      "healthCare": 1.1,
+      "dailyAllowance": 0.88,
+      "dailyAllowanceYel": 1.11,
+      "dailyAllowanceFrom": 1725500,
+      "yelRate": 24.4,
+      "yelStarterDiscount": 22,
+      "yelMinIncome": 942309,
+      "source": "vero.fi, Muutokset veroperusteisiin 2026; Veronmaksajat, Valtion tulovero and Ansiotulosta tehtävät vähennykset 2026; VNA 1026/2025 (sairausvakuutusmaksut); Eläketurvakeskus, YEL 2026"
+    }
+  ],
   "limits": {
     "vatThreshold": [
       {
@@ -104,14 +153,32 @@
       }
     ],
     "singleEntryAssets": [
-      { "from": null, "value": 10000000, "source": "KPL 1:1a" }
+      {
+        "from": null,
+        "value": 10000000,
+        "source": "KPL 1:1a"
+      }
     ],
     "singleEntryTurnover": [
-      { "from": null, "value": 20000000, "source": "KPL 1:1a" }
+      {
+        "from": null,
+        "value": 20000000,
+        "source": "KPL 1:1a"
+      }
     ],
-    "microAssets": [{ "from": null, "value": 45000000, "source": "KPL 1:4b" }],
+    "microAssets": [
+      {
+        "from": null,
+        "value": 45000000,
+        "source": "KPL 1:4b"
+      }
+    ],
     "microTurnover": [
-      { "from": null, "value": 90000000, "source": "KPL 1:4b" }
+      {
+        "from": null,
+        "value": 90000000,
+        "source": "KPL 1:4b"
+      }
     ],
     "depreciationPercent": [
       {

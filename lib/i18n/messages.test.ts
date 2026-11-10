@@ -72,6 +72,7 @@ describe("dictionary integrity", () => {
       "statement",
       "summary",
       "table",
+      "taxEstimate",
       "vat",
       "viewer",
     ]

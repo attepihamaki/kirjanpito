@@ -49,6 +49,7 @@ import { unsettledDues } from "@/lib/domain/vat-settlement"
 import { vatReturnReport } from "@/lib/domain/year-reports"
 import { rateOnDate } from "@/lib/domain/vat-rates"
 import { indexCategories, type Category, type Entry } from "@/lib/domain/types"
+import { announce } from "@/lib/browser/announce"
 import { useBookStore } from "@/stores/book-store"
 
 /** Review a bank statement and book it (§8.16). */
@@ -302,6 +303,18 @@ function Review({
   const paidCount = plans.filter((p) => p.action === "match").length
   const newCount = plans.filter((p) => p.action === "new").length
 
+  /* What the statement held, said once when the review opens (§11). */
+  React.useEffect(() => {
+    announce(
+      f.t("bank.readAnnounce", {
+        n: result.rows.length,
+        paid: paidCount,
+        added: newCount,
+      })
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on opening
+  }, [])
+
   const book = async () => {
     const paid: { entryId: string; on: string }[] = []
     /* Rows the reference proved to pay an invoice, whose other entries are paid with it. */
@@ -529,9 +542,13 @@ function Review({
       />
 
       <DialogFooter className="items-center">
-        {hint ? (
-          <p className="mr-auto text-sm text-muted-foreground">{hint}</p>
-        ) : null}
+        {/* Mounted while empty, so a hint that appears is read out (§11). */}
+        <p
+          role="status"
+          className="mr-auto text-sm text-muted-foreground empty:hidden"
+        >
+          {hint}
+        </p>
         <Button variant="outline" onClick={closeDialog}>
           {f.t("common.cancel")}
         </Button>

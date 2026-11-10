@@ -585,6 +585,15 @@ export function parseSettings(text: string): ParsedSettings {
       }
     }
     const rate = raw.payMonths.taxRate
+    const profile = isRecord(raw.payMonths.taxProfile)
+      ? raw.payMonths.taxProfile
+      : {}
+    const share = (v: unknown): number | null =>
+      typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 100
+        ? v
+        : null
+    const amount = (v: unknown): number | null =>
+      typeof v === "number" && Number.isInteger(v) && v >= 0 ? v : null
     out.payMonths = {
       yel: months(raw.payMonths.yel),
       advanceTax: months(raw.payMonths.advanceTax),
@@ -593,6 +602,13 @@ export function parseSettings(text: string): ParsedSettings {
         typeof rate === "number" && Number.isFinite(rate) && rate >= 0
           ? rate
           : null,
+      taxProfile: {
+        municipalRate: share(profile.municipalRate),
+        churchRate: share(profile.churchRate),
+        yelIncome: amount(profile.yelIncome),
+        yelStarter: profile.yelStarter === true,
+        otherIncome: amount(profile.otherIncome) ?? 0,
+      },
     }
   }
   if (raw.invoiceSettings !== undefined) {

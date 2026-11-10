@@ -21,6 +21,8 @@ import {
   estimateTax,
 } from "@/lib/domain/advance-tax"
 import { uid } from "@/lib/domain/id"
+import { incomeStatement } from "@/lib/domain/income-statement"
+import { estimateIncomeTax, incomeTaxRow } from "@/lib/domain/income-tax"
 import { bookStartDate, daysBetween } from "@/lib/domain/vat-deadline"
 import {
   taxCalendar,
@@ -263,17 +265,31 @@ function AdvanceTaxSummary() {
   const payMonths = useBookStore((s) => s.payMonths)
   const decision = payMonths.advanceTaxYearly[String(year)] ?? 0
   const paid = advanceTaxPaid(entries, year)
-  const estimate = React.useMemo(
-    () =>
-      estimateTax(
-        entries,
-        indexCategories(cats),
-        year,
-        payMonths.taxRate,
-        decision
-      ),
-    [entries, cats, year, payMonths.taxRate, decision]
-  )
+  const profile = payMonths.taxProfile
+  /*
+   * On the year's scale when the user has given the details for it (§6.14),
+   * else at the user's own flat rate.
+   */
+  const estimate = React.useMemo(() => {
+    const catMap = indexCategories(cats)
+    const row = incomeTaxRow(year)
+    const scaled = row
+      ? estimateIncomeTax(
+          incomeStatement(entries, catMap, year).result,
+          profile,
+          row
+        )
+      : null
+    if (scaled) {
+      return {
+        scale: true,
+        tax: scaled.businessTax,
+        gap: scaled.businessTax - decision,
+      }
+    }
+    const flat = estimateTax(entries, catMap, year, payMonths.taxRate, decision)
+    return flat ? { scale: false, ...flat } : null
+  }, [entries, cats, year, payMonths.taxRate, profile, decision])
   if (!decision && !estimate && paid === 0) return null
 
   const rows: [string, string][] = [
@@ -286,9 +302,11 @@ function AdvanceTaxSummary() {
   if (decision) rows.push([f.t("calendar.sumLeft"), f.money(decision - paid)])
   if (estimate) {
     rows.push([
-      f.t("calendar.sumEstimate", {
-        r: String(payMonths.taxRate).replace(".", ","),
-      }),
+      estimate.scale
+        ? f.t("calendar.sumScale")
+        : f.t("calendar.sumEstimate", {
+            r: String(payMonths.taxRate).replace(".", ","),
+          }),
       f.money(estimate.tax),
     ])
     if (decision && estimate.gap !== 0) {
@@ -311,7 +329,9 @@ function AdvanceTaxSummary() {
       </dl>
       {estimate ? (
         <p className="px-5 pb-5 text-sm text-muted-foreground">
-          {f.t("calendar.sumNote")}
+          {estimate.scale
+            ? f.t("calendar.sumScaleNote", { y: year })
+            : f.t("calendar.sumNote")}
         </p>
       ) : null}
     </Panel>

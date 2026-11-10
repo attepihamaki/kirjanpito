@@ -80,6 +80,7 @@ The prototype split them, and the app follows:
 - **Theme:** light ↔ dark from the top bar, defaulting to the system theme (§8.2).
 - **Responsive breakpoints:** 900 px (the sidebar becomes a sheet; dialogs stack) and 560 px (compact table and totals). 900 is also `MOBILE_BREAKPOINT` in `hooks/use-mobile.ts`, and the `min-[900px]:` that replaced shadcn's hard-coded `md:` inside `components/ui/sidebar.tsx` — the CSS and the JS have to flip on the same pixel.
 - **Accessibility:** visible focus rings, `aria-sort` on sortable headers, `aria-pressed` on toggles, `aria-label` on icon buttons, `prefers-reduced-motion` respected. The only motion is a short pop-in on dialogs.
+- **Announcements.** Toasts are read by the toast viewport's own live region; a failure to read, save or export a file is raised with `priority: "high"`, so it interrupts. What has no toast goes through `announce()` (`lib/browser/announce.ts`) to `LiveAnnouncer` (`components/app/live-announcer.tsx`), two visually hidden regions, polite and assertive, mounted once and empty in the app shell: a save made by autosave, autosave stopping, and what a bank statement held when its review opens. The bank import's hint, such as rows missing a category, is a status region that stays mounted. `test/live-announcer.test.tsx` covers the regions.
 
 ### Suggested shadcn/ui mapping
 

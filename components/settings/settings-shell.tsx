@@ -24,23 +24,6 @@ function NewCategoryButton() {
   )
 }
 
-/** "Lisää osapuoli" on the counterparty register (§8.29). */
-function NewPartyButton() {
-  const t = useT()
-  const openDialog = useBookStore((s) => s.openDialog)
-
-  return (
-    <Button
-      onClick={() =>
-        openDialog({ kind: "customer", customerId: null, role: "both" })
-      }
-    >
-      <PlusIcon data-icon="inline-start" />
-      {t("party.new")}
-    </Button>
-  )
-}
-
 /**
  * The title and sub-page tabs shared by every settings page (§8.10). It is
  * the settings layout, so switching tabs keeps the header in place and only
@@ -52,7 +35,6 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
   const path = trim(usePathname())
   const general = path === trim(SETTINGS_ROUTES.general)
   const categories = path === trim(SETTINGS_ROUTES.categories)
-  const parties = path === trim(SETTINGS_ROUTES.parties)
 
   return (
     <>
@@ -64,8 +46,6 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
             <GeneralActions />
           ) : categories ? (
             <NewCategoryButton />
-          ) : parties ? (
-            <NewPartyButton />
           ) : undefined
         }
       />
@@ -77,7 +57,6 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
           { href: SETTINGS_ROUTES.recurring, label: t("recurring.tab") },
           { href: SETTINGS_ROUTES.calendar, label: t("settings.calendarTab") },
           { href: SETTINGS_ROUTES.rules, label: t("settings.rulesTab") },
-          { href: SETTINGS_ROUTES.parties, label: t("party.tab") },
           { href: SETTINGS_ROUTES.invoicing, label: t("invoice.settingsTab") },
         ]}
       />

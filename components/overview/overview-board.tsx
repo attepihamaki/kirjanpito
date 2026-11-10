@@ -40,6 +40,7 @@ import {
 import { BankWidget } from "@/components/overview/bank-widget"
 import { MonthsWidget } from "@/components/overview/months-widget"
 import { ResultWidget } from "@/components/overview/result-widget"
+import { TaxWidget } from "@/components/overview/tax-widget"
 import { VatWidget } from "@/components/overview/vat-widget"
 import {
   moveWidget,
@@ -57,6 +58,7 @@ const WIDGETS: Record<
   { title: MessageKey; Component: React.ComponentType; tall?: boolean }
 > = {
   result: { title: "overview.widgetResult", Component: ResultWidget },
+  tax: { title: "overview.widgetTax", Component: TaxWidget },
   vat: { title: "overview.widgetVat", Component: VatWidget },
   bank: { title: "overview.widgetBank", Component: BankWidget },
   months: {

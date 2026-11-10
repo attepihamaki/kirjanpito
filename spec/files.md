@@ -232,7 +232,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
   "bankSeen": ["id:2026102801234", "fp:2026-10-28|-12450|k market||0"],
   "assetOpening": { "year": 2026, "amount": 300000 },
   "bankBalance": { "amount": 125000, "date": "2026-10-31" },
-  "payMonths": { "yel": [1, 7], "advanceTax": [2, 4, 6, 8, 10, 12], "advanceTaxYearly": { "2026": 360000 }, "taxRate": 22.5 },
+  "payMonths": { "yel": [1, 7], "advanceTax": [2, 4, 6, 8, 10, 12], "advanceTaxYearly": { "2026": 360000 }, "taxRate": 22.5, "taxProfile": { "municipalRate": 7.5, "churchRate": null, "yelIncome": 2000000, "yelStarter": false, "otherIncome": 0 } },
   "loanOpening": { "year": 2026, "amount": 800000 },
   "changeLog": [{ "at": "2026-11-03T10:00:00.000Z", "action": "add", "voucher": 1, "date": "2026-10-10", "description": "Osto" }],
   "yearEnd": { "2026": { "goods": 120000, "otherCurrent": 0, "otherFixed": 0, "cash": 3500, "otherFinancial": 0, "loanCurrent": 0, "otherCurrentDebt": 0, "otherLongDebt": 0 } }

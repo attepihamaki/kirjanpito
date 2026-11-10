@@ -18,7 +18,7 @@ export function InvoiceShell({ children }: { children: React.ReactNode }) {
   const t = useT()
   const openDialog = useBookStore((s) => s.openDialog)
   const path = usePathname().replace(/\/$/, "")
-  const customers = path === INVOICE_ROUTES.customers
+  const parties = path === INVOICE_ROUTES.parties
 
   return (
     <>
@@ -26,12 +26,14 @@ export function InvoiceShell({ children }: { children: React.ReactNode }) {
         title={t("invoice.title")}
         subtitle={t("invoice.subtitle")}
         actions={
-          customers ? (
+          parties ? (
             <Button
-              onClick={() => openDialog({ kind: "customer", customerId: null })}
+              onClick={() =>
+                openDialog({ kind: "customer", customerId: null, role: "both" })
+              }
             >
               <PlusIcon data-icon="inline-start" />
-              {t("invoice.newCustomer")}
+              {t("party.new")}
             </Button>
           ) : (
             <Button
@@ -50,7 +52,7 @@ export function InvoiceShell({ children }: { children: React.ReactNode }) {
           { href: INVOICE_ROUTES.recurring, label: t("invoice.tabRecurring") },
           { href: INVOICE_ROUTES.aging, label: t("invoice.tabAging") },
           { href: INVOICE_ROUTES.payables, label: t("invoice.tabPayables") },
-          { href: INVOICE_ROUTES.customers, label: t("invoice.tabCustomers") },
+          { href: INVOICE_ROUTES.parties, label: t("party.tab") },
           { href: INVOICE_ROUTES.products, label: t("invoice.tabProducts") },
         ]}
       />

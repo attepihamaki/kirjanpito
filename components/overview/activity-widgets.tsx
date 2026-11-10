@@ -65,6 +65,7 @@ import { hasReceipt } from "@/stores/selectors"
 const RULE_GAP_TEXT = {
   travel: "overview.rulesTravel",
   homeOffice: "overview.rulesHomeOffice",
+  incomeTax: "overview.rulesIncomeTax",
   form5Due: "overview.rulesForm5Due",
 } as const
 

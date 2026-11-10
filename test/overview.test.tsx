@@ -7,6 +7,7 @@ import { LangProvider } from "@/components/lang-provider"
 import { OverviewView } from "@/components/overview/overview-view"
 import { defaultCategories } from "@/lib/domain/accounts"
 import { createIdFactory } from "@/lib/domain/id"
+import { DEFAULT_LAYOUT } from "@/lib/domain/overview-layout"
 import { sampleEntries } from "@/lib/domain/test-helpers/sample-book"
 import { useBookStore } from "@/stores/book-store"
 
@@ -180,9 +181,10 @@ describe("overview", () => {
     ).toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Palauta oletus" }))
-    expect(useBookStore.getState().overviewLayout.every((w) => !w.hidden)).toBe(
-      true
-    )
+    const reset = useBookStore.getState().overviewLayout
+    expect(reset.find((w) => w.id === "sales")?.hidden).toBe(false)
+    /* The tax estimate starts hidden until the user shows it. */
+    expect(reset.find((w) => w.id === "tax")?.hidden).toBe(true)
   })
 
   it("moves a widget with the arrow buttons", async () => {
@@ -207,5 +209,52 @@ describe("overview", () => {
     mount()
     expect(screen.getByText("Ei vielä tositteita")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Muokkaa näkymää" })).toBeNull()
+  })
+})
+
+describe("tax widget", () => {
+  /* Hidden by default, so each test shows it first. */
+  const showTax = () =>
+    useBookStore.setState({
+      overviewLayout: DEFAULT_LAYOUT.map((w) => ({ ...w, hidden: false })),
+    })
+
+  it("starts hidden", () => {
+    load()
+    mount()
+    expect(screen.queryByText(/Vero tähänastisesta voitosta/)).toBeNull()
+    expect(
+      screen.queryByText(/Lisää kunnallisveroprosentti asetuksissa/)
+    ).toBeNull()
+  })
+
+  it("asks for the municipal rate before it estimates anything", () => {
+    load()
+    showTax()
+    mount()
+    expect(
+      screen.getByText(/Lisää kunnallisveroprosentti asetuksissa/)
+    ).toBeInTheDocument()
+  })
+
+  it("estimates the tax, the year at this pace and the YEL contribution", () => {
+    load()
+    showTax()
+    useBookStore.setState((s) => ({
+      payMonths: {
+        ...s.payMonths,
+        taxProfile: {
+          municipalRate: 7.5,
+          churchRate: null,
+          yelIncome: 2_000_000,
+          yelStarter: false,
+          otherIncome: 0,
+        },
+      },
+    }))
+    mount()
+    const tax = widget(/Vero tähänastisesta voitosta/)
+    expect(flat(tax.textContent)).toContain("Koko vuosi samalla tahdilla")
+    expect(flat(tax.textContent)).toContain("406,67 € / kk · 24,4 %")
   })
 })

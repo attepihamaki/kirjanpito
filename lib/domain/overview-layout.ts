@@ -9,6 +9,7 @@
 
 const OVERVIEW_WIDGETS = [
   "result",
+  "tax",
   "vat",
   "bank",
   "months",
@@ -30,11 +31,14 @@ export interface OverviewWidget {
 }
 
 /*
- * Laid out on three columns, this fills every cell: the month chart is the
- * one widget that also spans two rows when wide, beside sales and expenses.
+ * Laid out on three columns, the visible ones fill every cell: the month
+ * chart is the one widget that also spans two rows when wide, beside sales
+ * and expenses. The tax estimate starts hidden, since it needs details from
+ * the user before it shows anything (§6.14).
  */
 export const DEFAULT_LAYOUT: readonly OverviewWidget[] = [
   { id: "result", size: "S", hidden: false },
+  { id: "tax", size: "S", hidden: true },
   { id: "vat", size: "S", hidden: false },
   { id: "bank", size: "S", hidden: false },
   { id: "months", size: "L", hidden: false },

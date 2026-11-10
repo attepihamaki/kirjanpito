@@ -8,6 +8,7 @@ import {
   vatPeriods,
   type VatPeriodKind,
 } from "@/lib/domain/vat-deadline"
+import { NO_TAX_PROFILE, type TaxProfile } from "@/lib/domain/income-tax"
 import type { CategoryMap, Cents, Entry } from "@/lib/domain/types"
 
 /**
@@ -30,6 +31,8 @@ export interface PayMonths {
   advanceTaxYearly: Record<string, Cents>
   /** The flat rate in percent that the tax estimate uses, or null for none. */
   taxRate: number | null
+  /** What the income tax and YEL estimate needs to know (§6.14). */
+  taxProfile: TaxProfile
 }
 
 export const NO_PAY_MONTHS: PayMonths = {
@@ -37,6 +40,7 @@ export const NO_PAY_MONTHS: PayMonths = {
   advanceTax: [],
   advanceTaxYearly: {},
   taxRate: null,
+  taxProfile: NO_TAX_PROFILE,
 }
 
 /** Day of the month a YEL instalment falls due (Elo, Varma). */

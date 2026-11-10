@@ -99,10 +99,19 @@ describe("ruleGaps", () => {
   })
 
   it("lists what the new year lacks", () => {
-    expect(ruleGaps("2027-01-01")).toEqual(["homeOffice", "form5Due"])
+    expect(ruleGaps("2027-01-01")).toEqual([
+      "homeOffice",
+      "incomeTax",
+      "form5Due",
+    ])
   })
 
   it("lists travel too once its year runs out", () => {
-    expect(ruleGaps("2028-01-01")).toEqual(["travel", "homeOffice", "form5Due"])
+    expect(ruleGaps("2028-01-01")).toEqual([
+      "travel",
+      "homeOffice",
+      "incomeTax",
+      "form5Due",
+    ])
   })
 })

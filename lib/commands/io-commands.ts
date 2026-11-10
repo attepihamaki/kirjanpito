@@ -4,6 +4,7 @@ import { periodFromKey } from "@/lib/domain/vat-deadline"
 import { NO_PAY_MONTHS } from "@/lib/domain/tax-calendar"
 
 import { releaseAllObjectUrls } from "@/lib/browser/object-urls"
+import { announce } from "@/lib/browser/announce"
 import { fileToUint8Array, saveBlob } from "@/lib/browser/download"
 import {
   hasWritePermission,
@@ -207,7 +208,7 @@ export async function openFile(
     if (opened) await rememberHandle(handle)
   } catch (error) {
     console.error(error)
-    toast.add({ title: ctx.t("io.readFailed") })
+    toast.add({ title: ctx.t("io.readFailed"), priority: "high" })
   } finally {
     useBookStore.getState().setImporting(false)
   }
@@ -225,7 +226,7 @@ export async function pickAndOpenFile(ctx: Ctx): Promise<boolean> {
     handle = await pickFileToOpen()
   } catch (error) {
     console.error(error)
-    toast.add({ title: ctx.t("io.readFailed") })
+    toast.add({ title: ctx.t("io.readFailed"), priority: "high" })
     return true
   }
   // Cancelling the picker is a normal outcome, and still "handled".
@@ -971,7 +972,7 @@ export async function exportBook(ctx: Ctx, baseName: string): Promise<void> {
     toast.add({ title: ctx.t("io.exported", { f: file.name }) })
   } catch (error) {
     console.error(error)
-    toast.add({ title: ctx.t("io.exportFailed") })
+    toast.add({ title: ctx.t("io.exportFailed"), priority: "high" })
   }
 }
 
@@ -1055,7 +1056,7 @@ export async function saveBook(ctx: Ctx, suggestedBase: string): Promise<void> {
     toast.add({ title: ctx.t("io.saved", { f: handle.name }) })
   } catch (error) {
     console.error(error)
-    toast.add({ title: ctx.t("io.saveFailed") })
+    toast.add({ title: ctx.t("io.saveFailed"), priority: "high" })
   } finally {
     useBookStore.getState().setSaving(false)
   }
@@ -1084,7 +1085,7 @@ async function handleToWrite(
   }
 
   if (!(await requestWritePermission(fileHandle))) {
-    toast.add({ title: ctx.t("io.saveDenied") })
+    toast.add({ title: ctx.t("io.saveDenied"), priority: "high" })
     return null
   }
 
@@ -1095,7 +1096,7 @@ async function handleToWrite(
     // Moved, renamed or deleted since it was opened.
     useBookStore.getState().forgetFileHandle()
     await rememberHandle(null)
-    toast.add({ title: ctx.t("io.fileGone") })
+    toast.add({ title: ctx.t("io.fileGone"), priority: "high" })
     return pick()
   }
 
@@ -1159,6 +1160,7 @@ export async function autosaveBook(ctx: Ctx): Promise<boolean> {
       savedAt: await lastModified(handle),
       dirty: changedSince(file.version),
     })
+    announce(ctx.t("io.autosaved"))
     return true
   } catch (error) {
     console.error(error)
@@ -1182,7 +1184,7 @@ function failAutosave(ctx: Ctx, epoch: number): boolean {
   const store = useBookStore.getState()
   const failures = store.autosaveFailures + 1
   if (failures >= AUTOSAVE_MAX_FAILURES) {
-    toast.add({ title: ctx.t("io.saveFailed") })
+    toast.add({ title: ctx.t("io.saveFailed"), priority: "high" })
     store.setAutosavePaused(true)
     return false
   }
@@ -1427,7 +1429,7 @@ export async function archiveClosedYear(
     return true
   } catch (error) {
     console.error(error)
-    toast.add({ title: ctx.t("io.archiveFailed") })
+    toast.add({ title: ctx.t("io.archiveFailed"), priority: "high" })
     return false
   } finally {
     useBookStore.getState().setSaving(false)

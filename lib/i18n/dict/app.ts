@@ -23,6 +23,35 @@ export const APP_DICT = {
   // Short enough to fit the sidebar's brand button on one line.
   "app.tagline": ["Yhdenkertainen kirjanpito", "Single-entry bookkeeping"],
   "app.fiscalYear": ["Tilikausi", "Financial year"],
+  "app.errorTitle": ["Jokin meni vikaan", "Something went wrong"],
+  "app.errorSafe": [
+    "Sivua ei voitu näyttää. Kirjanpitosi on silti tallessa: selain säilyttää tositteet ja kuitit, eikä virhe koskenut niihin.",
+    "The page couldn’t be shown. Your bookkeeping is still safe: the browser keeps the vouchers and receipts, and the error didn’t touch them.",
+  ],
+  "app.errorUnsaved": [
+    "Selaimessa on muutoksia, joita ei ole vielä tallennettu tiedostoon. Lataa kopio ennen kuin jatkat.",
+    "The browser holds changes that aren’t saved to a file yet. Download a copy before you go on.",
+  ],
+  "app.errorSaved": [
+    "Kaikki muutokset on tallennettu tiedostoon {f}.",
+    "Every change is saved to {f}.",
+  ],
+  "app.errorInBrowser": [
+    "Muutokset ovat selaimessa. Lataa kopio, niin ne ovat myös tiedostossa.",
+    "The changes are in the browser. Download a copy to have them in a file too.",
+  ],
+  "app.errorNoBook": [
+    "Kirjanpitoa ei ole auki, joten mitään ei ole vaarassa.",
+    "No bookkeeping is open, so nothing is at risk.",
+  ],
+  "app.errorRetry": ["Yritä uudelleen", "Try again"],
+  "app.errorDownload": ["Lataa kopio kirjanpidosta", "Download a copy"],
+  "app.errorReload": ["Lataa sivu uudelleen", "Reload the page"],
+  "app.errorDetails": ["Virheen tiedot", "Error details"],
+  "app.errorRawData": [
+    "Lataa selaimen tallentama data (JSON, vikailmoitusta varten)",
+    "Download the browser’s stored data (JSON, for a bug report)",
+  ],
   "app.waitingForTab": [
     "Jatka siellä tai sulje se välilehti. Tämä välilehti avautuu silloin itsestään.",
     "Continue there or close that tab. This tab then opens by itself.",
@@ -363,6 +392,7 @@ export const APP_DICT = {
   "overview.widgetExpenses": ["Kulut ryhmittäin", "Expenses by group"],
   "overview.widgetRecent": ["Viimeisimmät tositteet", "Latest vouchers"],
   "overview.widgetChecks": ["Tarkistettavaa", "To check"],
+  "overview.widgetTax": ["Verot ja YEL", "Tax and YEL"],
 
   "overview.bankOn": ["Pankkitilin saldo {d}", "Bank balance on {d}"],
   "overview.bankMovement": [
@@ -676,6 +706,7 @@ export const APP_DICT = {
   ],
   "overview.rulesTravel": ["matkakorvaukset", "travel allowances"],
   "overview.rulesHomeOffice": ["kotitoimistovähennys", "home office deduction"],
+  "overview.rulesIncomeTax": ["veroasteikko", "income tax scale"],
   "overview.rulesForm5Due": ["lomakkeen 5 määräpäivä", "Form 5 due date"],
   "settings.rulesChecked": [
     "Verosäännöt ja -rajat tarkistettu {d}.",
@@ -1150,8 +1181,8 @@ export const APP_DICT = {
   ],
   "entry.partyInfo": ["Mikä osapuoli on?", "What is a counterparty?"],
   "entry.partyHint": [
-    "Osapuolen valinta täyttää sen luokan ja verokannan. Osapuolet lisätään kohdassa Asetukset, Osapuolet.",
-    "Picking a counterparty fills in its category and VAT rate. Counterparties are added in Settings, Counterparties.",
+    "Osapuolen valinta täyttää sen luokan ja verokannan. Osapuolet lisätään kohdassa Laskut, Osapuolet.",
+    "Picking a counterparty fills in its category and VAT rate. Counterparties are added in Invoices, Counterparties.",
   ],
   "entry.euPurchaseGoods": ["Kyllä, tavara", "Yes, goods"],
   "entry.euPurchaseServices": ["Kyllä, palvelu", "Yes, services"],
@@ -3042,7 +3073,6 @@ export const APP_DICT = {
   ],
   "invoice.sections": ["Laskujen osiot", "Invoice sections"],
   "invoice.tabInvoices": ["Laskut", "Invoices"],
-  "invoice.tabCustomers": ["Asiakkaat", "Customers"],
   "invoice.new": ["Uusi lasku", "New invoice"],
   "invoice.empty": ["Ei vielä laskuja.", "No invoices yet."],
   "invoice.emptyHint": [
@@ -3435,16 +3465,8 @@ export const APP_DICT = {
     "Saatavaa {r}, maksettavaa {p}",
     "Receivable {r}, payable {p}",
   ],
-  "invoice.customersTitle": ["Asiakasrekisteri", "Customer register"],
-  "invoice.customersHint": [
-    "Tallennetut asiakkaat täyttävät laskun tiedot. Vanhat laskut säilyttävät asiakkaan tiedot sellaisina kuin ne olivat.",
-    "Saved customers fill in an invoice. Old invoices keep the customer's details as they were.",
-  ],
-  "invoice.customersEmpty": ["Ei vielä asiakkaita.", "No customers yet."],
   "invoice.newCustomer": ["Uusi asiakas", "New customer"],
   "invoice.editCustomer": ["Muokkaa asiakasta", "Edit customer"],
-  "invoice.deleteCustomer": ["Poista asiakas {x}", "Delete customer {x}"],
-  "invoice.customerDeleted": ["Asiakas poistettu", "Customer deleted"],
   "invoice.customerNeedsName": [
     "Asiakkaalla pitää olla nimi.",
     "A customer needs a name.",
@@ -3570,6 +3592,7 @@ export const APP_DICT = {
   // --- Saving back to the opened file (§7.5) ---
   "io.saving": ["Tallennetaan…", "Saving…"],
   "io.saved": ["Tallennettu tiedostoon {f}.", "Saved to {f}."],
+  "io.autosaved": ["Tallennettu automaattisesti.", "Saved automatically."],
   "io.archiveReadOnly": [
     "Arkisto on vain luettavissa. Avaa työkirjanpito, jos haluat tallentaa.",
     "This archive is read-only. Open your working book to save.",
@@ -4081,6 +4104,16 @@ export const APP_DICT = {
     "Sama avoin tosite on valittu kahdelle riville.",
     "The same open voucher is chosen for two rows.",
   ],
+  "bank.readAnnounce": [
+    pl(
+      "Tiliotteelta luettu 1 rivi: {paid} maksua ja {added} uutta kirjattavaksi.",
+      "Tiliotteelta luettu {n} riviä: {paid} maksua ja {added} uutta kirjattavaksi."
+    ),
+    pl(
+      "1 row read from the statement: {paid} payments and {added} new to book.",
+      "{n} rows read from the statement: {paid} payments and {added} new to book."
+    ),
+  ],
   "bank.confirm": [
     "Kirjaa ({paid} maksua, {added} uutta)",
     "Book ({paid} payments, {added} new)",
@@ -4176,6 +4209,89 @@ export const APP_DICT = {
     "Arvio on tilikauden voitto (358) kerrottuna omalla veroprosentillasi. Ansiotulon verotus on progressiivista, joten arvio on suuntaa antava. Jos ennakko jää selvästi alle, voit hakea ennakon korotusta OmaVerossa.",
     "The estimate is the year's profit (358) times your own rate. Earned income is taxed on a progressive scale, so the figure is only a guide. If the advance falls well short, you can ask for a higher one in OmaVero.",
   ],
+  "calendar.profileTitle": ["Veroarvion tiedot", "Tax estimate details"],
+  "calendar.profileMunicipal": ["Kunnallisvero (%)", "Municipal tax (%)"],
+  "calendar.profileChurch": [
+    "Kirkollisvero (%), tyhjä jos ei",
+    "Church tax (%), empty if none",
+  ],
+  "calendar.profileYel": [
+    "Vahvistettu YEL-työtulo (€/v)",
+    "Confirmed YEL work income (€/yr)",
+  ],
+  "calendar.profileStarter": [
+    "Aloittavan yrittäjän 22 %:n alennus",
+    "First-time entrepreneur’s 22% discount",
+  ],
+  "calendar.profileOther": [
+    "Muut ansiotulot, kuten palkka (€/v)",
+    "Other earned income, such as wages (€/yr)",
+  ],
+  "calendar.profileHint": [
+    "Kunnallis- ja kirkollisveron prosentit ovat verokortissasi tai kuntasi sivuilla, YEL-työtulo eläkeyhtiön päätöksessä. Arvio verottaa koko yritystulon ansiotulona ja tekee vain jokaiselle yrittäjälle kuuluvat vähennykset.",
+    "The municipal and church tax rates are on your tax card or your municipality’s website, and the YEL work income is in your pension company’s decision. The estimate taxes all of the business income as earned income and makes only the deductions every entrepreneur gets.",
+  ],
+  "calendar.profileValue": ["Kunnallisvero {r} %", "Municipal tax {r}%"],
+  "calendar.profileNote": [
+    "Arvio näkyy kalenterissa. Yleiskatsaukseen saat sen kohdasta Muokkaa näkymää.",
+    "The estimate shows in the calendar. Add it to the overview from Edit layout.",
+  ],
+  "calendar.profileNoYear": [
+    "Vuoden {y} veroasteikkoa ei ole sovelluksessa.",
+    "The app has no tax scale for {y}.",
+  ],
+  "calendar.sumScale": ["Veroarvio asteikolla", "Tax estimate on the scale"],
+  "calendar.sumScaleNote": [
+    "Arvio on vuoden {y} veroasteikolla laskettu vero, jonka tähänastinen voitto (358) tuo muiden ansiotulojesi päälle. Se on suuntaa antava. Jos ennakko jää selvästi alle, voit hakea ennakon korotusta OmaVerossa.",
+    "The estimate is the tax the profit so far (358) adds on top of your other earned income, on the {y} scale. It is only a guide. If the advance falls well short, you can ask for a higher one in OmaVero.",
+  ],
+
+  // --- Income tax and YEL estimate (§6.14) ---
+  "taxEstimate.setUp": [
+    "Lisää kunnallisveroprosentti asetuksissa, niin näet arvion verostasi ja YEL-maksusta.",
+    "Add your municipal tax rate in settings to see an estimate of your tax and YEL contribution.",
+  ],
+  "taxEstimate.setUpAction": ["Lisää tiedot", "Add details"],
+  "taxEstimate.noYear": [
+    "Vuoden {y} veroasteikkoa ei ole sovelluksessa, joten arviota ei voi laskea.",
+    "The app has no tax scale for {y}, so there is no estimate.",
+  ],
+  "taxEstimate.toDate": [
+    "Vero tähänastisesta voitosta",
+    "Tax on the profit so far",
+  ],
+  "taxEstimate.rate": ["{r} voitosta", "{r} of the profit"],
+  "taxEstimate.pace": [
+    "Koko vuosi samalla tahdilla",
+    "Whole year at this pace",
+  ],
+  "taxEstimate.paid": ["Ennakkoveroa maksettu", "Advance tax paid"],
+  "taxEstimate.setAside": ["Varattava vielä", "Still to set aside"],
+  "taxEstimate.covered": ["Ennakot riittävät", "Advances cover it"],
+  "taxEstimate.yel": ["YEL-maksu", "YEL contribution"],
+  "taxEstimate.yelValue": ["{m} / kk · {r}", "{m} / month · {r}"],
+  "taxEstimate.yelBelow": [
+    "Työtulo on alle YEL-vakuutuksen alarajan {x}.",
+    "The work income is below the YEL limit of {x}.",
+  ],
+  "taxEstimate.note": [
+    "Arvio, ei verotuspäätös. Koko yritystulo verotetaan ansiotulona, ja vain perusvähennykset tehdään.",
+    "An estimate, not the assessment. All business income is taxed as earned income, and only the basic deductions are made.",
+  ],
+  "taxEstimate.details": ["Erittely", "Breakdown"],
+  "taxEstimate.state": ["Valtion tulovero", "State income tax"],
+  "taxEstimate.municipal": ["Kunnallisvero", "Municipal tax"],
+  "taxEstimate.church": ["Kirkollisvero", "Church tax"],
+  "taxEstimate.health": [
+    "Sairaanhoito- ja päivärahamaksu",
+    "Health insurance contributions",
+  ],
+  "taxEstimate.credit": ["Työtulovähennys", "Earned income credit"],
+  "taxEstimate.entrepreneur": [
+    "Yrittäjävähennys tulosta",
+    "Entrepreneur deduction from income",
+  ],
+  "taxEstimate.other": ["Muiden tulojen osuus", "Share of the other income"],
 
   // --- Check the book (§8.23) ---
   "check.title": ["Tarkista kirjanpito", "Check the book"],

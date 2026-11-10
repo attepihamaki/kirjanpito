@@ -65,6 +65,43 @@ export interface HomeOfficeRow {
   source: string
 }
 
+/** One bracket of the state income tax scale (§6.14). */
+export interface TaxBracket {
+  /** Taxable earned income where the bracket starts, in cents. */
+  from: Cents
+  /** The tax at `from`, in cents. */
+  base: Cents
+  /** Percent of the income above `from`. */
+  rate: number
+}
+
+/**
+ * The year's earned income tax figures (§6.14): the state scale, the
+ * deductions and credits that apply to a sole trader, the health insurance
+ * contributions and the YEL rate. Amounts are cents, rates percent.
+ */
+export interface IncomeTaxRow {
+  year: number
+  stateScale: readonly TaxBracket[]
+  basicDeduction: Cents
+  basicDeductionReduction: number
+  workCreditRate: number
+  workCreditMax: Cents
+  workCreditReduceFrom: Cents
+  workCreditReduceTo: Cents
+  workCreditReduceRate: number
+  incomeAcquisition: Cents
+  entrepreneurDeduction: number
+  healthCare: number
+  dailyAllowance: number
+  dailyAllowanceYel: number
+  dailyAllowanceFrom: Cents
+  yelRate: number
+  yelStarterDiscount: number
+  yelMinIncome: Cents
+  source: string
+}
+
 export interface RuleTables {
   /** The day the figures were last compared with their sources. */
   checkedOn: string
@@ -72,6 +109,7 @@ export interface RuleTables {
   form5Due: readonly Form5DueRow[]
   travel: readonly TravelRow[]
   homeOffice: readonly HomeOfficeRow[]
+  incomeTax: readonly IncomeTaxRow[]
   limits: Readonly<Record<LimitKey, readonly DatedValue[]>>
 }
 
@@ -169,6 +207,71 @@ function datedValues(v: unknown, path: string): DatedValue[] {
   })
 }
 
+/** A percentage between 0 and 100. */
+function percent(v: unknown, path: string): number {
+  const n = number(v, path)
+  if (n > 100) fail(path, "a percentage")
+  return n
+}
+
+/** The state scale: starting at 0, rising, each base the tax up to its start. */
+function stateScale(v: unknown, path: string): TaxBracket[] {
+  const rows = list(v, path)
+  if (rows.length === 0) fail(path, "a list with at least one bracket")
+  const out: TaxBracket[] = []
+  rows.forEach((raw, i) => {
+    const at = `${path}[${i}]`
+    const row = record(raw, at)
+    const bracket = {
+      from: cents(row.from, `${at}.from`),
+      base: cents(row.base, `${at}.base`),
+      rate: percent(row.rate, `${at}.rate`),
+    }
+    const before = out.at(-1)
+    if (!before && (bracket.from !== 0 || bracket.base !== 0)) {
+      fail(at, "a first bracket from 0 with no tax")
+    }
+    if (before) {
+      if (bracket.from <= before.from)
+        fail(`${at}.from`, "above the bracket before it")
+      const expected = Math.round(
+        before.base + ((bracket.from - before.from) * before.rate) / 100
+      )
+      if (Math.abs(bracket.base - expected) > 1) {
+        fail(`${at}.base`, `the tax at its start (${expected})`)
+      }
+    }
+    out.push(bracket)
+  })
+  return out
+}
+
+function incomeTaxRow(row: Record<string, unknown>, at: string): IncomeTaxRow {
+  const c = (key: string) => cents(row[key], `${at}.${key}`)
+  const p = (key: string) => percent(row[key], `${at}.${key}`)
+  return {
+    year: year(row.year, `${at}.year`),
+    stateScale: stateScale(row.stateScale, `${at}.stateScale`),
+    basicDeduction: c("basicDeduction"),
+    basicDeductionReduction: p("basicDeductionReduction"),
+    workCreditRate: p("workCreditRate"),
+    workCreditMax: c("workCreditMax"),
+    workCreditReduceFrom: c("workCreditReduceFrom"),
+    workCreditReduceTo: c("workCreditReduceTo"),
+    workCreditReduceRate: p("workCreditReduceRate"),
+    incomeAcquisition: c("incomeAcquisition"),
+    entrepreneurDeduction: p("entrepreneurDeduction"),
+    healthCare: p("healthCare"),
+    dailyAllowance: p("dailyAllowance"),
+    dailyAllowanceYel: p("dailyAllowanceYel"),
+    dailyAllowanceFrom: c("dailyAllowanceFrom"),
+    yelRate: p("yelRate"),
+    yelStarterDiscount: p("yelStarterDiscount"),
+    yelMinIncome: c("yelMinIncome"),
+    source: text(row.source, `${at}.source`),
+  }
+}
+
 /** Reads the file's shape and throws on the first value that does not fit. */
 export function parseRuleTables(raw: unknown): RuleTables {
   const root = record(raw, "the file")
@@ -219,6 +322,12 @@ export function parseRuleTables(raw: unknown): RuleTables {
         source: text(row.source, `${at}.source`),
       })
     ),
+    incomeTax: byYear(
+      root.incomeTax,
+      "incomeTax",
+      (row, at) => year(row.year, `${at}.year`),
+      incomeTaxRow
+    ),
     limits: Object.fromEntries(
       LIMIT_KEYS.map((key) => [key, datedValues(limits[key], `limits.${key}`)])
     ) as Record<LimitKey, DatedValue[]>,
@@ -258,11 +367,11 @@ export function startOf(year: number): string {
  * Coverage
  * ---------------------------------------------------------------------- */
 
-export type RuleGap = "travel" | "homeOffice" | "form5Due"
+export type RuleGap = "travel" | "homeOffice" | "incomeTax" | "form5Due"
 
 /**
- * What the tables lack for the calendar year `today` falls in: travel and
- * home office amounts for this year, and the due date of last year's Form 5.
+ * What the tables lack for the calendar year `today` falls in: travel, home
+ * office and income tax figures for this year, and the due date of last year's Form 5.
  * The app hides a calculator or says "in the spring" for each, so a gap
  * costs nothing until someone notices it, which is what the overview row is for.
  */
@@ -271,6 +380,7 @@ export function ruleGaps(today: string, tables: RuleTables = RULES): RuleGap[] {
   const gaps: RuleGap[] = []
   if (!tables.travel.some((r) => r.year === y)) gaps.push("travel")
   if (!tables.homeOffice.some((r) => r.year === y)) gaps.push("homeOffice")
+  if (!tables.incomeTax.some((r) => r.year === y)) gaps.push("incomeTax")
   if (!tables.form5Due.some((r) => r.taxYear === y - 1)) gaps.push("form5Due")
   return gaps
 }

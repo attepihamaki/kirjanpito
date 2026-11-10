@@ -2,6 +2,7 @@ import { EMPTY_YEAR_END } from "@/lib/domain/form5-balance"
 import { describe, expect, it } from "vitest"
 
 import { defaultCategories } from "@/lib/domain/accounts"
+import { NO_TAX_PROFILE } from "@/lib/domain/income-tax"
 import {
   DEFAULT_LAYOUT,
   moveWidget,
@@ -76,6 +77,13 @@ function settings(): BookSettings {
       advanceTax: [2, 4, 6],
       advanceTaxYearly: { "2026": 360_000 },
       taxRate: 22.5,
+      taxProfile: {
+        municipalRate: 7.5,
+        churchRate: 1.4,
+        yelIncome: 2_000_000,
+        yelStarter: true,
+        otherIncome: 1_200_000,
+      },
     },
     loanOpening: { year: 2026, amount: 800_000 },
     changeLog: [{ at: "2026-11-03T10:00:00.000Z", action: "add", voucher: 1 }],
@@ -260,7 +268,26 @@ describe("settings.json", () => {
       advanceTax: [],
       advanceTaxYearly: {},
       taxRate: null,
+      taxProfile: NO_TAX_PROFILE,
     })
+  })
+
+  it("drops a tax profile value that cannot be a rate or an amount", () => {
+    const parsed = parseSettings(
+      JSON.stringify({
+        version: 1,
+        payMonths: {
+          taxProfile: {
+            municipalRate: 120,
+            churchRate: "1,4",
+            yelIncome: 1.5,
+            yelStarter: "yes",
+            otherIncome: -100,
+          },
+        },
+      })
+    )
+    expect(parsed.payMonths?.taxProfile).toEqual(NO_TAX_PROFILE)
   })
 
   it("keeps a positive whole-cent decision per year and a non-negative rate", () => {
@@ -406,6 +433,7 @@ describe("overview layout", () => {
     expect(ids).toEqual([
       "checks",
       "result",
+      "tax",
       "vat",
       "bank",
       "months",
@@ -419,7 +447,7 @@ describe("overview layout", () => {
     const ids = normalizeLayout(
       DEFAULT_LAYOUT.filter((w) => w.id !== "result")
     ).map((w) => w.id)
-    expect(ids[0]).toBe("vat")
+    expect(ids[0]).toBe("tax")
     expect(ids.at(-1)).toBe("result")
   })
 
@@ -434,7 +462,9 @@ describe("overview layout", () => {
 
   it("steps over hidden widgets", () => {
     const layout = DEFAULT_LAYOUT.map((w) =>
-      w.id === "vat" || w.id === "bank" ? { ...w, hidden: true } : w
+      w.id === "tax" || w.id === "vat" || w.id === "bank"
+        ? { ...w, hidden: true }
+        : w
     )
     const ids = stepWidget(layout, "result", 1).map((w) => w.id)
     expect(ids.indexOf("months")).toBeLessThan(ids.indexOf("result"))

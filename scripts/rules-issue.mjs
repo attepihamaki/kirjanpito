@@ -21,6 +21,7 @@ const lines = [
   "",
   line("Travel allowances", newest(rules.travel), (r) => r.year),
   line("Home office deduction", newest(rules.homeOffice), (r) => r.year),
+  line("Income tax and YEL figures", newest(rules.incomeTax), (r) => r.year),
   line(
     `Form 5 due date for ${next - 1}`,
     newest(rules.form5Due),

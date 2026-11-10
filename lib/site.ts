@@ -137,7 +137,6 @@ export const SETTINGS_ROUTES = {
   recurring: `${APP_ROUTES.settings}/recurring`,
   calendar: `${APP_ROUTES.settings}/calendar`,
   rules: `${APP_ROUTES.settings}/rules`,
-  parties: `${APP_ROUTES.settings}/parties`,
   invoicing: `${APP_ROUTES.settings}/invoicing`,
 } as const
 
@@ -147,7 +146,7 @@ export const INVOICE_ROUTES = {
   recurring: `${APP_ROUTES.invoices}/recurring`,
   aging: `${APP_ROUTES.invoices}/aging`,
   payables: `${APP_ROUTES.invoices}/payables`,
-  customers: `${APP_ROUTES.invoices}/customers`,
+  parties: `${APP_ROUTES.invoices}/parties`,
   products: `${APP_ROUTES.invoices}/products`,
 } as const
 
