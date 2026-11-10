@@ -150,7 +150,17 @@ describe("the counterparty field", () => {
   it("is absent while the register is empty", () => {
     mount({ kind: "entry", mode: "new", prefill: { type: "expense" } })
     expect(
-      screen.queryByRole("button", { name: "Osapuoli" })
+      screen.queryByRole("button", { name: "Toimittaja" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("is named for the entry's side", () => {
+    mount({ kind: "entry", mode: "new", prefill: { type: "income" } }, [
+      { ...landlord, role: "both" },
+    ])
+    expect(screen.getByRole("button", { name: "Asiakas" })).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Toimittaja" })
     ).not.toBeInTheDocument()
   })
 
@@ -159,7 +169,7 @@ describe("the counterparty field", () => {
       landlord,
     ])
 
-    fireEvent.click(screen.getByRole("button", { name: "Osapuoli" }))
+    fireEvent.click(screen.getByRole("button", { name: "Toimittaja" }))
     fireEvent.click(await screen.findByText("Kiinteistö Oy Kulma"))
 
     expect(screen.getByLabelText("Kuvaus")).toHaveValue("Kiinteistö Oy Kulma")

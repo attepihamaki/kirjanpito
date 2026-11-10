@@ -686,6 +686,10 @@ function EntryDialogForm({
         })),
     [customers, form.party, form.type, f.collator]
   )
+  /** The field is named for the side: a customer on income, else a supplier. */
+  const partyLabel = f.t(
+    form.type === "income" ? "entry.partyCustomer" : "entry.partySupplier"
+  )
 
   /**
    * Picking a party fills what it knows (§8.29): its category and rate for
@@ -1307,7 +1311,7 @@ function EntryDialogForm({
                   {partyOptions.length ? (
                     <Field>
                       <div className="flex items-center gap-1">
-                        <FieldLabel>{f.t("entry.party")}</FieldLabel>
+                        <FieldLabel>{partyLabel}</FieldLabel>
                         <InfoPopover label={f.t("entry.partyInfo")}>
                           {f.t("entry.partyHint")}
                         </InfoPopover>
@@ -1316,8 +1320,12 @@ function EntryDialogForm({
                         options={partyOptions}
                         value={form.party}
                         onChange={pickParty}
-                        label={f.t("entry.party")}
-                        noneLabel={f.t("entry.partyNone")}
+                        label={partyLabel}
+                        noneLabel={f.t(
+                          form.type === "income"
+                            ? "entry.partyNoneCustomer"
+                            : "entry.partyNoneSupplier"
+                        )}
                         searchPlaceholder={f.t("entry.partySearch")}
                         emptyText={f.t("entry.partyEmpty")}
                         moreText={(n) => f.t("entry.partyMore", { n })}

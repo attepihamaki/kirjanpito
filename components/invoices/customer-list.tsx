@@ -25,9 +25,9 @@ const ROLE_TEXT = {
 } as const
 
 /**
- * The counterparty register (§8.29), at Laskut → Osapuolet: customers and
- * suppliers in one list, each with its role. A name opens the party's own
- * view.
+ * The counterparty register (§8.29), at Laskut → Asiakkaat ja toimittajat:
+ * customers and suppliers in one list, each with its role. A name opens the
+ * party's own view.
  */
 export function CustomerList() {
   const f = useFormatters()
@@ -41,7 +41,7 @@ export function CustomerList() {
   const remove = (customer: Customer) => {
     setCustomers(customers.filter((c) => c.id !== customer.id))
     const id = toast.add({
-      title: f.t("party.deleted"),
+      title: f.t("party.deleted", { x: customer.name }),
       actionProps: {
         children: f.t("common.undo"),
         onClick: () => {

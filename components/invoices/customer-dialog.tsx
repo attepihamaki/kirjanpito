@@ -154,9 +154,13 @@ function CustomerForm({
                 ? existing
                   ? "invoice.editCustomer"
                   : "invoice.newCustomer"
-                : existing
-                  ? "party.edit"
-                  : "party.new"
+                : role === "supplier"
+                  ? existing
+                    ? "party.editSupplier"
+                    : "party.newSupplier"
+                  : existing
+                    ? "party.edit"
+                    : "party.new"
             )}
           </DialogTitle>
         </DialogHeader>
