@@ -111,7 +111,7 @@ import { DateInput } from "@/components/common/date-input"
 import { evalAmount } from "@/lib/domain/amount-expr"
 import { formatMoneyPlain } from "@/lib/domain/money"
 import { deleteEntry, offerEditUndo } from "@/lib/commands/book-commands"
-import { mergeSplit } from "@/lib/commands/bulk-commands"
+import { mergeSplit, restoreEntryVersion } from "@/lib/commands/bulk-commands"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
 import { rememberReceiptHash } from "@/lib/commands/receipt-hash-commands"
 import { categorySide, compareCategories } from "@/stores/selectors"
@@ -164,6 +164,8 @@ interface FormState {
   /** The first and last day the entry covers, "" for none (§6.3). */
   periodFrom: string
   periodTo: string
+  /** The due date of a bill received, "" for none (§8.30). */
+  due: string
 }
 
 /** The fields §8.5 validates, named as they are in `FormState`. */
@@ -237,6 +239,7 @@ function initialForm({
       party: prefill?.party ?? "",
       periodFrom: "",
       periodTo: "",
+      due: prefill?.due ?? "",
     }
   }
   const today = todayIso()
@@ -271,6 +274,8 @@ function initialForm({
     // A copy is dated afresh, so the days the original covered no longer fit.
     periodFrom: mode === "edit" ? (editing.periodFrom ?? "") : "",
     periodTo: mode === "edit" ? (editing.periodTo ?? "") : "",
+    // A copy is a new bill, which falls due on a day of its own.
+    due: mode === "edit" ? (editing.due ?? "") : "",
   }
 }
 
@@ -743,6 +748,8 @@ function EntryDialogForm({
    * neither, the end not before the start.
    */
   const periodApplies = unpayable && traderType === "business"
+  // A due date belongs to a bill received that is not paid on its own date (§8.30).
+  const dueApplies = unpayable && form.type === "expense" && form.paid !== ""
   const periodFilled = !!(form.periodFrom || form.periodTo)
   const periodInvalid =
     periodApplies && periodFilled && !isPeriod(form.periodFrom, form.periodTo)
@@ -937,6 +944,7 @@ function EntryDialogForm({
       ...(periodApplies && periodFilled
         ? { periodFrom: form.periodFrom, periodTo: form.periodTo }
         : {}),
+      ...(dueApplies && form.due ? { due: form.due } : {}),
       ...(euSale && form.buyerVatId.trim()
         ? { buyerVatId: normalizeVatId(form.buyerVatId) }
         : {}),
@@ -1603,6 +1611,23 @@ function EntryDialogForm({
                     </Field>
                   ) : null}
 
+                  {dueApplies ? (
+                    <Field>
+                      <FieldLabel>{f.t("entry.due")}</FieldLabel>
+                      <div className="flex">
+                        <DateInput
+                          aria-label={f.t("entry.due")}
+                          value={form.due}
+                          onValueChange={(iso) => update({ due: iso })}
+                          className="w-44"
+                        />
+                      </div>
+                      <FieldDescription>
+                        {f.t("entry.dueHint")}
+                      </FieldDescription>
+                    </Field>
+                  ) : null}
+
                   <fieldset disabled={!!lock} className="contents">
                     {periodApplies ? (
                       <Field data-invalid={invalid("period")}>
@@ -1802,7 +1827,21 @@ function EntryDialogForm({
 
             {showHistory ? (
               <TabsContent value="history" className="min-h-72 px-5 py-5">
-                <EntryHistory records={history} cats={catMap} />
+                <EntryHistory
+                  records={history}
+                  cats={catMap}
+                  onRestore={
+                    editing
+                      ? (index, when) =>
+                          void restoreEntryVersion(
+                            ctx,
+                            editing.id,
+                            index,
+                            when
+                          ).then((done) => done && closeDialog())
+                      : undefined
+                  }
+                />
               </TabsContent>
             ) : null}
           </Tabs>

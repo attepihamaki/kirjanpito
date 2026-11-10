@@ -239,6 +239,7 @@ export function serializeCsv(
         e.periodFrom ?? "",
         e.periodTo ?? "",
         e.party && PARTY_ID.test(e.party) ? e.party : "",
+        e.due ?? "",
       ]
         .map(quote)
         .join(";")
@@ -612,6 +613,7 @@ export function parseCsv(
       ...shareColumn(get("share"), type, cat),
       ...periodColumns(get("period_from"), get("period_to"), cat),
       ...partyColumn(get("party")),
+      ...dueColumn(get("due"), type, paid, cat),
     })
 
     const splitRaw = get("split")
@@ -782,6 +784,23 @@ const PARTY_ID = /^[A-Za-z0-9_-]{1,64}$/
 function partyColumn(value: string): { party?: string } {
   const id = value.trim()
   return PARTY_ID.test(id) ? { party: id } : {}
+}
+
+/**
+ * The due date of a bill received (§8.30). Kept only on an expense on a line
+ * that can be paid and not paid on its own date, where a due date means
+ * something; an unreadable date reads as none.
+ */
+function dueColumn(
+  value: string,
+  type: EntryType,
+  paid: { paidOn?: string | null },
+  cat: Category
+): { due?: string } {
+  if (!value || type !== "expense" || paid.paidOn === undefined) return {}
+  if (!canBeUnpaid(LINE_BY_KEY.get(cat.line))) return {}
+  const due = parseCsvDate(value)
+  return due ? { due } : {}
 }
 
 function buyerColumn(value: string, cat: Category): { buyerVatId?: string } {

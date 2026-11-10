@@ -2,6 +2,7 @@
 
 import * as React from "react"
 
+import { BankReconcile } from "@/components/bank/bank-reconcile"
 import { Money } from "@/components/common/money"
 import { OptionSelect, type Option } from "@/components/common/option-select"
 import { useFormatters } from "@/components/lang-provider"
@@ -27,9 +28,9 @@ import { useCommandCtx } from "@/hooks/use-commands"
 import { bookBankRows } from "@/lib/commands/bank-commands"
 import { storeReport } from "@/lib/commands/memo-commands"
 import { LINE_BY_KEY } from "@/lib/domain/accounts"
+import { parseBankStatement } from "@/lib/domain/bank-camt"
 import {
   mappingComplete,
-  parseBankCsv,
   type BankField,
   type BankMapping,
   type BankParseResult,
@@ -90,7 +91,7 @@ function BankImportForm({
   const closeDialog = useBookStore((s) => s.closeDialog)
   const [mapping, setMapping] = React.useState<BankMapping | undefined>()
   const result = React.useMemo(
-    () => parseBankCsv(text, mapping),
+    () => parseBankStatement(text, mapping),
     [text, mapping]
   )
 
@@ -289,6 +290,15 @@ function Review({
       claims.set(p.entryId, (claims.get(p.entryId) ?? 0) + 1)
   }
   const claimedTwice = [...claims.values()].some((n) => n > 1)
+  const planned = React.useMemo(
+    () =>
+      new Set(
+        plans.flatMap((p, i) =>
+          p.action === "match" || p.action === "new" ? [i] : []
+        )
+      ),
+    [plans]
+  )
   const paidCount = plans.filter((p) => p.action === "match").length
   const newCount = plans.filter((p) => p.action === "new").length
 
@@ -511,6 +521,12 @@ function Review({
           </TableBody>
         </Table>
       </div>
+
+      <BankReconcile
+        rows={result.rows}
+        statement={result.statement}
+        planned={planned}
+      />
 
       <DialogFooter className="items-center">
         {hint ? (

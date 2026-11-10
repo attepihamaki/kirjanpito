@@ -67,6 +67,8 @@ interface Entry {
   share?: number // business share in whole percent, 1 to 99; absent means all of it (§6.12)
   reverses?: string // id of the entry this refund, credit note or correction reverses; a reference only (§8.4)
   sells?: string // id of the asset purchase this sale of machinery or equipment disposes of; a reference for the asset list only (§8.8)
+  party?: string // id of the counterparty in the register (§8.29)
+  due?: string // due date of a bill received, on an expense not paid on its date; reports nothing (§8.30)
 }
 ```
 

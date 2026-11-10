@@ -17,7 +17,7 @@ The user writes in Finnish and English. The app's default language is Finnish.
 | 6 | `spec/rules.md` | VAT, income statement and every calculation rule, rule engine and rule tables, partial deduction |
 | 7 | `spec/files.md` | CSV, ZIP, receipts, saving back to the file, `settings.json`, encryption, integrity seal |
 | 8.1 to 8.11 | `spec/views.md` | shell, landing, ledger, entry dialog, viewer, VAT return, income statement, settings, confirmations and locks |
-| 8.12 to 8.29 | `spec/features.md` | overview, new year, onboarding, bank import, category rules, click-through, archive, undo, retention package, audit package, calendar, book check, help, parts in use, sales invoices, stocktake, counterparties |
+| 8.12 to 8.30 | `spec/features.md` | overview, new year, onboarding, bank import, category rules, click-through, archive, undo, retention package, audit package, calendar, book check, help, parts in use, sales invoices, stocktake, counterparties, payables |
 | 9, 10 | `spec/i18n-and-fixture.md` | UI vocabulary, formatting, the §10 reference figures the tests assert |
 | 11 | `spec/design.md` | palette, type, controls, the one-component-per-element table |
 | 11b, 12 | `spec/hosting-and-storage.md` | routes, SEO, GitHub Pages, git hooks, storage keys and migrations |

@@ -162,6 +162,12 @@ export interface Entry {
    */
   party?: string
   /**
+   * When a bill received falls due, as an ISO date (§8.30). Only on an
+   * expense on a line that can be paid, and only while the payment is not on
+   * the entry's own date. It reports nothing: the payables list reads it.
+   */
+  due?: string
+  /**
    * The `id` of the purchase this sale of machinery or equipment disposes of
    * (§8.8). A reference for the asset list only: the pool is still one balance
    * and no figure reads it. An id no longer in the book means no link.

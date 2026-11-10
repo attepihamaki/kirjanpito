@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { decodeCsv } from "@/lib/domain/csv"
 import { useBookStore } from "@/stores/book-store"
 
-/** "Tuo tiliote": pick a bank CSV and open the review dialog (§8.16). */
+/** "Tuo tiliote": pick a bank CSV or camt.053 XML and open the review dialog (§8.16). */
 export function BankImportButton() {
   const f = useFormatters()
   const openDialog = useBookStore((s) => s.openDialog)
@@ -36,7 +36,7 @@ export function BankImportButton() {
       <input
         ref={input}
         type="file"
-        accept=".csv,.txt,text/csv,text/plain"
+        accept=".csv,.txt,.xml,text/csv,text/plain,application/xml,text/xml"
         className="hidden"
         onChange={(e) => void onPick(e)}
       />

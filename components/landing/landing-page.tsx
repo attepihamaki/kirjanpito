@@ -110,7 +110,7 @@ function LandingBody() {
       <input
         ref={inputRef}
         type="file"
-        accept=".csv,.zip,text/csv,application/zip"
+        accept=".csv,.zip,.xml,text/csv,application/zip,application/xml,text/xml"
         className="sr-only"
         onChange={(e) => {
           const file = e.target.files?.[0]

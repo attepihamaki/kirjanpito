@@ -1,7 +1,7 @@
 "use client"
 
 import { Money } from "@/components/common/money"
-import { Panel } from "@/components/common/panel"
+import { TotalCard } from "@/components/common/total-card"
 import { useT } from "@/components/lang-provider"
 import type { LedgerTotals } from "@/lib/domain/vat"
 
@@ -18,33 +18,20 @@ export function TotalsCards({ totals }: { totals: LedgerTotals }) {
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <Card label={t("ledger.incomeNet")}>
+      <TotalCard label={t("ledger.incomeNet")}>
         <Money cents={totals.incomeNet} tone="income" />
-      </Card>
-      <Card label={t("ledger.expenseNet")}>
+      </TotalCard>
+      <TotalCard label={t("ledger.expenseNet")}>
         <Money cents={totals.expenseNet} tone="expense" />
-      </Card>
-      <Card label={refund ? t("ledger.vatRefundable") : t("ledger.vatPayable")}>
+      </TotalCard>
+      <TotalCard
+        label={refund ? t("ledger.vatRefundable") : t("ledger.vatPayable")}
+      >
         <Money
           cents={Math.abs(totals.due)}
           tone={refund ? "income" : undefined}
         />
-      </Card>
+      </TotalCard>
     </div>
-  )
-}
-
-function Card({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <Panel bodyClassName="flex flex-col gap-0.5 px-4 py-3">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-lg font-medium">{children}</span>
-    </Panel>
   )
 }

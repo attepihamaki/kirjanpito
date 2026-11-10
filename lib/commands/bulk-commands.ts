@@ -9,6 +9,8 @@ import {
 import type { Ctx } from "@/lib/commands/ctx"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
 import { uid } from "@/lib/domain/id"
+import { versionAfter } from "@/lib/domain/change-log"
+import { paidDate, paidOnFor } from "@/lib/domain/open-items"
 import { paidChangeHitsForm5 } from "@/lib/domain/period-lock"
 import { entryToRecurring, matchRecurring } from "@/lib/domain/recurring"
 import { carveSplit, mergeSplitPart, type SplitPart } from "@/lib/domain/split"
@@ -266,6 +268,111 @@ export async function markEntryPaid(ctx: Ctx, entry: Entry): Promise<boolean> {
   const store = useBookStore.getState()
   store.updateEntries([paid])
   offerEditUndo(ctx, entry, store.recurring)
+  return true
+}
+
+/**
+ * Put a voucher back as it stood right after step `index` of its change log
+ * (§8.11), every later edit undone. `when` is that step's time as the user
+ * reads it. It asks first, saying when that version is from and, when a later
+ * step touched them, that receipts and links stay as they are, since the log
+ * holds only their names. It is an ordinary edit after that: a locked voucher
+ * refuses it, a payment moved in or out of a year whose Form 5 is filed is
+ * refused, a change that adds to a filed return asks, the log records it, and
+ * the toast undoes it. False when nothing was restored.
+ */
+export async function restoreEntryVersion(
+  ctx: Ctx,
+  entryId: string,
+  index: number,
+  when: string
+): Promise<boolean> {
+  const state = useBookStore.getState()
+  const current = state.entries.find((e) => e.id === entryId)
+  if (!current) return false
+  const records = state.changeLog.filter((r) => r.entryId === entryId)
+  const version = versionAfter(current, records, index)
+  if (!version) return false
+  const restored = version.entry
+  if (!state.cats.some((c) => c.id === restored.catId)) {
+    toast.add({ title: ctx.t("entry.restoreNoCategory") })
+    return false
+  }
+  if (refuseLocked(ctx, [current, restored])) return false
+  if (paidChangeHitsForm5(paidDate(current), paidDate(restored), state)) {
+    toast.add({ title: ctx.t("entry.paidInForm5Year") })
+    return false
+  }
+  const confirmed = await confirm({
+    title: ctx.t("entry.restoreTitle"),
+    message: [
+      ctx.t("entry.restoreMessage", { d: when }),
+      version.kept.length ? ctx.t("entry.restoreKept") : "",
+    ]
+      .filter(Boolean)
+      .join(" "),
+    confirmLabel: ctx.t("entry.restoreConfirm"),
+    cancelLabel: ctx.t("common.cancel"),
+  })
+  if (!confirmed) return false
+  const after = useBookStore
+    .getState()
+    .entries.map((e) => (e.id === entryId ? restored : e))
+  if (!(await confirmFiledChange(after))) return false
+
+  const store = useBookStore.getState()
+  store.updateEntries([restored])
+  offerEditUndo(ctx, current, store.recurring)
+  return true
+}
+
+/**
+ * Pay a bill received on `on` (§8.30): every open part of it, a split
+ * receipt's parts together, since they share their payment (§8.5). Like
+ * `markEntryPaid`, a filed VAT period does not stop it and a year whose Form 5
+ * is filed does. One toast undoes all of it, leaving alone a part changed
+ * since. False when nothing was open or the change was refused.
+ */
+export async function payBill(
+  ctx: Ctx,
+  parts: readonly Entry[],
+  on: string
+): Promise<boolean> {
+  const open = parts.filter((e) => e.paidOn === null)
+  if (open.length === 0) return false
+  const state = useBookStore.getState()
+  if (paidChangeHitsForm5(null, on, state)) {
+    toast.add({ title: ctx.t("bank.paidInFiledYear") })
+    return false
+  }
+  const paid = open.map((e): Entry => ({ ...e, paidOn: paidOnFor(e.date, on) }))
+  const byId = new Map(paid.map((e) => [e.id, e]))
+  const after = state.entries.map((e) => byId.get(e.id) ?? e)
+  if (!(await confirmFiledChange(after))) return false
+
+  const store = useBookStore.getState()
+  const epoch = store.bookEpoch
+  store.updateEntries(paid)
+  const id = toast.add({
+    title: ctx.t("payables.paid"),
+    timeout: UNDO_TIMEOUT_MS,
+    actionProps: {
+      children: ctx.t("common.undo"),
+      onClick: () => {
+        toast.close(id)
+        const now = useBookStore.getState()
+        if (now.bookEpoch !== epoch) return
+        const saved = new Map(paid.map((e) => [e.id, JSON.stringify(e)]))
+        now.updateEntries(
+          now.entries.flatMap((e) =>
+            saved.get(e.id) === JSON.stringify(e)
+              ? [{ ...e, paidOn: null }]
+              : []
+          )
+        )
+      },
+    },
+  })
   return true
 }
 

@@ -1,12 +1,16 @@
 "use client"
 
+import { HistoryIcon } from "lucide-react"
+
 import { useFormatters } from "@/components/lang-provider"
+import { Button } from "@/components/ui/button"
 import { todayIso } from "@/lib/domain/dates"
 import { clock } from "@/lib/i18n/clock"
-import type {
-  ChangeRecord,
-  FieldChange,
-  LoggedField,
+import {
+  PAID_OPEN,
+  type ChangeRecord,
+  type FieldChange,
+  type LoggedField,
 } from "@/lib/domain/change-log"
 import type { CategoryMap } from "@/lib/domain/types"
 import type { Formatters } from "@/lib/i18n/create-formatters"
@@ -32,6 +36,7 @@ const FIELD_LABEL = {
   sells: "entry.logFieldSells",
   periodFrom: "entry.logFieldPeriodFrom",
   periodTo: "entry.logFieldPeriodTo",
+  due: "entry.logFieldDue",
 } as const satisfies Record<LoggedField, string>
 
 /** A field's value as a person reads it. */
@@ -41,14 +46,18 @@ function formatValue(
   change: FieldChange,
   value: FieldChange["from"]
 ): string {
+  // A payment logged as null was made on the voucher's own date.
+  if (change.field === "paidOn" && value === null) return f.t("entry.paidSame")
   if (value === null || value === "") return "–"
   switch (change.field) {
     case "amount":
       return f.money(Number(value))
-    case "date":
     case "paidOn":
+      return value === PAID_OPEN ? f.t("entry.paidOpen") : f.date(String(value))
+    case "date":
     case "periodFrom":
     case "periodTo":
+    case "due":
       return f.date(String(value))
     case "vatRate":
       return f.rate(Number(value))
@@ -93,11 +102,14 @@ function Step({
   cats,
   record,
   latest,
+  onRestore,
 }: {
   f: Formatters
   cats: CategoryMap
   record: ChangeRecord
   latest: boolean
+  /** Restores the voucher as it stood after this step; absent on the newest. */
+  onRestore?: (when: string) => void
 }) {
   const at = new Date(record.at)
   const when = f.t("entry.historyAt", {
@@ -138,19 +150,42 @@ function Step({
           </span>
         </div>
       ))}
+      {onRestore ? (
+        <Button
+          variant="outline"
+          size="xs"
+          className="mt-1 w-fit"
+          onClick={() => onRestore(when)}
+        >
+          <HistoryIcon data-icon="inline-start" />
+          {f.t("entry.restoreAction")}
+        </Button>
+      ) : null}
     </li>
   )
 }
 
+/** Steps a version can be restored from: one that left the voucher in a state of its own. */
+const RESTORABLE: ReadonlySet<ChangeRecord["action"]> = new Set([
+  "add",
+  "edit",
+  "restore",
+])
+
 /**
  * What has happened to one voucher (§8.11), newest first, as a timeline.
+ * Every step but the newest offers to restore the voucher as it stood after
+ * that step, when `onRestore` is given; it receives the step's index in
+ * `records` and its time as shown.
  */
 export function EntryHistory({
   records,
   cats,
+  onRestore,
 }: {
   records: readonly ChangeRecord[]
   cats: CategoryMap
+  onRestore?: (index: number, when: string) => void
 }) {
   const f = useFormatters()
   const newestFirst = [...records].reverse()
@@ -164,6 +199,11 @@ export function EntryHistory({
           cats={cats}
           record={r}
           latest={i === 0}
+          onRestore={
+            onRestore && i > 0 && RESTORABLE.has(r.action)
+              ? (when) => onRestore(records.length - 1 - i, when)
+              : undefined
+          }
         />
       ))}
     </ol>

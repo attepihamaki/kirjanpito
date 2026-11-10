@@ -4,6 +4,7 @@ import {
   capChangeLog,
   entryChanges,
   relinkChangeLog,
+  versionAfter,
   type ChangeRecord,
 } from "@/lib/domain/change-log"
 import type { Entry } from "@/lib/domain/types"
@@ -52,6 +53,7 @@ describe("entryChanges", () => {
     expect(record.action).toBe("edit")
     expect(record.changes).toEqual([
       { field: "amount", from: 45_000, to: 50_000 },
+      { field: "paidOn", from: null, to: "open" },
     ])
   })
 
@@ -173,5 +175,44 @@ describe("capChangeLog", () => {
   it("leaves a short log alone", () => {
     const log = [rec("add", 1)]
     expect(capChangeLog(log, 5)).toBe(log)
+  })
+})
+
+describe("versionAfter", () => {
+  /* The entry's own records, oldest first, as the store writes them. */
+  const history = (...steps: Entry[]): ChangeRecord[] =>
+    steps.flatMap((e, i) =>
+      entryChanges(i === 0 ? [] : [steps[i - 1]], [e], AT)
+    )
+
+  const v1 = entry()
+  const v2 = entry({ amount: 50_000, description: "Toimitilan vuokra" })
+  const v3 = entry({
+    amount: 50_000,
+    description: "Toimitilan vuokra",
+    paidOn: null,
+    due: "2026-03-31",
+    atts: [{ id: "x", name: "lasku.pdf", type: "application/pdf", size: 9 }],
+  })
+  const log = history(v1, v2, v3)
+
+  it("undoes every later edit, newest first", () => {
+    expect(versionAfter(v3, log, 1)).toEqual({
+      entry: { ...v2, atts: v3.atts },
+      kept: ["atts"],
+    })
+    expect(versionAfter(v3, log, 0)?.entry).toEqual({ ...v1, atts: v3.atts })
+  })
+
+  it("puts an open voucher back as open", () => {
+    const paid = entry({ paidOn: "2026-04-02" })
+    const log2 = history(v1, entry({ paidOn: null }), paid)
+    expect(versionAfter(paid, log2, 1)?.entry.paidOn).toBeNull()
+    expect(versionAfter(paid, log2, 0)?.entry).toEqual(v1)
+  })
+
+  it("has nothing to restore at the newest step", () => {
+    expect(versionAfter(v3, log, 2)).toBeNull()
+    expect(versionAfter(v3, log, -1)).toBeNull()
   })
 })

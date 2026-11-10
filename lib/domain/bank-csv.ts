@@ -48,10 +48,17 @@ export function mappingComplete(map: BankMapping): boolean {
   return Boolean(map.amount) || Boolean(map.debit && map.credit)
 }
 
-export type BankSkipCode = "bad-date" | "bad-amount"
+/**
+ * Why a row was skipped. `not-booked` is a pending transaction and `currency`
+ * one not in euros, which only an XML statement (§8.16) says.
+ */
+export type BankSkipCode = "bad-date" | "bad-amount" | "not-booked" | "currency"
 
 export interface BankSkippedRow {
-  /** 1-based line number in the file, the header being line 1. */
+  /**
+   * 1-based line number in a CSV, the header being line 1; in an XML
+   * statement, the entry's position among its entries.
+   */
   line: number
   code: BankSkipCode
 }
@@ -65,6 +72,8 @@ export type BankParseResult =
       mapping: BankMapping
       /** Set when the layout was recognised, not mapped by hand. */
       preset: BankPreset | null
+      /** What the statement says about itself, when it says anything. */
+      statement?: StatementInfo
     }
   | {
       ok: false
@@ -74,7 +83,22 @@ export type BankParseResult =
       suggested: BankMapping
     }
 
-export type BankPreset = "op"
+export type BankPreset = "op" | "camt053"
+
+/** A balance a statement states, in cents, on the day it is for. */
+export interface StatementBalance {
+  amount: Cents
+  date: string
+}
+
+/** The account and balances of a statement. A CSV export carries none of this. */
+export interface StatementInfo {
+  iban?: string
+  /** The balance at the start of the first day the statement covers. */
+  opening?: StatementBalance
+  /** The balance at the end of the last day it covers. */
+  closing?: StatementBalance
+}
 
 /* -------------------------------------------------------------------------
  * Layouts
@@ -173,7 +197,7 @@ function detectBankDelimiter(text: string): string {
 }
 
 /** `ref=` is how OP writes an empty reference; a reference may follow it. */
-function cleanReference(raw: string): string {
+export function cleanReference(raw: string): string {
   return raw.replace(/^ref=/i, "").replace(/\s+/g, "")
 }
 

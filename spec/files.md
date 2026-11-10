@@ -12,8 +12,8 @@ category names, the ZIP's suggested name, the CSV's name and the receipt folder
 (§7.2) — and nothing else.
 
 - **Header row**, always these columns in this order, in one of two spellings:
-  - fi: `tositenro;päivämäärä;selite;tyyppi;tili;luokka;summa;alv;verollisuus;liitteet;verokausi;maksettu;ostajan_alv;eu_osto;käteinen;jaettu;osuus;korjaa;myy;jakso_alkaa;jakso_päättyy;osapuoli`
-  - en: `voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase;cash;split;share;reverses;sells;period_from;period_to;party`
+  - fi: `tositenro;päivämäärä;selite;tyyppi;tili;luokka;summa;alv;verollisuus;liitteet;verokausi;maksettu;ostajan_alv;eu_osto;käteinen;jaettu;osuus;korjaa;myy;jakso_alkaa;jakso_päättyy;osapuoli;eräpäivä`
+  - en: `voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase;cash;split;share;reverses;sells;period_from;period_to;party;due`
 - **`lib/domain/csv-header.ts` is the one place a column name is spelled.** The
   English names are the canonical ones the parser works in; `FINNISH_LABELS`
   gives the Finnish spelling of each, `csvHeaderLine(lang)` builds a header and
@@ -48,6 +48,7 @@ category names, the ZIP's suggested name, the CSV's name and the receipt folder
   - `reverses` names the voucher a refund, credit note or correction reverses (§8.4), written as `#number/year` (`#12/2026`), and empty on every other row. The `#` keeps Excel from reading it as a date. A voucher number is unique within a year, so the import finds the target by year and number. A target without a number is not written. On import a cell that is unreadable, names no row of the file, names the row itself or would close a loop links nothing, and the toast counts those rows. `Entry.reverses` itself is the target's id.
   - `period_from` and `period_to` are the first and last day an entry covers (§6.3), as ISO dates, and empty on an entry with no period. The import keeps them only as a pair of real dates with the end not before the start, on a line that can be paid; anything else reads as no period.
   - `party` is the id of the entry's counterparty in `customers.json` (§8.29), and empty on an entry with none. The import keeps any cell shaped like an id (letters, digits, `-` and `_`, at most 64) and checks it against the register only where it is shown, since a bare CSV has no register beside it.
+  - `due` is the due date of a bill received (§8.30), ISO like every date, and empty on every other row. The import keeps it only on an expense on a line that can be paid whose `paid` cell is not empty, since a due date means nothing on a voucher paid on its own date; an unreadable date reads as none. A file written before the column existed reads as having no due dates.
   - `sells` names the purchase voucher a sale of machinery or equipment disposes of (§8.8), written as `#number/year` like `reverses`, and empty on every other row. The import finds the purchase by year and number; a cell that is unreadable, names no row of the file or names the row itself links nothing, and the toast counts those rows. `Entry.sells` itself is the purchase's id.
   - `eu_purchase` is `tavara`/`palvelu` or `goods`/`services` on an EU purchase (§6.9), empty on every other row. A CSV opened on its own has no `settings.json`, so this is what tells a custom EU category it is one. A row marked on any other category moves to an EU category when the book opens.
   - Rows are sorted by date, then by voucher number. Nothing about the format depends on the **UI** language, only on the book's.

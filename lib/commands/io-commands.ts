@@ -28,6 +28,7 @@ import {
   serializeCsv,
   type ImportSuccess,
 } from "@/lib/domain/csv"
+import { isCamt053 } from "@/lib/domain/bank-camt"
 import { parseBankCsv } from "@/lib/domain/bank-csv"
 import { csvColumnLabel, csvHeaderLine } from "@/lib/domain/csv-header"
 import { uid } from "@/lib/domain/id"
@@ -514,16 +515,19 @@ function refuseFile(ctx: Ctx, title: string): Promise<void> {
 }
 
 /**
- * A CSV that is a bank statement and no bookkeeping (§8.16). With a book open
+ * A file that is a bank statement and no bookkeeping (§8.16): a camt.053 XML,
+ * or a CSV the ledger reader does not take. With a book open
  * it goes to the review list on the ledger; with none there is nothing to
  * match it against, so the user is told what to do. True when the file was
  * dealt with, so the caller opens nothing.
  */
 async function claimBankStatement(ctx: Ctx, file: File): Promise<boolean> {
   const text = decodeCsv(await fileToUint8Array(file))
-  const own = parseCsv(text, useBookStore.getState().cats, uid)
-  if (own.ok || own.code !== "not-a-book" || !parseBankCsv(text).ok) {
-    return false
+  if (!isCamt053(text)) {
+    const own = parseCsv(text, useBookStore.getState().cats, uid)
+    if (own.ok || own.code !== "not-a-book" || !parseBankCsv(text).ok) {
+      return false
+    }
   }
   const state = useBookStore.getState()
   if (!state.open) {

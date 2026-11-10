@@ -172,6 +172,7 @@ export type EntryPrefill = Partial<
     | "party"
     | "buyerVatId"
     | "share"
+    | "due"
   >
 >
 

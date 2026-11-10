@@ -12,8 +12,9 @@ export function isMediaFile(file: File): boolean {
   return isReceiptFile({ name: file.name, type: file.type })
 }
 
+/** A file `openFile` takes: a book, or a bank statement as CSV or camt.053 XML (§8.16). */
 export function isBookFile(file: File): boolean {
-  return /\.(csv|zip)$/i.test(file.name)
+  return /\.(csv|zip|xml)$/i.test(file.name)
 }
 
 /**

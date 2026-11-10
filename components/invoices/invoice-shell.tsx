@@ -48,6 +48,7 @@ export function InvoiceShell({ children }: { children: React.ReactNode }) {
         tabs={[
           { href: INVOICE_ROUTES.list, label: t("invoice.tabInvoices") },
           { href: INVOICE_ROUTES.aging, label: t("invoice.tabAging") },
+          { href: INVOICE_ROUTES.payables, label: t("invoice.tabPayables") },
           { href: INVOICE_ROUTES.customers, label: t("invoice.tabCustomers") },
         ]}
       />

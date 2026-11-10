@@ -23,6 +23,16 @@ export interface BankEstimate {
 }
 
 /**
+ * Whether a paid entry moved money through the bank account. One paid in
+ * cash never did, and a non-cash line moves no money at all.
+ */
+export function movesBank(e: Entry, catMap: CategoryMap): boolean {
+  if (e.cash) return false
+  const line = catMap.get(e.catId)?.line
+  return !(line && NON_CASH_LINES.has(line))
+}
+
+/**
  * The balance carried forward through the entries paid after it, up to today.
  * An open entry and a payment still to come stay out. This drifts between
  * readings with anything the book does not record, such as tax payments other
@@ -39,10 +49,7 @@ export function bankEstimate(
   for (const e of entries) {
     const paid = paidDate(e)
     if (paid === null || paid <= balance.date || paid > today) continue
-    // Paid in cash: the money never passed through the bank account.
-    if (e.cash) continue
-    const line = catMap.get(e.catId)?.line
-    if (line && NON_CASH_LINES.has(line)) continue
+    if (!movesBank(e, catMap)) continue
     count += 1
     movement += signedGross(e)
   }
