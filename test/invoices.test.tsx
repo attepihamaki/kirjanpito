@@ -27,6 +27,8 @@ vi.mock("@/lib/browser/share", () => ({
   openMailto: vi.fn(),
 }))
 
+vi.mock("@/lib/ui/confirm", () => ({ confirm: vi.fn(async () => true) }))
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   usePathname: () => "/app/invoices",
@@ -247,6 +249,54 @@ describe("InvoiceList", () => {
     const today = todayIso()
     const [paid] = useBookStore.getState().entries
     expect([undefined, today]).toContain(paid.paidOn)
+  })
+})
+
+describe("payment reminders", () => {
+  const seller = {
+    ...emptyParty(),
+    name: "Oma Yritys",
+    street: "Katu 2",
+    postcode: "00100",
+    city: "Helsinki",
+    businessId: "0112038-9",
+    phone: "",
+    iban: "FI2112345600000785",
+    vatRegistered: true,
+  }
+
+  it("books the interest and fee as open income on the invoice, and waives them", async () => {
+    useBookStore.setState({
+      entries: [entry("e1", null)],
+      invoices: [invoice({ dueDate: "2026-10-01", seller })],
+    })
+    mount(<InvoiceList />)
+    fireEvent.click(screen.getByLabelText("Maksumuistutus: 1001"))
+    const dialog = await screen.findByRole("dialog")
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Tee muistutus" })
+    )
+    await vi.waitFor(() =>
+      expect(useBookStore.getState().entries).toHaveLength(3)
+    )
+    const state = useBookStore.getState()
+    const [, interest, fee] = state.entries
+    expect(interest).toMatchObject({ catId: "323", vatRate: 0, paidOn: null })
+    expect(fee).toMatchObject({ catId: "301", amount: 500, paidOn: null })
+    const [made] = state.invoices
+    expect(made.entryIds).toEqual(["e1", interest.id, fee.id])
+    expect(made.reminders?.[0].entryIds).toEqual([interest.id, fee.id])
+
+    fireEvent.click(
+      await screen.findByLabelText("Luovu muistutuskuluista: 1001")
+    )
+    await vi.waitFor(() =>
+      expect(useBookStore.getState().entries).toHaveLength(1)
+    )
+    const [waived] = useBookStore.getState().invoices
+    expect(waived.entryIds).toEqual(["e1"])
+    expect(waived.reminders).toHaveLength(1)
+    expect(waived.reminders?.[0].entryIds).toBeUndefined()
   })
 })
 

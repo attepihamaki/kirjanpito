@@ -48,6 +48,8 @@ function settings(): BookSettings {
     },
     taxPayment: { iban: "FI21 1234 5600 0007 85", reference: "1234567" },
     yearsArchived: { "2025": "2026-01-20" },
+    retentionNoted: { "2019": "vouchers" },
+    taxLosses: { "2024": 120_000 },
     form5Filed: { "2025": "2026-03-20" },
     archives: {
       "2024": { file: "kirjanpito-2024.zip", on: "2025-03-01", entries: 42 },

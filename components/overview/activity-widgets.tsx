@@ -221,6 +221,9 @@ export function ChecksWidget() {
   const recurring = useBookStore((s) => s.recurring)
   const invoices = useBookStore((s) => s.invoices)
   const setYearArchived = useBookStore((s) => s.setYearArchived)
+  const archives = useBookStore((s) => s.archives)
+  const retentionNoted = useBookStore((s) => s.retentionNoted)
+  const noteRetention = useBookStore((s) => s.noteRetention)
   const ctx = useCommandCtx()
   const canSave = useCanSaveToFile()
   const save = useSaveBook()
@@ -321,6 +324,8 @@ export function ChecksWidget() {
     recurring,
     invoices,
     yearsArchived,
+    archives,
+    retentionNoted,
   })
   const overview = <K extends OverviewRuleId>(id: K) =>
     found.filter(
@@ -559,6 +564,40 @@ export function ChecksWidget() {
             {f.t("overview.yearStored")}
           </Button>
         </div>
+      ),
+    })
+  }
+
+  /*
+   * Once per stage: the vouchers may go after 6 years, the books after 10
+   * (KPL 2:10). Nothing is deleted from the book; the user decides what to
+   * destroy of the copies they hold.
+   */
+  for (const { severity, data: d } of overview("retentionEnded")) {
+    const y = d.year
+    items.push({
+      key: `retention-${y}-${d.stage}`,
+      tone: tone(severity),
+      title: f.t(
+        d.stage === "books"
+          ? "overview.retentionBooks"
+          : "overview.retentionVouchers",
+        { y }
+      ),
+      sub: f.t(
+        d.stage === "books"
+          ? "overview.retentionBooksSub"
+          : "overview.retentionVouchersSub",
+        { v: f.date(d.vouchers), b: f.date(d.books) }
+      ),
+      action: (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => noteRetention(y, d.stage)}
+        >
+          {f.t("overview.retentionNoted")}
+        </Button>
       ),
     })
   }

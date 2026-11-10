@@ -28,6 +28,7 @@ import { NO_PAY_MONTHS, type PayMonths } from "@/lib/domain/tax-calendar"
 import type { EntryCheck } from "@/lib/domain/entry-checks"
 import type { CategoryRule } from "@/lib/domain/category-rules"
 import type { RecurringEntry } from "@/lib/domain/recurring"
+import type { RetentionStage } from "@/lib/domain/retention"
 import { mergeCategories } from "@/lib/domain/settings-file"
 import { assignVouchers, keepVoucher } from "@/lib/domain/voucher"
 import {
@@ -331,6 +332,17 @@ export interface BookState {
    * (§8.12). Saved in settings.json.
    */
   yearsArchived: Record<string, string>
+  /**
+   * Year (`"2019"`) → the retention stage the user has noted for it, so the
+   * overview's retention reminder is shown once per stage (§8.12). Saved in
+   * settings.json.
+   */
+  retentionNoted: Record<string, RetentionStage>
+  /**
+   * Year (`"2024"`) → the loss the tax assessment confirmed for it, in
+   * positive cents (§6.15). Saved in settings.json.
+   */
+  taxLosses: Record<string, Cents>
   /** Year → ISO date its Form 5 was marked as filed (§8.8). Saved in settings.json. */
   form5Filed: Record<string, string>
   /**
@@ -553,6 +565,8 @@ export interface BookActions {
       vatFiledFigures?: Record<string, Record<string, number>>
       taxPayment?: TaxPayment
       yearsArchived?: Record<string, string>
+      retentionNoted?: Record<string, RetentionStage>
+      taxLosses?: Record<string, Cents>
       form5Filed?: Record<string, string>
       archives?: Record<string, ArchiveStub>
       recurring?: RecurringEntry[]
@@ -638,6 +652,10 @@ export interface BookActions {
   setTaxPayment(payment: TaxPayment): void
   /** Mark a closed year as stored away on `date`, or clear it with null. */
   setYearArchived(year: number, date: string | null): void
+  /** Note that the user has seen a year's retention reach `stage` (§8.12). */
+  noteRetention(year: number, stage: RetentionStage): void
+  /** Set the loss confirmed for a year, or clear it with null (§6.15). */
+  setTaxLoss(year: number, amount: Cents | null): void
   setForm5Filed(year: number, date: string | null): void
   /**
    * Take an archived year out of the working book (§8.19): drop its entries,
@@ -742,6 +760,8 @@ function initialState(): BookState {
     vatFiledFigures: {},
     taxPayment: NO_TAX_PAYMENT,
     yearsArchived: {},
+    retentionNoted: {},
+    taxLosses: {},
     form5Filed: {},
     archives: {},
     archiveYear: null,
@@ -826,6 +846,8 @@ type PersistedBook = Pick<
   | "vatFiledFigures"
   | "taxPayment"
   | "yearsArchived"
+  | "retentionNoted"
+  | "taxLosses"
   | "form5Filed"
   | "archives"
   | "archiveYear"
@@ -1010,6 +1032,8 @@ const BOOK_DATA_KEYS: readonly (keyof BookState)[] = [
   "vatFiledFigures",
   "taxPayment",
   "yearsArchived",
+  "retentionNoted",
+  "taxLosses",
   "form5Filed",
   "archives",
   "recurring",
@@ -1111,6 +1135,8 @@ export const useBookStore = create<BookStore>()(
           vatFiledFigures: {},
           taxPayment: NO_TAX_PAYMENT,
           yearsArchived: {},
+          retentionNoted: {},
+          taxLosses: {},
           form5Filed: {},
           archives: {},
           recurring: [],
@@ -1219,6 +1245,8 @@ export const useBookStore = create<BookStore>()(
           vatFiledFigures: {},
           taxPayment: NO_TAX_PAYMENT,
           yearsArchived: {},
+          retentionNoted: {},
+          taxLosses: {},
           form5Filed: {},
           archives: {},
           recurring: [],
@@ -1287,6 +1315,8 @@ export const useBookStore = create<BookStore>()(
           vatFiledFigures: s.vatFiledFigures ?? {},
           taxPayment: { ...NO_TAX_PAYMENT, ...s.taxPayment },
           yearsArchived: s.yearsArchived ?? {},
+          retentionNoted: s.retentionNoted ?? {},
+          taxLosses: s.taxLosses ?? {},
           form5Filed: s.form5Filed ?? {},
           archives: s.archives ?? {},
           archiveYear: next.archiveYear ?? null,
@@ -1548,6 +1578,17 @@ export const useBookStore = create<BookStore>()(
           dirty: true,
         })
       },
+      noteRetention: (year, stage) =>
+        set({
+          retentionNoted: { ...get().retentionNoted, [String(year)]: stage },
+          dirty: true,
+        }),
+      setTaxLoss: (year, amount) => {
+        const taxLosses = { ...get().taxLosses }
+        if (amount === null) delete taxLosses[String(year)]
+        else taxLosses[String(year)] = amount
+        set({ taxLosses, dirty: true })
+      },
       setOverviewLayout: (overviewLayout) =>
         set({ overviewLayout, dirty: true }),
       upsertRecurring: (template) => {
@@ -1751,6 +1792,8 @@ export const useBookStore = create<BookStore>()(
         vatFiledFigures: s.vatFiledFigures,
         taxPayment: s.taxPayment,
         yearsArchived: s.yearsArchived,
+        retentionNoted: s.retentionNoted,
+        taxLosses: s.taxLosses,
         form5Filed: s.form5Filed,
         archives: s.archives,
         archiveYear: s.archiveYear,

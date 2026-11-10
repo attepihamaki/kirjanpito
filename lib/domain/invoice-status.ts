@@ -20,7 +20,7 @@ export type InvoiceStatus =
 
 /** The entries of an invoice that are still unpaid. */
 export function openEntries(
-  invoice: Invoice,
+  invoice: Pick<Invoice, "entryIds">,
   byId: ReadonlyMap<string, Entry>
 ): Entry[] {
   return invoice.entryIds.flatMap((id) => {

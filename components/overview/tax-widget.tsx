@@ -15,7 +15,9 @@ import {
   incomeTaxRow,
   yearPace,
 } from "@/lib/domain/income-tax"
+import { lossAvailable } from "@/lib/domain/tax-loss"
 import { SETTINGS_ROUTES } from "@/lib/site"
+import { useLossInput } from "@/hooks/use-loss-input"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -30,13 +32,21 @@ export function TaxWidget() {
   const profile = useBookStore((s) => s.payMonths.taxProfile)
   const { year, entries, statement, elapsedMonths } = data
   const row = incomeTaxRow(year)
+  const losses = useLossInput()
 
   const figures = React.useMemo(() => {
     if (!row) return null
-    const toDate = estimateIncomeTax(statement.result, profile, row)
+    /* Earlier confirmed losses come off the profit first (§6.15). */
+    const afterLosses = (profit: number) =>
+      profit - lossAvailable(losses, year, profit)
+    const toDate = estimateIncomeTax(
+      afterLosses(statement.result),
+      profile,
+      row
+    )
     if (!toDate) return null
     const pace = estimateIncomeTax(
-      yearPace(statement.result, elapsedMonths),
+      afterLosses(yearPace(statement.result, elapsedMonths)),
       profile,
       row
     )
@@ -46,7 +56,7 @@ export function TaxWidget() {
       yel: estimateYel(profile, row),
       paid: advanceTaxPaid(entries, year),
     }
-  }, [row, statement.result, profile, elapsedMonths, entries, year])
+  }, [row, statement.result, profile, elapsedMonths, entries, year, losses])
 
   const settingsLink = (label: string) => (
     <ButtonLink

@@ -36,3 +36,57 @@ export function yearsToArchive(
     )
     .sort((a, b) => a - b)
 }
+
+/**
+ * How far a year's retention has run: the vouchers may be destroyed while the
+ * books must still be kept, or everything may be destroyed.
+ */
+export type RetentionStage = "vouchers" | "books"
+
+/**
+ * The years whose records the user holds: the years the book has entries in,
+ * and the years archived or marked as stored away, whose material lives
+ * outside the book (§8.19). Oldest first.
+ */
+export function heldYears(
+  entries: readonly Entry[],
+  archived: Readonly<Record<string, unknown>>,
+  stubs: Readonly<Record<string, unknown>> = {}
+): number[] {
+  const years = new Set(entries.map((e) => yearOf(e.date)))
+  for (const key of [...Object.keys(archived), ...Object.keys(stubs)]) {
+    if (/^\d{4}$/.test(key)) years.add(Number(key))
+  }
+  return [...years].sort((a, b) => a - b)
+}
+
+/** The stage a year's retention has reached on `today`, or null while all of it must be kept. */
+export function retentionStage(
+  year: number,
+  today: string
+): RetentionStage | null {
+  const r = retentionDates(year)
+  if (r.books < today) return "books"
+  if (r.vouchers < today) return "vouchers"
+  return null
+}
+
+/**
+ * The years the retention reminder names (§8.12): a held year whose
+ * vouchers, or whose books too, may now be destroyed, unless the user has
+ * already noted that stage. Noting the vouchers leaves the books' end to be
+ * reminded of in its turn. Oldest first.
+ */
+export function retentionEnded(
+  years: readonly number[],
+  today: string,
+  noted: Readonly<Record<string, RetentionStage>>
+): { year: number; stage: RetentionStage }[] {
+  return years.flatMap((year) => {
+    const stage = retentionStage(year, today)
+    if (stage === null) return []
+    const seen = noted[String(year)]
+    if (seen === "books" || seen === stage) return []
+    return [{ year, stage }]
+  })
+}

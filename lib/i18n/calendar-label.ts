@@ -20,5 +20,9 @@ export function eventTitle(f: Formatters, e: CalendarEvent): string {
       return f.t("calendar.yel")
     case "advanceTax":
       return f.t("calendar.advanceTax")
+    case "retentionVouchers":
+      return f.t("calendar.retentionVouchers", { y: e.ref })
+    case "retentionBooks":
+      return f.t("calendar.retentionBooks", { y: e.ref })
   }
 }

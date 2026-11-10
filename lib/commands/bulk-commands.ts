@@ -19,8 +19,8 @@ import { confirm } from "@/lib/ui/confirm"
 import { useBookStore } from "@/stores/book-store"
 
 /**
- * Changes to several ledger rows at once (§8.4). Both refuse locked entries
- * (§8.11) and can be undone from the toast.
+ * Changes to several ledger rows at once (§8.4). Each refuses what a lock
+ * holds (§8.11) and can be undone from the toast.
  */
 
 /** Delete the selected entries. False when the user cancels. */
@@ -421,5 +421,165 @@ export async function recategorizeEntries(
       },
     },
   })
+  return true
+}
+
+/**
+ * Write `changed` over `before` and offer the toast's undo (§8.4), which puts
+ * back each entry still exactly as the change left it. An entry edited since
+ * keeps that edit.
+ */
+function updateWithUndo(
+  ctx: Ctx,
+  before: readonly Entry[],
+  changed: readonly Entry[],
+  title: string
+): void {
+  const store = useBookStore.getState()
+  const epoch = store.bookEpoch
+  store.updateEntries(changed)
+  const saved = new Map(
+    useBookStore
+      .getState()
+      .entries.filter((e) => changed.some((c) => c.id === e.id))
+      .map((e) => [e.id, JSON.stringify(e)])
+  )
+  const id = toast.add({
+    title,
+    timeout: UNDO_TIMEOUT_MS,
+    actionProps: {
+      children: ctx.t("common.undo"),
+      onClick: () => {
+        toast.close(id)
+        const now = useBookStore.getState()
+        if (now.bookEpoch !== epoch) return
+        const untouched = new Set(
+          now.entries
+            .filter((e) => saved.get(e.id) === JSON.stringify(e))
+            .map((e) => e.id)
+        )
+        now.updateEntries(before.filter((e) => untouched.has(e.id)))
+        toast.add({ title: ctx.t("ledger.bulkUndone") })
+      },
+    },
+  })
+}
+
+/** The selection with every other part of each split receipt it touches, since they share a date and a payment (§8.5). */
+function withSplitParts(
+  selected: readonly Entry[],
+  entries: readonly Entry[]
+): Entry[] {
+  const splits = new Set(selected.flatMap((e) => (e.split ? [e.split] : [])))
+  const ids = new Set(selected.map((e) => e.id))
+  return entries.filter(
+    (e) => ids.has(e.id) || (e.split !== undefined && splits.has(e.split))
+  )
+}
+
+/**
+ * Move the selected entries to one date (§8.4). The date stays inside the
+ * entries' own year, so no voucher changes its number series, and a split
+ * receipt moves whole. An entry paid on its own date stays paid on it. Locked
+ * entries refuse, before and after the move (§8.11), and a change a filed
+ * return would see asks first. False when nothing moved.
+ */
+export async function redateEntries(
+  ctx: Ctx,
+  selected: readonly Entry[],
+  date: string
+): Promise<boolean> {
+  const state = useBookStore.getState()
+  const all = withSplitParts(selected, state.entries)
+  if (all.some((e) => e.date.slice(0, 4) !== date.slice(0, 4))) {
+    toast.add({ title: ctx.t("ledger.bulkDateYear") })
+    return false
+  }
+  const before = all.filter((e) => e.date !== date)
+  if (before.length === 0) return false
+  const moved = before.map((e): Entry => ({
+    ...e,
+    date,
+    ...(e.paidOn === date ? { paidOn: undefined } : {}),
+  }))
+  if (refuseLocked(ctx, before) || refuseLocked(ctx, moved)) return false
+  const byId = new Map(moved.map((e) => [e.id, e]))
+  const after = state.entries.map((e) => byId.get(e.id) ?? e)
+  if (!(await confirmFiledChange(after))) return false
+  updateWithUndo(
+    ctx,
+    before,
+    moved,
+    ctx.t("ledger.bulkDated", { n: moved.length })
+  )
+  return true
+}
+
+/**
+ * Give the selected entries one VAT rate (§8.4). An EU purchase's rate is
+ * the Finnish rate the buyer reports, set with the purchase itself, so a
+ * selection with one is refused. Locked entries refuse and a change a filed
+ * return would see asks first (§8.11). False when nothing changed.
+ */
+export async function setEntriesVat(
+  ctx: Ctx,
+  selected: readonly Entry[],
+  rate: number
+): Promise<boolean> {
+  if (selected.some((e) => e.euPurchase)) {
+    toast.add({ title: ctx.t("ledger.bulkVatEu") })
+    return false
+  }
+  const before = selected.filter((e) => e.vatRate !== rate)
+  if (before.length === 0) return false
+  if (refuseLocked(ctx, before)) return false
+  const changed = before.map((e): Entry => ({ ...e, vatRate: rate }))
+  const byId = new Map(changed.map((e) => [e.id, e]))
+  const after = useBookStore.getState().entries.map((e) => byId.get(e.id) ?? e)
+  if (!(await confirmFiledChange(after))) return false
+  updateWithUndo(
+    ctx,
+    before,
+    changed,
+    ctx.t("ledger.bulkVatDone", { n: changed.length })
+  )
+  return true
+}
+
+/**
+ * Record the selected entries as paid on `on` (§8.4), the parts of a split
+ * receipt together. Like `payBill`, paying changes nothing a VAT return
+ * counts, so a filed VAT period and an invoice's lock do not stop it, but a
+ * year whose Form 5 is filed does, before or after. An entry the app counts
+ * as paid when it happens, such as a VAT payment, keeps that. False when
+ * nothing changed.
+ */
+export async function setEntriesPaid(
+  ctx: Ctx,
+  selected: readonly Entry[],
+  on: string
+): Promise<boolean> {
+  const state = useBookStore.getState()
+  const before = withSplitParts(selected, state.entries).filter(
+    (e) => !e.settles && paidDate(e) !== on
+  )
+  if (before.length === 0) return false
+  if (before.some((e) => paidChangeHitsForm5(paidDate(e), on, state))) {
+    toast.add({ title: ctx.t("bank.paidInFiledYear") })
+    return false
+  }
+  const paid = before.map((e): Entry => ({
+    ...e,
+    paidOn: paidOnFor(e.date, on),
+  }))
+  const byId = new Map(paid.map((e) => [e.id, e]))
+  const after = state.entries.map((e) => byId.get(e.id) ?? e)
+  if (!(await confirmFiledChange(after))) return false
+  updateWithUndo(
+    ctx,
+    before,
+    paid,
+    ctx.t("ledger.bulkPaid", { n: paid.length })
+  )
   return true
 }

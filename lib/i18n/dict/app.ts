@@ -721,6 +721,23 @@ export const APP_DICT = {
     "Put away a copy of the file that you no longer edit. Keep the books until {b} and the vouchers until {v}.",
   ],
   "overview.yearStored": ["Tallessa", "Stored"],
+  "overview.retentionVouchers": [
+    "Vuoden {y} tositteiden säilytysaika on päättynyt",
+    "The retention of the {y} vouchers has ended",
+  ],
+  "overview.retentionVouchersSub": [
+    "Tositteet piti säilyttää {v} asti, joten ne saa nyt hävittää. Kirjanpitokirjat (päiväkirja, pääkirja, tilinpäätös) on säilytettävä {b} asti.",
+    "The vouchers had to be kept until {v}, so they may now be destroyed. The books (journal, general ledger, financial statements) must be kept until {b}.",
+  ],
+  "overview.retentionBooks": [
+    "Vuoden {y} kirjanpidon säilytysaika on päättynyt",
+    "The retention of the {y} books has ended",
+  ],
+  "overview.retentionBooksSub": [
+    "Kirjanpitokirjat piti säilyttää {b} asti, joten vuoden aineiston saa nyt hävittää kokonaan. Sovellus ei poista mitään itse.",
+    "The books had to be kept until {b}, so the year's material may now be destroyed entirely. The app deletes nothing by itself.",
+  ],
+  "overview.retentionNoted": ["Selvä", "Got it"],
   "overview.yearStoredDone": [
     "Vuosi {y} merkitty tallessa olevaksi.",
     "Year {y} marked as stored.",
@@ -907,6 +924,53 @@ export const APP_DICT = {
     "To change the category, select only income or only expenses.",
   ],
   "ledger.bulkDelete": ["Poista valitut", "Delete selected"],
+  "ledger.bulkEdit": ["Muokkaa valittuja", "Edit selected"],
+  "ledger.bulkDate": ["Vaihda päivämäärä", "Change date"],
+  "ledger.bulkVat": ["Vaihda ALV-kanta", "Change VAT rate"],
+  "ledger.bulkPay": ["Merkitse maksetuksi", "Mark as paid"],
+  "ledger.bulkDateLabel": ["Uusi päivämäärä", "New date"],
+  "ledger.bulkVatLabel": ["Uusi ALV-kanta", "New VAT rate"],
+  "ledger.bulkPayLabel": ["Maksupäivä", "Payment date"],
+  "ledger.bulkDateHint": [
+    "Päivämäärä pysyy tositteiden omalla tilikaudella, ja jaettu tosite siirtyy kokonaan.",
+    "The date stays in the entries' own financial year, and a split receipt moves whole.",
+  ],
+  "ledger.bulkVatHint": [
+    "Kanta vaihtuu jokaiseen valittuun tositteeseen. Summa pysyy, joten bruttona kirjatun veroton osa muuttuu.",
+    "Every selected entry takes the rate. The amount stays, so an entry booked gross changes its net part.",
+  ],
+  "ledger.bulkPayHint": [
+    "Jaetun tositteen osat merkitään yhdessä.",
+    "The parts of a split receipt are marked together.",
+  ],
+  "ledger.bulkApply": ["Tallenna", "Apply"],
+  "ledger.bulkUndone": ["Muutos kumottu.", "Change undone."],
+  "ledger.bulkDateYear": [
+    "Päivämäärän on oltava samalla tilikaudella kuin tositteiden.",
+    "The date has to be in the same financial year as the entries.",
+  ],
+  "ledger.bulkVatEu": [
+    "EU-ostojen ALV-kanta asetetaan ostolle itselleen, joten niitä ei voi muuttaa tässä.",
+    "An EU purchase's rate is set with the purchase itself, so it cannot be changed here.",
+  ],
+  "ledger.bulkDated": [
+    pl(
+      "Päivämäärä vaihdettu 1 tositteeseen.",
+      "Päivämäärä vaihdettu {n} tositteeseen."
+    ),
+    pl("Date changed on 1 voucher.", "Date changed on {n} vouchers."),
+  ],
+  "ledger.bulkVatDone": [
+    pl(
+      "ALV-kanta vaihdettu 1 tositteeseen.",
+      "ALV-kanta vaihdettu {n} tositteeseen."
+    ),
+    pl("VAT rate changed on 1 voucher.", "VAT rate changed on {n} vouchers."),
+  ],
+  "ledger.bulkPaid": [
+    pl("1 tosite merkitty maksetuksi.", "{n} tositetta merkitty maksetuksi."),
+    pl("1 voucher marked as paid.", "{n} vouchers marked as paid."),
+  ],
   "ledger.bulkClear": ["Poista valinta", "Clear selection"],
   "ledger.colAccount": ["Tili", "Account"],
   "ledger.sections": ["Kirjanpidon osiot", "Bookkeeping sections"],
@@ -2032,8 +2096,12 @@ export const APP_DICT = {
   ],
   "statement.loss": ["359 Elinkeinotoiminnan tappio", "359 Business loss"],
   "statement.lossNote": [
-    "Tappio {a} vahvistetaan verotuksessa. Vahvistettu tappio vähennetään elinkeinotoiminnan tuloksesta seuraavien 10 vuoden aikana, vanhin tappio ensin. Sovellus ei seuraa vahvistettuja tappioita, joten kirjaa vähennys itse, kun tulos on voitollinen. Kohtaa 373 sovellus ei täytä.",
-    "The loss of {a} is confirmed in the tax assessment. A confirmed loss is deducted from business income over the next 10 years, oldest first. The app does not track confirmed losses, so enter the deduction yourself when a year turns to profit. The app leaves field 373 empty.",
+    "Tappio {a} vahvistetaan verotuksessa. Vahvistettu tappio vähennetään elinkeinotoiminnan tuloksesta seuraavien 10 vuoden aikana, vanhin tappio ensin. Verohallinto tekee vähennyksen itse; Tappiot-välilehti seuraa, mitä on jäljellä.",
+    "The loss of {a} is confirmed in the tax assessment. A confirmed loss is deducted from business income over the next 10 years, oldest first. Verohallinto makes the deduction itself; the Losses tab follows what is left.",
+  ],
+  "overview.lossesLeft": [
+    "Aiempia tappioita vähennettävissä {a}.",
+    "{a} of earlier losses to deduct.",
   ],
   "overview.lossCarry": [
     "Tappio voidaan vähentää seuraavien 10 vuoden voitoista.",
@@ -2433,6 +2501,96 @@ export const APP_DICT = {
   // --- Calculated deductions ---
 
   "deductions.tab": ["Vähennykset", "Deductions"],
+  "palette.title": ["Komentopaletti", "Command palette"],
+  "palette.description": [
+    "Hae toimintoa, sivua, tositetta, laskua tai asiakasta. Valitse nuolinäppäimillä ja Enterillä.",
+    "Find an action, a page, an entry, an invoice or a customer. Pick with the arrow keys and Enter.",
+  ],
+  "palette.open": ["Hae (komentopaletti)", "Search (command palette)"],
+  "palette.placeholder": [
+    "Hae toimintoa, sivua, tositetta, laskua tai asiakasta…",
+    "Find an action, page, entry, invoice or customer…",
+  ],
+  "palette.placeholderShort": ["Hae…", "Search…"],
+  "palette.none": ["Ei osumia.", "Nothing found."],
+  "palette.actions": ["Toiminnot", "Actions"],
+  "palette.pages": ["Sivut", "Pages"],
+  "palette.entries": ["Tositteet", "Entries"],
+  "palette.invoices": ["Laskut", "Invoices"],
+  "palette.parties": ["Asiakkaat ja toimittajat", "Customers and suppliers"],
+  "palette.newEntry": ["Uusi tosite", "New entry"],
+  "palette.newInvoice": ["Uusi lasku", "New invoice"],
+  "palette.openFile": ["Avaa tiedosto", "Open file"],
+  "palette.save": ["Tallenna tiedostoon", "Save to file"],
+  "palette.export": ["Lataa kopio", "Download a copy"],
+  "palette.checkBook": ["Tarkista kirjanpito", "Check the books"],
+  "palette.yearEnd": ["Tilinpäätös", "Year-end"],
+  "palette.shortcuts": ["Pikanäppäimet", "Keyboard shortcuts"],
+  "palette.noDescription": ["(ei kuvausta)", "(no description)"],
+  "palette.draft": ["Luonnos – {c}", "Draft – {c}"],
+  "palette.invoice": ["Lasku {n} – {c}", "Invoice {n} – {c}"],
+  "palette.shortcutsTitle": ["Pikanäppäimet", "Keyboard shortcuts"],
+  "palette.shortcutsDescription": [
+    "Kirjaimet toimivat, kun kirjoitus ei ole menossa mihinkään kenttään.",
+    "Single letters work when you are not typing into a field.",
+  ],
+  "palette.keyPalette": ["Komentopaletti", "Command palette"],
+  "palette.keyNewEntry": ["Uusi tosite", "New entry"],
+  "palette.keyShortcuts": ["Tämä luettelo", "This list"],
+  "palette.keyOpen": ["Avaa tiedosto", "Open file"],
+  "palette.keySave": ["Tallenna tiedostoon", "Save to file"],
+  "palette.keyExport": ["Lataa kopio", "Download a copy"],
+  "palette.keyUndo": ["Kumoa", "Undo"],
+  "palette.keyRedo": ["Tee uudelleen", "Redo"],
+  "palette.keySidebar": [
+    "Näytä tai piilota sivupalkki",
+    "Show or hide the sidebar",
+  ],
+  "palette.keySubmit": [
+    "Tallenna tosite ikkunassa",
+    "Save the entry in its dialog",
+  ],
+  "palette.keyClose": ["Sulje ikkuna", "Close a dialog"],
+  "losses.tab": ["Tappiot", "Losses"],
+  "losses.title": ["Vahvistetut tappiot", "Confirmed losses"],
+  "losses.description": [
+    "Elinkeinotoiminnan tappio vähennetään seuraavien {n} vuoden voitoista, vanhin ensin (TVL 119 §). Verohallinto tekee vähennyksen itse; kirjoita tähän verotuspäätöksessä vahvistettu tappio, niin sovellus seuraa, mitä on jäljellä. Tyhjä kenttä käyttää kirjanpidon lukua.",
+    "A business loss is deducted from the profits of the next {n} years, oldest first (Finnish Income Tax Act, section 119). Verohallinto makes the deduction itself; type the loss confirmed in the tax decision here and the app follows what is left. An empty field uses the book's figure.",
+  ],
+  "losses.none": [
+    "Kirjanpidossa ei ole tappiollisia vuosia. Jos tappioita on vahvistettu ennen kirjanpidon alkua, lisää ne alla.",
+    "The book has no loss years. If losses were confirmed before the book began, add them below.",
+  ],
+  "losses.year": ["Vuosi", "Year"],
+  "losses.book": ["Kirjanpidon tappio", "Loss in the book"],
+  "losses.confirmed": ["Vahvistettu", "Confirmed"],
+  "losses.confirmedFor": [
+    "Vuoden {y} vahvistettu tappio",
+    "Confirmed loss of {y}",
+  ],
+  "losses.used": ["Vähennetty", "Deducted"],
+  "losses.remaining": ["Jäljellä", "Left"],
+  "losses.lastYear": ["Viimeinen vähennysvuosi", "Last year to deduct"],
+  "losses.expired": ["Vanhentui {a}", "{a} expired"],
+  "losses.remove": ["Poista vuoden {y} tappio", "Remove the loss of {y}"],
+  "losses.deducted": ["Vähennetään vuonna {y}", "Deducted in {y}"],
+  "losses.deductedHint": [
+    "Aiempien vuosien tappiot, jotka vuoden voitto kattaa. Verohallinto vähentää ne verotuksessa, ei veroilmoituksella.",
+    "The earlier losses the year's profit covers. Verohallinto deducts them in the assessment, not on the return.",
+  ],
+  "losses.taxable": [
+    "Verotettava elinkeinotulo {a}",
+    "Taxable business income {a}",
+  ],
+  "losses.noProfit": [
+    "Vuosi ei ole voitollinen, joten tappioita ei vähennetä.",
+    "The year has no profit, so no loss is deducted.",
+  ],
+  "losses.left": ["Jäljellä vuoden {y} jälkeen", "Left after {y}"],
+  "losses.expiring": ["Vanhenee vuonna {y}", "Runs out in {y}"],
+  "losses.earlierYear": ["Aiempi vuosi", "Earlier year"],
+  "losses.earlierAmount": ["Vahvistettu tappio", "Confirmed loss"],
+  "losses.addEarlier": ["Lisää tappio", "Add loss"],
   "deductions.intro": [
     "Matkojen ja yksityisauton lisävähennykset kirjataan riville 364 (veroilmoituksen kohdat 388 ja 392) ja työhuonevähennys riville 354, kirjanpidon ulkopuolisiin vähennyskelpoisiin kuluihin. Laskelmat käyttävät Verohallinnon vuoden {y} määriä, ja ne ovat apuväline: säilytä ajopäiväkirja ja matkojen tiedot itse.",
     "The travel and private car deductions go on line 364 (fields 388 and 392 of the return), and the home office deduction on line 354, deductible expenses outside the books. The calculators use the Tax Administration’s amounts for {y}. They are an aid: keep your own logbook and trip records.",
@@ -3334,6 +3492,24 @@ export const APP_DICT = {
     "{open} open + interest {interest} ({days} days) + fee {fee} = {total}. New due date {due}.",
   ],
   "invoice.reminderCreate": ["Tee muistutus", "Make reminder"],
+  "invoice.reminderBooked": [
+    "Korko ja muistutusmaksu kirjataan laskun avoimiksi tuloiksi, jotka kuittautuvat, kun asiakas maksaa.",
+    "The interest and the fee are booked as open income on the invoice, settled when the customer pays.",
+  ],
+  "invoice.waive": ["Luovu muistutuskuluista", "Waive reminder charges"],
+  "invoice.waiveTitle": [
+    "Luovutaanko laskun {n} muistutuskuluista?",
+    "Waive the reminder charges of invoice {n}?",
+  ],
+  "invoice.waiveMessage": [
+    "Maksamattomat korot ja muistutusmaksut ({amount}) poistetaan kirjanpidosta, eikä niitä enää peritä. Muistutukset jäävät laskun tietoihin.",
+    "The unpaid interest and reminder fees ({amount}) are removed from the books and no longer collected. The reminders stay on the invoice.",
+  ],
+  "invoice.waiveConfirm": ["Luovu kuluista", "Waive charges"],
+  "invoice.waived": [
+    "Laskun {n} muistutuskuluista luovuttiin",
+    "Reminder charges of invoice {n} waived",
+  ],
   "invoice.remindersSent": [
     "{n} muistutusta, viimeisin {d}",
     "{n} reminders, latest {d}",
@@ -4307,6 +4483,14 @@ export const APP_DICT = {
   "calendar.form5": ["Lomake 5, verovuosi {y}", "Form 5, tax year {y}"],
   "calendar.yel": ["YEL-maksu", "YEL contribution"],
   "calendar.advanceTax": ["Ennakkovero", "Advance tax"],
+  "calendar.retentionVouchers": [
+    "Vuoden {y} tositteiden säilytys päättyy",
+    "Retention of the {y} vouchers ends",
+  ],
+  "calendar.retentionBooks": [
+    "Vuoden {y} kirjanpidon säilytys päättyy",
+    "Retention of the {y} books ends",
+  ],
   "calendar.done": ["Ilmoitettu", "Filed"],
   "calendar.today": ["Tänään", "Today"],
   "calendar.inDays": ["{n} pv:n päästä", "in {n} days"],

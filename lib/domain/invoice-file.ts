@@ -355,6 +355,11 @@ function parseReminder(value: unknown): Reminder | null {
     rate === null
   )
     return null
+  const entryIds = Array.isArray(value.entryIds)
+    ? value.entryIds.filter(
+        (id): id is string => typeof id === "string" && id !== ""
+      )
+    : []
   return {
     id: value.id,
     date,
@@ -363,6 +368,7 @@ function parseReminder(value: unknown): Reminder | null {
     interest,
     fee,
     newDueDate,
+    ...(entryIds.length > 0 ? { entryIds } : {}),
   }
 }
 

@@ -9,6 +9,7 @@ import { calcEntry } from "@/lib/domain/calc"
 import { canCopy, copyDraft, recurringDrafts } from "@/lib/domain/invoice-draft"
 import { todayIso } from "@/lib/domain/dates"
 import { uid } from "@/lib/domain/id"
+import { formatMoney } from "@/lib/domain/money"
 import type { Invoice } from "@/lib/domain/invoice"
 import {
   buildIssue,
@@ -21,6 +22,8 @@ import {
 import { invoiceFileName, reminderLabels } from "@/lib/domain/invoice-labels"
 import { invoiceMail, mailtoUrl, reminderMail } from "@/lib/domain/invoice-mail"
 import {
+  openCharges,
+  reminderEntries,
   reminderRecord,
   type ReminderFigures,
 } from "@/lib/domain/invoice-reminder"
@@ -258,10 +261,13 @@ export async function sendInvoice(ctx: Ctx, invoice: Invoice): Promise<void> {
 }
 
 /**
- * Make a payment reminder for an issued invoice (§8.27): draw the letter, hand
- * it to the share sheet or download it, and keep a record of it on the invoice.
- * Nothing is booked. The record stays when the letter was only downloaded, since
- * the user has it either way, and one toast undoes it. Returns whether it was made.
+ * Make a payment reminder for an issued invoice (§8.27): draw the letter, book
+ * its interest and fee as open income entries of the invoice with the letter as
+ * their voucher, keep a record of it on the invoice, and hand the letter to the
+ * share sheet or download it. The booking asks about a filed period like any
+ * new entry (§8.11). The record stays when the letter was only downloaded,
+ * since the user has it either way, and one toast undoes all of it. Returns
+ * whether it was made.
  */
 export async function makeReminder(
   ctx: Ctx,
@@ -273,7 +279,16 @@ export async function makeReminder(
   const invoice = state.invoices.find((i) => i.id === invoiceId)
   if (!invoice || invoice.number === null || invoice.credits !== null)
     return false
-  const reminder = reminderRecord(uid(), on, figures)
+  const entries = reminderEntries(invoice, on, figures, uid)
+  if (refuseLocked(ctx, entries)) return false
+  if (!(await confirmFiledChange([...state.entries, ...entries]))) return false
+
+  const reminder = reminderRecord(
+    uid(),
+    on,
+    figures,
+    entries.map((e) => e.id)
+  )
   let bytes: Uint8Array
   try {
     const { renderReminderPdf } = await import("@/lib/browser/invoice-pdf")
@@ -290,36 +305,54 @@ export async function makeReminder(
   const mail = reminderMail(invoice, reminder)
   const file = new File([bytes as BlobPart], name, { type: "application/pdf" })
 
-  const store = useBookStore.getState()
-  const epoch = store.bookEpoch
-  const before = store.invoices
-  store.setInvoices(
-    before.map((i) =>
-      i.id === invoice.id
-        ? { ...i, reminders: [...(i.reminders ?? []), reminder] }
-        : i
+  const att =
+    entries.length > 0 ? await storePdf(ctx, name, async () => bytes) : null
+  try {
+    const withVoucher = entries.map((e) =>
+      att ? { ...e, atts: [{ ...att } satisfies Attachment] } : e
     )
-  )
-  const id = toast.add({
-    title: ctx.t("invoice.reminderMade", { n: invoice.number }),
-    timeout: UNDO_TIMEOUT_MS,
-    actionProps: {
-      children: ctx.t("common.undo"),
-      onClick: () => {
-        toast.close(id)
-        const now = useBookStore.getState()
-        if (now.bookEpoch !== epoch) return
-        now.setInvoices(
-          now.invoices.map((i) => {
-            if (i.id !== invoice.id) return i
-            const { reminders, ...rest } = i
-            const left = (reminders ?? []).filter((r) => r.id !== reminder.id)
-            return left.length > 0 ? { ...rest, reminders: left } : rest
-          })
-        )
+    const store = useBookStore.getState()
+    const epoch = store.bookEpoch
+    if (withVoucher.length > 0) store.addEntries(withVoucher)
+    store.setInvoices(
+      store.invoices.map((i) =>
+        i.id === invoice.id
+          ? {
+              ...i,
+              entryIds: [...i.entryIds, ...entries.map((e) => e.id)],
+              reminders: [...(i.reminders ?? []), reminder],
+            }
+          : i
+      )
+    )
+    const id = toast.add({
+      title: ctx.t("invoice.reminderMade", { n: invoice.number }),
+      timeout: UNDO_TIMEOUT_MS,
+      actionProps: {
+        children: ctx.t("common.undo"),
+        onClick: () => {
+          toast.close(id)
+          const now = useBookStore.getState()
+          if (now.bookEpoch !== epoch) return
+          const booked = new Set(entries.map((e) => e.id))
+          if (booked.size > 0) now.removeEntries([...booked])
+          now.setInvoices(
+            now.invoices.map((i) => {
+              if (i.id !== invoice.id) return i
+              const { reminders, ...rest } = i
+              const left = (reminders ?? []).filter((r) => r.id !== reminder.id)
+              const entryIds = i.entryIds.filter((e) => !booked.has(e))
+              return left.length > 0
+                ? { ...rest, entryIds, reminders: left }
+                : { ...rest, entryIds }
+            })
+          )
+        },
       },
-    },
-  })
+    })
+  } finally {
+    if (att?.id) releaseDraftAttachment(att.id)
+  }
 
   const result = await shareFile(file, { title: mail.subject, text: mail.body })
   if (result === "unsupported") {
@@ -327,6 +360,87 @@ export async function makeReminder(
     openMailto(mailtoUrl(mail))
     toast.add({ title: ctx.t("invoice.sendAttach") })
   }
+  return true
+}
+
+/**
+ * Give up the unpaid interest and fees of an invoice's reminders (§8.27), when
+ * the customer paid the invoice but not them, or will not be pressed for them.
+ * Their entries are removed from the book and from the invoice, so the income
+ * that never came is not reported; the reminder records stay as the log of
+ * what was asked. A filed period or a stored year that holds them refuses it.
+ * It asks first, and one toast undoes it. Returns whether anything was removed.
+ */
+export async function waiveReminderCharges(
+  ctx: Ctx,
+  invoiceId: string
+): Promise<boolean> {
+  const state = useBookStore.getState()
+  const invoice = state.invoices.find((i) => i.id === invoiceId)
+  if (!invoice) return false
+  const byId = new Map(state.entries.map((e) => [e.id, e]))
+  const removed = openCharges(invoice, byId)
+  if (removed.length === 0) return false
+  /* Without the invoice's own lock, so only a filed period or a stored year can hold them. */
+  const others = state.invoices.filter((i) => i.id !== invoice.id)
+  const locked = lockedEntries(
+    removed,
+    { ...state, invoices: others },
+    indexCategories(state.cats)
+  )
+  if (locked.length > 0) {
+    toast.add({ title: ctx.t("entry.lockedRefused", { n: locked.length }) })
+    return false
+  }
+  const total = removed.reduce((sum, e) => sum + calcEntry(e).gross, 0)
+  const confirmed = await confirm({
+    title: ctx.t("invoice.waiveTitle", { n: invoice.number ?? 0 }),
+    message: ctx.t("invoice.waiveMessage", { amount: formatMoney(total) }),
+    confirmLabel: ctx.t("invoice.waiveConfirm"),
+    cancelLabel: ctx.t("common.cancel"),
+  })
+  if (!confirmed) return false
+
+  const store = useBookStore.getState()
+  const epoch = store.bookEpoch
+  const gone = new Set(removed.map((e) => e.id))
+  const held = removed.flatMap((e) =>
+    (e.atts ?? []).flatMap((a) => (a.id ? [a.id] : []))
+  )
+  const current = store.invoices.find((i) => i.id === invoice.id) ?? invoice
+  const waived: Invoice = {
+    ...current,
+    entryIds: current.entryIds.filter((id) => !gone.has(id)),
+    reminders: (current.reminders ?? []).map((r) => {
+      if (!r.entryIds) return r
+      const left = r.entryIds.filter((id) => !gone.has(id))
+      const rest = { ...r }
+      delete rest.entryIds
+      return left.length > 0 ? { ...rest, entryIds: left } : rest
+    }),
+  }
+  store.holdUndoAttachments(held)
+  store.removeEntries([...gone])
+  store.setInvoices(
+    store.invoices.map((i) => (i.id === invoice.id ? waived : i))
+  )
+  const id = toast.add({
+    title: ctx.t("invoice.waived", { n: invoice.number ?? 0 }),
+    timeout: UNDO_TIMEOUT_MS,
+    actionProps: {
+      children: ctx.t("common.undo"),
+      onClick: () => {
+        toast.close(id)
+        const now = useBookStore.getState()
+        if (now.bookEpoch !== epoch) return
+        now.restoreEntries(removed)
+        now.setInvoices(
+          now.invoices.map((i) => (i.id === invoice.id ? current : i))
+        )
+      },
+    },
+    onRemove: () => useBookStore.getState().releaseUndoAttachments(held),
+  })
   return true
 }
 

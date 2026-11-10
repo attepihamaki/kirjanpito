@@ -1,6 +1,6 @@
 "use client"
 
-import { PanelLeftIcon } from "lucide-react"
+import { PanelLeftIcon, SearchIcon } from "lucide-react"
 
 import { FileMenu } from "@/components/app/file-menu"
 import { SavedClock } from "@/components/app/file-status"
@@ -8,7 +8,10 @@ import { LangToggle } from "@/components/app/lang-toggle"
 import { ThemeToggle } from "@/components/app/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/components/ui/sidebar"
+import { Keys } from "@/components/common/keys"
 import { useT } from "@/components/lang-provider"
+import { useShortcut } from "@/hooks/use-save-book"
+import { usePaletteStore } from "@/stores/palette-store"
 
 /**
  * The bar across the top of every app view (§8.2), laid out like FormBox's
@@ -32,6 +35,8 @@ export function AppTopbar({
 }) {
   const t = useT()
   const { toggleSidebar } = useSidebar()
+  const setLayer = usePaletteStore((s) => s.setLayer)
+  const palette = useShortcut()("K")
 
   return (
     <header className="print-hidden sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 bg-background/95 backdrop-blur">
@@ -47,6 +52,22 @@ export function AppTopbar({
           onClick={toggleSidebar}
         >
           <PanelLeftIcon />
+        </Button>
+
+        <Button
+          variant="outline"
+          className="w-9 justify-start gap-2 px-0 text-muted-foreground sm:w-56 sm:px-3"
+          aria-label={t("palette.open")}
+          aria-keyshortcuts={palette.aria || undefined}
+          onClick={() => setLayer("commands")}
+        >
+          <SearchIcon className="mx-auto sm:mx-0" />
+          <span className="hidden flex-1 text-left font-normal sm:inline">
+            {t("palette.placeholderShort")}
+          </span>
+          {palette.label ? (
+            <Keys className="hidden sm:inline">{palette.label}</Keys>
+          ) : null}
         </Button>
 
         <div className="ml-auto flex items-center gap-2">

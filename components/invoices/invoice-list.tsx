@@ -6,6 +6,7 @@ import {
   CopyIcon,
   DownloadIcon,
   BellIcon,
+  BellOffIcon,
   FilePenLineIcon,
   PencilIcon,
   Repeat2Icon,
@@ -47,6 +48,7 @@ import {
   deleteIssuedInvoice,
   downloadInvoicePdf,
   makeReminder,
+  waiveReminderCharges,
   recordInvoicePayment,
   reopenIssuedInvoice,
   sendInvoice,
@@ -57,7 +59,12 @@ import { todayIso } from "@/lib/domain/dates"
 import type { Invoice } from "@/lib/domain/invoice"
 import { invoiceTotals } from "@/lib/domain/invoice-calc"
 import { canCopy } from "@/lib/domain/invoice-draft"
-import { reminderFigures, reminderRate } from "@/lib/domain/invoice-reminder"
+import {
+  interestBasis,
+  openCharges,
+  reminderFigures,
+  reminderRate,
+} from "@/lib/domain/invoice-reminder"
 import { owedOn, partlyPaid } from "@/lib/domain/invoice-payment"
 import {
   invoiceStatus,
@@ -99,9 +106,12 @@ function MarkPaidDialog({
     const today = todayIso()
     return today < invoice.date ? invoice.date : today
   })
-  const owed = useBookStore((s) =>
-    owedOn(invoice, new Map(s.entries.map((e) => [e.id, e])))
+  const entries = useBookStore((s) => s.entries)
+  const byId = React.useMemo(
+    () => new Map(entries.map((e) => [e.id, e])),
+    [entries]
   )
+  const owed = owedOn(invoice, byId)
   const [amount, setAmount] = React.useState(formatMoneyPlain(owed))
   const [bad, setBad] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
@@ -175,9 +185,13 @@ function ReminderDialog({
   const f = useFormatters()
   const ctx = useCommandCtx()
   const settings = useBookStore((s) => s.invoiceSettings)
-  const owed = useBookStore((s) =>
-    owedOn(invoice, new Map(s.entries.map((e) => [e.id, e])))
+  const entries = useBookStore((s) => s.entries)
+  const byId = React.useMemo(
+    () => new Map(entries.map((e) => [e.id, e])),
+    [entries]
   )
+  const owed = owedOn(invoice, byId)
+  const basis = interestBasis(invoice, byId)
   const [on, setOn] = React.useState(todayIso())
   const [bad, setBad] = React.useState(false)
   const [fee, setFee] = React.useState(formatMoneyPlain(settings.reminderFee))
@@ -191,7 +205,7 @@ function ReminderDialog({
   const feeCents = evalAmount(fee)
   const figures =
     !rateBad && feeCents != null && feeCents >= 0 && !bad && on !== ""
-      ? reminderFigures(invoice, owed, on, rateValue, feeCents)
+      ? reminderFigures(invoice, owed, on, rateValue, feeCents, basis)
       : null
   const [busy, setBusy] = React.useState(false)
 
@@ -257,6 +271,9 @@ function ReminderDialog({
             })}
           </p>
         ) : null}
+        <p className="text-xs text-muted-foreground">
+          {f.t("invoice.reminderBooked")}
+        </p>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             {f.t("common.cancel")}
@@ -490,6 +507,19 @@ export function InvoiceList() {
                             onClick={() => setReminding(invoice)}
                           >
                             <BellIcon />
+                          </Button>
+                        ) : null}
+                        {openCharges(invoice, byId).length > 0 ? (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`${f.t("invoice.waive")}: ${invoice.number}`}
+                            title={f.t("invoice.waive")}
+                            onClick={() =>
+                              void waiveReminderCharges(ctx, invoice.id)
+                            }
+                          >
+                            <BellOffIcon />
                           </Button>
                         ) : null}
                         {openEntries(invoice, byId).length > 0 ? (

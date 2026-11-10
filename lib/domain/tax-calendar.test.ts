@@ -113,6 +113,16 @@ describe("taxCalendar", () => {
     ])
   })
 
+  it("lists the last day a held year's vouchers and books must be kept", () => {
+    expect(dates("retentionVouchers", { heldYears: [2019, 2020] })).toEqual([
+      ["2020", "2026-12-31"],
+    ])
+    expect(dates("retentionBooks", { heldYears: [2016] })).toEqual([
+      ["2016", "2026-12-31"],
+    ])
+    expect(dates("retentionVouchers")).toEqual([])
+  })
+
   it("sorts by date", () => {
     const e = taxCalendar(
       input({

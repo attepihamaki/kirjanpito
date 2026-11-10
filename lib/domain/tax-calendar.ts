@@ -1,6 +1,7 @@
 import { instalmentAmounts, paidMonths } from "@/lib/domain/advance-tax"
 import { ecSales } from "@/lib/domain/ec-sales"
 import { isoDate, monthOf, yearOf } from "@/lib/domain/dates"
+import { retentionDates } from "@/lib/domain/retention"
 import { form5Due } from "@/lib/domain/tax-return-deadline"
 import {
   nextWorkingDay,
@@ -50,7 +51,14 @@ const YEL_DAY = 20
 /** Day of the month an advance tax instalment falls due (vero.fi). */
 const ADVANCE_TAX_DAY = 23
 
-export type CalendarKind = "vat" | "ec" | "form5" | "yel" | "advanceTax"
+export type CalendarKind =
+  | "vat"
+  | "ec"
+  | "form5"
+  | "yel"
+  | "advanceTax"
+  | "retentionVouchers"
+  | "retentionBooks"
 
 export interface CalendarEvent {
   /** Stable across exports, so a calendar app updates an event in place. */
@@ -60,7 +68,8 @@ export interface CalendarEvent {
   date: string
   /**
    * What the date is for: a VAT period key (`2026-09`), the month an EC list
-   * covers (`2026-03`), the tax year of Form 5, or the month of an instalment.
+   * covers (`2026-03`), the tax year of Form 5, the month of an instalment,
+   * or the year whose records stop needing to be kept.
    */
   ref: string
   /** Already dealt with: a return marked as filed, an instalment booked. */
@@ -82,6 +91,8 @@ export interface CalendarInput {
   payMonths: PayMonths
   entries: readonly Entry[]
   cats: CategoryMap
+  /** The years whose records the user holds (`heldYears`), for the retention ends. */
+  heldYears?: readonly number[]
 }
 
 function monthList(months: readonly number[]): number[] {
@@ -174,6 +185,30 @@ export function taxCalendar(input: CalendarInput): CalendarEvent[] {
       ref: `${year}-${String(m).padStart(2, "0")}`,
       done: paid.has(m),
       ...(amount === undefined ? {} : { amount }),
+    })
+  }
+
+  /*
+   * The last day a held year's vouchers and books must be kept (KPL 2:10). It
+   * is a 31 December whatever the weekday, since nothing is filed on it.
+   */
+  const held = new Set(input.heldYears ?? [])
+  for (const [kind, back] of [
+    ["retentionVouchers", 6],
+    ["retentionBooks", 10],
+  ] as const) {
+    const y = year - back
+    if (!held.has(y)) continue
+    const date =
+      kind === "retentionBooks"
+        ? retentionDates(y).books
+        : retentionDates(y).vouchers
+    out.push({
+      id: `${kind}-${y}`,
+      kind,
+      date,
+      ref: String(y),
+      done: false,
     })
   }
 

@@ -38,6 +38,7 @@ import {
   type CategoryRule,
 } from "@/lib/domain/category-rules"
 import type { RecurringEntry } from "@/lib/domain/recurring"
+import type { RetentionStage } from "@/lib/domain/retention"
 import {
   EU_PURCHASE_KINDS,
   type Category,
@@ -106,6 +107,10 @@ export interface BookSettings {
   taxPayment: TaxPayment
   /** Year (`"2025"`) → ISO date its material was marked as stored away. */
   yearsArchived: Record<string, string>
+  /** Year (`"2019"`) → the retention stage the user has noted (§8.12). */
+  retentionNoted: Record<string, RetentionStage>
+  /** Year (`"2024"`) → the loss confirmed in the assessment, in cents (§6.15). */
+  taxLosses: Record<string, number>
   /** Year (`"2025"`) → ISO date its Form 5 was marked as filed (§8.8). */
   form5Filed: Record<string, string>
   /** Year (`"2025"`) → where its entries went when it was archived (§8.19). */
@@ -445,6 +450,29 @@ export function parseSettings(text: string): ParsedSettings {
     }
     out.yearsArchived = archived
   }
+  if (isRecord(raw.retentionNoted)) {
+    const noted: Record<string, RetentionStage> = {}
+    for (const [key, stage] of Object.entries(raw.retentionNoted)) {
+      if (YEAR.test(key) && (stage === "vouchers" || stage === "books")) {
+        noted[key] = stage
+      }
+    }
+    out.retentionNoted = noted
+  }
+  if (isRecord(raw.taxLosses)) {
+    const losses: Record<string, number> = {}
+    for (const [key, amount] of Object.entries(raw.taxLosses)) {
+      if (
+        YEAR.test(key) &&
+        typeof amount === "number" &&
+        Number.isSafeInteger(amount) &&
+        amount >= 0
+      ) {
+        losses[key] = amount
+      }
+    }
+    out.taxLosses = losses
+  }
   if (isRecord(raw.form5Filed)) {
     const filed: Record<string, string> = {}
     for (const [key, date] of Object.entries(raw.form5Filed)) {
@@ -659,6 +687,12 @@ export function serializeSettings(s: BookSettings): string {
     taxPayment: s.taxPayment,
     yearsArchived: Object.fromEntries(
       Object.entries(s.yearsArchived).sort(([a], [b]) => a.localeCompare(b))
+    ),
+    retentionNoted: Object.fromEntries(
+      Object.entries(s.retentionNoted).sort(([a], [b]) => a.localeCompare(b))
+    ),
+    taxLosses: Object.fromEntries(
+      Object.entries(s.taxLosses).sort(([a], [b]) => a.localeCompare(b))
     ),
     form5Filed: Object.fromEntries(
       Object.entries(s.form5Filed).sort(([a], [b]) => a.localeCompare(b))

@@ -1,14 +1,28 @@
+import { calcEntry } from "@/lib/domain/calc"
 import { daysBetween, addDays } from "@/lib/domain/dates"
-import type { Invoice, InvoiceSettings, Reminder } from "@/lib/domain/invoice"
+import type {
+  Invoice,
+  InvoiceLang,
+  InvoiceSettings,
+  Reminder,
+} from "@/lib/domain/invoice"
+import { openEntries } from "@/lib/domain/invoice-status"
 import { roundCents } from "@/lib/domain/money"
 import { RULES, type RuleTables } from "@/lib/domain/rule-tables"
-import type { Cents } from "@/lib/domain/types"
+import type { Cents, Entry } from "@/lib/domain/types"
 
 /**
  * Payment reminders (§8.27). The amounts are worked out from the invoice's
- * open balance and the day the reminder is made, and the result is kept on
- * the invoice as a log; nothing is booked.
+ * open balance and the day the reminder is made. The reminder is kept on the
+ * invoice as a log, and its interest and fee are booked as open income
+ * entries of the invoice, so they are a receivable until the customer pays.
  */
+
+/** The category late-payment interest books on: Form 5's financial income. */
+export const REMINDER_INTEREST_CAT = "323"
+
+/** The category a reminder fee books on: other operating income. */
+export const REMINDER_FEE_CAT = "301"
 
 /** Days a reminder gives to pay, counted from the reminder's date. */
 const REMINDER_TERM_DAYS = 7
@@ -68,19 +82,34 @@ export interface ReminderFigures {
   newDueDate: string
 }
 
-/** The figures for a reminder of `invoice` made on `on` while `open` is owed. */
+/**
+ * What interest is charged on: the invoice's own balance, without the charges
+ * of earlier reminders, since interest is not charged on interest. `from` is
+ * the day interest runs from, the due date or the last reminder whose interest
+ * is still booked, so no day is charged twice.
+ */
+export interface InterestBasis {
+  principal: Cents
+  from: string
+}
+
+/**
+ * The figures for a reminder of `invoice` made on `on` while `open` is owed.
+ * Without a basis, interest runs on the whole of `open` from the due date.
+ */
 export function reminderFigures(
   invoice: Pick<Invoice, "dueDate">,
   open: Cents,
   on: string,
   rate: number,
-  fee: Cents
+  fee: Cents,
+  basis: InterestBasis = { principal: open, from: invoice.dueDate }
 ): ReminderFigures {
-  const interest = lateInterest(open, invoice.dueDate, on, rate)
+  const interest = lateInterest(basis.principal, basis.from, on, rate)
   return {
     open,
     rate,
-    days: Math.max(0, daysBetween(invoice.dueDate, on)),
+    days: Math.max(0, daysBetween(basis.from, on)),
     interest,
     fee,
     total: open + interest + fee,
@@ -92,7 +121,8 @@ export function reminderFigures(
 export function reminderRecord(
   id: string,
   on: string,
-  figures: ReminderFigures
+  figures: ReminderFigures,
+  entryIds: readonly string[] = []
 ): Reminder {
   return {
     id,
@@ -102,5 +132,78 @@ export function reminderRecord(
     interest: figures.interest,
     fee: figures.fee,
     newDueDate: figures.newDueDate,
+    ...(entryIds.length > 0 ? { entryIds: [...entryIds] } : {}),
   }
+}
+
+const CHARGE_WORD: Record<InvoiceLang, string> = {
+  fi: "Maksumuistutus, lasku",
+  en: "Payment reminder, invoice",
+}
+
+/**
+ * The open income entries a reminder books (§8.27): the interest on
+ * financial income and the fee on other operating income, each outside VAT,
+ * dated on the reminder's day. A charge of nothing books nothing.
+ */
+export function reminderEntries(
+  invoice: Pick<Invoice, "number" | "language" | "customer">,
+  on: string,
+  figures: Pick<ReminderFigures, "interest" | "fee">,
+  makeId: () => string
+): Entry[] {
+  const description = `${CHARGE_WORD[invoice.language]} ${invoice.number ?? ""} – ${invoice.customer.name.trim()}`
+  const charges: [string, Cents][] = [
+    [REMINDER_INTEREST_CAT, figures.interest],
+    [REMINDER_FEE_CAT, figures.fee],
+  ]
+  return charges
+    .filter(([, amount]) => amount > 0)
+    .map(([catId, amount]) => ({
+      id: makeId(),
+      date: on,
+      description,
+      type: "income" as const,
+      catId,
+      amount,
+      vatRate: 0,
+      amountMode: "gross" as const,
+      paidOn: null,
+    }))
+}
+
+/** The ids of the entries an invoice's reminders booked. */
+export function chargeIds(invoice: Pick<Invoice, "reminders">): Set<string> {
+  return new Set((invoice.reminders ?? []).flatMap((r) => r.entryIds ?? []))
+}
+
+/**
+ * The interest basis of a new reminder: the unpaid balance of the invoice's
+ * own entries, and the day after which interest is not yet charged.
+ */
+export function interestBasis(
+  invoice: Pick<Invoice, "dueDate" | "entryIds" | "reminders">,
+  byId: ReadonlyMap<string, Entry>
+): InterestBasis {
+  const charges = chargeIds(invoice)
+  const principal = openEntries(invoice, byId)
+    .filter((e) => !charges.has(e.id))
+    .reduce((sum, e) => sum + calcEntry(e).gross, 0)
+  let from = invoice.dueDate
+  for (const r of invoice.reminders ?? []) {
+    const booked = (r.entryIds ?? []).some(
+      (id) => byId.get(id)?.catId === REMINDER_INTEREST_CAT
+    )
+    if (booked && r.date > from) from = r.date
+  }
+  return { principal, from }
+}
+
+/** The reminder charges still unpaid, which the user can give up when the customer will not pay them. */
+export function openCharges(
+  invoice: Pick<Invoice, "entryIds" | "reminders">,
+  byId: ReadonlyMap<string, Entry>
+): Entry[] {
+  const charges = chargeIds(invoice)
+  return openEntries(invoice, byId).filter((e) => charges.has(e.id))
 }

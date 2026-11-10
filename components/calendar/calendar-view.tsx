@@ -29,6 +29,9 @@ import {
   toIcs,
   type CalendarEvent,
 } from "@/lib/domain/tax-calendar"
+import { heldYears } from "@/lib/domain/retention"
+import { lossAvailable } from "@/lib/domain/tax-loss"
+import { useLossInput } from "@/hooks/use-loss-input"
 import { indexCategories } from "@/lib/domain/types"
 import { eventTitle } from "@/lib/i18n/calendar-label"
 import { SETTINGS_ROUTES } from "@/lib/site"
@@ -48,6 +51,8 @@ export function CalendarView() {
   const vatFiled = useBookStore((s) => s.vatFiled)
   const form5Filed = useBookStore((s) => s.form5Filed)
   const payMonths = useBookStore((s) => s.payMonths)
+  const yearsArchived = useBookStore((s) => s.yearsArchived)
+  const archives = useBookStore((s) => s.archives)
 
   const events = React.useMemo(
     () =>
@@ -68,6 +73,7 @@ export function CalendarView() {
         payMonths,
         entries,
         cats: indexCategories(cats),
+        heldYears: heldYears(entries, yearsArchived, archives),
       }),
     [
       year,
@@ -80,6 +86,8 @@ export function CalendarView() {
       payMonths,
       entries,
       cats,
+      yearsArchived,
+      archives,
     ]
   )
 
@@ -266,6 +274,7 @@ function AdvanceTaxSummary() {
   const entries = useBookStore((s) => s.entries)
   const cats = useBookStore((s) => s.cats)
   const payMonths = useBookStore((s) => s.payMonths)
+  const losses = useLossInput()
   const decision = payMonths.advanceTaxYearly[String(year)] ?? 0
   const paid = advanceTaxPaid(entries, year)
   const profile = payMonths.taxProfile
@@ -276,9 +285,10 @@ function AdvanceTaxSummary() {
   const estimate = React.useMemo(() => {
     const catMap = indexCategories(cats)
     const row = incomeTaxRow(year)
+    const result = incomeStatement(entries, catMap, year).result
     const scaled = row
       ? estimateIncomeTax(
-          incomeStatement(entries, catMap, year).result,
+          result - lossAvailable(losses, year, result),
           profile,
           row
         )
@@ -292,7 +302,7 @@ function AdvanceTaxSummary() {
     }
     const flat = estimateTax(entries, catMap, year, payMonths.taxRate, decision)
     return flat ? { scale: false, ...flat } : null
-  }, [entries, cats, year, payMonths.taxRate, profile, decision])
+  }, [entries, cats, year, payMonths.taxRate, profile, decision, losses])
   if (!decision && !estimate && paid === 0) return null
 
   const rows: [string, string][] = [

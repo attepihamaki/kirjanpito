@@ -6,6 +6,7 @@ import { useCommandCtx } from "@/hooks/use-commands"
 import { useCanSaveToFile, useSaveBook } from "@/hooks/use-save-book"
 import { redoChange, undoChange } from "@/lib/commands/history-commands"
 import { useBookStore } from "@/stores/book-store"
+import { usePaletteStore } from "@/stores/palette-store"
 
 /*
  * Where a typed letter belongs to the control: fields, and lists that jump to
@@ -27,12 +28,12 @@ function isTyping(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest(TAKES_LETTERS) !== null
 }
 
-/** The plain `N` key, pressed where it is not typing into something. */
-function isNewEntryKey(event: KeyboardEvent): boolean {
-  if (event.key.toLowerCase() !== "n" || event.repeat) return false
-  if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) {
-    return false
-  }
+/** A plain key, pressed where it is not typing into something and nothing is open. */
+function isPlainKey(event: KeyboardEvent, key: string): boolean {
+  if (event.key.toLowerCase() !== key || event.repeat) return false
+  /* `?` needs Shift on most layouts, so only the other modifiers rule it out. */
+  if (event.ctrlKey || event.metaKey || event.altKey) return false
+  if (event.shiftKey && key !== "?") return false
   if (document.querySelector(OPEN_LAYER)) return false
   return !isTyping(event.target)
 }
@@ -44,6 +45,8 @@ function isNewEntryKey(event: KeyboardEvent): boolean {
  * `Ctrl`/`⌘`+`W` is deliberately not bound to closing the bookkeeping: it is
  * one of the few combinations a browser refuses to hand to a page, so binding
  * it would close the tab instead. Closing is rare enough to live without one.
+ *
+ * `?` lists the shortcuts and Ctrl/⌘+K opens the command palette (§8.35).
  *
  * `N` opens a new entry. `Ctrl`/`⌘`+`N` is another combination the browser
  * keeps for itself, so this one has no modifier and has to stay out of the way
@@ -62,7 +65,14 @@ export function useAppShortcuts({
 
   React.useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if (isNewEntryKey(event)) {
+      if (isPlainKey(event, "?")) {
+        if (!useBookStore.getState().open) return
+        event.preventDefault()
+        usePaletteStore.getState().setLayer("shortcuts")
+        return
+      }
+
+      if (isPlainKey(event, "n")) {
         const s = useBookStore.getState()
         if (!s.open || s.importing || s.saving || s.dialog.kind !== "none") {
           return
@@ -74,6 +84,26 @@ export function useAppShortcuts({
 
       if (!(event.metaKey || event.ctrlKey) || event.altKey) return
       const key = event.key.toLowerCase()
+
+      /*
+       * Ctrl/⌘+K opens the command palette (§8.35), from a field too, since
+       * no field uses the combination. It waits while a dialog is open, and
+       * pressed again it closes the palette.
+       */
+      if (key === "k" && !event.shiftKey) {
+        const palette = usePaletteStore.getState()
+        if (palette.layer === "commands") {
+          event.preventDefault()
+          palette.setLayer("none")
+          return
+        }
+        const s = useBookStore.getState()
+        if (!s.open || s.importing || s.dialog.kind !== "none") return
+        if (document.querySelector(OPEN_LAYER)) return
+        event.preventDefault()
+        palette.setLayer("commands")
+        return
+      }
 
       if (key === "z" || key === "y") {
         /*

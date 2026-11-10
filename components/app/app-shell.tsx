@@ -54,6 +54,7 @@ import { LiveAnnouncer } from "@/components/app/live-announcer"
 import { useReceiptHashes } from "@/hooks/use-receipt-hashes"
 import { useReceiptText } from "@/hooks/use-receipt-text"
 import { useAppShortcuts } from "@/hooks/use-app-shortcuts"
+import { CommandPalette, ShortcutSheet } from "@/components/app/command-palette"
 import { useAutosave } from "@/hooks/use-autosave"
 import { startRecordingHistory } from "@/stores/history-store"
 import { usePersistentStorage } from "@/hooks/use-persistent-storage"
@@ -246,6 +247,8 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
         />
 
         <ScrollMemory />
+        <CommandPalette onOpenFile={pickFile} onExport={openExportDialog} />
+        <ShortcutSheet />
         <LiveAnnouncer />
         <AppSidebar />
 

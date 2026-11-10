@@ -40,6 +40,7 @@ export function StatementShell({ children }: { children: React.ReactNode }) {
             },
             { href: STATEMENT_ROUTES.assets, label: t("assets.tab") },
             { href: STATEMENT_ROUTES.deductions, label: t("deductions.tab") },
+            { href: STATEMENT_ROUTES.losses, label: t("losses.tab") },
           ]}
         />
       </div>

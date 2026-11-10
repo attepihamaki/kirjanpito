@@ -257,6 +257,11 @@ export interface Reminder {
   fee: number
   /** The due date the reminder gave. */
   newDueDate: string
+  /**
+   * The entries that booked its interest and fee, which are also among the
+   * invoice's `entryIds`. Absent when it charged nothing, or was given up.
+   */
+  entryIds?: string[]
 }
 
 /** A party with nothing filled in but the country, for the editor to start from. */

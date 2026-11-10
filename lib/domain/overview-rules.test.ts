@@ -209,6 +209,28 @@ describe("OVERVIEW_RULES", () => {
     ).not.toContain("yearToArchive")
   })
 
+  it("says once per stage when a held year's retention has ended", () => {
+    const old = sale("a", "2019-06-01")
+    const rows = (over: Partial<OverviewContext> = {}) =>
+      overviewFindings(context([old], "2026-03-01", over)).flatMap((f) =>
+        f.ruleId === "retentionEnded" ? [f.data] : []
+      )
+    expect(rows()).toEqual([
+      {
+        year: 2019,
+        stage: "vouchers",
+        books: "2029-12-31",
+        vouchers: "2025-12-31",
+      },
+    ])
+    expect(rows({ retentionNoted: { "2019": "vouchers" } })).toEqual([])
+    /* A year archived out of the book is still the user's to keep. */
+    const archived = overviewFindings(
+      context([], "2030-01-02", { archives: { "2019": {} } })
+    ).flatMap((f) => (f.ruleId === "retentionEnded" ? [f.data.stage] : []))
+    expect(archived).toEqual(["books"])
+  })
+
   it("says when the rule tables lack this year", () => {
     expect(ids(context([], "2028-01-05"))).toContain("rulesStale")
   })

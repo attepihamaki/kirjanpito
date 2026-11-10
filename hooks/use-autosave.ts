@@ -45,6 +45,8 @@ export function useAutosave() {
   const vatFiledFigures = useBookStore((s) => s.vatFiledFigures)
   const taxPayment = useBookStore((s) => s.taxPayment)
   const yearsArchived = useBookStore((s) => s.yearsArchived)
+  const retentionNoted = useBookStore((s) => s.retentionNoted)
+  const taxLosses = useBookStore((s) => s.taxLosses)
   const form5Filed = useBookStore((s) => s.form5Filed)
   const vatPeriod = useBookStore((s) => s.vatPeriod)
   const layout = useBookStore((s) => s.overviewLayout)
@@ -83,6 +85,8 @@ export function useAutosave() {
     vatFiledFigures,
     taxPayment,
     yearsArchived,
+    retentionNoted,
+    taxLosses,
     form5Filed,
     vatPeriod,
     layout,

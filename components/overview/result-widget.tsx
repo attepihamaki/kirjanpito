@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { ArrowRightIcon } from "lucide-react"
 import { Area, AreaChart, ResponsiveContainer, YAxis } from "recharts"
 
@@ -11,7 +12,9 @@ import { Panel } from "@/components/common/panel"
 import { viewHelp } from "@/lib/domain/field-help"
 import { useFormatters } from "@/components/lang-provider"
 import { useOverviewData } from "@/components/overview/overview-data"
-import { APP_ROUTES } from "@/lib/site"
+import { useLossInput } from "@/hooks/use-loss-input"
+import { lossAvailable } from "@/lib/domain/tax-loss"
+import { APP_ROUTES, STATEMENT_ROUTES } from "@/lib/site"
 
 /** Line 358 or 359 so far this year, and how it built up month by month. */
 export function ResultWidget() {
@@ -40,6 +43,9 @@ export function ResultWidget() {
   const yearVat = data.months.vat.reduce((a, b) => a + b, 0)
   const last = cumulative.length - 1
   const lastYear = data.lastYear
+  const losses = useLossInput()
+  /* The earlier losses this year's profit can still absorb (§6.15). */
+  const lossesLeft = lossAvailable(losses, year, Number.MAX_SAFE_INTEGER)
 
   return (
     <Panel
@@ -74,6 +80,17 @@ export function ResultWidget() {
           {statement.resultLine === "359" ? (
             <p className="mt-1 text-sm text-muted-foreground">
               {f.t("overview.lossCarry")}
+            </p>
+          ) : null}
+          {lossesLeft > 0 ? (
+            <p className="mt-1 text-sm text-muted-foreground">
+              {f.t("overview.lossesLeft", { a: f.money(lossesLeft) })}{" "}
+              <Link
+                href={STATEMENT_ROUTES.losses}
+                className="underline underline-offset-2"
+              >
+                {f.t("losses.tab")}
+              </Link>
             </p>
           ) : null}
         </div>

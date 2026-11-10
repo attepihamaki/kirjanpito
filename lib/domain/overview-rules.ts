@@ -4,7 +4,13 @@ import type { Invoice } from "@/lib/domain/invoice"
 import { newYearDue, newYearTarget } from "@/lib/domain/new-year"
 import { balancesAt, type OpenBalances } from "@/lib/domain/open-items"
 import { dueRecurring, type RecurringEntry } from "@/lib/domain/recurring"
-import { retentionDates, yearsToArchive } from "@/lib/domain/retention"
+import {
+  heldYears,
+  retentionDates,
+  retentionEnded,
+  yearsToArchive,
+  type RetentionStage,
+} from "@/lib/domain/retention"
 import { ruleGaps, type RuleGap } from "@/lib/domain/rule-tables"
 import {
   defineRules,
@@ -23,7 +29,7 @@ import { daysBetween, type TimelinePeriod } from "@/lib/domain/vat-deadline"
  * The overview's reminders (§8.12) that are neither entry checks nor limits:
  * deadlines, open items, empty months, missing receipts, the year to open,
  * recurring entries due, drafts made by recurring invoices, closed years to
- * put away and gaps in the rule tables. Each is a rule, so the checklist only turns findings into rows.
+ * put away, years whose retention has ended and gaps in the rule tables. Each is a rule, so the checklist only turns findings into rows.
  */
 
 /** A VAT return falling due within this many days is shown. */
@@ -49,6 +55,10 @@ export interface OverviewContext {
   invoices: readonly Invoice[]
   /** Closed years the user has marked as stored, with the day. */
   yearsArchived: Readonly<Record<string, string>>
+  /** Years archived out of the book (§8.19). */
+  archives?: Readonly<Record<string, unknown>>
+  /** The retention stages the user has noted, by year. */
+  retentionNoted?: Readonly<Record<string, RetentionStage>>
 }
 
 /** What each overview rule reports, by rule id. */
@@ -64,6 +74,12 @@ export interface OverviewData {
   recurringDue: { month: string; items: RecurringEntry[] }
   recurringDrafts: { count: number }
   yearToArchive: { year: number; books: string; vouchers: string }
+  retentionEnded: {
+    year: number
+    stage: RetentionStage
+    books: string
+    vouchers: string
+  }
 }
 
 export type OverviewRuleId = keyof OverviewData
@@ -166,6 +182,13 @@ export const OVERVIEW_RULES = defineRules<OverviewContext, AnyData>([
       year,
       ...retentionDates(year),
     }))
+  ),
+  rule("retentionEnded", "info", "KPL 2:10", (ctx) =>
+    retentionEnded(
+      heldYears(ctx.entries, ctx.yearsArchived, ctx.archives),
+      ctx.today,
+      ctx.retentionNoted ?? {}
+    ).map((r) => ({ ...r, ...retentionDates(r.year) }))
   ),
 ])
 

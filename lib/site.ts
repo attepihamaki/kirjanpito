@@ -163,6 +163,7 @@ export const STATEMENT_ROUTES = {
   inventory: `${APP_ROUTES.statement}/inventory`,
   assets: `${APP_ROUTES.statement}/assets`,
   deductions: `${APP_ROUTES.statement}/deductions`,
+  losses: `${APP_ROUTES.statement}/losses`,
 } as const
 
 /**

@@ -164,7 +164,7 @@ asks anything (below).
 - **A book with no entries can be saved.** Deleting the last entry has to reach
   the file too, so only a book that is empty and clean has nothing to save. Its
   CSV is the header alone, which opens as an empty bookkeeping.
-- **Leaving a bookkeeping unlinks the file**, in the store *and* in IndexedDB
+- **Leaving a bookkeeping unlinks the file**, in the store _and_ in IndexedDB
   (`unlinkFile` in `lib/commands/book-commands.ts`). The stored handle outlives
   a reload, so a new book that skipped this would find the old file waiting and
   save itself over it.
@@ -223,29 +223,92 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
   "vatFiledFigures": { "2026-08": { "301": 12000, "308": 4500 } },
   "taxPayment": { "iban": "", "reference": "" },
   "yearsArchived": { "2025": "2026-01-20" },
+  "retentionNoted": { "2019": "vouchers" },
+  "taxLosses": { "2024": 120000 },
   "form5Filed": { "2025": "2026-03-20" },
-  "archives": { "2024": { "file": "kirjanpito-2024.zip", "on": "2025-03-01", "entries": 42 } },
+  "archives": {
+    "2024": { "file": "kirjanpito-2024.zip", "on": "2025-03-01", "entries": 42 }
+  },
   "overview": { "layout": [{ "id": "result", "size": "L", "hidden": false }] },
-  "categories": [{ "id": "333", "line": "333", "name": "Ostot ja varastojen muutokset", "vatRate": 25.5, "enabled": true, "custom": false }],
+  "categories": [
+    {
+      "id": "333",
+      "line": "333",
+      "name": "Ostot ja varastojen muutokset",
+      "vatRate": 25.5,
+      "enabled": true,
+      "custom": false
+    }
+  ],
   "autosave": false,
   "encrypted": false,
   "pageSize": { "ledger": 10, "categories": 25 },
   "showAccounts": true,
-  "recurring": [{ "id": "r1", "description": "Vuokra", "type": "expense", "catId": "343", "amount": 45000, "vatRate": 25.5, "amountMode": "gross", "day": 20, "from": "2026-02" }],
-  "categoryRules": [{ "id": "rule-1", "contains": "Elisa", "catId": "344-other", "vatRate": 25.5 }],
+  "recurring": [
+    {
+      "id": "r1",
+      "description": "Vuokra",
+      "type": "expense",
+      "catId": "343",
+      "amount": 45000,
+      "vatRate": 25.5,
+      "amountMode": "gross",
+      "day": 20,
+      "from": "2026-02"
+    }
+  ],
+  "categoryRules": [
+    {
+      "id": "rule-1",
+      "contains": "Elisa",
+      "catId": "344-other",
+      "vatRate": 25.5
+    }
+  ],
   "bankSeen": ["id:2026102801234", "fp:2026-10-28|-12450|k market||0"],
   "assetOpening": { "year": 2026, "amount": 300000 },
   "bankBalance": { "amount": 125000, "date": "2026-10-31" },
-  "payMonths": { "yel": [1, 7], "advanceTax": [2, 4, 6, 8, 10, 12], "advanceTaxYearly": { "2026": 360000 }, "taxRate": 22.5, "taxProfile": { "municipalRate": 7.5, "churchRate": null, "yelIncome": 2000000, "yelStarter": false, "otherIncome": 0 } },
+  "payMonths": {
+    "yel": [1, 7],
+    "advanceTax": [2, 4, 6, 8, 10, 12],
+    "advanceTaxYearly": { "2026": 360000 },
+    "taxRate": 22.5,
+    "taxProfile": {
+      "municipalRate": 7.5,
+      "churchRate": null,
+      "yelIncome": 2000000,
+      "yelStarter": false,
+      "otherIncome": 0
+    }
+  },
   "loanOpening": { "year": 2026, "amount": 800000 },
-  "changeLog": [{ "at": "2026-11-03T10:00:00.000Z", "action": "add", "voucher": 1, "date": "2026-10-10", "description": "Osto" }],
-  "yearEnd": { "2026": { "goods": 120000, "otherCurrent": 0, "otherFixed": 0, "cash": 3500, "otherFinancial": 0, "loanCurrent": 0, "otherCurrentDebt": 0, "otherLongDebt": 0 } }
+  "changeLog": [
+    {
+      "at": "2026-11-03T10:00:00.000Z",
+      "action": "add",
+      "voucher": 1,
+      "date": "2026-10-10",
+      "description": "Osto"
+    }
+  ],
+  "yearEnd": {
+    "2026": {
+      "goods": 120000,
+      "otherCurrent": 0,
+      "otherFixed": 0,
+      "cash": 3500,
+      "otherFinancial": 0,
+      "loanCurrent": 0,
+      "otherCurrentDebt": 0,
+      "otherLongDebt": 0
+    }
+  }
 }
 ```
 
 - **`inbox`** lists the receipt inbox (§8.31): `name`, `type`, `size`, the day `added`, `path` in the ZIP and, when a PDF's text gave any, `guess` with `date`, `amount` (cents) and `vendor`. It is absent while the inbox is empty, and an item whose path is not a receipt's (§7.2) is dropped. Example: `"inbox": [{ "name": "lasku.pdf", "type": "application/pdf", "size": 48211, "added": "2026-11-10", "path": "saapuneet/lasku.pdf", "guess": { "date": "2026-11-02", "amount": 12550, "vendor": "Nurmi" } }]`.
 - **The stocktake is another JSON file at the ZIP root** (§8.28): `inventory.json` (`lib/domain/inventory-file.ts`), with `version`, the cost `method` and the `years` that map a year to its rows. It is DEFLATE-compressed like `settings.json`, read as leniently as the invoice files and encrypted with the rest (§7.8). A row that cannot be read, such as one with a fractional quantity or a purchase layer with no date, is dropped and counted, and a year key that is not four digits is ignored. A book with no rows writes no file. The seal (§7.9) gains an `inventory` hash. A year archive (§8.19) carries only the years its entries fall in. Quantities are integer thousandths and unit costs integer cents, bounded so that a row's value stays far below 2^53.
-- **Invoices are two more JSON files at the ZIP root** (§8.27): `invoices.json` and `customers.json` (`lib/domain/invoice-file.ts`), DEFLATE-compressed like `settings.json`, read as leniently, and encrypted with the rest (§7.8). `customers.json` is the counterparty register (§8.29): each party carries `role`, `incomeCat`, `expenseCat` and `vatRate` besides its address, and a party without `role` reads as a customer. A book with no invoices or no customers writes no file for them. An invoice may carry `reminders` (§8.27), each read on its own and dropped when unreadable. A record that cannot be read is dropped and counted, and an invoice with a half-set issue (a number without a reference, say) counts as unreadable. The seal (§7.9) gains an `invoices` and a `customers` hash when the file is written. A file the seal covers that has changed or gone missing is reported as edited, and a file it does not mention is not checked. `settings.json` gains `invoiceSettings` (address, email, IBAN, payment term, terms text, first invoice number, reminder fee and rate, the product register `products`, the recurring invoices `recurring` and the quotes `quotes` (§8.34), each record read on its own and dropped when unreadable, and `vatRegistered`, true unless it is `false`, §8.27). An issued invoice's `seller` carries `vatRegistered` too, read the same way. An invoice made from a recurring invoice carries its id as `recurring`. An invoice's PDF is an ordinary attachment of its entries (§7.2). A book without the files has no invoices.
+- **Invoices are two more JSON files at the ZIP root** (§8.27): `invoices.json` and `customers.json` (`lib/domain/invoice-file.ts`), DEFLATE-compressed like `settings.json`, read as leniently, and encrypted with the rest (§7.8). `customers.json` is the counterparty register (§8.29): each party carries `role`, `incomeCat`, `expenseCat` and `vatRate` besides its address, and a party without `role` reads as a customer. A book with no invoices or no customers writes no file for them. An invoice may carry `reminders` (§8.27), each read on its own and dropped when unreadable, each with the `entryIds` of the charges it booked when it booked any. A record that cannot be read is dropped and counted, and an invoice with a half-set issue (a number without a reference, say) counts as unreadable. The seal (§7.9) gains an `invoices` and a `customers` hash when the file is written. A file the seal covers that has changed or gone missing is reported as edited, and a file it does not mention is not checked. `settings.json` gains `invoiceSettings` (address, email, IBAN, payment term, terms text, first invoice number, reminder fee and rate, the product register `products`, the recurring invoices `recurring` and the quotes `quotes` (§8.34), each record read on its own and dropped when unreadable, and `vatRegistered`, true unless it is `false`, §8.27). An issued invoice's `seller` carries `vatRegistered` too, read the same way. An invoice made from a recurring invoice carries its id as `recurring`. An invoice's PDF is an ordinary attachment of its entries (§7.2). A book without the files has no invoices.
 - **Keys are English**, like browser storage (§12). Nobody opens this file in Excel.
 - **Reading is lenient**, like the CSV. A missing file means defaults. A bad or unknown value is dropped on its own and the rest is kept. A `version` above `SETTINGS_VERSION` still parses, and sets `fromNewerVersion` so the import can say the file may hold settings this reader passed over — lenient, but not silent.
 - **`exportLang` is the language the book is written out in** (§7.1, §7.2). It belongs to the bookkeeping, not to the browser: open a book elsewhere and save it, and it comes back in the shape it went out in rather than reformatting itself to that browser's UI language. Unlike `language` and `theme` it **marks the book dirty**, since it changes the bytes a save would produce, and it is in `bookVersion()`. Absent from a file, it falls back to `"fi"`; a new book is seeded from the UI language and the setup dialog (§8.3) can change it.
