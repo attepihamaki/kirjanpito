@@ -51,12 +51,75 @@ export interface Party {
   email: string
 }
 
-/** A customer in the register (§8.27). */
+/** Whether a party buys from the business, sells to it, or both (§8.29). */
+export type PartyRole = "customer" | "supplier" | "both"
+
+export const PARTY_ROLES: readonly PartyRole[] = [
+  "customer",
+  "supplier",
+  "both",
+]
+
+/**
+ * A counterparty in the register (§8.27, §8.29): a customer, a supplier or
+ * both. The type keeps its invoicing name because invoices and
+ * `customers.json` refer to it; a register entry is a customer when its role
+ * says so.
+ */
 export interface Customer extends Party {
   id: string
+  role: PartyRole
   language: InvoiceLang
   /** Days to the due date, or null to use the book's term. */
   termDays: number | null
+  /** The income category an entry for this party starts with, or null. */
+  incomeCat: string | null
+  /** The expense category an entry for this party starts with, or null. */
+  expenseCat: string | null
+  /** The VAT rate an entry for this party starts with, or null for the category's own. */
+  vatRate: number | null
+}
+
+/** The register fields an invoicing customer starts with. */
+export const CUSTOMER_DEFAULTS: Pick<
+  Customer,
+  "role" | "termDays" | "incomeCat" | "expenseCat" | "vatRate"
+> = {
+  role: "customer",
+  termDays: null,
+  incomeCat: null,
+  expenseCat: null,
+  vatRate: null,
+}
+
+/**
+ * A register entry as stored before roles and defaults existed, made whole:
+ * the missing fields take `CUSTOMER_DEFAULTS`, so such an entry is a customer.
+ */
+export function withPartyFields(
+  stored: Omit<Customer, keyof typeof CUSTOMER_DEFAULTS> &
+    Partial<Pick<Customer, keyof typeof CUSTOMER_DEFAULTS>>
+): Customer {
+  return {
+    ...stored,
+    role: PARTY_ROLES.includes(stored.role as PartyRole)
+      ? (stored.role as PartyRole)
+      : CUSTOMER_DEFAULTS.role,
+    termDays: stored.termDays ?? null,
+    incomeCat: stored.incomeCat ?? null,
+    expenseCat: stored.expenseCat ?? null,
+    vatRate: stored.vatRate ?? null,
+  }
+}
+
+/** Whether a register entry can be invoiced. */
+export function isCustomer(party: Pick<Customer, "role">): boolean {
+  return party.role !== "supplier"
+}
+
+/** Whether a register entry sells to the business. */
+export function isSupplier(party: Pick<Customer, "role">): boolean {
+  return party.role !== "customer"
 }
 
 /** The seller as it was when the invoice was issued, so a later change to the settings leaves the old invoice alone. */

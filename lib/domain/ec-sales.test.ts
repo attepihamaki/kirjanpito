@@ -48,8 +48,14 @@ describe("ecSales", () => {
     )
     expect(months).toHaveLength(1)
     expect(months[0].buyers).toEqual([
-      { vatId: "DE5678", goods: 50_000, services: 0, unsorted: 0 },
-      { vatId: "SE1234", goods: 100_000, services: 100_000, unsorted: 0 },
+      { vatId: "DE5678", names: [], goods: 50_000, services: 0, unsorted: 0 },
+      {
+        vatId: "SE1234",
+        names: [],
+        goods: 100_000,
+        services: 100_000,
+        unsorted: 0,
+      },
     ])
   })
 

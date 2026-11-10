@@ -37,6 +37,8 @@ import { evalAmount } from "@/lib/domain/amount-expr"
 import { todayIso } from "@/lib/domain/dates"
 import { uid } from "@/lib/domain/id"
 import {
+  CUSTOMER_DEFAULTS,
+  isCustomer,
   emptyParty,
   type Customer,
   type Invoice,
@@ -239,13 +241,13 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
     let register = customerId
     if (saveCustomer && register === null && !nameMissing) {
       const customer: Customer = {
+        ...CUSTOMER_DEFAULTS,
         ...party,
         name: party.name.trim(),
         country: party.country.trim().toUpperCase() || "FI",
         vatId: party.vatId.replace(/\s/g, "").toUpperCase(),
         id: uid(),
         language,
-        termDays: null,
       }
       setCustomers([...useBookStore.getState().customers, customer])
       register = customer.id
@@ -349,7 +351,8 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
                   onChange={pickCustomer}
                   options={[
                     { value: "", label: f.t("invoice.customerTyped") },
-                    ...[...customers]
+                    ...customers
+                      .filter((c) => isCustomer(c) || c.id === customerId)
                       .sort((a, b) => f.collator.compare(a.name, b.name))
                       .map((c) => ({ value: c.id, label: c.name })),
                   ]}

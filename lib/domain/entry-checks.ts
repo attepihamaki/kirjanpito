@@ -128,6 +128,17 @@ function sameSplit(a: Pick<Entry, "split">, b: Pick<Entry, "split">): boolean {
 }
 
 /**
+ * Whether two entries belong together on purpose: parts of one split
+ * receipt, or a credit and the voucher it reverses (§8.4).
+ */
+function linkedPair(
+  a: Pick<Entry, "id" | "split" | "reverses">,
+  b: Pick<Entry, "id" | "split" | "reverses">
+): boolean {
+  return sameSplit(a, b) || a.reverses === b.id || b.reverses === a.id
+}
+
+/**
  * Another entry that has the same figures as `entry`, or the same side,
  * amount and description a few days apart, if any. The entry itself, by id,
  * and the other parts of its split never count.
@@ -295,7 +306,8 @@ export const ENTRY_RULES = defineRules<EntryCheckContext, string>([
     /*
      * Entries that share their figures, or a receipt file, with another
      * entry. Both of a pair are flagged, since either may be the extra one.
-     * Parts of one split receipt share both on purpose and are not a pair.
+     * Parts of one split receipt share both on purpose and are not a pair,
+     * and neither are a credit and the voucher it reverses.
      */
     const out = new Set<string>()
     const group = (keysOf: (e: Entry) => (string | null)[]) => {
@@ -309,7 +321,7 @@ export const ENTRY_RULES = defineRules<EntryCheckContext, string>([
             continue
           }
           for (const other of earlier) {
-            if (!sameSplit(other, e)) out.add(other.id).add(e.id)
+            if (!linkedPair(other, e)) out.add(other.id).add(e.id)
           }
           earlier.push(e)
         }
@@ -326,7 +338,7 @@ export const ENTRY_RULES = defineRules<EntryCheckContext, string>([
         if (daysFrom(sorted[i].e.date, sorted[j].e.date) > NEAR_DUPLICATE_DAYS)
           break
         const [a, b] = [sorted[i], sorted[j]]
-        if (sameSplit(a.e, b.e)) continue
+        if (linkedPair(a.e, b.e)) continue
         if (
           nearDuplicate({ ...a.e, gross: a.gross }, { ...b.e, gross: b.gross })
         )

@@ -1,12 +1,14 @@
 import { parseIban } from "@/lib/domain/iban"
 import {
   DEFAULT_INVOICE_SETTINGS,
+  PARTY_ROLES,
   type Customer,
   type Invoice,
   type InvoiceLang,
   type InvoiceRow,
   type InvoiceSettings,
   type Party,
+  type PartyRole,
   type Reminder,
   type Seller,
 } from "@/lib/domain/invoice"
@@ -125,9 +127,33 @@ function parseCustomer(value: unknown): Customer | null {
   return {
     ...party,
     id: value.id,
+    /* A register written before suppliers existed held customers only. */
+    role: PARTY_ROLES.includes(value.role as PartyRole)
+      ? (value.role as PartyRole)
+      : "customer",
     language: lang(value.language),
     termDays: days(value.termDays),
+    incomeCat: catId(value.incomeCat),
+    expenseCat: catId(value.expenseCat),
+    vatRate: rate(value.vatRate),
   }
+}
+
+function catId(value: unknown): string | null {
+  return typeof value === "string" && value !== "" && value.length <= 64
+    ? value
+    : null
+}
+
+/** A VAT rate in percent with at most one decimal, or null. */
+function rate(value: unknown): number | null {
+  return typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= 0 &&
+    value < 100 &&
+    Math.round(value * 10) === value * 10
+    ? value
+    : null
 }
 
 export interface ParsedCustomers {

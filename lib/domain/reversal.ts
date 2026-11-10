@@ -1,5 +1,7 @@
+import { calcEntry } from "@/lib/domain/calc"
 import { isVoucherNumber } from "@/lib/domain/voucher"
 import { yearOf } from "@/lib/domain/dates"
+import { paidDate, paidOnFor } from "@/lib/domain/open-items"
 import type { Entry } from "@/lib/domain/types"
 
 /**
@@ -76,6 +78,34 @@ export function reversalLabel(target: Entry, fromYear: number): string {
   return year === fromYear
     ? String(target.voucher)
     : `${target.voucher}/${year}`
+}
+
+/**
+ * What a credit settles when it takes the whole of an open voucher, as a
+ * credit note does for an invoice (§8.27): the voucher it reverses and the
+ * credit itself, both marked paid on the credit's date, so they net to
+ * nothing as open items under either way of counting. Null when the target is
+ * gone or already paid, the credit is paid on another day, is on the other
+ * side, or does not cancel the target's gross amount exactly. A part credit
+ * stays open beside its voucher until the money moves.
+ */
+export function creditSettlement(
+  credit: Entry,
+  entries: readonly Entry[]
+): { target: Entry; credit: Entry } | null {
+  const target = reversedEntry(credit, entries)
+  if (!target || target.type !== credit.type) return null
+  if (target.paidOn !== null) return null
+  const creditPaid = paidDate(credit)
+  if (creditPaid !== null && creditPaid !== credit.date) return null
+  if (calcEntry(credit).gross !== -calcEntry(target).gross) return null
+  const settled: Entry = { ...credit }
+  delete settled.paidOn
+  delete settled.cash
+  return {
+    target: { ...target, paidOn: paidOnFor(target.date, credit.date) },
+    credit: settled,
+  }
 }
 
 /*

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  CUSTOMER_DEFAULTS,
   emptyParty,
   type Customer,
   type Invoice,
@@ -161,6 +162,7 @@ describe("invoices.json", () => {
 
 describe("customers.json", () => {
   const customer = (over: Partial<Customer> = {}): Customer => ({
+    ...CUSTOMER_DEFAULTS,
     ...buyer,
     id: "c1",
     language: "en",

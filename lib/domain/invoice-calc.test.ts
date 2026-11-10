@@ -5,6 +5,7 @@ import type { Entry } from "@/lib/domain/types"
 import { calcEntry } from "@/lib/domain/calc"
 import { createIdFactory } from "@/lib/domain/id"
 import {
+  CUSTOMER_DEFAULTS,
   DEFAULT_INVOICE_SETTINGS,
   emptyParty,
   type Invoice,
@@ -445,11 +446,11 @@ describe("invoicesOfEntries", () => {
   const owned = (id: string, entryIds: string[], customerId: string | null) =>
     ({ ...draft(), id, number: 1001, entryIds, customerId }) as Invoice
   const customer = (id: string) => ({
+    ...CUSTOMER_DEFAULTS,
     ...emptyParty(),
     id,
     name: id,
     language: "fi" as const,
-    termDays: null,
   })
   const entries = [{ id: "a" }, { id: "c" }] as Entry[]
 

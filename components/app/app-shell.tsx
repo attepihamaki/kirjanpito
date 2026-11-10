@@ -13,6 +13,7 @@ import { ScrollMemory } from "@/components/app/scroll-memory"
 import { ExportDialog } from "@/components/export/export-dialog"
 import { BankImportDialog } from "@/components/bank/bank-import-dialog"
 import { CustomerDialog } from "@/components/invoices/customer-dialog"
+import { PartyViewDialog } from "@/components/invoices/party-view-dialog"
 import { InvoiceDialog } from "@/components/invoices/invoice-dialog"
 import { RecurringDialog } from "@/components/ledger/recurring-dialog"
 import { CategoryDialogs } from "@/components/settings/category-dialogs"
@@ -275,6 +276,7 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
         <CategoryDialogs />
         <InvoiceDialog />
         <CustomerDialog />
+        <PartyViewDialog />
         <FigureDialog />
       </SidebarProvider>
     </TooltipProvider>

@@ -238,6 +238,7 @@ export function serializeCsv(
         linkTarget(e.sells),
         e.periodFrom ?? "",
         e.periodTo ?? "",
+        e.party && PARTY_ID.test(e.party) ? e.party : "",
       ]
         .map(quote)
         .join(";")
@@ -592,6 +593,7 @@ export function parseCsv(
       ...euPurchaseColumn(get("eu_purchase"), cat),
       ...shareColumn(get("share"), type, cat),
       ...periodColumns(get("period_from"), get("period_to"), cat),
+      ...partyColumn(get("party")),
     })
 
     const splitRaw = get("split")
@@ -752,6 +754,18 @@ function shareColumn(
 }
 
 /** The buyer's VAT number, kept only on an EU sale (§8.7). */
+/** A register id as `uid` makes them; anything else links to nothing. */
+const PARTY_ID = /^[A-Za-z0-9_-]{1,64}$/
+
+/**
+ * The counterparty's register id (§8.29). It is checked against the register
+ * when shown, not here: a bare CSV has no register beside it.
+ */
+function partyColumn(value: string): { party?: string } {
+  const id = value.trim()
+  return PARTY_ID.test(id) ? { party: id } : {}
+}
+
 function buyerColumn(value: string, cat: Category): { buyerVatId?: string } {
   return value && isEuSaleKind(cat.kind) ? { buyerVatId: value } : {}
 }

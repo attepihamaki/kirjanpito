@@ -88,6 +88,32 @@ describe("persisted preferences and bookkeeping (§12)", () => {
     expect(storedBook()?.state).not.toHaveProperty("theme")
   })
 
+  it("reads a stored customer register from before roles as customers", async () => {
+    localStorage.setItem(
+      BOOK_STORAGE_KEY,
+      JSON.stringify({
+        version: 11,
+        state: {
+          open: true,
+          entries: [],
+          customers: [
+            { id: "c1", name: "Vanha Oy", language: "fi", termDays: 14 },
+          ],
+        },
+      })
+    )
+
+    await useBookStore.persist.rehydrate()
+
+    expect(useBookStore.getState().customers[0]).toMatchObject({
+      role: "customer",
+      termDays: 14,
+      incomeCat: null,
+      expenseCat: null,
+      vatRate: null,
+    })
+  })
+
   it("adds the EU goods and services categories to an older list", async () => {
     const cats = defaultCategories()
       .filter((c) => !c.id.startsWith("300-eu-"))

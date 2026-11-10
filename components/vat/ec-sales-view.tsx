@@ -27,9 +27,10 @@ export function EcSalesView() {
   const entries = useBookStore((s) => s.entries)
   const cats = useBookStore((s) => s.cats)
   const year = useBookStore((s) => s.year)
+  const customers = useBookStore((s) => s.customers)
   const months = React.useMemo(
-    () => ecSales(entries, indexCategories(cats), year),
-    [entries, cats, year]
+    () => ecSales(entries, indexCategories(cats), year, customers),
+    [entries, cats, year, customers]
   )
 
   return (
@@ -69,6 +70,11 @@ export function EcSalesView() {
                         {f.t("vat.ecNoNumber")}
                       </span>
                     )}
+                    {b.names.length ? (
+                      <p className="text-xs text-muted-foreground">
+                        {b.names.join(", ")}
+                      </p>
+                    ) : null}
                     {b.unsorted ? (
                       <p className="text-xs text-muted-foreground">
                         {f.t("vat.ecUnsorted", { a: f.money(b.unsorted) })}

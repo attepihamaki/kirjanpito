@@ -95,10 +95,12 @@ import { viewHelp } from "@/lib/domain/field-help"
 import { canSplitLine, splitSiblings } from "@/lib/domain/split"
 import { sellCandidates } from "@/lib/domain/assets"
 import {
+  creditSettlement,
   reversalCandidates,
   reversalLabel,
   reversingEntries,
 } from "@/lib/domain/reversal"
+import { partyDefaults, partyFitsSide } from "@/lib/domain/parties"
 import { rateMismatch, rateOnDate } from "@/lib/domain/vat-rates"
 import { uid } from "@/lib/domain/id"
 import { periodFromKey, vatPeriods } from "@/lib/domain/vat-deadline"
@@ -157,6 +159,8 @@ interface FormState {
   reverses: string
   /** The id of the purchase this sale of machinery disposes of, "" for none (§8.8). */
   sells: string
+  /** The id of the counterparty in the register, "" for none (§8.29). */
+  party: string
   /** The first and last day the entry covers, "" for none (§6.3). */
   periodFrom: string
   periodTo: string
@@ -226,10 +230,11 @@ function initialForm({
       settles: prefill?.settles ?? "",
       paid: "",
       cash: false,
-      buyerVatId: "",
-      share: "",
-      reverses: "",
+      buyerVatId: prefill?.buyerVatId ?? "",
+      share: prefill?.share ? String(prefill.share) : "",
+      reverses: prefill?.reverses ?? "",
       sells: "",
+      party: prefill?.party ?? "",
       periodFrom: "",
       periodTo: "",
     }
@@ -262,6 +267,7 @@ function initialForm({
     // A copy is a new voucher and reverses nothing until it is told to.
     reverses: mode === "edit" ? (editing.reverses ?? "") : "",
     sells: mode === "edit" ? (editing.sells ?? "") : "",
+    party: editing.party ?? "",
     // A copy is dated afresh, so the days the original covered no longer fit.
     periodFrom: mode === "edit" ? (editing.periodFrom ?? "") : "",
     periodTo: mode === "edit" ? (editing.periodTo ?? "") : "",
@@ -348,6 +354,7 @@ function EntryDialogForm({
   const upsertRecurring = useBookStore((s) => s.upsertRecurring)
   const removeRecurring = useBookStore((s) => s.removeRecurring)
   const vatPeriodKind = useBookStore((s) => s.vatPeriod)
+  const customers = useBookStore((s) => s.customers)
 
   // Captured at mount: the form owns its values from here on.
   const [editing] = React.useState(() =>
@@ -657,6 +664,52 @@ function EntryDialogForm({
   const lock =
     mode === "edit" && editing ? entryLock(editing, marks, catMap) : null
   const euSale = isEuSaleKind(selectedCat?.kind)
+
+  /* The register entries on this side, and the chosen one whatever its side. */
+  const partyOptions = React.useMemo(
+    () =>
+      customers
+        .filter((c) => c.id === form.party || partyFitsSide(c, form.type))
+        .sort((a, b) => f.collator.compare(a.name, b.name))
+        .map((c) => ({
+          value: c.id,
+          label: c.city ? `${c.name} · ${c.city}` : c.name,
+          haystack: [c.name, c.city, c.vatId].join(" ").toLowerCase(),
+        })),
+    [customers, form.party, form.type, f.collator]
+  )
+
+  /**
+   * Picking a party fills what it knows (§8.29): its category and rate for
+   * this side, the description while it is empty, and the buyer's VAT number
+   * on an EU sale. A rate somebody chose is kept.
+   */
+  const pickParty = (id: string) => {
+    const party = customers.find((c) => c.id === id)
+    if (!party) {
+      update({ party: "" })
+      return
+    }
+    const defaults = partyDefaults(party, form.type, catMap)
+    const catId = defaults?.catId ?? form.catId
+    const cat = cats.find((c) => c.id === catId)
+    update({
+      party: id,
+      ...(form.description.trim() ? {} : { description: party.name }),
+      ...(defaults
+        ? {
+            catId,
+            vatRate:
+              keepRate.current && !cat?.euPurchase
+                ? form.vatRate
+                : rateOnDate(defaults.vatRate, form.date),
+          }
+        : {}),
+      ...(isEuSaleKind(cat?.kind) && !form.buyerVatId.trim() && party.vatId
+        ? { buyerVatId: party.vatId }
+        : {}),
+    })
+  }
   const euPurchase = selectedCat?.euPurchase
   const unpayable = canBeUnpaid(
     selectedCat && LINE_BY_KEY.get(selectedCat.line)
@@ -896,6 +949,10 @@ function EntryDialogForm({
       ...(assetSale && form.sells && entries.some((e) => e.id === form.sells)
         ? { sells: form.sells }
         : {}),
+      // A party since removed from the register is let go.
+      ...(form.party && customers.some((c) => c.id === form.party)
+        ? { party: form.party }
+        : {}),
       // A part stays a part of its receipt; a copy is a new voucher of its own.
       ...(mode === "edit" && editing?.split ? { split: editing.split } : {}),
     }
@@ -931,12 +988,30 @@ function EntryDialogForm({
     }
 
     const entries = useBookStore.getState().entries
-    const after = entries.some((e) => e.id === entry.id)
-      ? entries.map((e) => (e.id === entry.id ? entry : e))
-      : [...entries, entry]
+    /*
+     * A new link to an open voucher that this credit cancels in full settles
+     * both (§8.4), unless that would move a payment into a filed Form 5 year.
+     */
+    const newLink =
+      entry.reverses !== undefined &&
+      !(mode === "edit" && editing?.reverses === entry.reverses)
+    const settled = newLink ? creditSettlement(entry, entries) : null
+    const settles =
+      settled &&
+      !paidChangeHitsForm5(null, paidDate(settled.target), marks) &&
+      !paidChangeHitsForm5(paidDate(entry), paidDate(settled.credit), marks)
+        ? settled
+        : null
+    const saved = settles?.credit ?? entry
+    const after = (
+      entries.some((e) => e.id === saved.id)
+        ? entries.map((e) => (e.id === saved.id ? saved : e))
+        : [...entries, saved]
+    ).map((e) => (settles && e.id === settles.target.id ? settles.target : e))
     if (!(await confirmFiledChange(after))) return
 
-    upsertEntry(entry)
+    upsertEntry(saved)
+    if (settles) upsertEntry(settles.target)
     /*
      * The template follows the entry it was made from, found by the entry as
      * it was before this edit, so renaming the entry does not leave a second
@@ -961,7 +1036,15 @@ function EntryDialogForm({
     // §8.5: saving an entry from another year switches the selected year.
     if (yearOf(entry.date) !== year) setYear(yearOf(entry.date))
     if (mode === "edit" && editing) offerEditUndo(ctx, editing, recurring)
-    else toast.add({ title: f.t("entry.saved") })
+    else
+      toast.add({
+        title: settles
+          ? f.t("entry.creditSettled", {
+              n: settles.target.voucher ?? "",
+              d: f.date(saved.date),
+            })
+          : f.t("entry.saved"),
+      })
 
     if (andNew) {
       // Keep the date, reset the rest.
@@ -979,6 +1062,7 @@ function EntryDialogForm({
         share: "",
         reverses: "",
         sells: "",
+        party: "",
       }
       keepRate.current = false
       keepShare.current = false
@@ -1204,6 +1288,27 @@ function EntryDialogForm({
                       onChange={(e) => update({ description: e.target.value })}
                     />
                   </Field>
+
+                  {partyOptions.length ? (
+                    <Field>
+                      <div className="flex items-center gap-1">
+                        <FieldLabel>{f.t("entry.party")}</FieldLabel>
+                        <InfoPopover label={f.t("entry.partyInfo")}>
+                          {f.t("entry.partyHint")}
+                        </InfoPopover>
+                      </div>
+                      <VoucherPicker
+                        options={partyOptions}
+                        value={form.party}
+                        onChange={pickParty}
+                        label={f.t("entry.party")}
+                        noneLabel={f.t("entry.partyNone")}
+                        searchPlaceholder={f.t("entry.partySearch")}
+                        emptyText={f.t("entry.partyEmpty")}
+                        moreText={(n) => f.t("entry.partyMore", { n })}
+                      />
+                    </Field>
+                  ) : null}
 
                   <Field data-invalid={invalid("catId")}>
                     <div className="flex items-center gap-1">
@@ -1728,31 +1833,37 @@ function EntryDialogForm({
                 side="top"
                 className="min-w-48"
               >
-                {lock ? (
-                  <DropdownMenuItem
-                    onClick={() =>
-                      openDialog({
-                        kind: "entry",
-                        mode: "new",
-                        prefill: {
-                          date: todayIso(),
-                          description: f.t("entry.correctionOf", {
-                            n: editing.voucher ?? "",
-                            x: editing.description,
-                          }),
-                          type: editing.type,
-                          catId: editing.catId,
-                          amount: -editing.amount,
-                          vatRate: editing.vatRate,
-                          amountMode: editing.amountMode,
-                        },
-                      })
-                    }
-                  >
-                    <Undo2Icon />
-                    {f.t("entry.correction")}
-                  </DropdownMenuItem>
-                ) : null}
+                <DropdownMenuItem
+                  onClick={async () => {
+                    // A credit is of the saved voucher, not of what is typed here.
+                    if (!lock && !(await confirmDiscard())) return
+                    openDialog({
+                      kind: "entry",
+                      mode: "new",
+                      prefill: {
+                        date: todayIso(),
+                        description: f.t("entry.correctionOf", {
+                          n: editing.voucher ?? "",
+                          x: editing.description,
+                        }),
+                        type: editing.type,
+                        catId: editing.catId,
+                        amount: -editing.amount,
+                        vatRate: editing.vatRate,
+                        amountMode: editing.amountMode,
+                        reverses: editing.id,
+                        ...(editing.party ? { party: editing.party } : {}),
+                        ...(editing.buyerVatId
+                          ? { buyerVatId: editing.buyerVatId }
+                          : {}),
+                        ...(editing.share ? { share: editing.share } : {}),
+                      },
+                    })
+                  }}
+                >
+                  <Undo2Icon />
+                  {f.t("entry.correction")}
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={async () => {
                     // A copy is of the saved entry, not of what is typed here.

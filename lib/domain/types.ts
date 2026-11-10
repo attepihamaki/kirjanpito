@@ -156,6 +156,12 @@ export interface Entry {
    */
   reverses?: string
   /**
+   * The `id` of the counterparty in the register (§8.29) this voucher is with.
+   * A reference only: the description stays the text the user typed, and an
+   * id no longer in the register means no link.
+   */
+  party?: string
+  /**
    * The `id` of the purchase this sale of machinery or equipment disposes of
    * (§8.8). A reference for the asset list only: the pool is still one balance
    * and no figure reads it. An id no longer in the book means no link.

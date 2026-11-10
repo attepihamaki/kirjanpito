@@ -13,7 +13,9 @@ import type { AssetOpening } from "@/lib/domain/assets"
 import type { BankBalance } from "@/lib/domain/bank-balance"
 import {
   DEFAULT_INVOICE_SETTINGS,
+  withPartyFields,
   type Customer,
+  type PartyRole,
   type Invoice,
   type InvoiceSettings,
 } from "@/lib/domain/invoice"
@@ -166,6 +168,10 @@ export type EntryPrefill = Partial<
     | "amountMode"
     | "settles"
     | "atts"
+    | "reverses"
+    | "party"
+    | "buyerVatId"
+    | "share"
   >
 >
 
@@ -243,8 +249,10 @@ export type DialogState =
   | { kind: "bank-import"; text: string; fileName: string }
   /** Write or read an invoice; `null` starts a new draft (§8.27). */
   | { kind: "invoice"; invoiceId: string | null }
-  /** Add or change a customer; `null` adds one (§8.27). */
-  | { kind: "customer"; customerId: string | null }
+  /** Add or change a counterparty; `null` adds one with `role` (§8.27, §8.29). */
+  | { kind: "customer"; customerId: string | null; role?: PartyRole }
+  /** One counterparty's vouchers and open items (§8.29). */
+  | { kind: "party"; partyId: string }
   /** Add a custom category (§8.10). */
   | { kind: "category-add" }
   /** Change a custom category's name, line or default VAT (§8.10). */
@@ -1655,6 +1663,10 @@ export const useBookStore = create<BookStore>()(
           ledgerHidden: normalizeHiddenColumns(stored.ledgerHidden),
           payMonths: { ...NO_PAY_MONTHS, ...stored.payMonths },
           taxPayment: { ...NO_TAX_PAYMENT, ...stored.taxPayment },
+          // A register stored before roles holds customers only (§8.29).
+          customers: (stored.customers ?? current.customers).map(
+            withPartyFields
+          ),
         }
       },
       migrate: (persisted) => {

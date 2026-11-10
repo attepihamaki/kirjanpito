@@ -12,6 +12,7 @@ import { getReceipt } from "@/lib/browser/receipt-store"
 import { defaultCategories } from "@/lib/domain/accounts"
 import { csvHeaderLine } from "@/lib/domain/csv-header"
 import {
+  CUSTOMER_DEFAULTS,
   DEFAULT_INVOICE_SETTINGS,
   emptyParty,
   type Customer,
@@ -196,10 +197,10 @@ describe("saving back to the opened file", () => {
       credits: null,
     }
     const customer: Customer = {
+      ...CUSTOMER_DEFAULTS,
       ...party,
       id: "c1",
       language: "fi",
-      termDays: null,
     }
     useBookStore.getState().setInvoices([invoice])
     useBookStore.getState().setCustomers([customer])

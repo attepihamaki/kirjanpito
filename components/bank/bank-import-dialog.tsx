@@ -251,6 +251,7 @@ function Review({
     proposeForRows(result.rows, {
       entries,
       invoices,
+      parties: useBookStore.getState().customers,
       cats: catMap,
       rules: categoryRules,
       seen: new Set(bankSeen),
@@ -342,6 +343,7 @@ function Review({
           vatRate,
           amountMode: "gross",
           ...(settles ? { settles } : {}),
+          ...(draft?.party ? { party: draft.party } : {}),
         })
       }
     })

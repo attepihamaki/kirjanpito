@@ -6,10 +6,11 @@ import {
   type CategoryRule,
 } from "@/lib/domain/category-rules"
 import { canBeUnpaid, paidDate } from "@/lib/domain/open-items"
-import type { Invoice } from "@/lib/domain/invoice"
+import type { Customer, Invoice } from "@/lib/domain/invoice"
 import { compactReference } from "@/lib/domain/invoice-reference"
 import { openEntries } from "@/lib/domain/invoice-status"
 import { hintCategory } from "@/lib/domain/invoice-text"
+import { partyDefaults, partyFitsSide } from "@/lib/domain/parties"
 import { periodFromKey } from "@/lib/domain/vat-deadline"
 import type { UnsettledDue } from "@/lib/domain/vat-settlement"
 import type { CategoryMap, Cents, Entry, EntryType } from "@/lib/domain/types"
@@ -58,6 +59,8 @@ export interface NewEntryDraft {
   settles?: string
   /** True when `catId` is a guess from the words alone, not a rule or history. */
   guessed?: boolean
+  /** The register entry the counterparty is (§8.29). */
+  party?: string
 }
 
 /* -------------------------------------------------------------------------
@@ -154,6 +157,8 @@ export interface BankContext {
   dues?: readonly UnsettledDue[]
   /** The sales invoices, matched to a row by their reference number (§8.27). */
   invoices?: readonly Invoice[]
+  /** The counterparty register (§8.29), tried after the rules and before the history. */
+  parties?: readonly Customer[]
   /** The fingerprints of rows reviewed in earlier imports (`rowFingerprints`). */
   seen?: ReadonlySet<string>
 }
@@ -337,10 +342,12 @@ function draftFor(
       settles: settlement.key,
     }
   }
+  const party = registerParty(row.counterparty, type, ctx)
   const hit = findCategoryRule(ctx.rules ?? [], parts.join(" "), ctx.cats, type)
   const known = hit
     ? { catId: hit.catId, vatRate: hit.vatRate }
-    : suggestFromHistory(row.counterparty, type, ctx)
+    : ((party && partyDefaults(party, type, ctx.cats)) ??
+      suggestFromHistory(row.counterparty, type, ctx))
   const guessed = known
     ? null
     : suggestFromWords(parts.join(" "), type, ctx.cats)
@@ -351,7 +358,28 @@ function draftFor(
     catId: known?.catId ?? guessed,
     vatRate: known?.vatRate ?? null,
     ...(guessed ? { guessed: true } : {}),
+    ...(party ? { party: party.id } : {}),
   }
+}
+
+/**
+ * The register entry a statement row's counterparty is (§8.29): one on the
+ * row's side whose name the counterparty contains, the longest name winning
+ * so "Mäkinen Rakennus" beats "Mäkinen".
+ */
+export function registerParty(
+  counterparty: string,
+  type: EntryType,
+  ctx: Pick<BankContext, "parties">
+): Customer | undefined {
+  if (!counterparty.trim()) return undefined
+  let best: Customer | undefined
+  for (const p of ctx.parties ?? []) {
+    if (!partyFitsSide(p, type) || !mentions(counterparty, p.name)) continue
+    if (!best || normalizeName(p.name).length > normalizeName(best.name).length)
+      best = p
+  }
+  return best
 }
 
 /**

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { defaultCategories } from "@/lib/domain/accounts"
 import { parseCsv, serializeCsv } from "@/lib/domain/csv"
 import {
+  creditSettlement,
   parseReversalKey,
   reversalCandidates,
   reversalKey,
@@ -144,5 +145,56 @@ describe("the CSV cell", () => {
       code: "reverses-dissolved",
       rows: 4,
     })
+  })
+})
+
+describe("creditSettlement", () => {
+  const invoice = entry("inv", { paidOn: null })
+  const credit = (over: Partial<Entry> = {}) =>
+    entry("cr", {
+      voucher: 2,
+      date: "2026-03-20",
+      amount: -10000,
+      reverses: "inv",
+      paidOn: null,
+      ...over,
+    })
+
+  it("marks an open voucher and its full credit paid on the credit's date", () => {
+    const result = creditSettlement(credit(), [invoice])
+    expect(result?.target.paidOn).toBe("2026-03-20")
+    expect(result?.credit.paidOn).toBeUndefined()
+  })
+
+  it("also settles a credit saved as paid on its own date", () => {
+    expect(creditSettlement(credit({ paidOn: undefined }), [invoice])).not.toBe(
+      null
+    )
+  })
+
+  it("leaves a part credit open", () => {
+    expect(creditSettlement(credit({ amount: -4000 }), [invoice])).toBeNull()
+  })
+
+  it("leaves a paid voucher alone", () => {
+    expect(
+      creditSettlement(credit(), [{ ...invoice, paidOn: undefined }])
+    ).toBeNull()
+  })
+
+  it("leaves a credit paid on another day alone", () => {
+    expect(
+      creditSettlement(credit({ paidOn: "2026-04-01" }), [invoice])
+    ).toBeNull()
+  })
+
+  it("needs the same side and a target still in the book", () => {
+    expect(creditSettlement(credit({ type: "expense" }), [invoice])).toBeNull()
+    expect(creditSettlement(credit(), [])).toBeNull()
+  })
+
+  it("compares gross amounts, so a net credit can cancel a gross voucher", () => {
+    const net = credit({ amountMode: "net", amount: -7968 })
+    expect(creditSettlement(net, [invoice])).not.toBeNull()
   })
 })

@@ -62,6 +62,7 @@ describe("dictionary integrity", () => {
       "newYear",
       "notFound",
       "overview",
+      "party",
       "privacy",
       "receipt",
       "recurring",

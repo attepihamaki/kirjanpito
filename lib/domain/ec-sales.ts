@@ -1,6 +1,8 @@
 import { isEuSaleKind } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
 import { yearOf } from "@/lib/domain/dates"
+import type { Customer } from "@/lib/domain/invoice"
+import { partyOf } from "@/lib/domain/parties"
 import { nextWorkingDay } from "@/lib/domain/vat-deadline"
 import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
 
@@ -15,6 +17,8 @@ import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
 export interface EcBuyer {
   /** Normalised VAT number, or null for entries that have none. */
   vatId: string | null
+  /** The register's names for this number (§8.29), in order of first sale. */
+  names: string[]
   goods: Cents
   services: Cents
   /** On the retired category, which does not say goods or services (§5). */
@@ -47,11 +51,23 @@ function isEcSale(e: Entry, cats: CategoryMap): boolean {
   return e.type === "income" && isEuSaleKind(cats.get(e.catId)?.kind)
 }
 
+/**
+ * The VAT number a sale is listed under: the one on the entry, or else its
+ * party's in the register (§8.29), so a number typed once serves every sale.
+ */
+function buyerVatId(e: Entry, parties: readonly Customer[]): string | null {
+  const own = e.buyerVatId ? normalizeVatId(e.buyerVatId) : ""
+  if (own) return own
+  const party = normalizeVatId(partyOf(e, parties)?.vatId ?? "")
+  return party || null
+}
+
 /** The year's list, by month, each month's buyers in number order with the unknown last. */
 export function ecSales(
   entries: readonly Entry[],
   cats: CategoryMap,
-  year: number
+  year: number,
+  parties: readonly Customer[] = []
 ): EcMonth[] {
   const months = new Map<string, Map<string, EcBuyer>>()
   for (const e of entries) {
@@ -59,12 +75,20 @@ export function ecSales(
     const key = e.date.slice(0, 7)
     const buyers = months.get(key) ?? new Map<string, EcBuyer>()
     months.set(key, buyers)
-    const vatId = e.buyerVatId ? normalizeVatId(e.buyerVatId) : null
+    const vatId = buyerVatId(e, parties)
     const id = vatId ?? ""
     const row =
       buyers.get(id) ??
-      ({ vatId, goods: 0, services: 0, unsorted: 0 } satisfies EcBuyer)
+      ({
+        vatId,
+        names: [],
+        goods: 0,
+        services: 0,
+        unsorted: 0,
+      } satisfies EcBuyer)
     buyers.set(id, row)
+    const name = partyOf(e, parties)?.name
+    if (name && !row.names.includes(name)) row.names.push(name)
     const { net } = calcEntry(e)
     const kind = cats.get(e.catId)?.kind
     if (kind === "euGoods") row.goods += net
