@@ -1,4 +1,5 @@
 import type { InvoiceLang } from "@/lib/domain/invoice"
+import type { VatNote } from "@/lib/domain/invoice-vat"
 
 /**
  * The words printed on an invoice (§8.27). They follow the invoice's own
@@ -20,8 +21,11 @@ export interface InvoiceLabels {
   description: string
   quantity: string
   unitPrice: string
+  /** The unit price heading of a seller outside the VAT register, which says nothing of VAT. */
+  unitPricePlain: string
   vatRate: string
   amount: string
+  amountPlain: string
   vatBase: string
   vatAmount: string
   netTotal: string
@@ -44,6 +48,8 @@ export interface InvoiceLabels {
   quoteValid: (date: string) => string
   /** A quote's page title, e.g. "Tarjous 3". */
   quoteTitle: (number: number) => string
+  /** The note that stands in for VAT on a zero-rated sale or a seller outside the register (`invoice-vat.ts`). */
+  vatNote: Record<VatNote, string>
 }
 
 const LABELS: Record<InvoiceLang, InvoiceLabels> = {
@@ -63,8 +69,10 @@ const LABELS: Record<InvoiceLang, InvoiceLabels> = {
     description: "Kuvaus",
     quantity: "Määrä",
     unitPrice: "À-hinta (alv 0 %)",
+    unitPricePlain: "À-hinta",
     vatRate: "ALV %",
     amount: "Yhteensä (alv 0 %)",
+    amountPlain: "Yhteensä",
     vatBase: "Veroton",
     vatAmount: "Alv",
     netTotal: "Veroton yhteensä",
@@ -81,6 +89,14 @@ const LABELS: Record<InvoiceLang, InvoiceLabels> = {
     validUntil: "Voimassa asti",
     quoteTotal: "Yhteensä",
     quoteValid: (d) => `Tarjous on voimassa ${d} asti.`,
+    vatNote: {
+      euGoods: "ALV 0 %, yhteisömyynti (AVL 72 a §).",
+      euServices: "Käännetty verovelvollisuus, arvonlisäverodirektiivi 44 art.",
+      nonEu: "ALV 0 %, veroton myynti EU:n ulkopuolelle.",
+      reverse: "Käännetty verovelvollisuus.",
+      unregistered:
+        "Myyjä ei ole arvonlisäverovelvollinen: vähäinen toiminta (AVL 3 §).",
+    },
     quoteTitle: (n) => `Tarjous ${n}`,
   },
   en: {
@@ -99,8 +115,10 @@ const LABELS: Record<InvoiceLang, InvoiceLabels> = {
     description: "Description",
     quantity: "Quantity",
     unitPrice: "Unit price (excl. VAT)",
+    unitPricePlain: "Unit price",
     vatRate: "VAT %",
     amount: "Total (excl. VAT)",
+    amountPlain: "Total",
     vatBase: "Net",
     vatAmount: "VAT",
     netTotal: "Total excl. VAT",
@@ -118,6 +136,14 @@ const LABELS: Record<InvoiceLang, InvoiceLabels> = {
     validUntil: "Valid until",
     quoteTotal: "Total",
     quoteValid: (d) => `This quotation is valid until ${d}.`,
+    vatNote: {
+      euGoods: "VAT 0 %, intra-Community supply (VAT Directive art. 138).",
+      euServices: "Reverse charge, VAT Directive art. 44.",
+      nonEu: "VAT 0 %, exempt sale outside the EU.",
+      reverse: "Reverse charge.",
+      unregistered:
+        "The seller is not liable for VAT: small-scale business (Finnish VAT Act, section 3).",
+    },
     quoteTitle: (n) => `Quotation ${n}`,
   },
 }

@@ -1,4 +1,4 @@
-import { lineOf } from "@/lib/domain/accounts"
+import { isEuSaleKind, lineOf } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
 import type {
   Customer,
@@ -9,16 +9,25 @@ import type {
   Seller,
 } from "@/lib/domain/invoice"
 import { finnishReference } from "@/lib/domain/invoice-reference"
+import {
+  isInvoiceSaleKind,
+  rowSaleKind,
+  vatProblems,
+  type VatProblem,
+} from "@/lib/domain/invoice-vat"
 import { roundCents } from "@/lib/domain/money"
 import type { Category, Cents, Entry } from "@/lib/domain/types"
 
 /**
- * Whether an invoice row can book on `cat`. Only a domestic income category
- * fits: EU and reverse-charge sales need more than an invoice carries.
+ * Whether an invoice row can book on `cat`: an enabled income category whose
+ * kind of sale says which VAT note the invoice prints (`invoice-vat.ts`). The
+ * retired "Myynti – EU" does not say whether goods or services were sold.
  */
 export function isInvoiceCategory(cat: Category): boolean {
   return (
-    cat.enabled && lineOf(cat)?.side === "income" && cat.kind === "domestic"
+    cat.enabled &&
+    lineOf(cat)?.side === "income" &&
+    isInvoiceSaleKind(cat.kind ?? "domestic")
   )
 }
 
@@ -140,6 +149,7 @@ export type IssueProblem =
   | "dueBeforeDate"
   | "creditOriginal"
   | "creditTooLarge"
+  | VatProblem
 
 /** The business details outside the invoice settings that an invoice needs. */
 export interface BusinessDetails {
@@ -209,6 +219,7 @@ export function issueProblems(
     return cat !== undefined && isInvoiceCategory(cat)
   }
   if (invoice.rows.some((r) => !usable(r.catId))) problems.push("badCategory")
+  problems.push(...vatProblems(invoice.rows, customer, settings.vatRegistered))
   const gross = invoiceTotals(invoice.rows).gross
   if (invoice.rows.length > 0 && (credit ? gross >= 0 : gross <= 0))
     problems.push("noTotal")
@@ -230,7 +241,10 @@ const CREDIT_WORD: Record<InvoiceLang, string> = {
 
 /** The seller as the settings describe it now, as an issued invoice or a quote prints it. */
 export function sellerOf(
-  settings: InvoiceSettings,
+  settings: Pick<
+    InvoiceSettings,
+    "street" | "postcode" | "city" | "email" | "iban" | "vatRegistered"
+  >,
   business: BusinessDetails
 ): Seller {
   return {
@@ -239,11 +253,15 @@ export function sellerOf(
     postcode: settings.postcode,
     city: settings.city,
     country: "FI",
-    vatId: `FI${(business.businessId ?? "").replace("-", "")}`,
+    /* A seller outside the VAT register has a business ID but no VAT number. */
+    vatId: settings.vatRegistered
+      ? `FI${(business.businessId ?? "").replace("-", "")}`
+      : "",
     email: settings.email,
     businessId: business.businessId ?? "",
     phone: business.phone ?? "",
     iban: settings.iban,
+    vatRegistered: settings.vatRegistered,
   }
 }
 
@@ -292,6 +310,8 @@ export function buildIssue(input: IssueInput): IssueResult {
   const word = (credit ? CREDIT_WORD : WORD)[invoice.language]
   const description = `${word} ${number} – ${invoice.customer.name.trim()}`
   const originals = input.originalEntries ?? []
+  /* An EU sale carries the buyer's number, which the EC Sales List reads (§8.7). */
+  const buyerVatId = invoice.customer.vatId.replace(/\s/g, "").toUpperCase()
   const entries: Entry[] = groups.map((group) => {
     const target = credit
       ? (originals.find(
@@ -310,6 +330,9 @@ export function buildIssue(input: IssueInput): IssueResult {
       paidOn: credit && input.settled ? undefined : null,
       ...(split ? { split } : {}),
       ...(target ? { reverses: target.id } : {}),
+      ...(buyerVatId && isEuSaleKind(rowSaleKind(group.catId))
+        ? { buyerVatId }
+        : {}),
     }
   })
   const issued: Invoice = {

@@ -5,7 +5,11 @@ import { EMPTY_YEAR_END } from "@/lib/domain/form5-balance"
 import { indexCategories, type Entry } from "@/lib/domain/types"
 import {
   canLockYear,
+  topicFindings,
+  topicStatus,
   yearEndFindings,
+  yearWideFindings,
+  YEAR_END_TOPICS,
   type YearEndInput,
 } from "@/lib/domain/year-end"
 
@@ -210,5 +214,33 @@ describe("stock rules (§8.28)", () => {
     const rules = ids({ openingStock: 5 })
     expect(rules).not.toContain("stockTooHigh")
     expect(rules).not.toContain("stockRows")
+  })
+})
+
+describe("the year-end walk-through (§8.8)", () => {
+  it("puts every finding in one topic, or above them all when the year runs", () => {
+    const items = yearEndFindings(
+      input({
+        year: 2026,
+        today: "2026-10-04",
+        dirty: true,
+        yearEnd: undefined,
+      })
+    )
+    const placed = YEAR_END_TOPICS.flatMap((t) => topicFindings(items, t))
+    expect(placed.length + yearWideFindings(items).length).toBe(items.length)
+    expect(yearWideFindings(items).map((i) => i.ruleId)).toEqual([
+      "yearOngoing",
+    ])
+  })
+
+  it("rates a topic by its worst finding, and info alone as done enough", () => {
+    const items = yearEndFindings(
+      input({ dirty: true, vatFiled: {}, yearEnd: undefined })
+    )
+    expect(topicStatus(items, "entries")).toBe("warn")
+    expect(topicStatus(items, "vat")).toBe("warn")
+    expect(topicStatus(items, "balance")).toBe("info")
+    expect(topicStatus(items, "assets")).toBe("clear")
   })
 })

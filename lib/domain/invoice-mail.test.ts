@@ -9,6 +9,7 @@ const seller: Seller = {
   businessId: "0112038-9",
   phone: "",
   iban: "FI2112345600000785",
+  vatRegistered: true,
 }
 
 const invoice = (over: Partial<Invoice> = {}): Invoice => ({

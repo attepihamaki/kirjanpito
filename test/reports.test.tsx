@@ -284,7 +284,7 @@ describe("YearEndDialog", () => {
   })
   afterEach(() => vi.useRealTimers())
 
-  it("opens on the checks and lists what stands in the way", () => {
+  it("walks through the topics, each with its own findings", () => {
     openDialog()
     expect(
       screen.getByText("Vuoden 2026 ilmoitus OmaVeroon")
@@ -292,8 +292,13 @@ describe("YearEndDialog", () => {
     // The sample year has entries without a receipt, and no year-end figures.
     expect(screen.getByText(/ilman liitettä/i)).toBeInTheDocument()
     expect(
+      screen.queryByText("Vuoden lopun varat ja velat puuttuvat")
+    ).toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: /Varat ja velat$/ }))
+    expect(
       screen.getByText("Vuoden lopun varat ja velat puuttuvat")
     ).toBeInTheDocument()
+    expect(screen.queryByText(/ilman liitettä/i)).toBeNull()
   })
 
   it("lists the fields in the form's order and copies an amount by its code", async () => {

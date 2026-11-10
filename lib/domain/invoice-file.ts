@@ -119,6 +119,7 @@ export function parseInvoiceSettings(value: unknown): InvoiceSettings {
     products: list(value.products, parseProduct),
     recurring: list(value.recurring, parseRecurringInvoice),
     quotes: list(value.quotes, parseQuote),
+    vatRegistered: value.vatRegistered !== false,
   }
 }
 
@@ -332,6 +333,7 @@ function parseSeller(value: unknown): Seller | null {
     businessId: text(value.businessId, 20),
     phone: text(value.phone, 40),
     iban: parseIban(text(value.iban, 40)) ?? "",
+    vatRegistered: value.vatRegistered !== false,
   }
 }
 

@@ -161,6 +161,7 @@ describe("InvoiceList", () => {
             businessId: "",
             phone: "",
             iban: "",
+            vatRegistered: true,
           },
         }),
         invoice({

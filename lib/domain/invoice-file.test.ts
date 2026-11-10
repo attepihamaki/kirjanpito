@@ -22,6 +22,7 @@ const seller: Seller = {
   businessId: "0112038-9",
   phone: "09 1234567",
   iban: "FI2112345600000785",
+  vatRegistered: true,
 }
 
 function draft(over: Partial<Invoice> = {}): Invoice {

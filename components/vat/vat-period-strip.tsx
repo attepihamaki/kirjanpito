@@ -2,6 +2,7 @@
 
 import { useFormatters } from "@/components/lang-provider"
 import { type VatPeriod, type VatPeriodStatus } from "@/lib/domain/vat-deadline"
+import { periodStatusText } from "@/lib/i18n/period-label"
 import { cn } from "@/lib/utils"
 
 const DOT: Record<VatPeriodStatus, string> = {
@@ -38,19 +39,7 @@ export function VatPeriodStrip({
       : f.t("vat.quarterShort", { q: p.index })
 
   const statusText = (s: VatPeriodStatus, p: VatPeriod) =>
-    s === "filed"
-      ? f.t("vat.filed")
-      : s === "overdue"
-        ? f.t("vat.overdue")
-        : s === "due"
-          ? f.t("vat.dueShort", { d: f.date(p.due) })
-          : s === "open"
-            ? f.t("vat.running")
-            : s === "before"
-              ? f.t("vat.beforeStart")
-              : s === "ended"
-                ? f.t("vat.afterEnd")
-                : f.t("vat.upcoming")
+    periodStatusText(f, s, p)
 
   return (
     <div

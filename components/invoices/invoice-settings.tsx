@@ -5,6 +5,7 @@ import * as React from "react"
 import { EuroInput } from "@/components/common/euro-input"
 import { Panel } from "@/components/common/panel"
 import { useFormatters } from "@/components/lang-provider"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Field,
   FieldDescription,
@@ -171,6 +172,22 @@ export function InvoiceSettingsForm() {
             />
           </Field>
         </div>
+        <Field>
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <Checkbox
+              checked={settings.vatRegistered}
+              onCheckedChange={(v) => save({ vatRegistered: v === true })}
+            />
+            {f.t("invoice.settingsVatRegistered")}
+          </label>
+          <FieldDescription>
+            {f.t(
+              settings.vatRegistered
+                ? "invoice.settingsVatRegisteredHint"
+                : "invoice.settingsVatUnregisteredHint"
+            )}
+          </FieldDescription>
+        </Field>
         <Field>
           <FieldLabel htmlFor={ids.email}>
             {f.t("invoice.settingsEmail")}

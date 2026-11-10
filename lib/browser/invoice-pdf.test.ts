@@ -26,7 +26,11 @@ const row = (n: number, over: Partial<InvoiceRow> = {}): InvoiceRow => ({
   ...over,
 })
 
-function issued(rows: InvoiceRow[], over: Partial<Invoice> = {}): Invoice {
+function issued(
+  rows: InvoiceRow[],
+  over: Partial<Invoice> = {},
+  vatRegistered = true
+): Invoice {
   const draft: Invoice = {
     id: "i1",
     number: null,
@@ -61,6 +65,7 @@ function issued(rows: InvoiceRow[], over: Partial<Invoice> = {}): Invoice {
       postcode: "00100",
       city: "Helsinki",
       iban: "FI2112345600000785",
+      vatRegistered,
     },
     business: { name: "Oma Yritys", businessId: "0112038-9", phone: null },
     invoices: [],
@@ -120,6 +125,23 @@ describe("renderInvoicePdf", () => {
     expect(await pages(bytes)).toBe(1)
     /* No barcode or QR code to draw, so the file is smaller. */
     expect(bytes.length).toBeLessThan(plain.length)
+  })
+
+  it("draws zero-rated rows with their notes, and an unregistered seller's invoice without VAT", async () => {
+    const abroad = { ...emptyParty(), name: "Köpare AB", country: "SE" }
+    const eu = issued(
+      [
+        row(1, { catId: "300-eu-goods", vatRate: 0 }),
+        row(2, { catId: "300-eu-services", vatRate: 0 }),
+        row(3, { catId: "300-other", vatRate: 0 }),
+        row(4, { catId: "300-reverse", vatRate: 0 }),
+      ],
+      { customer: { ...abroad, vatId: "SE556677889901" }, language: "en" }
+    )
+    expect(await pages(await renderInvoicePdf(eu))).toBe(1)
+    const small = issued([row(1, { vatRate: 0 })], {}, false)
+    expect(small.seller?.vatId).toBe("")
+    expect(await pages(await renderInvoicePdf(small))).toBe(1)
   })
 
   it("refuses a draft", async () => {

@@ -199,7 +199,7 @@ describe("issueProblems", () => {
   it.each([
     ["an unknown category", "nope"],
     ["an expense category", "333"],
-    ["an EU sales category", "300-eu-goods"],
+    ["the retired EU sales category", "300-eu"],
   ])("refuses %s", (_name, catId) => {
     expect(problems(draft({ rows: [row({ catId })] }))).toContain("badCategory")
   })
@@ -220,6 +220,108 @@ describe("issueProblems", () => {
     expect(problems(draft({ dueDate: "2026-10-31" }))).toEqual([
       "dueBeforeDate",
     ])
+  })
+})
+
+describe("zero-rated and unregistered invoices", () => {
+  const abroad = {
+    ...draft().customer,
+    country: "SE",
+    vatId: "SE556677889901",
+  }
+  const problems = (invoice: Invoice, s: InvoiceSettings = settings) =>
+    issueProblems(invoice, s, business, cats)
+
+  it.each([
+    ["EU goods", "300-eu-goods"],
+    ["EU services", "300-eu-services"],
+  ])("issues %s to an EU buyer with a VAT number at rate 0", (_n, catId) => {
+    const invoice = draft({
+      customer: abroad,
+      rows: [row({ catId, vatRate: 0 })],
+    })
+    expect(problems(invoice)).toEqual([])
+  })
+
+  it("wants rate 0, the buyer's VAT number and a buyer abroad on an EU sale", () => {
+    const invoice = draft({ rows: [row({ catId: "300-eu-services" })] })
+    expect(problems(invoice)).toEqual([
+      "zeroRateVat",
+      "buyerVatId",
+      "buyerCountry",
+    ])
+  })
+
+  it("sells outside the EU without a VAT number, and reverse charge at home with one", () => {
+    expect(
+      problems(
+        draft({
+          customer: { ...abroad, country: "US", vatId: "" },
+          rows: [row({ catId: "300-other", vatRate: 0 })],
+        })
+      )
+    ).toEqual([])
+    const reverse = draft({ rows: [row({ catId: "300-reverse", vatRate: 0 })] })
+    expect(problems(reverse)).toEqual(["buyerVatId"])
+    expect(
+      problems({
+        ...reverse,
+        customer: { ...reverse.customer, vatId: "FI01120389" },
+      })
+    ).toEqual([])
+  })
+
+  it("lets a seller outside the VAT register sell domestically at rate 0 only", () => {
+    const unregistered = { ...settings, vatRegistered: false }
+    expect(
+      problems(draft({ rows: [row({ vatRate: 0 })] }), unregistered)
+    ).toEqual([])
+    expect(problems(draft(), unregistered)).toEqual(["vatUnregistered"])
+    expect(
+      problems(
+        draft({
+          customer: abroad,
+          rows: [row({ catId: "300-eu-goods", vatRate: 0 })],
+        }),
+        unregistered
+      )
+    ).toEqual(["vatUnregistered"])
+  })
+
+  it("books an EU sale with the buyer's number and drops the VAT number of an unregistered seller", () => {
+    const eu = buildIssue({
+      invoice: draft({
+        customer: { ...abroad, vatId: "se 556677889901" },
+        rows: [row({ catId: "300-eu-goods", vatRate: 0 })],
+      }),
+      settings,
+      business,
+      invoices: [],
+      now: "2026-11-01T09:00:00.000Z",
+      makeId: createIdFactory("x"),
+    })
+    expect(eu.entries[0]).toMatchObject({
+      catId: "300-eu-goods",
+      vatRate: 0,
+      buyerVatId: "SE556677889901",
+    })
+    expect(eu.invoice.seller).toMatchObject({
+      vatId: "FI01120389",
+      vatRegistered: true,
+    })
+    const small = buildIssue({
+      invoice: draft({ rows: [row({ vatRate: 0 })] }),
+      settings: { ...settings, vatRegistered: false },
+      business,
+      invoices: [],
+      now: "2026-11-01T09:00:00.000Z",
+      makeId: createIdFactory("x"),
+    })
+    expect(small.invoice.seller).toMatchObject({
+      vatId: "",
+      vatRegistered: false,
+    })
+    expect(small.entries[0].buyerVatId).toBeUndefined()
   })
 })
 

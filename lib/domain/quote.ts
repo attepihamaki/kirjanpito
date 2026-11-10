@@ -2,6 +2,7 @@ import { addDays } from "@/lib/domain/dates"
 import type { Invoice, InvoiceSettings, Quote } from "@/lib/domain/invoice"
 import type { BusinessDetails } from "@/lib/domain/invoice-calc"
 import { copyDraft, type DraftContext } from "@/lib/domain/invoice-draft"
+import { vatProblems, type VatProblem } from "@/lib/domain/invoice-vat"
 
 /**
  * Quotes (tarjous, §8.34): an offer with rows and prices, valid until a date.
@@ -50,6 +51,7 @@ export type QuoteProblem =
   | "sellerName"
   | "sellerAddress"
   | "validBeforeDate"
+  | Extract<VatProblem, "zeroRateVat" | "vatUnregistered">
 
 /**
  * The problems that keep a quote from being printed, in the order they are
@@ -59,7 +61,8 @@ export type QuoteProblem =
  */
 export function quoteProblems(
   quote: Pick<Quote, "rows" | "customer" | "date" | "validUntil">,
-  settings: Pick<InvoiceSettings, "street" | "postcode" | "city">,
+  settings: Pick<InvoiceSettings, "street" | "postcode" | "city"> &
+    Partial<Pick<InvoiceSettings, "vatRegistered">>,
   business: Pick<BusinessDetails, "name">
 ): QuoteProblem[] {
   const problems: QuoteProblem[] = []
@@ -80,6 +83,13 @@ export function quoteProblems(
   )
     problems.push("sellerAddress")
   if (quote.validUntil < quote.date) problems.push("validBeforeDate")
+  // A quote prints the VAT its invoice will; the buyer's details can wait.
+  for (const p of vatProblems(
+    quote.rows,
+    quote.customer,
+    settings.vatRegistered ?? true
+  ))
+    if (p === "zeroRateVat" || p === "vatUnregistered") problems.push(p)
   return problems
 }
 

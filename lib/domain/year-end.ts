@@ -304,3 +304,73 @@ export function yearEndFindings(input: YearEndInput): YearEndFinding[] {
 export function canLockYear(findings: readonly YearEndFinding[]): boolean {
   return !hasBlocker(findings)
 }
+
+/* -------------------------------------------------------------------------
+ * The walk-through
+ * ---------------------------------------------------------------------- */
+
+/**
+ * The topics the year-end walk-through takes in turn before Form 5 (§8.8),
+ * each a step of its own: the vouchers, the VAT returns, what is still open
+ * on 31 December with the loans, the fixed assets with the car, and the
+ * assets and stock typed in for the balance sheet.
+ */
+export type YearEndTopic = "entries" | "vat" | "open" | "assets" | "balance"
+
+export const YEAR_END_TOPICS: readonly YearEndTopic[] = [
+  "entries",
+  "vat",
+  "open",
+  "assets",
+  "balance",
+]
+
+/** The topic each rule belongs to. A year still running concerns them all, so it has none. */
+const TOPIC_OF: Record<keyof YearEndData, YearEndTopic | null> = {
+  yearOngoing: null,
+  noEntries: "entries",
+  unsaved: "entries",
+  entryCheck: "entries",
+  missingFiles: "entries",
+  emptyMonths: "entries",
+  vatUnfiled: "vat",
+  openItems: "open",
+  depreciation: "assets",
+  privateCar: "assets",
+  yearEndFigures: "balance",
+  stockMissing: "balance",
+  stockTooHigh: "balance",
+  stockRows: "balance",
+}
+
+/** The findings of one topic, in the order `yearEndFindings` gave them. */
+export function topicFindings(
+  findings: readonly YearEndFinding[],
+  topic: YearEndTopic
+): YearEndFinding[] {
+  return findings.filter((f) => TOPIC_OF[f.ruleId] === topic)
+}
+
+/** The findings no topic owns, shown above every step. */
+export function yearWideFindings(
+  findings: readonly YearEndFinding[]
+): YearEndFinding[] {
+  return findings.filter((f) => TOPIC_OF[f.ruleId] === null)
+}
+
+/**
+ * Where a topic stands: its worst finding's severity, or "clear" with none.
+ * Only a blocker stops the lock; a warning asks for a look, and info is for
+ * the record, so a topic with info alone reads as done.
+ */
+export type TopicStatus = "clear" | "info" | "warn" | "blocker"
+
+export function topicStatus(
+  findings: readonly YearEndFinding[],
+  topic: YearEndTopic
+): TopicStatus {
+  const own = topicFindings(findings, topic)
+  if (own.some((f) => f.severity === "blocker")) return "blocker"
+  if (own.some((f) => f.severity === "warn")) return "warn"
+  return own.length ? "info" : "clear"
+}

@@ -1842,7 +1842,52 @@ export const APP_DICT = {
     "Go through the checks, copy the amounts into MyTax and lock the year.",
   ],
   "statement.yearEndSteps": ["Vaiheet", "Steps"],
-  "statement.yearEndStepChecks": ["Tarkistukset", "Checks"],
+  "statement.yearEndStepEntries": ["Tositteet", "Vouchers"],
+  "statement.yearEndStepVat": ["ALV-ilmoitukset", "VAT returns"],
+  "statement.yearEndStepOpen": ["Avoimet ja lainat", "Open and loans"],
+  "statement.yearEndStepAssets": ["Käyttöomaisuus", "Fixed assets"],
+  "statement.yearEndStepBalance": ["Varat ja velat", "Assets and liabilities"],
+  "statement.yearEndProgress": [
+    "{n}/{m} aihetta kunnossa. Varoitukset eivät estä lukitsemista, mutta katso ne ennen kuin ilmoitat.",
+    "{n} of {m} topics in order. Warnings do not stop the lock, but look at them before you report.",
+  ],
+  "statement.yearEndTopicClear": ["Ei huomautettavaa.", "Nothing to note."],
+  "statement.yearEndTopicEntries": [
+    "Vuoden kaikki tositteet on kirjattu, jokaisella on kuitti tai lasku, ja muutokset on tallennettu tiedostoon.",
+    "Every voucher of the year is booked, each has its receipt or invoice, and the changes are saved to the file.",
+  ],
+  "statement.yearEndTopicVat": [
+    "Jokainen vuoden ALV-kausi on ilmoitettu OmaVerossa ja merkitty täällä ilmoitetuksi. Vertaa listaa OmaVeron ilmoituksiin.",
+    "Every VAT period of the year is filed in MyTax and marked as filed here. Compare the list with the returns in MyTax.",
+  ],
+  "statement.yearEndTopicOpen": [
+    "Mitä oli maksamatta 31.12. Vertaa saatavia ja maksettavia siihen, mitä oikeasti oli auki, ja lainoja pankin lainalaskelmaan.",
+    "What was unpaid on 31 December. Compare the receivables and payables with what was really open, and the loans with the bank's loan statement.",
+  ],
+  "statement.yearEndTopicAssets": [
+    "Pitkäikäiset hankinnat ja vuoden poisto. Poisto on enintään 25 % menojäännöksestä (EVL 30 §). Auton yksityiskäyttö lasketaan OmaVerossa.",
+    "Long-lived purchases and the year's depreciation. Depreciation is at most 25 % of the undepreciated balance (EVL 30 §). Private use of a car is worked out in MyTax.",
+  ],
+  "statement.yearEndTopicBalance": [
+    "Lomake 5 tarvitsee varat ja velat 31.12, kuten rahavarat ja varaston. Ne kirjoitetaan Varat ja velat -sivulle.",
+    "Form 5 needs the assets and liabilities on 31 December, such as cash and stock. They are typed in on the Assets and liabilities page.",
+  ],
+  "statement.yearEndGoEntries": ["Avaa kirjanpito", "Open bookkeeping"],
+  "statement.yearEndGoVat": ["Avaa ALV-laskelma", "Open the VAT return"],
+  "statement.yearEndGoOpen": ["Avaa saatavat", "Open receivables"],
+  "statement.yearEndGoAssets": ["Avaa poistot", "Open depreciation"],
+  "statement.yearEndGoBalance": [
+    "Avaa varat ja velat",
+    "Open assets and liabilities",
+  ],
+  "statement.yearEndReceivables": ["Saatavat 31.12.", "Receivables on 31 Dec"],
+  "statement.yearEndPayables": ["Maksettavat 31.12.", "Payables on 31 Dec"],
+  "statement.yearEndLoans": ["Lainat 31.12.", "Loans on 31 Dec"],
+  "statement.yearEndAssetOpening": ["Menojäännös 1.1.", "Balance on 1 Jan"],
+  "statement.yearEndAssetAdditions": ["Vuoden hankinnat", "Purchases"],
+  "statement.yearEndAssetMaximum": ["Enimmäispoisto", "Most allowed"],
+  "statement.yearEndAssetTaken": ["Tehty poisto", "Depreciation taken"],
+  "statement.yearEndAssetClosing": ["Menojäännös 31.12.", "Balance on 31 Dec"],
   "statement.yearEndStepValues": ["Summat", "Amounts"],
   "statement.yearEndStepLock": ["Lukitus", "Lock"],
   "statement.yearEndStepPackage": ["Säilytys", "Keep"],
@@ -1861,10 +1906,6 @@ export const APP_DICT = {
   "statement.yearEndBack": ["Takaisin", "Back"],
   "statement.yearEndNext": ["Seuraava", "Next"],
   "statement.yearEndOpen": ["Avaa", "Open"],
-  "statement.yearEndAllClear": [
-    "Ei huomautettavaa. Vuosi on valmis ilmoitettavaksi.",
-    "Nothing to flag. The year is ready to report.",
-  ],
   "statement.yearEndOngoing": [
     "Vuosi {y} on vielä kesken",
     "{y} is still ongoing",
@@ -3075,7 +3116,39 @@ export const APP_DICT = {
   ],
   "invoice.problemBadCategory": [
     "Laskun rivillä on luokka, jota ei voi käyttää myyntilaskulla. Käytä myyntiluokkaa, esimerkiksi Myynti – Suomi.",
-    "A row uses a category that cannot be used on a sales invoice. Use a domestic sales category.",
+    "A row uses a category that cannot be used on a sales invoice. Use a sales category, such as Sales – Finland.",
+  ],
+  "invoice.settingsVatRegistered": [
+    "Yritys on arvonlisäverorekisterissä",
+    "The business is in the VAT register",
+  ],
+  "invoice.settingsVatRegisteredHint": [
+    "Laskuilla näkyy ALV-numero ja arvonlisävero. EU-myynnin, EU:n ulkopuolelle myynnin ja käännetyn verovelvollisuuden laskuille tulostuu lain vaatima merkintä.",
+    "Invoices show the VAT number and VAT. Invoices for EU sales, sales outside the EU and reverse charge carry the note the law asks for.",
+  ],
+  "invoice.settingsVatUnregisteredHint": [
+    "Laskuilla ei näy arvonlisäveroa, ja niihin tulostuu merkintä vähäisestä toiminnasta (AVL 3 §). Jo annetut laskut säilyvät ennallaan.",
+    "Invoices show no VAT and carry a note that the business is small-scale (Finnish VAT Act, section 3). Invoices already issued stay as they are.",
+  ],
+  "invoice.vatNotes": [
+    "Laskulle tulostuva ALV-merkintä",
+    "VAT note printed on the invoice",
+  ],
+  "invoice.problemZeroRateVat": [
+    "EU-myynnin, EU:n ulkopuolelle myynnin ja käännetyn verovelvollisuuden riveillä ALV on 0 %.",
+    "Rows for EU sales, sales outside the EU and reverse charge carry 0 % VAT.",
+  ],
+  "invoice.problemVatUnregistered": [
+    "Yritys ei ole ALV-rekisterissä, joten laskun riveillä ALV on 0 % ja luokkana kotimaan myynti. Muuta tätä laskutusasetuksista, jos yritys on rekisterissä.",
+    "The business is not in the VAT register, so every row has 0 % VAT and a domestic sales category. Change this in the invoice settings if the business is registered.",
+  ],
+  "invoice.problemBuyerVatId": [
+    "EU-myynti ja käännetty verovelvollisuus vaativat asiakkaan ALV-numeron.",
+    "An EU sale or a reverse-charge sale needs the customer's VAT number.",
+  ],
+  "invoice.problemBuyerCountry": [
+    "Myynti ulkomaille vaatii asiakkaan, jonka maa ei ole Suomi.",
+    "A sale abroad needs a customer whose country is not Finland.",
   ],
   "invoice.problemNoTotal": [
     "Laskun loppusumma on nolla.",
@@ -3219,6 +3292,7 @@ export const APP_DICT = {
   "invoice.rowQuantity": ["Määrä", "Quantity"],
   "invoice.rowUnit": ["Yksikkö", "Unit"],
   "invoice.rowPrice": ["À-hinta (alv 0 %)", "Unit price (excl. VAT)"],
+  "invoice.rowPricePlain": ["À-hinta", "Unit price"],
   "invoice.rowVat": ["ALV %", "VAT %"],
   "invoice.rowCategory": ["Luokka", "Category"],
   "invoice.rowTotal": ["Yhteensä", "Total"],

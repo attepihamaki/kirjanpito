@@ -31,6 +31,8 @@ const PROBLEM_MESSAGES: Record<QuoteProblem, MessageKey> = {
   sellerName: "invoice.problemSellerName",
   sellerAddress: "invoice.problemSellerAddress",
   validBeforeDate: "quote.problemValidBeforeDate",
+  zeroRateVat: "invoice.problemZeroRateVat",
+  vatUnregistered: "invoice.problemVatUnregistered",
 }
 
 /** Replace the quotes with `next`. */

@@ -29,6 +29,11 @@ export interface InvoiceSettings {
   recurring: RecurringInvoice[]
   /** The quotes given to customers (§8.34). */
   quotes: Quote[]
+  /**
+   * Whether the business is in the VAT register. A seller outside it, below
+   * the turnover limit of AVL 3 §, invoices without VAT and says why (§8.27).
+   */
+  vatRegistered: boolean
 }
 
 export const DEFAULT_INVOICE_SETTINGS: InvoiceSettings = {
@@ -45,6 +50,7 @@ export const DEFAULT_INVOICE_SETTINGS: InvoiceSettings = {
   products: [],
   recurring: [],
   quotes: [],
+  vatRegistered: true,
 }
 
 /** The postal address and contact of a party on an invoice. */
@@ -136,6 +142,8 @@ export interface Seller extends Party {
   businessId: string
   phone: string
   iban: string
+  /** Whether the seller was in the VAT register when the document was made (§8.27). */
+  vatRegistered: boolean
 }
 
 export interface InvoiceRow {

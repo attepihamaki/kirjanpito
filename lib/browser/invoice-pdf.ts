@@ -10,11 +10,22 @@ import qrcode from "qrcode-generator"
 import { code128C } from "@/lib/domain/code128"
 import { daysBetween, formatDate } from "@/lib/domain/dates"
 import { formatIban } from "@/lib/domain/iban"
-import type { Invoice, Quote, Reminder, Seller } from "@/lib/domain/invoice"
+import type {
+  Invoice,
+  InvoiceRow,
+  Quote,
+  Reminder,
+  Seller,
+} from "@/lib/domain/invoice"
 import { invoiceTotals, rowNet } from "@/lib/domain/invoice-calc"
 import { virtualBarcode } from "@/lib/domain/invoice-barcode"
 import { epcPayload } from "@/lib/domain/invoice-epc"
 import { formatReference } from "@/lib/domain/invoice-reference"
+import {
+  isReverseCharge,
+  rowSaleKind,
+  vatNotes,
+} from "@/lib/domain/invoice-vat"
 import {
   invoiceLabels,
   reminderLabels,
@@ -384,6 +395,9 @@ async function drawSale(
     y: A4[1] - MARGIN,
   }
   const { seller } = invoice
+  const registered = seller.vatRegistered
+  // On reverse charge the buyer reports the VAT: neither rate nor amount is shown.
+  const reverse = (row: InvoiceRow) => isReverseCharge(rowSaleKind(row.catId))
 
   /* Header: the seller on the left, the invoice's facts on the right. */
   const top = c.y
@@ -468,21 +482,32 @@ async function drawSale(
       color: MUTED,
       align: "right",
     })
-    put(c.page, fonts, labels.unitPrice, columns.unitPrice, c.y - 8, {
-      size: 8,
-      color: MUTED,
-      align: "right",
-    })
-    put(c.page, fonts, labels.vatRate, columns.vat, c.y - 8, {
-      size: 8,
-      color: MUTED,
-      align: "right",
-    })
-    put(c.page, fonts, labels.amount, columns.amount, c.y - 8, {
-      size: 8,
-      color: MUTED,
-      align: "right",
-    })
+    put(
+      c.page,
+      fonts,
+      registered ? labels.unitPrice : labels.unitPricePlain,
+      columns.unitPrice,
+      c.y - 8,
+      {
+        size: 8,
+        color: MUTED,
+        align: "right",
+      }
+    )
+    if (registered)
+      put(c.page, fonts, labels.vatRate, columns.vat, c.y - 8, {
+        size: 8,
+        color: MUTED,
+        align: "right",
+      })
+    put(
+      c.page,
+      fonts,
+      registered ? labels.amount : labels.amountPlain,
+      columns.amount,
+      c.y - 8,
+      { size: 8, color: MUTED, align: "right" }
+    )
     c.y -= 12
     rule(c)
   }
@@ -516,9 +541,15 @@ async function drawSale(
       base,
       { align: "right" }
     )
-    put(c.page, fonts, percent(row.vatRate), columns.vat, base, {
-      align: "right",
-    })
+    if (registered)
+      put(
+        c.page,
+        fonts,
+        reverse(row) ? "–" : percent(row.vatRate),
+        columns.vat,
+        base,
+        { align: "right" }
+      )
     put(c.page, fonts, formatMoneyPlain(rowNet(row)), columns.amount, base, {
       align: "right",
     })
@@ -526,11 +557,18 @@ async function drawSale(
   }
   rule(c)
 
-  /* The totals, with the VAT shown per rate. */
+  /*
+   * The totals, with the VAT shown per rate. Reverse-charge rows count in the
+   * totals but have no rate line, and a seller outside the VAT register shows
+   * the total alone.
+   */
   const totals = invoiceTotals(invoice.rows)
-  const totalsHeight = (totals.rates.length + 4) * 14 + 30
+  const charged = invoice.rows.filter((row) => !reverse(row))
+  const rates = registered ? invoiceTotals(charged).rates : []
+  const showVat = registered && charged.length > 0
+  const totalsHeight = (rates.length + 4) * 14 + 30
   ensure(c, totalsHeight, MARGIN)
-  for (const line of totals.rates) {
+  for (const line of rates) {
     put(
       c.page,
       fonts,
@@ -558,18 +596,23 @@ async function drawSale(
     c.y -= 13
   }
   c.y -= 4
-  put(c.page, fonts, labels.netTotal, 330, c.y - 9, { size: 9 })
-  put(c.page, fonts, formatMoneyPlain(totals.net), RIGHT, c.y - 9, {
-    size: 9,
-    align: "right",
-  })
-  c.y -= 13
-  put(c.page, fonts, labels.vatTotal, 330, c.y - 9, { size: 9 })
-  put(c.page, fonts, formatMoneyPlain(totals.vat), RIGHT, c.y - 9, {
-    size: 9,
-    align: "right",
-  })
-  c.y -= 16
+  if (registered) {
+    put(c.page, fonts, labels.netTotal, 330, c.y - 9, { size: 9 })
+    put(c.page, fonts, formatMoneyPlain(totals.net), RIGHT, c.y - 9, {
+      size: 9,
+      align: "right",
+    })
+    c.y -= 13
+  }
+  if (showVat) {
+    put(c.page, fonts, labels.vatTotal, 330, c.y - 9, { size: 9 })
+    put(c.page, fonts, formatMoneyPlain(totals.vat), RIGHT, c.y - 9, {
+      size: 9,
+      align: "right",
+    })
+    c.y -= 13
+  }
+  c.y -= 3
   put(c.page, fonts, quote ? labels.quoteTotal : labels.total, 330, c.y - 11, {
     size: 12,
     bold: true,
@@ -583,6 +626,7 @@ async function drawSale(
 
   /* Notes and terms. */
   const notes = [
+    ...vatNotes(invoice.rows, registered).map((note) => labels.vatNote[note]),
     invoice.note,
     invoice.terms,
     quote

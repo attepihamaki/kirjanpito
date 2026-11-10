@@ -69,6 +69,8 @@ import {
   rowNet,
 } from "@/lib/domain/invoice-calc"
 import { formatQuantity, parseQuantity } from "@/lib/domain/invoice-input"
+import { invoiceLabels } from "@/lib/domain/invoice-labels"
+import { isZeroRated, rowSaleKind, vatNotes } from "@/lib/domain/invoice-vat"
 import { formatMoneyPlain } from "@/lib/domain/money"
 import { defaultValidUntil, nextQuoteNumber } from "@/lib/domain/quote"
 import { rateOnDate, validRates } from "@/lib/domain/vat-rates"
@@ -192,6 +194,10 @@ function InvoiceForm({
   const issued = existing !== undefined && existing.number !== null
   /* A credit note takes negative quantities and has no due date. */
   const credit = existing?.credits != null
+  /* An issued invoice keeps the VAT standing it was issued with (§8.27). */
+  const registered = existing?.seller
+    ? existing.seller.vatRegistered
+    : settings.vatRegistered
   const credited = invoices.find((i) => i.id === existing?.credits)
 
   const [date, setDate] = React.useState(start?.date ?? todayIso())
@@ -215,17 +221,43 @@ function InvoiceForm({
   )
   const [party, setParty] = React.useState(start?.customer ?? emptyParty())
   const [saveCustomer, setSaveCustomer] = React.useState(false)
+  /*
+   * The rate a row's category allows: 0 on a zero-rated sale and for a seller
+   * outside the VAT register, otherwise the row's own. Leaving a zero-rated
+   * category for a domestic one brings back the category's rate.
+   */
+  const fitRate = (row: RowDraft, before?: RowDraft): RowDraft => {
+    if (issued) return row
+    if (!registered || isZeroRated(rowSaleKind(row.catId)))
+      return { ...row, vatRate: 0 }
+    if (before && isZeroRated(rowSaleKind(before.catId)) && row.vatRate === 0) {
+      const cat = cats.find((c) => c.id === row.catId)
+      return cat ? { ...row, vatRate: rateOnDate(cat.vatRate, date) } : row
+    }
+    return row
+  }
   const [rows, setRows] = React.useState<RowDraft[]>(() =>
     start && start.rows.length > 0
       ? start.rows.map(toDraft)
-      : [blankRow(start?.date ?? todayIso(), undefined, undefined, credit)]
+      : [
+          fitRate(
+            blankRow(start?.date ?? todayIso(), undefined, undefined, credit)
+          ),
+        ]
   )
   const [note, setNote] = React.useState(start?.note ?? "")
   const [showErrors, setShowErrors] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
   const ids = { note: React.useId(), language: React.useId() }
 
-  const incomeCats = cats.filter(isInvoiceCategory)
+  /* A seller outside the VAT register sells domestically only (`vatProblems`). */
+  const incomeCats = cats.filter(
+    (c) =>
+      isInvoiceCategory(c) && (registered || rowSaleKind(c.id) === "domestic")
+  )
+  const notes = vatNotes(rows, registered).map(
+    (note) => invoiceLabels(language).vatNote[note]
+  )
   const rateOptions = validRates(date)
   const rowErrors = rows.map((r) => !isBlank(r) && toRow(r, credit) === null)
   const readRows = rows
@@ -291,7 +323,7 @@ function InvoiceForm({
   const addProduct = (id: string) => {
     const product = products.find((p) => p.id === id)
     if (!product) return
-    const row = toDraft(productRow(product, date || todayIso()))
+    const row = fitRate(toDraft(productRow(product, date || todayIso())))
     setRows((list) =>
       list.length > 0 && isBlank(list[list.length - 1])
         ? [...list.slice(0, -1), row]
@@ -313,7 +345,9 @@ function InvoiceForm({
   )
 
   const patchRow = (key: string, patch: Partial<RowDraft>) =>
-    setRows((list) => list.map((r) => (r.key === key ? { ...r, ...patch } : r)))
+    setRows((list) =>
+      list.map((r) => (r.key === key ? fitRate({ ...r, ...patch }, r) : r))
+    )
 
   /** Keep a typed customer in the register when asked to. Returns the register id, or null. */
   const registerCustomer = (): string | null => {
@@ -673,7 +707,11 @@ function InvoiceForm({
                     </Field>
                     <Field className="w-28">
                       <FieldLabel className="text-xs">
-                        {f.t("invoice.rowPrice")}
+                        {f.t(
+                          registered
+                            ? "invoice.rowPrice"
+                            : "invoice.rowPricePlain"
+                        )}
                       </FieldLabel>
                       <AmountInput
                         className="text-right"
@@ -685,23 +723,30 @@ function InvoiceForm({
                         }
                       />
                     </Field>
-                    <Field className="w-24">
-                      <FieldLabel className="text-xs">
-                        {f.t("invoice.rowVat")}
-                      </FieldLabel>
-                      <OptionSelect
-                        label={f.t("invoice.rowVat")}
-                        disabled={issued}
-                        value={String(row.vatRate)}
-                        onChange={(v) =>
-                          patchRow(row.key, { vatRate: Number(v) })
-                        }
-                        options={(rateOptions.includes(row.vatRate)
-                          ? rateOptions
-                          : [...rateOptions, row.vatRate]
-                        ).map((r) => ({ value: String(r), label: f.rate(r) }))}
-                      />
-                    </Field>
+                    {registered ? (
+                      <Field className="w-24">
+                        <FieldLabel className="text-xs">
+                          {f.t("invoice.rowVat")}
+                        </FieldLabel>
+                        <OptionSelect
+                          label={f.t("invoice.rowVat")}
+                          disabled={
+                            issued || isZeroRated(rowSaleKind(row.catId))
+                          }
+                          value={String(row.vatRate)}
+                          onChange={(v) =>
+                            patchRow(row.key, { vatRate: Number(v) })
+                          }
+                          options={(rateOptions.includes(row.vatRate)
+                            ? rateOptions
+                            : [...rateOptions, row.vatRate]
+                          ).map((r) => ({
+                            value: String(r),
+                            label: f.rate(r),
+                          }))}
+                        />
+                      </Field>
+                    ) : null}
                     <Field className="min-w-36 flex-1">
                       <FieldLabel className="text-xs">
                         {f.t("invoice.rowCategory")}
@@ -741,11 +786,13 @@ function InvoiceForm({
                   onClick={() =>
                     setRows((list) => [
                       ...list,
-                      blankRow(
-                        date,
-                        list.at(-1)?.catId,
-                        list.at(-1)?.vatRate,
-                        credit
+                      fitRate(
+                        blankRow(
+                          date,
+                          list.at(-1)?.catId,
+                          list.at(-1)?.vatRate,
+                          credit
+                        )
                       ),
                     ])
                   }
@@ -780,12 +827,27 @@ function InvoiceForm({
             />
           </Field>
 
+          {notes.length > 0 ? (
+            <div className="flex flex-col gap-0.5 text-sm text-muted-foreground">
+              <p className="text-xs font-medium">{f.t("invoice.vatNotes")}</p>
+              {notes.map((note) => (
+                <p key={note}>{note}</p>
+              ))}
+            </div>
+          ) : null}
+
           <dl className="ml-auto grid min-w-64 grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-sm">
-            <dt className="text-muted-foreground">{f.t("invoice.totalNet")}</dt>
-            <dd className="text-right">
-              <Money cents={totals.net} />
-            </dd>
-            {totals.rates.map((line) => (
+            {registered ? (
+              <>
+                <dt className="text-muted-foreground">
+                  {f.t("invoice.totalNet")}
+                </dt>
+                <dd className="text-right">
+                  <Money cents={totals.net} />
+                </dd>
+              </>
+            ) : null}
+            {(registered ? totals.rates : []).map((line) => (
               <React.Fragment key={line.vatRate}>
                 <dt className="text-muted-foreground">
                   {f.t("invoice.totalVat")} {f.rate(line.vatRate)}

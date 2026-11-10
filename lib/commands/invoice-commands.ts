@@ -54,6 +54,10 @@ const PROBLEM_MESSAGES: Record<IssueProblem, MessageKey> = {
   dueBeforeDate: "invoice.problemDueBeforeDate",
   creditOriginal: "invoice.problemCreditOriginal",
   creditTooLarge: "invoice.problemCreditTooLarge",
+  zeroRateVat: "invoice.problemZeroRateVat",
+  vatUnregistered: "invoice.problemVatUnregistered",
+  buyerVatId: "invoice.problemBuyerVatId",
+  buyerCountry: "invoice.problemBuyerCountry",
 }
 
 /**

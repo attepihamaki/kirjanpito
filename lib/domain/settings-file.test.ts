@@ -90,6 +90,7 @@ function settings(): BookSettings {
     changeLog: [{ at: "2026-11-03T10:00:00.000Z", action: "add", voucher: 1 }],
     yearEnd: { "2026": { ...EMPTY_YEAR_END, goods: 120_000, cash: 3_500 } },
     invoiceSettings: {
+      vatRegistered: true,
       street: "Esimerkkikatu 1",
       postcode: "00100",
       city: "Helsinki",
