@@ -46,6 +46,7 @@ import { useCommandCtx } from "@/hooks/use-commands"
 import { useDelayedFlag } from "@/hooks/use-delayed-flag"
 import { useFileDrop, isBookFile, isMediaFile } from "@/hooks/use-file-drop"
 import { useReceiptGc } from "@/hooks/use-receipt-gc"
+import { useRecurringInvoices } from "@/hooks/use-recurring-invoices"
 import { useReceiptHashes } from "@/hooks/use-receipt-hashes"
 import { useReceiptText } from "@/hooks/use-receipt-text"
 import { useAppShortcuts } from "@/hooks/use-app-shortcuts"
@@ -179,6 +180,7 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
   useStorageWarning()
   usePersistentStorage()
   useServiceWorker()
+  useRecurringInvoices()
 
   const handleDrop = React.useCallback(
     (

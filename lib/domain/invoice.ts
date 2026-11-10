@@ -23,6 +23,10 @@ export interface InvoiceSettings {
   reminderFee: number
   /** The late-payment rate in percent a reminder charges, or null for the statutory rate. */
   interestRate: number | null
+  /** The products and services an invoice row can be picked from (§8.27). */
+  products: Product[]
+  /** The invoices made again on a schedule (§8.27). */
+  recurring: RecurringInvoice[]
 }
 
 export const DEFAULT_INVOICE_SETTINGS: InvoiceSettings = {
@@ -36,6 +40,8 @@ export const DEFAULT_INVOICE_SETTINGS: InvoiceSettings = {
   firstNumber: 1001,
   reminderFee: 500,
   interestRate: null,
+  products: [],
+  recurring: [],
 }
 
 /** The postal address and contact of a party on an invoice. */
@@ -180,6 +186,51 @@ export interface Invoice {
   reservedNumber?: number
   /** The payment reminders made for it, oldest first (§8.27). Absent while none was made. */
   reminders?: Reminder[]
+  /** The recurring invoice it was made from (§8.27). Absent otherwise. */
+  recurring?: string
+}
+
+/** A product or service in the register, which fills an invoice row (§8.27). */
+export interface Product {
+  id: string
+  /** The row's description. */
+  name: string
+  unit: string
+  /** The price of one unit without VAT, in cents. */
+  unitCents: number
+  /** VAT in percent. */
+  vatRate: number
+  /** The income category the row books on. */
+  catId: string
+}
+
+/** How many months apart a recurring invoice can be made. */
+export const RECURRING_EVERY = [1, 2, 3, 6, 12] as const
+
+/**
+ * An invoice made again on a schedule (§8.27). Nothing is issued by itself:
+ * when the app opens on or after `next`, the template becomes a draft to
+ * review, and `next` moves on by `every` months.
+ */
+export interface RecurringInvoice {
+  id: string
+  /** The register customer, whose current details each draft takes, or null for one typed in. */
+  customerId: string | null
+  /** The customer's details as the template holds them. */
+  customer: Party
+  language: InvoiceLang
+  rows: InvoiceRow[]
+  note: string
+  /** Months between invoices, one of `RECURRING_EVERY`. */
+  every: number
+  /** 1 to 31, the day of the month an invoice is dated. A shorter month uses its last day. */
+  day: number
+  /** ISO date of the next invoice to make. */
+  next: string
+  /** ISO date after which none is made, or null to go on. */
+  until: string | null
+  /** Paused templates make nothing. */
+  paused: boolean
 }
 
 /** One payment reminder, kept as a record of what the customer was asked to pay. */

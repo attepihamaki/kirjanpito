@@ -3,10 +3,12 @@
 import * as React from "react"
 import {
   CheckIcon,
+  CopyIcon,
   DownloadIcon,
   BellIcon,
   FilePenLineIcon,
   PencilIcon,
+  Repeat2Icon,
   SendIcon,
   Trash2Icon,
   Undo2Icon,
@@ -17,6 +19,7 @@ import { EuroInput } from "@/components/common/euro-input"
 import { Money } from "@/components/common/money"
 import { Panel } from "@/components/common/panel"
 import { Pill } from "@/components/common/pill"
+import { RecurringInvoiceDialog } from "@/components/invoices/recurring-invoice-list"
 import { useFormatters } from "@/components/lang-provider"
 import { Button } from "@/components/ui/button"
 import {
@@ -40,6 +43,7 @@ import {
 import { toast } from "@/components/ui/toast"
 import { useCommandCtx } from "@/hooks/use-commands"
 import {
+  copyInvoice,
   deleteIssuedInvoice,
   downloadInvoicePdf,
   makeReminder,
@@ -52,6 +56,7 @@ import { evalAmount } from "@/lib/domain/amount-expr"
 import { todayIso } from "@/lib/domain/dates"
 import type { Invoice } from "@/lib/domain/invoice"
 import { invoiceTotals } from "@/lib/domain/invoice-calc"
+import { canCopy } from "@/lib/domain/invoice-draft"
 import { reminderFigures, reminderRate } from "@/lib/domain/invoice-reminder"
 import { owedOn, partlyPaid } from "@/lib/domain/invoice-payment"
 import {
@@ -275,6 +280,7 @@ export function InvoiceList() {
   const openDialog = useBookStore((s) => s.openDialog)
   const [paying, setPaying] = React.useState<Invoice | null>(null)
   const [reminding, setReminding] = React.useState<Invoice | null>(null)
+  const [repeating, setRepeating] = React.useState<Invoice | null>(null)
 
   const today = todayIso()
   const byId = React.useMemo(
@@ -357,6 +363,11 @@ export function InvoiceList() {
                   </TableCell>
                   <TableCell>
                     <Pill tone={STATUS_TONE[status]}>{label[status]}</Pill>
+                    {draft && invoice.recurring ? (
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {f.t("invoice.fromRecurring")}
+                      </div>
+                    ) : null}
                     {invoice.reminders?.length ? (
                       <div className="mt-1 text-xs text-muted-foreground">
                         {f.t("invoice.remindersSent", {
@@ -377,6 +388,30 @@ export function InvoiceList() {
                     >
                       <PencilIcon />
                     </Button>
+                    {canCopy(invoice) ? (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`${f.t("invoice.copy")}: ${invoice.number ?? invoice.customer.name}`}
+                          onClick={() => {
+                            const id = copyInvoice(invoice.id)
+                            if (id)
+                              openDialog({ kind: "invoice", invoiceId: id })
+                          }}
+                        >
+                          <CopyIcon />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`${f.t("invoice.repeat")}: ${invoice.number ?? invoice.customer.name}`}
+                          onClick={() => setRepeating(invoice)}
+                        >
+                          <Repeat2Icon />
+                        </Button>
+                      </>
+                    ) : null}
                     {draft ? (
                       <Button
                         variant="ghost"
@@ -478,6 +513,12 @@ export function InvoiceList() {
       )}
       {paying ? (
         <MarkPaidDialog invoice={paying} onClose={() => setPaying(null)} />
+      ) : null}
+      {repeating ? (
+        <RecurringInvoiceDialog
+          source={repeating}
+          onClose={() => setRepeating(null)}
+        />
       ) : null}
       {reminding ? (
         <ReminderDialog

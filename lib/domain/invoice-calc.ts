@@ -12,6 +12,16 @@ import { finnishReference } from "@/lib/domain/invoice-reference"
 import { roundCents } from "@/lib/domain/money"
 import type { Category, Cents, Entry } from "@/lib/domain/types"
 
+/**
+ * Whether an invoice row can book on `cat`. Only a domestic income category
+ * fits: EU and reverse-charge sales need more than an invoice carries.
+ */
+export function isInvoiceCategory(cat: Category): boolean {
+  return (
+    cat.enabled && lineOf(cat)?.side === "income" && cat.kind === "domestic"
+  )
+}
+
 /* -------------------------------------------------------------------------
  * Amounts
  * ---------------------------------------------------------------------- */
@@ -194,15 +204,9 @@ export function issueProblems(
   )
     problems.push("sellerAddress")
   if (settings.iban === "") problems.push("sellerIban")
-  /* Only a domestic income category fits: EU and reverse-charge sales need more than this invoice carries. */
   const usable = (catId: string) => {
     const cat = cats.find((c) => c.id === catId)
-    return (
-      cat !== undefined &&
-      cat.enabled &&
-      lineOf(cat)?.side === "income" &&
-      cat.kind === "domestic"
-    )
+    return cat !== undefined && isInvoiceCategory(cat)
   }
   if (invoice.rows.some((r) => !usable(r.catId))) problems.push("badCategory")
   const gross = invoiceTotals(invoice.rows).gross

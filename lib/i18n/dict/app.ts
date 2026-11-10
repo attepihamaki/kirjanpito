@@ -3212,6 +3212,117 @@ export const APP_DICT = {
   ],
   "invoice.tabAging": ["Saatavat", "Receivables"],
   "invoice.tabPayables": ["Maksettavat", "To pay"],
+  "invoice.tabRecurring": ["Toistuvat", "Recurring"],
+  "invoice.tabProducts": ["Tuotteet", "Products"],
+  "invoice.copy": ["Kopioi uudeksi", "Copy as new"],
+  "invoice.repeat": ["Toista laskua", "Repeat invoice"],
+  "invoice.fromRecurring": ["Toistuvasta laskusta", "From a recurring invoice"],
+  "invoice.recurringTitle": ["Toistuvat laskut", "Recurring invoices"],
+  "invoice.recurringHint": [
+    "Kun seuraava päivä koittaa, sovellus tekee laskusta luonnoksen avautuessaan. Tarkista ja lähetä luonnos Laskut-välilehdellä.",
+    "When the next date comes, the app makes a draft of the invoice when it opens. Check and issue the draft on the Invoices tab.",
+  ],
+  "invoice.recurringEmpty": [
+    "Ei toistuvia laskuja. Tee sellainen laskulistan Toista laskua -painikkeella.",
+    "No recurring invoices. Make one with the Repeat invoice button in the invoice list.",
+  ],
+  "invoice.recurringColEvery": ["Toistuu", "Repeats"],
+  "invoice.recurringColNext": ["Seuraava lasku", "Next invoice"],
+  "invoice.recurringColMade": ["Tehty", "Made"],
+  "invoice.recurringUntil": ["Viimeinen päivä", "Last date"],
+  "invoice.recurringMonthly": ["Joka kuukausi", "Every month"],
+  "invoice.recurringEvery": ["{n} kk välein", "Every {n} months"],
+  "invoice.recurringPaused": ["Keskeytetty", "Paused"],
+  "invoice.recurringEnded": ["Päättynyt", "Ended"],
+  "invoice.recurringPause": [
+    "Keskeytä: ei uusia luonnoksia",
+    "Pause: no new drafts",
+  ],
+  "invoice.recurringEdit": [
+    "Muokkaa toistuvaa laskua: {x}",
+    "Edit recurring invoice: {x}",
+  ],
+  "invoice.recurringDelete": [
+    "Poista toistuva lasku: {x}",
+    "Delete recurring invoice: {x}",
+  ],
+  "invoice.recurringEditTitle": ["Toistuva lasku", "Recurring invoice"],
+  "invoice.recurringDialogHint": [
+    "{x}, {n}. Rivit otetaan tästä laskusta, asiakkaan tiedot rekisteristä luonnosta tehtäessä.",
+    "{x}, {n}. The rows come from this invoice, the customer’s details from the register when the draft is made.",
+  ],
+  "invoice.recurringDraftHint": [
+    "Luonnos tehdään tuona päivänä. Mitään ei lähetetä itsestään.",
+    "The draft is made on that day. Nothing is issued by itself.",
+  ],
+  "invoice.recurringNowHint": [
+    "Päivä on jo tullut, joten luonnos tehdään heti tallennettaessa.",
+    "The date has come already, so the draft is made as soon as you save.",
+  ],
+  "invoice.recurringSaved": [
+    "Toistuva lasku tallennettu. Seuraava luonnos {d}.",
+    "Recurring invoice saved. Next draft {d}.",
+  ],
+  "invoice.recurringSavedNow": [
+    "Toistuva lasku tallennettu.",
+    "Recurring invoice saved.",
+  ],
+  "invoice.recurringDeleted": [
+    "Toistuva lasku poistettu: {x}",
+    "Recurring invoice deleted: {x}",
+  ],
+  "invoice.recurringMade": [
+    pl(
+      "Toistuvista laskuista tehtiin 1 luonnos.",
+      "Toistuvista laskuista tehtiin {n} luonnosta."
+    ),
+    pl(
+      "1 draft made from recurring invoices.",
+      "{n} drafts made from recurring invoices."
+    ),
+  ],
+  "invoice.recurringDraftsTitle": [
+    pl(
+      "1 toistuvan laskun luonnos odottaa",
+      "{n} toistuvan laskun luonnosta odottaa"
+    ),
+    pl(
+      "1 recurring invoice draft waiting",
+      "{n} recurring invoice drafts waiting"
+    ),
+  ],
+  "invoice.recurringDraftsSub": [
+    "Tarkista ja lähetä ne laskulistalla.",
+    "Check and issue them in the invoice list.",
+  ],
+  "product.title": ["Tuotteet ja palvelut", "Products and services"],
+  "product.hint": [
+    "Laskun rivin voi täyttää tuotteesta yhdellä valinnalla. Muutos tuotteeseen ei muuta jo tehtyjä laskuja.",
+    "An invoice row can be filled from a product in one pick. Changing a product leaves the invoices already made alone.",
+  ],
+  "product.empty": [
+    "Ei vielä tuotteita. Lisää tuote tästä tai tallenna laskun rivi tuotteeksi.",
+    "No products yet. Add one here, or keep an invoice row as a product.",
+  ],
+  "product.new": ["Uusi tuote", "New product"],
+  "product.newTitle": ["Uusi tuote tai palvelu", "New product or service"],
+  "product.editTitle": ["Tuote tai palvelu", "Product or service"],
+  "product.name": ["Nimi laskulla", "Name on the invoice"],
+  "product.price": ["À-hinta (alv 0 %)", "Unit price (excl. VAT)"],
+  "product.needsName": ["Anna nimi.", "Give a name."],
+  "product.badPrice": [
+    "Hintaa ei voi lukea. Anna hinta euroina, esim. 85,00.",
+    "The price cannot be read. Give it in euros, e.g. 85.00.",
+  ],
+  "product.saved": ["Tuote tallennettu: {x}", "Product saved: {x}"],
+  "product.deleted": ["Tuote poistettu: {x}", "Product deleted: {x}"],
+  "product.edit": ["Muokkaa tuotetta: {x}", "Edit product: {x}"],
+  "product.delete": ["Poista tuote: {x}", "Delete product: {x}"],
+  "product.pick": ["Lisää tuote…", "Add a product…"],
+  "product.keepRow": [
+    "Tallenna rivi {n} tuotteeksi",
+    "Keep row {n} as a product",
+  ],
   "payables.overdue": ["Erääntyneet", "Overdue"],
   "payables.soon": ["Seuraavat 7 pv", "Next 7 days"],
   "payables.later": ["Myöhemmin", "Later"],

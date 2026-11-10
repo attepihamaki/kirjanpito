@@ -1,5 +1,6 @@
 import { lastCompleteMonth, monthOf } from "@/lib/domain/dates"
 import type { YearEnd } from "@/lib/domain/form5-balance"
+import type { Invoice } from "@/lib/domain/invoice"
 import { newYearDue, newYearTarget } from "@/lib/domain/new-year"
 import { balancesAt, type OpenBalances } from "@/lib/domain/open-items"
 import { dueRecurring, type RecurringEntry } from "@/lib/domain/recurring"
@@ -21,8 +22,8 @@ import { daysBetween, type TimelinePeriod } from "@/lib/domain/vat-deadline"
 /**
  * The overview's reminders (§8.12) that are neither entry checks nor limits:
  * deadlines, open items, empty months, missing receipts, the year to open,
- * recurring entries due, closed years to put away and gaps in the rule
- * tables. Each is a rule, so the checklist only turns findings into rows.
+ * recurring entries due, drafts made by recurring invoices, closed years to
+ * put away and gaps in the rule tables. Each is a rule, so the checklist only turns findings into rows.
  */
 
 /** A VAT return falling due within this many days is shown. */
@@ -44,6 +45,8 @@ export interface OverviewContext {
   form5Filed: Readonly<Record<string, string>>
   yearEnd: Readonly<Record<string, YearEnd>>
   recurring: readonly RecurringEntry[]
+  /** The invoices, drafts and issued (§8.27). */
+  invoices: readonly Invoice[]
   /** Closed years the user has marked as stored, with the day. */
   yearsArchived: Readonly<Record<string, string>>
 }
@@ -59,6 +62,7 @@ export interface OverviewData {
   emptyMonths: { months: number[] }
   newYear: { year: number }
   recurringDue: { month: string; items: RecurringEntry[] }
+  recurringDrafts: { count: number }
   yearToArchive: { year: number; books: string; vouchers: string }
 }
 
@@ -150,6 +154,12 @@ export const OVERVIEW_RULES = defineRules<OverviewContext, AnyData>([
     const month = ctx.today.slice(0, 7)
     const items = dueRecurring(ctx.recurring, month, ctx.entries)
     return items.length ? [{ month, items }] : []
+  }),
+  rule("recurringDrafts", "info", "app", (ctx) => {
+    const count = ctx.invoices.filter(
+      (i) => i.number === null && i.recurring !== undefined
+    ).length
+    return count ? [{ count }] : []
   }),
   rule("yearToArchive", "info", "KPL 2:10", (ctx) =>
     yearsToArchive(ctx.entries, ctx.today, ctx.yearsArchived).map((year) => ({

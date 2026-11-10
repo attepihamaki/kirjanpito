@@ -1,7 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { DownloadIcon, PlusIcon, SendIcon, Trash2Icon } from "lucide-react"
+import {
+  BookmarkPlusIcon,
+  CopyIcon,
+  DownloadIcon,
+  PlusIcon,
+  SendIcon,
+  Trash2Icon,
+} from "lucide-react"
 
 import { AmountInput } from "@/components/common/amount-input"
 import { DateInput } from "@/components/common/date-input"
@@ -28,11 +35,11 @@ import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/toast"
 import { useCommandCtx } from "@/hooks/use-commands"
 import {
+  copyInvoice,
   downloadInvoicePdf,
   issueInvoice,
   sendInvoice,
 } from "@/lib/commands/invoice-commands"
-import { lineOf } from "@/lib/domain/accounts"
 import { evalAmount } from "@/lib/domain/amount-expr"
 import { todayIso } from "@/lib/domain/dates"
 import { uid } from "@/lib/domain/id"
@@ -46,8 +53,13 @@ import {
   type InvoiceRow,
 } from "@/lib/domain/invoice"
 import { addDays } from "@/lib/domain/dates"
+import { canCopy, productFromRow, productRow } from "@/lib/domain/invoice-draft"
 import { duplicateInvoice } from "@/lib/domain/invoice-duplicate"
-import { invoiceTotals, rowNet } from "@/lib/domain/invoice-calc"
+import {
+  invoiceTotals,
+  isInvoiceCategory,
+  rowNet,
+} from "@/lib/domain/invoice-calc"
 import { formatQuantity, parseQuantity } from "@/lib/domain/invoice-input"
 import { formatMoneyPlain } from "@/lib/domain/money"
 import { rateOnDate, validRates } from "@/lib/domain/vat-rates"
@@ -119,7 +131,10 @@ function toRow(draft: RowDraft, credit: boolean): InvoiceRow | null {
 export function InvoiceDialog() {
   const dialog = useBookStore((s) => s.dialog)
   if (dialog.kind !== "invoice") return null
-  return <InvoiceForm invoiceId={dialog.invoiceId} />
+  /* Keyed, so opening a copy from an invoice starts the form afresh. */
+  return (
+    <InvoiceForm key={dialog.invoiceId ?? "new"} invoiceId={dialog.invoiceId} />
+  )
 }
 
 function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
@@ -132,6 +147,8 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
   const setInvoices = useBookStore((s) => s.setInvoices)
   const setCustomers = useBookStore((s) => s.setCustomers)
   const closeDialog = useBookStore((s) => s.closeDialog)
+  const openDialog = useBookStore((s) => s.openDialog)
+  const products = useBookStore((s) => s.invoiceSettings.products)
 
   /* A new draft keeps one id however often it is saved, so saving twice is one draft. */
   const [newId] = React.useState(() => uid())
@@ -168,9 +185,7 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
   const [busy, setBusy] = React.useState(false)
   const ids = { note: React.useId(), language: React.useId() }
 
-  const incomeCats = cats.filter(
-    (c) => c.enabled && c.kind === "domestic" && lineOf(c)?.side === "income"
-  )
+  const incomeCats = cats.filter(isInvoiceCategory)
   const rateOptions = validRates(date)
   const rowErrors = rows.map((r) => !isBlank(r) && toRow(r, credit) === null)
   const readRows = rows
@@ -228,6 +243,31 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
       setDueDate(addDays(date, customer.termDays ?? settings.termDays))
     }
   }
+
+  /* A picked product fills the last row while nothing is typed in it, and is added after it otherwise. */
+  const addProduct = (id: string) => {
+    const product = products.find((p) => p.id === id)
+    if (!product) return
+    const row = toDraft(productRow(product, date || todayIso()))
+    setRows((list) =>
+      list.length > 0 && isBlank(list[list.length - 1])
+        ? [...list.slice(0, -1), row]
+        : [...list, row]
+    )
+  }
+
+  const keepAsProduct = (row: InvoiceRow) => {
+    const product = productFromRow(row, uid())
+    const s = useBookStore.getState()
+    s.setInvoiceSettings({
+      ...s.invoiceSettings,
+      products: [...s.invoiceSettings.products, product],
+    })
+    toast.add({ title: f.t("product.saved", { x: product.name }) })
+  }
+  const known = new Set(
+    products.map((p) => p.name.trim().toLocaleLowerCase("fi"))
+  )
 
   const patchRow = (key: string, patch: Partial<RowDraft>) =>
     setRows((list) => list.map((r) => (r.key === key ? { ...r, ...patch } : r)))
@@ -463,6 +503,21 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
                         patchRow(row.key, { description: e.target.value })
                       }
                     />
+                    {!issued &&
+                    !credit &&
+                    parsed &&
+                    parsed.description !== "" &&
+                    !known.has(parsed.description.toLocaleLowerCase("fi")) ? (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={f.t("product.keepRow", { n: index + 1 })}
+                        title={f.t("product.keepRow", { n: index + 1 })}
+                        onClick={() => keepAsProduct(parsed)}
+                      >
+                        <BookmarkPlusIcon />
+                      </Button>
+                    ) : null}
                     {!issued ? (
                       <Button
                         variant="ghost"
@@ -570,25 +625,39 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
               )
             })}
             {!issued ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="self-start"
-                onClick={() =>
-                  setRows((list) => [
-                    ...list,
-                    blankRow(
-                      date,
-                      list.at(-1)?.catId,
-                      list.at(-1)?.vatRate,
-                      credit
-                    ),
-                  ])
-                }
-              >
-                <PlusIcon data-icon="inline-start" />
-                {f.t("invoice.addRow")}
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setRows((list) => [
+                      ...list,
+                      blankRow(
+                        date,
+                        list.at(-1)?.catId,
+                        list.at(-1)?.vatRate,
+                        credit
+                      ),
+                    ])
+                  }
+                >
+                  <PlusIcon data-icon="inline-start" />
+                  {f.t("invoice.addRow")}
+                </Button>
+                {!credit && products.length > 0 ? (
+                  <OptionSelect
+                    size="sm"
+                    className="w-56"
+                    label={f.t("product.pick")}
+                    placeholder={f.t("product.pick")}
+                    value=""
+                    onChange={addProduct}
+                    options={[...products]
+                      .sort((a, b) => f.collator.compare(a.name, b.name))
+                      .map((p) => ({ value: p.id, label: p.name }))}
+                  />
+                ) : null}
+              </div>
             ) : null}
           </section>
 
@@ -626,6 +695,19 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
         <DialogFooter className="m-0 flex-row flex-wrap items-center gap-2 bg-popover px-5 py-3">
           {issued ? (
             <>
+              {canCopy(existing) ? (
+                <Button
+                  variant="outline"
+                  className="mr-auto"
+                  onClick={() => {
+                    const id = copyInvoice(existing.id)
+                    if (id) openDialog({ kind: "invoice", invoiceId: id })
+                  }}
+                >
+                  <CopyIcon data-icon="inline-start" />
+                  {f.t("invoice.copy")}
+                </Button>
+              ) : null}
               <Button
                 variant="outline"
                 onClick={() => void sendInvoice(ctx, existing)}

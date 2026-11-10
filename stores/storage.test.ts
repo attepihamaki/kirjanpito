@@ -176,6 +176,24 @@ describe("persisted preferences and bookkeeping (§12)", () => {
     expect(ids).toContain("vat-refund")
   })
 
+  it("gives stored invoice settings an empty product register and no recurring invoices", async () => {
+    localStorage.setItem(
+      BOOK_STORAGE_KEY,
+      JSON.stringify({
+        version: 6,
+        state: { open: true, invoiceSettings: { iban: "FI2112345600000785" } },
+      })
+    )
+
+    await useBookStore.persist.rehydrate()
+
+    const settings = useBookStore.getState().invoiceSettings
+    expect(settings.iban).toBe("FI2112345600000785")
+    expect(settings.products).toEqual([])
+    expect(settings.recurring).toEqual([])
+    expect(settings.termDays).toBe(14)
+  })
+
   it("adds the owner's transfer categories to a stored list", async () => {
     const cats = defaultCategories().filter((c) => !c.id.startsWith("owner-"))
     localStorage.setItem(

@@ -64,6 +64,7 @@ describe("dictionary integrity", () => {
       "overview",
       "party",
       "payables",
+      "product",
       "privacy",
       "receipt",
       "recurring",

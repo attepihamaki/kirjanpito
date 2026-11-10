@@ -6,6 +6,7 @@ import type { Ctx } from "@/lib/commands/ctx"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
 import { releaseDraftAttachment, storePdf } from "@/lib/commands/memo-commands"
 import { calcEntry } from "@/lib/domain/calc"
+import { canCopy, copyDraft, recurringDrafts } from "@/lib/domain/invoice-draft"
 import { todayIso } from "@/lib/domain/dates"
 import { uid } from "@/lib/domain/id"
 import type { Invoice } from "@/lib/domain/invoice"
@@ -36,6 +37,7 @@ import {
 import type { MessageKey } from "@/lib/i18n/messages"
 import { confirm } from "@/lib/ui/confirm"
 import { useBookStore } from "@/stores/book-store"
+import { withoutHistory } from "@/stores/history-store"
 
 /** The message that tells the user what stops an invoice from being issued. */
 const PROBLEM_MESSAGES: Record<IssueProblem, MessageKey> = {
@@ -600,4 +602,50 @@ export async function reopenIssuedInvoice(
     onRemove: () => useBookStore.getState().releaseUndoAttachments(held),
   })
   return invoice.id
+}
+
+/**
+ * Copy an invoice as a new draft dated today (§8.27). A credit note is not
+ * copied. Returns the draft's id, or null when nothing was made.
+ */
+export function copyInvoice(invoiceId: string): string | null {
+  const state = useBookStore.getState()
+  const source = state.invoices.find((i) => i.id === invoiceId)
+  if (!source || !canCopy(source)) return null
+  const draft = copyDraft(source, todayIso(), {
+    termDays: state.invoiceSettings.termDays,
+    customers: state.customers,
+    makeId: uid,
+  })
+  state.setInvoices([...state.invoices, draft])
+  return draft.id
+}
+
+/**
+ * Make the drafts the recurring invoices owe on `today` (§8.27), and move
+ * each template on. Run when the book opens and when a template changes. The
+ * drafts are not an undo step, since the templates' next dates have already
+ * moved past them. A toast says how many were made. An archive book makes
+ * none. Returns how many were made.
+ */
+export function makeRecurringDrafts(ctx: Ctx, today = todayIso()): number {
+  const state = useBookStore.getState()
+  if (state.archiveYear !== null) return 0
+  const { recurring } = state.invoiceSettings
+  if (recurring.length === 0) return 0
+  const run = recurringDrafts(recurring, today, {
+    termDays: state.invoiceSettings.termDays,
+    customers: state.customers,
+    makeId: uid,
+  })
+  if (run.drafts.length === 0) return 0
+  withoutHistory(() => {
+    const now = useBookStore.getState()
+    now.setInvoiceSettings({ ...now.invoiceSettings, recurring: run.templates })
+    now.setInvoices([...now.invoices, ...run.drafts])
+  })
+  toast.add({
+    title: ctx.t("invoice.recurringMade", { n: run.drafts.length }),
+  })
+  return run.drafts.length
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { defaultCategories } from "@/lib/domain/accounts"
+import { emptyParty } from "@/lib/domain/invoice"
 import {
   OVERVIEW_RULES,
   overviewFindings,
@@ -43,6 +44,7 @@ function context(
     form5Filed: {},
     yearEnd: {},
     recurring: [],
+    invoices: [],
     yearsArchived: {},
     ...over,
   }
@@ -158,6 +160,39 @@ describe("OVERVIEW_RULES", () => {
     )
     const row = found.find((f) => f.ruleId === "recurringDue")
     expect(row?.ruleId === "recurringDue" && row.data.month).toBe("2026-05")
+  })
+
+  it("counts the drafts recurring invoices made that are not issued yet", () => {
+    const draft = {
+      id: "d",
+      number: null,
+      date: "2026-05-01",
+      dueDate: "2026-05-15",
+      supplyFrom: null,
+      supplyTo: null,
+      customerId: null,
+      customer: emptyParty(),
+      language: "fi" as const,
+      rows: [],
+      note: "",
+      terms: "",
+      reference: null,
+      seller: null,
+      issuedAt: null,
+      entryIds: [],
+      credits: null,
+    }
+    const found = overviewFindings(
+      context([], "2026-05-10", {
+        invoices: [
+          { ...draft, recurring: "r" },
+          { ...draft, id: "e", recurring: "r" },
+          { ...draft, id: "f" },
+        ],
+      })
+    )
+    const row = found.find((f) => f.ruleId === "recurringDrafts")
+    expect(row?.ruleId === "recurringDrafts" && row.data.count).toBe(2)
   })
 
   it("reminds to put away a closed year until it is marked stored", () => {

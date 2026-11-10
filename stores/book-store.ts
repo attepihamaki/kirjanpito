@@ -1673,6 +1673,11 @@ export const useBookStore = create<BookStore>()(
           ledgerHidden: normalizeHiddenColumns(stored.ledgerHidden),
           payMonths: { ...NO_PAY_MONTHS, ...stored.payMonths },
           taxPayment: { ...NO_TAX_PAYMENT, ...stored.taxPayment },
+          // Invoice settings stored before products and recurring invoices lack both (§8.27).
+          invoiceSettings: {
+            ...DEFAULT_INVOICE_SETTINGS,
+            ...stored.invoiceSettings,
+          },
           // A register stored before roles holds customers only (§8.29).
           customers: (stored.customers ?? current.customers).map(
             withPartyFields

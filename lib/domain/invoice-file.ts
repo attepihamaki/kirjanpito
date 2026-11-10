@@ -7,8 +7,11 @@ import {
   type InvoiceLang,
   type InvoiceRow,
   type InvoiceSettings,
+  RECURRING_EVERY,
   type Party,
   type PartyRole,
+  type Product,
+  type RecurringInvoice,
   type Reminder,
   type Seller,
 } from "@/lib/domain/invoice"
@@ -112,6 +115,69 @@ export function parseInvoiceSettings(value: unknown): InvoiceSettings {
         : base.firstNumber,
     reminderFee: cents(value.reminderFee) ?? base.reminderFee,
     interestRate: percentOrNull(value.interestRate),
+    products: list(value.products, parseProduct),
+    recurring: list(value.recurring, parseRecurringInvoice),
+  }
+}
+
+/** The readable records of a list, the first of each id kept. */
+function list<T extends { id: string }>(
+  value: unknown,
+  parse: (item: unknown) => T | null
+): T[] {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<string>()
+  return value.flatMap((item) => {
+    const record = parse(item)
+    if (!record || seen.has(record.id)) return []
+    seen.add(record.id)
+    return [record]
+  })
+}
+
+function parseProduct(value: unknown): Product | null {
+  if (!isRecord(value) || typeof value.id !== "string" || value.id === "")
+    return null
+  const name = text(value.name, 500).trim()
+  const row = parseRow({ ...value, description: name, quantityMilli: 1000 })
+  if (!row || name === "" || row.unitCents < 0) return null
+  return {
+    id: value.id,
+    name,
+    unit: row.unit,
+    unitCents: row.unitCents,
+    vatRate: row.vatRate,
+    catId: row.catId,
+  }
+}
+
+function parseRecurringInvoice(value: unknown): RecurringInvoice | null {
+  if (!isRecord(value) || typeof value.id !== "string" || value.id === "")
+    return null
+  const customer = parseParty(value.customer)
+  const next = isoDate(value.next)
+  const { every, day } = value
+  if (!customer || !next || !Array.isArray(value.rows)) return null
+  if (!(RECURRING_EVERY as readonly unknown[]).includes(every)) return null
+  if (!Number.isInteger(day) || (day as number) < 1 || (day as number) > 31)
+    return null
+  const rows = value.rows.map(parseRow)
+  if (rows.length === 0 || rows.some((r) => r === null)) return null
+  return {
+    id: value.id,
+    customerId:
+      typeof value.customerId === "string" && value.customerId !== ""
+        ? value.customerId
+        : null,
+    customer,
+    language: lang(value.language),
+    rows: rows as InvoiceRow[],
+    note: text(value.note, 2000),
+    every: every as number,
+    day: day as number,
+    next,
+    until: isoDate(value.until),
+    paused: value.paused === true,
   }
 }
 
@@ -332,6 +398,9 @@ function parseInvoice(value: unknown): Invoice | null {
         : null,
     ...(reserved !== undefined ? { reservedNumber: reserved } : {}),
     ...(reminders.length > 0 ? { reminders } : {}),
+    ...(typeof value.recurring === "string" && value.recurring !== ""
+      ? { recurring: value.recurring }
+      : {}),
   }
 }
 

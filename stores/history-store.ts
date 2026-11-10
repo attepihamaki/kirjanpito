@@ -49,6 +49,21 @@ export function applyHistoryStep(
   return true
 }
 
+/**
+ * Run a change the app makes on its own, such as the drafts a recurring
+ * invoice makes when the book opens (§8.27), without making it an undo step:
+ * the user did not take it, and undoing it would lose what it made.
+ */
+export function withoutHistory(change: () => void): void {
+  const was = applying
+  applying = true
+  try {
+    change()
+  } finally {
+    applying = was
+  }
+}
+
 function clearHistory(): void {
   const { past, future } = useHistoryStore.getState()
   if (past.length === 0 && future.length === 0) return

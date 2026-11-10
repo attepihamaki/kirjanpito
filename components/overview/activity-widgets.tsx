@@ -218,6 +218,7 @@ export function ChecksWidget() {
   const setVatFiled = useBookStore((s) => s.setVatFiled)
   const yearsArchived = useBookStore((s) => s.yearsArchived)
   const recurring = useBookStore((s) => s.recurring)
+  const invoices = useBookStore((s) => s.invoices)
   const setYearArchived = useBookStore((s) => s.setYearArchived)
   const ctx = useCommandCtx()
   const canSave = useCanSaveToFile()
@@ -317,6 +318,7 @@ export function ChecksWidget() {
     form5Filed,
     yearEnd: yearEnds,
     recurring,
+    invoices,
     yearsArchived,
   })
   const overview = <K extends OverviewRuleId>(id: K) =>
@@ -504,6 +506,20 @@ export function ChecksWidget() {
         >
           {f.t("common.add")}
         </Button>
+      ),
+    })
+  }
+
+  for (const { severity, data: d } of overview("recurringDrafts")) {
+    items.push({
+      key: "recurring-drafts",
+      tone: tone(severity),
+      title: f.t("invoice.recurringDraftsTitle", { n: d.count }),
+      sub: f.t("invoice.recurringDraftsSub"),
+      action: (
+        <ButtonLink variant="ghost" size="sm" href={APP_ROUTES.invoices}>
+          {f.t("invoice.open")}
+        </ButtonLink>
       ),
     })
   }

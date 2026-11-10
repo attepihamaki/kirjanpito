@@ -91,6 +91,48 @@ function settings(): BookSettings {
       firstNumber: 2001,
       reminderFee: 700,
       interestRate: 11.5,
+      products: [
+        {
+          id: "p1",
+          name: "Konsultointi",
+          unit: "h",
+          unitCents: 8_500,
+          vatRate: 25.5,
+          catId: "300-domestic",
+        },
+      ],
+      recurring: [
+        {
+          id: "r1",
+          customerId: "c1",
+          customer: {
+            name: "Asiakas Oy",
+            street: "Katu 2",
+            postcode: "00200",
+            city: "Espoo",
+            country: "FI",
+            vatId: "",
+            email: "",
+          },
+          language: "fi",
+          rows: [
+            {
+              description: "Ylläpito",
+              quantityMilli: 1000,
+              unit: "kk",
+              unitCents: 20_000,
+              vatRate: 25.5,
+              catId: "300-domestic",
+            },
+          ],
+          note: "",
+          every: 3,
+          day: 31,
+          next: "2026-12-31",
+          until: null,
+          paused: false,
+        },
+      ],
     },
     overviewLayout: normalizeLayout([
       { id: "checks", size: "L", hidden: false },
