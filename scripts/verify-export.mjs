@@ -163,6 +163,7 @@ for (const [path, what] of [
   [join(OUT, "404.html"), "the 404 page Pages serves for unmatched paths"],
   [join(OUT, "pdf.worker.min.mjs"), "the pdf.js worker (copied on prebuild)"],
   [join(OUT, "og", "opengraph-image.png"), "the Open Graph card"],
+  [join(OUT, "icons", "apple-touch-icon.png"), "the iOS home-screen icon"],
 ]) {
   if (!existsSync(path)) fail(`Missing ${relative(OUT, path)} — ${what}.`)
 }
@@ -202,6 +203,82 @@ if (noPolicy.length > 0) {
     `No Content-Security-Policy meta tag in the <head> of:\n` +
       noPolicy.map((f) => `    ${relative(OUT, f)}`).join("\n")
   )
+}
+
+/*
+ * 6. The manifest and the service worker (CLAUDE.md §11b). Neither passes
+ *    through Next's basePath, so every URL in the manifest is checked for the
+ *    prefix and for a file behind it, and every path the worker precaches has
+ *    to exist, because one missing file fails the worker's whole install.
+ */
+const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+const manifestFile = join(OUT, "manifest.webmanifest")
+if (!existsSync(manifestFile)) {
+  fail("Missing manifest.webmanifest, the web app manifest.")
+} else if (basePath !== null) {
+  const manifest = JSON.parse(readFileSync(manifestFile, "utf8"))
+  const fileFor = (url) => join(OUT, url.slice(basePath.length))
+  for (const key of ["id", "start_url", "scope"]) {
+    const url = manifest[key]
+    if (typeof url !== "string" || !url.startsWith(`${basePath}/`)) {
+      fail(`manifest ${key} "${url}" does not carry the base path.`)
+    } else if (!existsSync(join(fileFor(url), "index.html"))) {
+      fail(`manifest ${key} "${url}" has no document behind it.`)
+    }
+  }
+  for (const { src } of manifest.icons ?? []) {
+    if (!src.startsWith(`${basePath}/`)) {
+      fail(`manifest icon "${src}" does not carry the base path.`)
+    } else if (!existsSync(fileFor(src))) {
+      fail(`manifest icon "${src}" is not in the export.`)
+    } else if (!readFileSync(fileFor(src)).subarray(0, 8).equals(PNG_MAGIC)) {
+      fail(`manifest icon "${src}" is not a PNG.`)
+    }
+  }
+  if (!manifest.icons?.length) fail("The manifest lists no icons.")
+  if (!landingHtml.includes('rel="manifest"')) {
+    fail("out/index.html does not link the manifest.")
+  }
+  if (!landingHtml.includes('rel="apple-touch-icon"')) {
+    fail("out/index.html does not link the apple-touch-icon.")
+  }
+}
+
+const swFile = join(OUT, "sw.js")
+if (!existsSync(swFile)) {
+  fail("Missing sw.js, the service worker (written by scripts/build-sw.mjs).")
+} else {
+  const sw = readFileSync(swFile, "utf8")
+  const build = sw.match(/^const BUILD = (.*)$/m)
+  if (!build) {
+    fail("Could not read the precache list from out/sw.js.")
+  } else {
+    const paths = JSON.parse(build[1]).precache
+    const missing = paths.filter((path) => {
+      const file = join(OUT, path)
+      return !existsSync(
+        path === "" || path.endsWith("/") ? join(file, "index.html") : file
+      )
+    })
+    if (missing.length > 0) {
+      fail(
+        `sw.js precaches files the export does not hold:\n` +
+          missing.map((m) => `    ${m}`).join("\n")
+      )
+    }
+    if (paths.includes("sw.js")) fail("sw.js precaches itself.")
+    for (const needed of ["", "app/", "app/overview/", "pdf.worker.min.mjs"]) {
+      if (!paths.includes(needed)) {
+        fail(`sw.js does not precache "${needed}", so the app breaks offline.`)
+      }
+    }
+    if (!paths.some((p) => p.startsWith("_next/static/"))) {
+      fail("sw.js precaches no chunks.")
+    }
+    if (!failures.length) {
+      note(`manifest and icons in place, sw.js precaches ${paths.length} files`)
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------

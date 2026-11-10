@@ -51,6 +51,7 @@ import { useAppShortcuts } from "@/hooks/use-app-shortcuts"
 import { useAutosave } from "@/hooks/use-autosave"
 import { startRecordingHistory } from "@/stores/history-store"
 import { usePersistentStorage } from "@/hooks/use-persistent-storage"
+import { useServiceWorker } from "@/hooks/use-service-worker"
 import { useStorageWarning } from "@/hooks/use-storage-warning"
 import {
   openFile,
@@ -175,6 +176,7 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
   useAutosave()
   useStorageWarning()
   usePersistentStorage()
+  useServiceWorker()
 
   const handleDrop = React.useCallback(
     (

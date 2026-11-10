@@ -54,6 +54,7 @@ const SECTIONS: readonly {
 const PLACES: readonly { title: MessageKey; body: MessageKey }[] = [
   { title: "privacy.lsTitle", body: "privacy.ls" },
   { title: "privacy.idbTitle", body: "privacy.idb" },
+  { title: "privacy.cacheTitle", body: "privacy.cache" },
   { title: "privacy.fileTitle", body: "privacy.file" },
   { title: "privacy.noneTitle", body: "privacy.none" },
 ]

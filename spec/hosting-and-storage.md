@@ -162,6 +162,22 @@ static files, so any static host would do.
   serves it for unmatched paths, which is also why `trailingSlash: true` matters:
   every route is a real `index.html` and no rewrite rules are involved.
 
+### Installing and working offline
+
+The site is a progressive web app: a manifest lets a browser install it, and a service worker keeps it usable with no connection. The file is the database (§1), so nothing else is needed for the app to work offline.
+
+- **The manifest is `app/manifest.ts`**, a Route Handler with `dynamic = "force-static"` that the export writes as `manifest.webmanifest`. It is in Finnish, with no per-language variant, like the indexed document. `start_url` is `/app/`, which sends an open bookkeeping to the overview and a closed one to the landing page. `scope` is the whole site, because the landing page is where a file is opened. `launch_handler` is `focus-existing`, since one tab at a time holds the bookkeeping (§12).
+- **Neither the manifest's URLs nor the icon links pass through `basePath`.** `lib/pwa.ts` holds the scope, the start URL, the worker's URL and the icon list, each with `BASE_PATH` spelled out. Moving to a host root needs no change there.
+- **The icons are route handlers** (`app/icons/[file]/route.tsx`), for the reason the OG card is one: the export writes real `.png` files that Pages types from the extension. `APP_ICONS` lists them: 192 and 512 as a rounded square, a 512 `maskable` and a 180 `apple-touch-icon` that fill the square. `components/app-icon.tsx` draws the mark, the letter K on `--primary`.
+- **The service worker is generated, not written to `public/`.** `scripts/build-sw.mjs` runs on `postbuild` before the export check. It lists the files in `out/`, hashes them into a version and writes `out/sw.js`. The worker's code is the two functions in `scripts/sw/`, printed into the file with `toString()`, so each must stand alone, with no imports. That is also what lets `test/pwa.test.tsx` run the worker against a fake global scope.
+- **Hashed files are answered from the cache, everything else from the network first.** Files under `_next/static/` carry a content hash in their name. Documents, their RSC payloads (`*.txt`) and `pdf.worker.min.mjs` keep one URL across builds, so the cached copy is used only when the network fails or takes more than four seconds. Online, a user gets a new build on the next page load, as without the worker, and no "update available" prompt exists. A request that is not a GET, or is outside the scope (the bank proxy), is left alone.
+- **The cache holds exactly one build.** Install stores every listed file or fails as a whole. A network answer is never written into the cache, because a newer document would point at chunks the cache lacks. A new worker takes over at once (`skipWaiting`, `clients.claim`) and deletes the older cache.
+- **Cache Storage is per origin, and the origin is shared** with the account's other Pages sites. The cache is named `kirjanpito-<version>`, and the worker deletes only names with that prefix.
+- **Only an open bookkeeping registers the worker.** `useServiceWorker` is mounted in `AppShell`, in production only. A visitor who only reads the landing page gets no worker and no cache, as they get no stored bookkeeping (§12). The cache holds the app's own files and none of the user's data, so closing the file leaves it in place.
+- **A redirect passes through the worker**, which is what lets a browser with the worker installed follow the site to a custom domain. An app installed from the old origin stays there with that origin's storage. The user installs again from the new address and opens their file.
+- **The CSP needs nothing for this.** `worker-src 'self'` covers the registration, and the manifest falls under `default-src 'self'`.
+- **`verify-export.mjs` checks all of it**: the manifest exists and is linked, its URLs carry the base path and have a file behind them, the icons are PNGs, and every path `sw.js` precaches exists, since one missing file fails the worker's install.
+
 ### Release notes
 
 `scripts/release-notes.mjs` turns Conventional Commit subjects into notes. `node scripts/release-notes.mjs` lists what changed since the newest tag, or since the first commit while there is none.
@@ -234,6 +250,9 @@ before any file is open, and must not read or write `bookkeeping` to get it.
   It is **not** in the localStorage blob — a handle is not JSON — so
   `AppShell` restores it by hand once the book has rehydrated, and both ways
   of leaving a bookkeeping delete it.
+- Cache Storage `kirjanpito-<version>`: the app's own files for offline use,
+  written by the service worker (§11b). It holds no bookkeeping, and only an
+  open bookkeeping creates it.
 - **sessionStorage is not used.**
 - **Persistent storage is requested** with `navigator.storage.persist()` at the first unsaved change of a page load (`hooks/use-persistent-storage.ts`), so a browser that prompts does so when there is work to protect. Without it the browser may evict storage under disk pressure, and until a save this is the only copy. A refusal changes nothing and is not shown.
 - **One tab at a time holds the bookkeeping.** localStorage and IndexedDB are

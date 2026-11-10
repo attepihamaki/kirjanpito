@@ -235,6 +235,11 @@ export const LANDING_DICT = {
     "Liitetiedostot (bookkeeping-receipts), liitteistä luettu hakuteksti (bookkeeping-receipt-text) ja avatun tiedoston osoitin (bookkeeping-file). Hakuteksti on välimuisti, jota ei kirjoiteta tiedostoon.",
     "The receipt files (bookkeeping-receipts), the text read from receipts for search (bookkeeping-receipt-text) and the pointer to the opened file (bookkeeping-file). The search text is a cache and is never written to the file.",
   ],
+  "privacy.cacheTitle": ["Selaimen välimuisti", "Browser cache"],
+  "privacy.cache": [
+    "Kun avaat kirjanpidon, selain tallentaa sovelluksen omat tiedostot (sivut, skriptit, fontit ja kuvakkeet), jotta sovellus toimii ilman verkkoyhteyttä ja sen voi asentaa. Välimuistissa ei ole kirjanpitoasi. Pelkkä etusivun katsominen ei tallenna sitäkään.",
+    "When you open a bookkeeping, the browser stores the app's own files (pages, scripts, fonts and icons), so that the app works offline and can be installed. The cache holds none of your books. Only looking at the home page does not store it either.",
+  ],
   "privacy.fileTitle": ["Tiedosto, jonka tallennat", "The file you save"],
   "privacy.file": [
     "ZIP-tiedosto, jossa on tositteet CSV:nä, asetukset (settings.json) ja liitteet. Valitset itse, minne se tallennetaan. Jos selain sallii, sovellus tallentaa suoraan samaan tiedostoon, ja automaattinen tallennus kirjoittaa sinne ilman kysymistä.",

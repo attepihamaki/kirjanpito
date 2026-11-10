@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import "@/app/globals.css"
 import { HtmlShell } from "@/components/html-shell"
 import { StoreHydrator } from "@/components/store-hydrator"
+import { appIconUrl } from "@/lib/pwa"
 import { INDEXABLE, SITE_URL } from "@/lib/site"
 
 export const metadata: Metadata = {
@@ -21,6 +22,8 @@ export const metadata: Metadata = {
   },
   description:
     "Selaimessa toimiva yhdenkertainen kirjanpito toiminimelle. Laskee arvonlisäveron ja tuloslaskelman veroilmoitusta varten. Ei tiliä, ei tietokantaa – tiedot pysyvät omalla koneellasi.",
+  // iOS reads its home-screen icon from this link, not from the manifest.
+  icons: { apple: appIconUrl("apple-touch-icon.png") },
 }
 
 export default function RootLayout({
