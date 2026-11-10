@@ -104,7 +104,7 @@ function fileKey(a: Attachment, hashes?: ReceiptHashes): string | null {
 }
 
 /** How many days apart two entries with the same side, amount and description may be and still look like one. */
-export const NEAR_DUPLICATE_DAYS = 3
+const NEAR_DUPLICATE_DAYS = 3
 
 /**
  * Whether two entries have the same side, gross amount and description, within

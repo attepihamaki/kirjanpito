@@ -11,7 +11,7 @@ import type { Cents } from "@/lib/domain/types"
  */
 
 /** Days a reminder gives to pay, counted from the reminder's date. */
-export const REMINDER_TERM_DAYS = 7
+const REMINDER_TERM_DAYS = 7
 
 /**
  * The general late-payment rate in percent on a day (Interest Act 4 §: the

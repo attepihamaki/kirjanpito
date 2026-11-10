@@ -9,7 +9,7 @@ import { normalizeName } from "@/lib/domain/bank-match"
  */
 
 /** How many days apart two otherwise identical invoices may be and still look like one. */
-export const NEAR_INVOICE_DAYS = 7
+const NEAR_INVOICE_DAYS = 7
 
 /** What a row says, apart from the words around it: its description, quantity, price and VAT. */
 function rowKey(r: InvoiceRow): string {
