@@ -30,7 +30,7 @@ function rememberPdfThumbnail(id: string, url: string): void {
 }
 
 /** A 3:4 thumbnail, cropped to the top. */
-function Thumb({
+export function Thumb({
   att,
   onOpen,
   onRemove,

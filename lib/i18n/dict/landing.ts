@@ -50,6 +50,8 @@ export const LANDING_DICT = {
   ],
   "landing.start": ["Aloita uusi kirjanpito", "Start new bookkeeping"],
   "landing.open": ["Avaa tiedosto", "Open a file"],
+  "landing.demoLead": ["Haluatko ensin katsoa?", "Want to look around first?"],
+  "landing.demo": ["Avaa esimerkkikirjanpito", "Open the demo bookkeeping"],
   "landing.continue": ["Jatka kirjanpitoa", "Continue bookkeeping"],
   "landing.toApp": ["Avaa kirjanpito", "Open bookkeeping"],
   "landing.drop": [

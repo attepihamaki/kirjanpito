@@ -4689,4 +4689,94 @@ export const APP_DICT = {
     "Kirjattu varaston muutos on {a}, mutta nykyinen lista antaa {b}.",
     "The booked stock change is {a}, but the list now gives {b}.",
   ],
+  "inbox.tab": ["Saapuneet", "Inbox"],
+  "inbox.tabCount": [
+    pl("Saapuneet (1)", "Saapuneet ({n})"),
+    pl("Inbox (1)", "Inbox ({n})"),
+  ],
+  "inbox.subtitle": [
+    "Tositteet, jotka odottavat kirjaamista",
+    "Receipts waiting to be booked",
+  ],
+  "inbox.add": ["Lisää tositteita", "Add receipts"],
+  "inbox.camera": ["Ota kuva", "Take a photo"],
+  "inbox.dropTitle": [
+    "Pudota tositteita tähän tai valitse tiedostot",
+    "Drop receipts here or choose files",
+  ],
+  "inbox.dropHint": [
+    "Kuvat ja PDF:t odottavat täällä, kunnes kirjaat ne. Ne tallentuvat kirjanpidon tiedostoon.",
+    "Images and PDFs wait here until you book them. They are saved in the bookkeeping file.",
+  ],
+  "inbox.emptyTitle": ["Ei odottavia tositteita", "No receipts waiting"],
+  "inbox.emptyHint": [
+    "Lisää kuitit ja laskut tänne heti, kun saat ne, ja kirjaa ne myöhemmin.",
+    "Add receipts and bills here as they arrive, and book them later.",
+  ],
+  "inbox.listLabel": [
+    pl("1 odottava tosite", "{n} odottavaa tositetta"),
+    pl("1 receipt waiting", "{n} receipts waiting"),
+  ],
+  "inbox.added": [
+    pl(
+      "1 tosite lisättiin saapuneisiin.",
+      "{n} tositetta lisättiin saapuneisiin."
+    ),
+    pl("1 receipt added to the inbox.", "{n} receipts added to the inbox."),
+  ],
+  "inbox.addedOn": ["Lisätty {d}", "Added {d}"],
+  "inbox.addedUnknown": ["Lisäyspäivä ei tiedossa", "Date added unknown"],
+  "inbox.nothingRead": [
+    "Tietoja ei luettu – täytä ne kirjatessa.",
+    "Nothing read – fill in the details when booking.",
+  ],
+  "inbox.book": ["Kirjaa", "Book"],
+  "inbox.photoName": ["Kuva {d}", "Photo {d}"],
+  "inbox.storeFailed": [
+    "Tositetta ei voitu tallentaa selaimeen.",
+    "The receipt could not be stored in the browser.",
+  ],
+  "inbox.missing": [
+    "Tositteen tiedostoa ei löydy tästä selaimesta.",
+    "The receipt’s file is not in this browser.",
+  ],
+  "inbox.deleteTitle": ["Poistetaanko tosite?", "Delete the receipt?"],
+  "inbox.deleteMessage": [
+    "”{x}” poistetaan saapuneista. Sitä ei ole kirjattu.",
+    "“{x}” will be removed from the inbox. It has not been booked.",
+  ],
+  "inbox.deleteNamed": ["Poista {x}", "Delete {x}"],
+  "inbox.deleted": [
+    "Tosite poistettiin saapuneista.",
+    "Receipt removed from the inbox.",
+  ],
+  "app.demoTitle": ["Esimerkkikirjanpito", "Demo bookkeeping"],
+  "app.demoHint": [
+    "Kaikki luvut ja nimet ovat keksittyjä. Kokeile vapaasti.",
+    "Every figure and name is made up. Try anything.",
+  ],
+  "app.demoStart": ["Aloita oma kirjanpito", "Start your own bookkeeping"],
+  "file.backupDays": [
+    pl(
+      "Muutoksia ei ole tallennettu tiedostoon 1 päivään.",
+      "Muutoksia ei ole tallennettu tiedostoon {n} päivään."
+    ),
+    pl(
+      "Changes have not been saved to a file for 1 day.",
+      "Changes have not been saved to a file for {n} days."
+    ),
+  ],
+  "file.backupNoFile": [
+    pl(
+      "Kirjanpito on ollut vain tässä selaimessa 1 päivän. Tallenna se tiedostoon.",
+      "Kirjanpito on ollut vain tässä selaimessa {n} päivää. Tallenna se tiedostoon."
+    ),
+    pl(
+      "The bookkeeping has only been in this browser for 1 day. Save it to a file.",
+      "The bookkeeping has only been in this browser for {n} days. Save it to a file."
+    ),
+  ],
+  "file.backupSave": ["Tallenna", "Save"],
+  "file.backupDownload": ["Lataa kopio", "Download a copy"],
+  "file.backupLater": ["Muistuta huomenna", "Remind me tomorrow"],
 } as const satisfies Dict

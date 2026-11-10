@@ -25,6 +25,7 @@ export function VatReminderBanner() {
   const router = useRouter()
   const today = useToday()
   const archiveYear = useBookStore((s) => s.archiveYear)
+  const demo = useBookStore((s) => s.demo)
   const entries = useBookStore((s) => s.entries)
   const mode = useBookStore((s) => s.vatPeriod)
   const bookStart = useBookStore((s) => s.bookStart)
@@ -42,8 +43,16 @@ export function VatReminderBanner() {
     )
   }, [entries, mode, bookStart, today, vatFiled])
 
-  /* An archive is a read-only reference, and the return belongs to the open book. */
-  if (!reminder || archiveYear !== null || hidden === reminder.period.key) {
+  /*
+   * An archive is a read-only reference, and the return belongs to the open
+   * book. The demo book's returns are not anybody's to file (§8.32).
+   */
+  if (
+    !reminder ||
+    archiveYear !== null ||
+    demo ||
+    hidden === reminder.period.key
+  ) {
     return null
   }
 

@@ -37,7 +37,7 @@ import { isBookFile, useFileDrop } from "@/hooks/use-file-drop"
  */
 import { csvHeaderLine } from "@/lib/domain/csv-header"
 import { MINUS } from "@/lib/domain/money"
-import { startNewBook } from "@/lib/commands/book-commands"
+import { startDemoBook, startNewBook } from "@/lib/commands/book-commands"
 import { APP_ROUTES, LANDING, LANDING_FAQ_ID } from "@/lib/site"
 import { useBookStore } from "@/stores/book-store"
 import { cn } from "@/lib/utils"
@@ -331,19 +331,31 @@ function HeroCta({
           {dirty ? `. ${f.t("file.dirty")}.` : ""}
         </p>
       ) : (
-        <DropTile
-          disabled={busy}
-          onClick={onPick}
-          className="flex items-center gap-3 rounded-lg px-4 py-3"
-        >
-          <UploadIcon className="size-5 shrink-0 text-muted-foreground" />
-          <span className="flex flex-col">
-            <span className="text-sm font-medium">{f.t("landing.drop")}</span>
-            <span className="text-xs text-muted-foreground">
-              {f.t("landing.dropSub")}
+        <>
+          <DropTile
+            disabled={busy}
+            onClick={onPick}
+            className="flex items-center gap-3 rounded-lg px-4 py-3"
+          >
+            <UploadIcon className="size-5 shrink-0 text-muted-foreground" />
+            <span className="flex flex-col">
+              <span className="text-sm font-medium">{f.t("landing.drop")}</span>
+              <span className="text-xs text-muted-foreground">
+                {f.t("landing.dropSub")}
+              </span>
             </span>
-          </span>
-        </DropTile>
+          </DropTile>
+          <p className="text-sm text-muted-foreground">
+            {f.t("landing.demoLead")}{" "}
+            <Button
+              variant="link"
+              className="h-auto p-0 align-baseline"
+              onClick={() => void startDemoBook(ctx)}
+            >
+              {f.t("landing.demo")}
+            </Button>
+          </p>
+        </>
       )}
     </div>
   )

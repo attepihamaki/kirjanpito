@@ -16,8 +16,10 @@ const eslintConfig = defineConfig([
     // Generated on predev/prebuild by scripts/copy-pdf-worker.mjs.
     "public/**",
   ]),
-  // The §10 reference bookkeeping is a fixture, not a feature: the app has no
-  // sample ledger, so only tests may reach for lib/domain/test-helpers.
+  /*
+   * The §10 reference bookkeeping is a fixture, not a feature: the demo book
+   * (§8.32) is its own data, so only tests may reach for lib/domain/test-helpers.
+   */
   {
     rules: {
       "no-restricted-imports": [
@@ -27,7 +29,7 @@ const eslintConfig = defineConfig([
             {
               group: ["**/domain/test-helpers/*", "@/lib/domain/test-helpers/*"],
               message:
-                "Test fixtures are for *.test.ts(x) only — the app ships no sample data.",
+                "Test fixtures are for *.test.ts(x) only — the demo book is lib/domain/demo-book.ts.",
             },
           ],
         },

@@ -59,7 +59,7 @@ Two words stay as they are, in both languages:
 
 ## 10. Reference data (test fixture)
 
-Sixteen gross entries for 2026. **The app has no sample ledger**: there is no "Kokeile esimerkillä" button, no `loadDemo` command and no way for a user to load these entries. They live only in `lib/domain/test-helpers/sample-book.ts` (`sampleEntries()`) as the fixture the calculations are verified against. An eslint `no-restricted-imports` rule blocks `lib/domain/test-helpers/*` outside test files, so the fixture cannot drift back into the app.
+Sixteen gross entries for 2026. **No user can load these entries**: they live only in `lib/domain/test-helpers/sample-book.ts` (`sampleEntries()`) as the fixture the calculations are verified against. The demo book a user can open (§8.32) is a separate, made-up book in `lib/domain/demo-book.ts`, so changing it never moves a figure the tests assert. An eslint `no-restricted-imports` rule blocks `lib/domain/test-helpers/*` outside test files, so the fixture cannot drift back into the app.
 
 | date       | description                      | type    | catId        | amount (€) | vatRate |
 | ---------- | -------------------------------- | ------- | ------------ | ---------- | ------- |

@@ -1,3 +1,9 @@
+import {
+  inboxFileItems,
+  inboxKey,
+  inboxPaths,
+  type InboxItem,
+} from "@/lib/domain/inbox"
 import { toast } from "@/components/ui/toast"
 import type { DateRange } from "@/lib/domain/books"
 import { periodFromKey } from "@/lib/domain/vat-deadline"
@@ -370,6 +376,25 @@ async function importZip(
     entries.push({ ...entry, ...(atts.length ? { atts } : {}) })
   }
 
+  /* An inbox file that cannot be read is dropped, like a missing receipt. */
+  const inbox: InboxItem[] = []
+  for (const { path, ...item } of settings?.inbox ?? []) {
+    const bytes = canStore ? await unpacked.readReceipt(path) : null
+    if (!bytes) {
+      missing += 1
+      continue
+    }
+    const id = `a-${uid()}`
+    const type = item.type || mimeForName(item.name)
+    try {
+      await putReceipt(id, new Blob([bytes as BlobPart], { type }))
+      inbox.push({ ...item, id, type })
+      imported += 1
+    } catch {
+      missing += 1
+    }
+  }
+
   const invoiceRecords = unpacked.invoicesText
     ? parseInvoices(unpacked.invoicesText)
     : { invoices: [], skipped: 0 }
@@ -394,6 +419,7 @@ async function importZip(
       invoices: invoiceRecords.invoices,
       customers: customerRecords.customers,
       inventory: inventoryRecords.inventory,
+      inbox,
     }
   )
   const skippedRecords =
@@ -578,6 +604,7 @@ function applyImport(
     invoices?: Invoice[]
     customers?: Customer[]
     inventory?: Inventory
+    inbox?: InboxItem[]
   }
 ): void {
   releaseAllObjectUrls()
@@ -587,6 +614,7 @@ function applyImport(
     invoices: archive.invoices,
     customers: archive.customers,
     inventory: archive.inventory,
+    inbox: archive.inbox,
     entries,
     cats: result.categories,
     // The name carries its extension (§7.3).
@@ -801,17 +829,26 @@ export async function buildBookFile(
    * the callers ask first, and this stops anything that did not.
    */
   if (encrypted && !heldPassword()) throw new Error("No password for the book")
-  const paths = buildReceiptPaths(entries, exportLang)
+  const receiptPaths = buildReceiptPaths(entries, exportLang)
   /*
    * Paths are always written, so a CSV taken out of the ZIP still records
    * which receipts existed (§7.1).
    */
   const csvText = serializeCsv(entries, indexCategories(cats), {
     lang: exportLang,
-    paths,
+    paths: receiptPaths,
   })
+  /*
+   * The inbox is the working book's (§8.31): a file of some entries only,
+   * an archive or an audit copy, leaves it out.
+   */
+  const inbox = only ? [] : useBookStore.getState().inbox
+  const inboxPathMap = inboxPaths(inbox, exportLang)
+  const paths = new Map([...receiptPaths, ...inboxPathMap])
 
-  const attachmentIds = new Map<string, string>()
+  const attachmentIds = new Map<string, string>(
+    inbox.map((item) => [inboxKey(item.id), item.id])
+  )
   let absentReceipts = 0
   let lostReceipts = 0
   for (const e of entries) {
@@ -852,7 +889,10 @@ export async function buildBookFile(
     attachmentIds,
     read: async (id) => (await getReceipt(id)) ?? null,
     settingsText: await sealSettings(
-      currentSettingsText(only?.settings),
+      currentSettingsText({
+        ...only?.settings,
+        inbox: inboxFileItems(inbox, inboxPathMap),
+      }),
       csvText,
       {
         invoices: invoicesText,

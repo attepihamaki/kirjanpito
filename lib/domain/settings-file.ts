@@ -1,3 +1,4 @@
+import { parseInboxFileItem, type InboxFileItem } from "@/lib/domain/inbox"
 import { type TaxPayment } from "@/lib/domain/vat-filing"
 import {
   LINE_BY_KEY,
@@ -141,6 +142,8 @@ export interface BookSettings {
   invoiceSettings: InvoiceSettings
   /** What has happened to the entries, oldest first (§8.11). */
   changeLog: ChangeRecord[]
+  /** The receipt inbox and where its files are in the ZIP (§8.31). Absent means empty. */
+  inbox?: InboxFileItem[]
 }
 
 /**
@@ -620,6 +623,9 @@ export function parseSettings(text: string): ParsedSettings {
     if (ledger && categories) out.pageSize = { ledger, categories }
   }
   if (typeof raw.showAccounts === "boolean") out.showAccounts = raw.showAccounts
+  if (Array.isArray(raw.inbox)) {
+    out.inbox = raw.inbox.flatMap((item) => parseInboxFileItem(item) ?? [])
+  }
   return out
 }
 
@@ -680,6 +686,7 @@ export function serializeSettings(s: BookSettings): string {
     yearEnd: s.yearEnd,
     invoiceSettings: s.invoiceSettings,
     changeLog: s.changeLog,
+    ...(s.inbox?.length ? { inbox: s.inbox } : {}),
   }
   return `${JSON.stringify(file, null, 2)}\n`
 }

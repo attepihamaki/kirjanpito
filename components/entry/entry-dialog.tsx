@@ -321,6 +321,7 @@ export function EntryDialog({
       mode={dialog.mode}
       entryId={dialog.entryId}
       files={dialog.files}
+      inboxId={dialog.inboxId}
       prefill={dialog.prefill}
       registerDropTarget={registerDropTarget}
     />
@@ -331,12 +332,14 @@ function EntryDialogForm({
   mode,
   entryId,
   files,
+  inboxId,
   prefill,
   registerDropTarget,
 }: {
   mode: "new" | "edit" | "copy"
   entryId?: string
   files?: File[]
+  inboxId?: string
   prefill?: EntryPrefill
   registerDropTarget: (fn: ((files: File[]) => void) | null) => void
 }) {
@@ -1020,6 +1023,10 @@ function EntryDialogForm({
 
     upsertEntry(saved)
     if (settles) upsertEntry(settles.target)
+    /* The inbox item is done once its receipt is on the entry (§8.31). */
+    if (inboxId && saved.atts?.length) {
+      useBookStore.getState().removeInboxItem(inboxId)
+    }
     /*
      * The template follows the entry it was made from, found by the entry as
      * it was before this edit, so renaming the entry does not leave a second

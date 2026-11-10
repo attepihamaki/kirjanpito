@@ -35,6 +35,7 @@ import {
   syncEuPurchase,
 } from "@/lib/domain/eu-purchase-category"
 import { uid } from "@/lib/domain/id"
+import type { InboxItem } from "@/lib/domain/inbox"
 import {
   DEFAULT_LAYOUT,
   type OverviewWidget,
@@ -222,6 +223,8 @@ export type DialogState =
       entryId?: string
       /** Receipts dropped with no dialog open, attached as the dialog opens. */
       files?: File[]
+      /** The inbox item `files` came from, taken out when the entry is saved (§8.31). */
+      inboxId?: string
       /** Fields a new entry starts from, such as a VAT payment's (§6.6). */
       prefill?: EntryPrefill
     }
@@ -366,6 +369,20 @@ export interface BookState {
   inventory: Inventory
   /** What has happened to the entries, oldest first (§8.11). Saved in settings.json. */
   changeLog: ChangeRecord[]
+  /** Receipts waiting to become entries (§8.31). Saved in settings.json and the ZIP. */
+  inbox: InboxItem[]
+  /**
+   * The bookkeeping is the demo book (§8.32): made up, never linked to a file,
+   * and gone as soon as another bookkeeping takes over.
+   */
+  demo: boolean
+  /**
+   * When the book last went from saved to unsaved, on the device's clock, or
+   * null while it is saved. The backup reminder reads it (§8.33).
+   */
+  dirtySince: number | null
+  /** The backup reminder is hidden until this ISO day (§8.33). */
+  backupSnoozed: string | null
 
   // ---- ephemeral ----
   hydrated: boolean
@@ -475,6 +492,22 @@ export interface BookActions {
   }): void
   /** Take the getting-started checklist off the overview (§8.15). */
   dismissOnboarding(): void
+  /** Put the demo book in place of whatever was open (§8.32). */
+  startDemo(book: {
+    year: number
+    entries: Entry[]
+    customers: Customer[]
+    businessName: string
+    businessId: string
+    /** VAT periods to mark filed, each on its due date (§8.32). */
+    filed: readonly { key: string; on: string }[]
+  }): void
+  /** Add receipts to the inbox (§8.31). */
+  addInboxItems(items: InboxItem[]): void
+  /** Take one item out of the inbox; its stored file goes in the next sweep. */
+  removeInboxItem(id: string): void
+  /** Hide the backup reminder until `day` (§8.33). */
+  snoozeBackup(day: string): void
   closeBook(): void
   replaceBook(next: {
     entries: Entry[]
@@ -493,6 +526,8 @@ export interface BookActions {
     customers?: Customer[]
     /** What the file's `inventory.json` carried (§7.6). */
     inventory?: Inventory
+    /** The receipts the file's inbox held, already stored (§8.31). */
+    inbox?: InboxItem[]
     /**
      * What the file's `settings.json` carried. A plain CSV has none: its
      * filed marks start empty and everything else stays as it was.
@@ -716,6 +751,10 @@ function initialState(): BookState {
     customers: [],
     inventory: EMPTY_INVENTORY,
     changeLog: [],
+    inbox: [],
+    demo: false,
+    dirtySince: null,
+    backupSnoozed: null,
 
     hydrated: false,
     importing: false,
@@ -795,6 +834,10 @@ type PersistedBook = Pick<
   | "customers"
   | "inventory"
   | "changeLog"
+  | "inbox"
+  | "demo"
+  | "dirtySince"
+  | "backupSnoozed"
 >
 
 /**
@@ -970,6 +1013,7 @@ const BOOK_DATA_KEYS: readonly (keyof BookState)[] = [
   "customers",
   "inventory",
   "changeLog",
+  "inbox",
   "encrypted",
   "overviewLayout",
   "autosave",
@@ -1069,6 +1113,8 @@ export const useBookStore = create<BookStore>()(
           customers: [],
           inventory: EMPTY_INVENTORY,
           changeLog: [],
+          inbox: [],
+          demo: false,
           onboarding: true,
           undoAttachmentIds: [],
           bookEpoch: get().bookEpoch + 1,
@@ -1076,6 +1122,50 @@ export const useBookStore = create<BookStore>()(
         }),
 
       dismissOnboarding: () => set({ onboarding: false }),
+
+      startDemo: (book) => {
+        get().replaceBook({
+          entries: book.entries,
+          cats: defaultCategories(),
+          customers: book.customers,
+          fileName: null,
+          fileHandle: null,
+          savedAt: null,
+          year: book.year,
+          dirty: false,
+          settings: {
+            exportLang: "fi",
+            businessName: book.businessName,
+            businessId: book.businessId,
+            vatPeriod: "month",
+            traderType: "professional",
+            autosave: false,
+            changeLog: [],
+          },
+        })
+        for (const { key, on } of book.filed) get().setVatFiled(key, on)
+        set({ demo: true, dirty: false })
+      },
+
+      addInboxItems: (items) => {
+        if (!items.length) return
+        set({
+          inbox: [...get().inbox, ...items],
+          dirty: true,
+          gcTick: get().gcTick + 1,
+        })
+      },
+
+      removeInboxItem: (id) => {
+        if (!get().inbox.some((i) => i.id === id)) return
+        set({
+          inbox: get().inbox.filter((i) => i.id !== id),
+          dirty: true,
+          gcTick: get().gcTick + 1,
+        })
+      },
+
+      snoozeBackup: (day) => set({ backupSnoozed: day }),
 
       startBook: (settings) =>
         set((s) => ({
@@ -1130,6 +1220,8 @@ export const useBookStore = create<BookStore>()(
           customers: [],
           inventory: EMPTY_INVENTORY,
           changeLog: [],
+          inbox: [],
+          demo: false,
           dialog: { kind: "none" },
           figure: null,
           draftAttachmentIds: [],
@@ -1199,6 +1291,8 @@ export const useBookStore = create<BookStore>()(
           invoices: next.invoices ?? [],
           customers: next.customers ?? [],
           inventory: next.inventory ?? EMPTY_INVENTORY,
+          inbox: next.inbox ?? [],
+          demo: false,
           changeLog: s.changeLog
             ? relinkChangeLog(s.changeLog, entries)
             : [{ at: new Date().toISOString(), action: "import" }],
@@ -1659,6 +1753,10 @@ export const useBookStore = create<BookStore>()(
         customers: s.customers,
         inventory: s.inventory,
         changeLog: s.changeLog,
+        inbox: s.inbox,
+        demo: s.demo,
+        dirtySince: s.dirtySince,
+        backupSnoozed: s.backupSnoozed,
       }),
       /*
        * The default merge is shallow, so a stored `payMonths` from before the

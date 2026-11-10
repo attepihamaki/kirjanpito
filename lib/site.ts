@@ -125,6 +125,7 @@ export const LEDGER_ROUTES = {
   journal: `${APP_ROUTES.ledger}/journal`,
   accounts: `${APP_ROUTES.ledger}/accounts`,
   chart: `${APP_ROUTES.ledger}/chart`,
+  inbox: `${APP_ROUTES.ledger}/inbox`,
 } as const
 
 /**

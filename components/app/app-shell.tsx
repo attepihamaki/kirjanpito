@@ -1,12 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 
 import { AppSidebar } from "@/components/app/app-sidebar"
 import { AppSkeleton } from "@/components/app/app-skeleton"
 import { AppTopbar } from "@/components/app/app-topbar"
 import { ArchiveBanner } from "@/components/app/archive-banner"
+import { BackupBanner } from "@/components/app/backup-banner"
+import { DemoBanner } from "@/components/app/demo-banner"
 import { VatReminderBanner } from "@/components/app/vat-reminder-banner"
 import { ImportOverlay } from "@/components/app/import-overlay"
 import { ScrollMemory } from "@/components/app/scroll-memory"
@@ -44,6 +46,7 @@ import { toast } from "@/components/ui/toast"
 import { useBeforeUnload } from "@/hooks/use-before-unload"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { useDelayedFlag } from "@/hooks/use-delayed-flag"
+import { useDirtySince } from "@/hooks/use-dirty-since"
 import { useFileDrop, isBookFile, isMediaFile } from "@/hooks/use-file-drop"
 import { useReceiptGc } from "@/hooks/use-receipt-gc"
 import { useRecurringInvoices } from "@/hooks/use-recurring-invoices"
@@ -62,7 +65,8 @@ import {
   restoreFileHandle,
 } from "@/lib/commands/io-commands"
 import { claimTab } from "@/lib/browser/tab-lock"
-import { LANDING } from "@/lib/site"
+import { addToInbox } from "@/lib/commands/inbox-commands"
+import { LANDING, LEDGER_ROUTES } from "@/lib/site"
 import { cn } from "@/lib/utils"
 import { syncBookFromStorage, useBookStore } from "@/stores/book-store"
 
@@ -155,6 +159,12 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
   const sidebarOpen = useBookStore((s) => s.sidebarOpen)
   const setSidebarOpen = useBookStore((s) => s.setSidebarOpen)
   const pushDropped = React.useRef<((files: File[]) => void) | null>(null)
+  // trailingSlash is on, so the path is compared without it.
+  const pathname = usePathname().replace(/\/$/, "")
+  const onInbox = React.useRef(false)
+  React.useEffect(() => {
+    onInbox.current = pathname === LEDGER_ROUTES.inbox
+  }, [pathname])
 
   const inputRef = React.useRef<HTMLInputElement>(null)
   /*
@@ -182,6 +192,7 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
   usePersistentStorage()
   useServiceWorker()
   useRecurringInvoices()
+  useDirtySince()
 
   const handleDrop = React.useCallback(
     (
@@ -203,9 +214,13 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
         void handleFor(book).then((handle) => openFile(ctx, book, handle))
         return
       }
-      // Receipts dropped on their own start a new entry around them.
+      /*
+       * Receipts dropped on their own start a new entry around them, or join
+       * the inbox while it is the page on screen (§8.31).
+       */
       const media = files.filter(isMediaFile)
-      if (media.length) {
+      if (media.length && onInbox.current) void addToInbox(ctx, media)
+      else if (media.length) {
         openDialog({ kind: "entry", mode: "new", files: media })
       }
     },
@@ -237,6 +252,8 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
         <SidebarInset className="min-w-0">
           <AppTopbar onOpenFile={pickFile} onExport={openExportDialog} />
           <ArchiveBanner />
+          <DemoBanner />
+          <BackupBanner />
           <VatReminderBanner />
           <div className="min-w-0 flex-1 px-4 py-5 lg:px-6 lg:py-6">
             {children}

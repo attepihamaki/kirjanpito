@@ -283,3 +283,28 @@ The payables side of Saatavat (§8.27): every bill received and not yet paid, wi
 - **The list** (`lib/domain/payables.ts`, `components/invoices/payables-list.tsx`, "Maksettavat" at `/app/invoices/payables`, the tab after Saatavat). Every open expense entry on a line that can be paid, across every year, as one row per voucher, the open parts of a split receipt together (§8.5) with the earliest of their due dates. Rows run by due date, the earliest first, with the undated ones last by voucher date. Each row shows the due date, how many days late it is, a pill for its group, the voucher number and date, the description (which opens the voucher) and the gross still to pay. Above it, totals for the groups: overdue, due today or within `DUE_SOON_DAYS` (7), later, and no due date, and the whole. It is worked out each time and never stored.
 - **Paying** (`payBill`). "Maksa" asks for the day, today to start with, and marks every open part paid on it (`paidOnFor`, so a day equal to the voucher's own date clears `paidOn`). A filed VAT period does not stop it; a year whose Form 5 is filed does, and a change that adds to a filed return asks first, as `markEntryPaid` does. One toast undoes it, leaving alone a part changed since.
 - **Not built:** a supplier's IBAN and reference on the bill, a payment file for the bank (pain.001), reminders of due dates in the calendar or the overview, and a due date filled from the supplier's payment term. The bank import (§8.16) closes a bill as it closes any open entry, by amount and text.
+
+### 8.31 Receipt inbox (Saapuneet)
+
+Receipts added now and booked later. A sole trader gets a bill by email or a till receipt in a shop and is not at the computer to book it; the inbox keeps it until they are.
+
+- **Where it is.** "Saapuneet" is the last tab of Kirjanpito at `/app/ledger/inbox` (`components/ledger/inbox-view.tsx`), with the number waiting in the tab's label. "Lisää tositteita" picks any number of images and PDFs, the dashed tile above the list does the same, and dropping files anywhere in the app while the page is on screen adds them too; elsewhere a dropped receipt still starts an entry (§8.2). On a phone or tablet (`pointer: coarse`) "Ota kuva" opens the camera through `capture="environment"`. Only images and PDFs go in, by the same rule as receipts (§7.4).
+- **What is kept.** `BookState.inbox`, one `InboxItem` per file (`lib/domain/inbox.ts`): the stored receipt's id, its name, type, size, the day it was added and what its text gave. The file is stored in IndexedDB like an attached receipt and the sweep keeps it (§7.4). The inbox is part of the book: it marks the book unsaved, and it is written to the ZIP and `settings.json` (§7.2, §7.6). An archive book shows its inbox read-only.
+- **What is read.** A PDF's text layer is read as it is added, by the same `parseInvoiceText` that fills the entry dialog (§8.6), and the card shows the date, the total and the seller it found. An image is not read: there is no OCR, and a photo is booked by hand.
+- **Booking.** "Kirjaa" opens the entry dialog with the receipt attached (`DialogState` `entry` with `files` and `inboxId`), so a PDF fills the form as any attached PDF does. Saving the entry with the receipt still on it takes the item out of the inbox; cancelling leaves it there. "Poista" asks first and removes the item without booking it.
+- **Not built:** OCR of photos, a share target that adds files from other apps, and an email address that receives receipts (that needs a backend).
+
+### 8.32 Demo book (Esimerkkikirjanpito)
+
+A made-up bookkeeping to look around in before starting one's own.
+
+- **Opening it.** "Avaa esimerkkikirjanpito" under the drop tile on the landing page (`startDemoBook`, `lib/commands/book-commands.ts`) asks about unsaved work as opening a file does (§8.11), then puts the demo in place of the open book and goes to the overview.
+- **What it holds** (`lib/domain/demo-book.ts`). Esimerkki Tmi, an invented business with a made-up y-tunnus. A year of sales and expenses, with the monthly rent, phone, YEL and bank fees up to today, and five counterparties, customers and suppliers, that the entries link to (§8.29). The year is this one from April on and last year before, so the views have something to show. The latest sale is left unpaid. Every name is invented. It is not the §10 fixture, which only the tests load.
+- **How it behaves.** `BookState.demo` is set. The book has no file and autosave is off. A banner on every page says it is the demo and offers "Aloita oma kirjanpito", which starts a new book (§8.3). The VAT reminder (§8.7) and the backup reminder (§8.33) stay quiet. Anything else works as in a real book, including downloading it. Any other book taking over, new, opened or closed, clears `demo`.
+
+### 8.33 Backup reminder
+
+The browser is a working buffer, not the record (§1), and its storage can be cleared without warning. When work has gone unsaved for days, a banner on every page says so (`components/app/backup-banner.tsx`, `backupReminder` in `lib/domain/backup-reminder.ts`).
+
+- **When.** `BookState.dirtySince` is the moment the book last went from saved to unsaved, kept by `useDirtySince` in the app shell and cleared on every save. The banner shows after `BACKUP_DAYS_WITH_FILE` (7) days for a book that has a file on disk, and after `BACKUP_DAYS_NO_FILE` (2) for one never opened from, saved to or downloaded as a file, whose only copy is the browser. A saved, closed, archive (§8.19) or demo (§8.32) book has no banner.
+- **What it offers.** "Tallenna" saves as the file menu does (§7.5); a browser that cannot write to a file gets "Lataa kopio", which opens the download dialog. "Muistuta huomenna" hides it until the next day (`backupSnoozed`).

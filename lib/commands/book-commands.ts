@@ -9,13 +9,14 @@ import {
 import { pruneReceiptHashes } from "@/lib/browser/receipt-hash-db"
 import { pruneReceiptText } from "@/lib/browser/receipt-text-db"
 import { heldByAnotherTab } from "@/lib/browser/tab-lock"
-import { yearOf } from "@/lib/domain/dates"
+import { todayIso, yearOf } from "@/lib/domain/dates"
 import { collectLiveIds } from "@/lib/domain/gc"
 import { historyAttachmentIds } from "@/lib/domain/history"
 import { lockedEntries } from "@/lib/domain/period-lock"
 import type { RecurringEntry } from "@/lib/domain/recurring"
 import { indexCategories, type Entry } from "@/lib/domain/types"
 import { splitSiblings } from "@/lib/domain/split"
+import { vatTimeline } from "@/lib/domain/vat-deadline"
 import { renumberYear } from "@/lib/domain/voucher"
 import { LANDING, APP_ROUTES } from "@/lib/site"
 import { choose, confirm } from "@/lib/ui/confirm"
@@ -57,6 +58,7 @@ export async function sweepReceipts(): Promise<void> {
       const state = useBookStore.getState()
       if (state.importing) return null
       swept.live = collectLiveIds(state.entries, [
+        ...state.inbox.map((i) => i.id),
         ...state.draftAttachmentIds,
         ...state.undoAttachmentIds,
         ...historyAttachmentIds(useHistoryStore.getState()),
@@ -123,6 +125,31 @@ export async function startNewBook(ctx: Ctx): Promise<void> {
    * unspoken. The host is in AppShell, which the route above mounts.
    */
   useBookStore.getState().openDialog({ kind: "setup" })
+}
+
+/**
+ * Open the demo book (§8.32) in place of whatever was open, after the same
+ * guards as a new book. It is never linked to a file and autosave stays off.
+ */
+export async function startDemoBook(ctx: Ctx): Promise<void> {
+  if (await refuseIfOpenElsewhere(ctx)) return
+  if (!(await guardDirty(ctx, true))) return
+  releaseAllObjectUrls()
+  await unlinkFile()
+  const { demoBook, DEMO_BUSINESS } = await import("@/lib/domain/demo-book")
+  const today = todayIso()
+  const book = demoBook(today)
+  /* The returns already due are filed, as a trader keeping up would have. */
+  const filed = vatTimeline("month", `${book.year}-01-01`, today, {})
+    .filter((p) => p.due < today)
+    .map((p) => ({ key: p.key, on: p.due }))
+  useBookStore.getState().startDemo({
+    ...book,
+    businessName: DEMO_BUSINESS.name,
+    businessId: DEMO_BUSINESS.id,
+    filed,
+  })
+  ctx.navigate(APP_ROUTES.overview)
 }
 
 export async function closeBook(ctx: Ctx): Promise<void> {
