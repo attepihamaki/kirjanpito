@@ -374,6 +374,13 @@ const VIEW_TOPICS: Record<string, HelpTopic> = {
       en: "The month the business began. No VAT return is expected for earlier periods, so the first year does not show overdue returns.",
     },
   },
+  "settings.bookEnd": {
+    text: {
+      fi: "Kun toiminta päättyy, ilmoitus annetaan vielä siltä verokaudelta, jolla rekisteröinti päättyy, vaikka toimintaa ei olisi ollut. Kuukauden tai neljännesvuoden ilmoitus on annettava tavalliseen eräpäivään, kauden jälkeisen toisen kuukauden 12. päivään. Kalenterivuoden verokausi päättyy päättymispäivään, ja ilmoitus on annettava sitä seuraavan toisen kuukauden 12. päivään mennessä.",
+      en: "When trading stops, a return is still filed for the tax period in which the registration ends, even with no activity. A monthly or quarterly return is due on its usual date, the 12th of the second month after the period. A calendar-year period ends on the end date, and its return is due by the 12th of the second month after it.",
+    },
+    source: VAT_RETURN,
+  },
   "settings.defaultVat": {
     text: {
       fi: "Verokanta, jonka luokka esitäyttää uudelle tositteelle. Yleinen kanta on 25,5 %, alennetut 13,5 % ja 10 %, ja 0 % kattaa verottomat tapahtumat. Jo kirjatut tositteet eivät muutu.",

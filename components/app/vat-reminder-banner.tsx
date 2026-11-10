@@ -29,6 +29,7 @@ export function VatReminderBanner() {
   const entries = useBookStore((s) => s.entries)
   const mode = useBookStore((s) => s.vatPeriod)
   const bookStart = useBookStore((s) => s.bookStart)
+  const bookEnd = useBookStore((s) => s.bookEnd)
   const vatFiled = useBookStore((s) => s.vatFiled)
   const [hidden, setHidden] = React.useState<string | null>(null)
 
@@ -38,10 +39,16 @@ export function VatReminderBanner() {
       null
     )
     return vatReminder(
-      vatTimeline(mode, bookStartDate(bookStart, first), today, vatFiled),
+      vatTimeline(
+        mode,
+        bookStartDate(bookStart, first),
+        today,
+        vatFiled,
+        bookEnd
+      ),
       today
     )
-  }, [entries, mode, bookStart, today, vatFiled])
+  }, [entries, mode, bookStart, bookEnd, today, vatFiled])
 
   /*
    * An archive is a read-only reference, and the return belongs to the open

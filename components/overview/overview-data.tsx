@@ -74,6 +74,7 @@ export function OverviewDataProvider({
   const year = useBookStore((s) => s.year)
   const vatPeriod = useBookStore((s) => s.vatPeriod)
   const bookStart = useBookStore((s) => s.bookStart)
+  const bookEnd = useBookStore((s) => s.bookEnd)
   const vatFiled = useBookStore((s) => s.vatFiled)
   const basis = useTaxBasisEntries()
   const options = useStatementOptions()
@@ -107,7 +108,8 @@ export function OverviewDataProvider({
         vatPeriod,
         bookStartDate(bookStart, first),
         today,
-        vatFiled
+        vatFiled,
+        bookEnd
       ),
     }
   }, [
@@ -119,6 +121,7 @@ export function OverviewDataProvider({
     today,
     vatPeriod,
     bookStart,
+    bookEnd,
     vatFiled,
   ])
 

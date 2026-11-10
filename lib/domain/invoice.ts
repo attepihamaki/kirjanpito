@@ -27,6 +27,8 @@ export interface InvoiceSettings {
   products: Product[]
   /** The invoices made again on a schedule (§8.27). */
   recurring: RecurringInvoice[]
+  /** The quotes given to customers (§8.34). */
+  quotes: Quote[]
 }
 
 export const DEFAULT_INVOICE_SETTINGS: InvoiceSettings = {
@@ -42,6 +44,7 @@ export const DEFAULT_INVOICE_SETTINGS: InvoiceSettings = {
   interestRate: null,
   products: [],
   recurring: [],
+  quotes: [],
 }
 
 /** The postal address and contact of a party on an invoice. */
@@ -259,4 +262,32 @@ export function emptyParty(): Party {
     vatId: "",
     email: "",
   }
+}
+
+/** What the customer answered to a quote, or null while there is no answer. */
+export type QuoteOutcome = "accepted" | "declined"
+
+/**
+ * A quote (tarjous, §8.34): the rows and prices offered to a customer, valid
+ * until a date. It is not a voucher and books nothing; accepting it makes an
+ * invoice draft with the same rows.
+ */
+export interface Quote {
+  id: string
+  /** The quote's own number, from a series of its own starting at 1. */
+  number: number
+  /** ISO date of the quote. */
+  date: string
+  /** ISO date until which the offer stands. */
+  validUntil: string
+  /** The register customer, or null for one typed in. */
+  customerId: string | null
+  customer: Party
+  language: InvoiceLang
+  rows: InvoiceRow[]
+  note: string
+  /** The customer's answer, or null while there is none. */
+  outcome: QuoteOutcome | null
+  /** The invoice made from it, or null. */
+  invoiceId: string | null
 }

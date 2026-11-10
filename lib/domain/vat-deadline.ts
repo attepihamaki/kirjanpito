@@ -12,7 +12,11 @@ import type { Period } from "@/lib/domain/period"
  *
  * A monthly or quarterly return is due on the 12th of the second month after
  * the period, a yearly one at the end of February. A due date on a weekend or
- * a Finnish bank holiday moves to the next working day.
+ * a Finnish bank holiday moves to the next working day. When the business
+ * stops trading, the period it stops in is the last: a month or a quarter
+ * keeps its own due date, and a year ends with the month trading stopped in
+ * and is due on the 12th of the second month after it. Nothing is owed after
+ * the last period.
  */
 
 /** How often the user files a VAT return. A setting, kept in `settings.json`. */
@@ -30,6 +34,8 @@ export interface VatPeriod {
   to: string
   /** ISO, already moved past weekends and holidays. */
   due: string
+  /** Set on the last period of a business that stopped trading; `to` is the end of the month it stopped in. */
+  final?: true
 }
 
 /** Where a period stands on a given day. */
@@ -46,6 +52,8 @@ export type VatPeriodStatus =
   | "due"
   /** Closed, not filed, due date passed. */
   | "overdue"
+  /** Starts after the business stopped trading, so no return is owed. */
+  | "ended"
 
 const pad2 = (n: number) => String(n).padStart(2, "0")
 
@@ -113,6 +121,15 @@ export function nextWorkingDay(iso: string): string {
   }
 }
 
+/** The 12th of the second month after `month` of `year`, moved to a working day. */
+function twelfthAfter(year: number, month: number): string {
+  const dueMonth = month + 2
+  const dueYear = year + Math.floor((dueMonth - 1) / 12)
+  return nextWorkingDay(
+    isoDate(dueYear, ((dueMonth - 1) % 12) + 1, 12) as string
+  )
+}
+
 function makePeriod(
   kind: VatPeriodKind,
   year: number,
@@ -133,10 +150,6 @@ function makePeriod(
     kind === "quarter"
       ? quarterMonths(index as 1 | 2 | 3 | 4)
       : ([index, index] as const)
-  // The 12th of the second month after the period's last month.
-  const dueMonth = last + 2
-  const dueYear = year + Math.floor((dueMonth - 1) / 12)
-  const due = isoDate(dueYear, ((dueMonth - 1) % 12) + 1, 12) as string
   return {
     kind,
     year,
@@ -144,7 +157,46 @@ function makePeriod(
     key: kind === "quarter" ? `${year}-Q${index}` : `${year}-${pad2(index)}`,
     from: `${year}-${pad2(first)}-01`,
     to: `${year}-${pad2(last)}-${pad2(lastDay(year, last))}`,
-    due: nextWorkingDay(due),
+    due: twelfthAfter(year, last),
+  }
+}
+
+/** The last day of an end month (`"2026-10"`), the day the last return covers to. */
+function endDate(endMonth: string): string {
+  const year = Number(endMonth.slice(0, 4))
+  const month = Number(endMonth.slice(5, 7))
+  return `${endMonth}-${pad2(lastDay(year, month))}`
+}
+
+/**
+ * `p` as the end of trading in `endMonth` leaves it (§6.5): unchanged when it
+ * ends before that month, the last period when the month falls inside it, and
+ * null when it starts after. The last period runs to the end of the month. A
+ * month or a quarter keeps its due date, the 12th of the second month after
+ * the period; a year is due on the 12th of the second month after the month
+ * trading stopped in, not at the end of February. The key stays the period's
+ * own, so a filed mark still finds it.
+ */
+export function withEnd(
+  p: VatPeriod,
+  endMonth: string | null
+): VatPeriod | null {
+  if (!endMonth) return p
+  const last = endDate(endMonth)
+  if (p.from > last) return null
+  if (p.to < last) return p
+  return {
+    ...p,
+    to: last,
+    ...(p.kind === "year"
+      ? {
+          due: twelfthAfter(
+            Number(endMonth.slice(0, 4)),
+            Number(endMonth.slice(5, 7))
+          ),
+        }
+      : {}),
+    final: true,
   }
 }
 
@@ -231,14 +283,19 @@ export function filedOn(
  * start month set and no entry to date it from. Nothing is owed then, which
  * is what the overview's timeline says by being empty, and a book nobody has
  * typed into must not report a year of overdue returns. It is required rather
- * than defaulted, so no caller can leave the question unanswered.
+ * than defaulted, so no caller can leave the question unanswered. `endMonth`
+ * is the month the business stopped trading, or null while it trades: the
+ * period it falls in ends with it (`withEnd`), and a later one is "ended".
  */
 export function periodStatus(
-  p: VatPeriod,
+  period: VatPeriod,
   today: string,
   filed: Readonly<Record<string, string>>,
-  start: string | null
+  start: string | null,
+  endMonth: string | null = null
 ): VatPeriodStatus {
+  const p = withEnd(period, endMonth)
+  if (!p) return "ended"
   if (start && p.to < start) return "before"
   if (today < p.from) return "future"
   if (today <= p.to) return "open"
@@ -263,7 +320,9 @@ export interface TimelinePeriod extends VatPeriod {
  * contains `startDate` (see `bookStartDate`) up to the one after today's. A
  * return is owed for a closed period even when it had no entries, a nil
  * return, but not for a period before the bookkeeping began, so a book
- * started in October does not report January to September as overdue.
+ * started in October does not report January to September as overdue. With
+ * an `endMonth` the timeline stops at the period trading stopped in, cut
+ * short at that month (`withEnd`).
  *
  * Empty when there is no start date.
  */
@@ -271,7 +330,8 @@ export function vatTimeline(
   kind: VatPeriodKind,
   startDate: string | null,
   today: string,
-  filed: Readonly<Record<string, string>>
+  filed: Readonly<Record<string, string>>,
+  endMonth: string | null = null
 ): TimelinePeriod[] {
   if (!startDate) return []
   const out: TimelinePeriod[] = []
@@ -279,9 +339,15 @@ export function vatTimeline(
   const current = periodContaining(kind, today)
   const lastYear = Math.max(current.year, start.year) + 1
   for (let y = start.year; y <= lastYear; y++) {
-    for (const p of vatPeriods(kind, y)) {
-      if (p.from < start.from) continue
-      out.push({ ...p, status: periodStatus(p, today, filed, startDate) })
+    for (const whole of vatPeriods(kind, y)) {
+      if (whole.from < start.from) continue
+      const p = withEnd(whole, endMonth)
+      if (!p) return out
+      out.push({
+        ...p,
+        status: periodStatus(p, today, filed, startDate, endMonth),
+      })
+      if (p.final) return out
       // One period past today's, so "and after that" always has an answer.
       if (p.from > current.from) return out
     }

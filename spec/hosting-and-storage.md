@@ -212,7 +212,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
 
 - localStorage `bookkeeping` — exported as `BOOK_STORAGE_KEY` from
   `stores/book-store.ts`, so nothing hard-codes the string twice:
-  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ledgerHidden, ctSize, sidebarOpen, exportLang, businessId, businessName, businessPhone, vatPeriod, traderType, bookStart, vatFiled, yearsArchived, archives, archiveYear, overviewLayout, autosave, encrypted, recurring, categoryRules, assetOpening, bankBalance, payMonths, inbox, demo, dirtySince, backupSnoozed }`.
+  `{ entries, cats, year, dirty, fileName, savedAt, lastMode, lastType, open, ledgerSize, ledgerHidden, ctSize, sidebarOpen, exportLang, businessId, businessName, businessPhone, vatPeriod, traderType, bookStart, bookEnd, vatFiled, yearsArchived, archives, archiveYear, overviewLayout, autosave, encrypted, recurring, categoryRules, assetOpening, bankBalance, payMonths, inbox, demo, dirtySince, backupSnoozed }`.
   `inbox` holds the receipt inbox's items, whose files are in the receipts'
   IndexedDB store (§8.31); `demo` marks the demo book (§8.32); `dirtySince` and
   `backupSnoozed` drive the backup reminder (§8.33).

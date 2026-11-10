@@ -228,6 +228,25 @@ const CREDIT_WORD: Record<InvoiceLang, string> = {
   en: "Credit note",
 }
 
+/** The seller as the settings describe it now, as an issued invoice or a quote prints it. */
+export function sellerOf(
+  settings: InvoiceSettings,
+  business: BusinessDetails
+): Seller {
+  return {
+    name: business.name?.trim() ?? "",
+    street: settings.street,
+    postcode: settings.postcode,
+    city: settings.city,
+    country: "FI",
+    vatId: `FI${(business.businessId ?? "").replace("-", "")}`,
+    email: settings.email,
+    businessId: business.businessId ?? "",
+    phone: business.phone ?? "",
+    iban: settings.iban,
+  }
+}
+
 export interface IssueInput {
   invoice: Invoice
   settings: InvoiceSettings
@@ -266,18 +285,7 @@ export function buildIssue(input: IssueInput): IssueResult {
     nextInvoiceNumber(input.invoices, settings.firstNumber)
   const reference = finnishReference(number)
   if (reference === null) throw new Error("invoice number out of range")
-  const seller: Seller = {
-    name: business.name?.trim() ?? "",
-    street: settings.street,
-    postcode: settings.postcode,
-    city: settings.city,
-    country: "FI",
-    vatId: `FI${(business.businessId ?? "").replace("-", "")}`,
-    email: settings.email,
-    businessId: business.businessId ?? "",
-    phone: business.phone ?? "",
-    iban: settings.iban,
-  }
+  const seller = sellerOf(settings, business)
   const groups = invoiceGroups(invoice.rows)
   const split = groups.length > 1 ? input.makeId() : undefined
   const credit = invoice.credits !== null

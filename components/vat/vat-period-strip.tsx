@@ -11,6 +11,7 @@ const DOT: Record<VatPeriodStatus, string> = {
   due: "bg-warning",
   open: "bg-muted-foreground/50",
   future: "bg-transparent",
+  ended: "bg-transparent",
 }
 
 /**
@@ -47,7 +48,9 @@ export function VatPeriodStrip({
             ? f.t("vat.running")
             : s === "before"
               ? f.t("vat.beforeStart")
-              : f.t("vat.upcoming")
+              : s === "ended"
+                ? f.t("vat.afterEnd")
+                : f.t("vat.upcoming")
 
   return (
     <div

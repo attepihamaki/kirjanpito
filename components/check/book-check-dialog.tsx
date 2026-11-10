@@ -44,6 +44,7 @@ function BookCheckForm() {
   const traderType = useBookStore((s) => s.traderType)
   const vatPeriod = useBookStore((s) => s.vatPeriod)
   const bookStart = useBookStore((s) => s.bookStart)
+  const bookEnd = useBookStore((s) => s.bookEnd)
   const vatFiled = useBookStore((s) => s.vatFiled)
   const changeLog = useBookStore((s) => s.changeLog)
   const receiptHashes = useReceiptHashStore((s) => s.hashes)
@@ -62,6 +63,7 @@ function BookCheckForm() {
         traderType,
         vatPeriod,
         bookStart,
+        bookEnd,
         vatFiled,
         changeLog,
         receiptHashes,
@@ -78,6 +80,7 @@ function BookCheckForm() {
       traderType,
       vatPeriod,
       bookStart,
+      bookEnd,
       vatFiled,
       changeLog,
       receiptHashes,

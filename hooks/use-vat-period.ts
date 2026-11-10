@@ -11,6 +11,7 @@ import {
   periodContaining,
   periodStatus,
   vatPeriods,
+  withEnd,
   type VatPeriodStatus,
 } from "@/lib/domain/vat-deadline"
 import { useToday } from "@/hooks/use-today"
@@ -29,6 +30,7 @@ export function useVatPeriod() {
   const mode = useBookStore((s) => s.vatPeriod)
   const picked = useBookStore((s) => s.vatIndex)
   const bookStart = useBookStore((s) => s.bookStart)
+  const bookEnd = useBookStore((s) => s.bookEnd)
   const vatFiled = useBookStore((s) => s.vatFiled)
   const today = useToday()
   /*
@@ -67,25 +69,30 @@ export function useVatPeriod() {
       ),
     [bookStart, entries]
   )
-  const all = React.useMemo(() => vatPeriods(mode, year), [mode, year])
+  /* The period trading stopped in ends with that month and is due sooner (§6.5). */
+  const all = React.useMemo(
+    () => vatPeriods(mode, year).map((p) => withEnd(p, bookEnd) ?? p),
+    [mode, year, bookEnd]
+  )
   const current = all.find((p) => p.index === index) ?? all[0]
-  const currentStatus = periodStatus(current, today, vatFiled, start)
+  const status = (p: (typeof all)[number]) =>
+    periodStatus(p, today, vatFiled, start, bookEnd)
+  const currentStatus = status(current)
 
   /*
-   * A period that ended before the book began owes no return and is left out
-   * of the strip, so a business founded in October is not offered January to
-   * September. The period on screen always stays, so the strip can never be
-   * empty or lose its selected chip; its banner is what explains the period
-   * to a user who reached it another way.
+   * A period that ended before the book began, or began after the business
+   * stopped trading, owes no return and is left out of the strip, so a
+   * business founded in October is not offered January to September. The
+   * period on screen always stays, so the strip can never be empty or lose
+   * its selected chip; its banner is what explains the period to a user who
+   * reached it another way.
    */
-  const shown = all.filter(
-    (p) =>
-      p.index === current.index ||
-      periodStatus(p, today, vatFiled, start) !== "before"
-  )
-  const statuses: VatPeriodStatus[] = shown.map((p) =>
-    periodStatus(p, today, vatFiled, start)
-  )
+  const shown = all.filter((p) => {
+    if (p.index === current.index) return true
+    const s = status(p)
+    return s !== "before" && s !== "ended"
+  })
+  const statuses: VatPeriodStatus[] = shown.map(status)
 
   const label =
     mode === "year"

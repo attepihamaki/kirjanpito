@@ -1,13 +1,18 @@
 import { PDFDocument } from "pdf-lib"
 import { describe, expect, it } from "vitest"
 
-import { renderInvoicePdf, renderReminderPdf } from "@/lib/browser/invoice-pdf"
+import {
+  renderInvoicePdf,
+  renderQuotePdf,
+  renderReminderPdf,
+} from "@/lib/browser/invoice-pdf"
 import { createIdFactory } from "@/lib/domain/id"
 import {
   DEFAULT_INVOICE_SETTINGS,
   emptyParty,
   type Invoice,
   type InvoiceRow,
+  type Quote,
 } from "@/lib/domain/invoice"
 import { buildIssue } from "@/lib/domain/invoice-calc"
 
@@ -152,5 +157,30 @@ describe("renderReminderPdf", () => {
         reminder
       )
     ).rejects.toThrow()
+  })
+})
+
+describe("renderQuotePdf (§8.34)", () => {
+  it("draws a quote titled by its own number, with no payment slip", async () => {
+    const invoice = issued([row(1), row(2)])
+    const quote: Quote = {
+      id: "q1",
+      number: 3,
+      date: "2026-11-01",
+      validUntil: "2026-12-01",
+      customerId: null,
+      customer: invoice.customer,
+      language: "en",
+      rows: invoice.rows,
+      note: "Prices include travel.",
+      outcome: null,
+      invoiceId: null,
+    }
+    const bytes = await renderQuotePdf(quote, invoice.seller!)
+    const doc = await PDFDocument.load(bytes)
+    expect(doc.getPageCount()).toBe(1)
+    expect(doc.getTitle()).toBe("Quotation 3")
+    /* No barcode or QR code to draw, so the file is smaller than the invoice. */
+    expect(bytes.length).toBeLessThan((await renderInvoicePdf(invoice)).length)
   })
 })

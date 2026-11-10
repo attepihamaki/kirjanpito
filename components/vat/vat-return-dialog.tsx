@@ -119,6 +119,7 @@ function VatReturnForm() {
   const dirty = useBookStore((s) => s.dirty)
   const vatPeriod = useBookStore((s) => s.vatPeriod)
   const bookStart = useBookStore((s) => s.bookStart)
+  const bookEnd = useBookStore((s) => s.bookEnd)
   const vatFiled = useBookStore((s) => s.vatFiled)
   const vatFiledFigures = useBookStore((s) => s.vatFiledFigures)
   const changeLog = useBookStore((s) => s.changeLog)
@@ -135,6 +136,7 @@ function VatReturnForm() {
         dirty,
         vatPeriod,
         bookStart,
+        bookEnd,
         vatFiled,
         changeLog,
         receiptHashes,
@@ -148,6 +150,7 @@ function VatReturnForm() {
       dirty,
       vatPeriod,
       bookStart,
+      bookEnd,
       vatFiled,
       changeLog,
       receiptHashes,
@@ -238,7 +241,8 @@ function VatReturnForm() {
   ]
   const stepIndex = steps.indexOf(step)
   const lastStep = stepIndex === steps.length - 1
-  const showMark = step === "file" && currentStatus !== "before"
+  const owesNone = currentStatus === "before" || currentStatus === "ended"
+  const showMark = step === "file" && !owesNone
 
   function showInLedger(check: CheckFilter) {
     const s = useBookStore.getState()
@@ -447,14 +451,18 @@ function VatReturnForm() {
               <h3 className="font-heading font-semibold">
                 {f.t("vat.returnFileTitle", { p: label })}
               </h3>
-              {currentStatus !== "before" ? (
+              {!owesNone ? (
                 <p className="text-sm text-muted-foreground">
                   {f.t("vat.returnFileHint")}
                 </p>
               ) : null}
-              {currentStatus === "before" ? (
+              {owesNone ? (
                 <p className="text-sm text-muted-foreground">
-                  {f.t("vat.beforeStartHint")}
+                  {f.t(
+                    currentStatus === "before"
+                      ? "vat.beforeStartHint"
+                      : "vat.afterEndHint"
+                  )}
                 </p>
               ) : filed ? (
                 <>

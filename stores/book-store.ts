@@ -253,6 +253,8 @@ export type DialogState =
   | { kind: "bank-import"; text: string; fileName: string }
   /** Write or read an invoice; `null` starts a new draft (§8.27). */
   | { kind: "invoice"; invoiceId: string | null }
+  /** Write or change a quote; `null` starts a new one (§8.34). */
+  | { kind: "quote"; quoteId: string | null }
   /** Add or change a counterparty; `null` adds one with `role` (§8.27, §8.29). */
   | { kind: "customer"; customerId: string | null; role?: PartyRole }
   /** One counterparty's vouchers and open items (§8.29). */
@@ -310,6 +312,11 @@ export interface BookState {
    * for a period that ended before it. Null follows the first entry.
    */
   bookStart: string | null
+  /**
+   * `"2027-03"`: the month the business stopped trading (§6.5), after which
+   * no VAT return is owed, or null while it trades.
+   */
+  bookEnd: string | null
   /** Period key → ISO date the return was marked as filed (§6.5). */
   vatFiled: Record<string, string>
   /**
@@ -541,6 +548,7 @@ export interface BookActions {
       traderType?: TraderType
       hiddenFeatures?: Feature[]
       bookStart?: string | null
+      bookEnd?: string | null
       vatFiled?: Record<string, string>
       vatFiledFigures?: Record<string, Record<string, number>>
       taxPayment?: TaxPayment
@@ -624,6 +632,7 @@ export interface BookActions {
   setBusinessName(name: string | null): void
   setBusinessPhone(phone: string | null): void
   setBookStart(month: string | null): void
+  setBookEnd(month: string | null): void
   /** Mark a period as filed on `date`, or clear the mark with null. */
   setVatFiled(key: string, date: string | null): void
   setTaxPayment(payment: TaxPayment): void
@@ -728,6 +737,7 @@ function initialState(): BookState {
     traderType: "professional",
     hiddenFeatures: [],
     bookStart: null,
+    bookEnd: null,
     vatFiled: {},
     vatFiledFigures: {},
     taxPayment: NO_TAX_PAYMENT,
@@ -811,6 +821,7 @@ type PersistedBook = Pick<
   | "traderType"
   | "hiddenFeatures"
   | "bookStart"
+  | "bookEnd"
   | "vatFiled"
   | "vatFiledFigures"
   | "taxPayment"
@@ -994,6 +1005,7 @@ const BOOK_DATA_KEYS: readonly (keyof BookState)[] = [
   "traderType",
   "hiddenFeatures",
   "bookStart",
+  "bookEnd",
   "vatFiled",
   "vatFiledFigures",
   "taxPayment",
@@ -1094,6 +1106,7 @@ export const useBookStore = create<BookStore>()(
           businessPhone: null,
           hiddenFeatures: [],
           bookStart: null,
+          bookEnd: null,
           vatFiled: {},
           vatFiledFigures: {},
           taxPayment: NO_TAX_PAYMENT,
@@ -1201,6 +1214,7 @@ export const useBookStore = create<BookStore>()(
           businessName: null,
           businessPhone: null,
           bookStart: null,
+          bookEnd: null,
           vatFiled: {},
           vatFiledFigures: {},
           taxPayment: NO_TAX_PAYMENT,
@@ -1268,6 +1282,7 @@ export const useBookStore = create<BookStore>()(
           traderType: s.traderType ?? "professional",
           hiddenFeatures: s.hiddenFeatures ?? [],
           bookStart: s.bookStart ?? null,
+          bookEnd: s.bookEnd ?? null,
           vatFiled: s.vatFiled ?? {},
           vatFiledFigures: s.vatFiledFigures ?? {},
           taxPayment: { ...NO_TAX_PAYMENT, ...s.taxPayment },
@@ -1463,6 +1478,7 @@ export const useBookStore = create<BookStore>()(
       setBusinessName: (businessName) => set({ businessName, dirty: true }),
       setBusinessPhone: (businessPhone) => set({ businessPhone, dirty: true }),
       setBookStart: (bookStart) => set({ bookStart, dirty: true }),
+      setBookEnd: (bookEnd) => set({ bookEnd, dirty: true }),
       setVatFiled: (key, date) => {
         const vatFiled = { ...get().vatFiled }
         const vatFiledFigures = { ...get().vatFiledFigures }
@@ -1730,6 +1746,7 @@ export const useBookStore = create<BookStore>()(
         traderType: s.traderType,
         hiddenFeatures: s.hiddenFeatures,
         bookStart: s.bookStart,
+        bookEnd: s.bookEnd,
         vatFiled: s.vatFiled,
         vatFiledFigures: s.vatFiledFigures,
         taxPayment: s.taxPayment,

@@ -19,6 +19,7 @@ export function InvoiceShell({ children }: { children: React.ReactNode }) {
   const openDialog = useBookStore((s) => s.openDialog)
   const path = usePathname().replace(/\/$/, "")
   const parties = path === INVOICE_ROUTES.parties
+  const quotes = path === INVOICE_ROUTES.quotes
 
   return (
     <>
@@ -35,6 +36,13 @@ export function InvoiceShell({ children }: { children: React.ReactNode }) {
               <PlusIcon data-icon="inline-start" />
               {t("party.new")}
             </Button>
+          ) : quotes ? (
+            <Button
+              onClick={() => openDialog({ kind: "quote", quoteId: null })}
+            >
+              <PlusIcon data-icon="inline-start" />
+              {t("quote.new")}
+            </Button>
           ) : (
             <Button
               onClick={() => openDialog({ kind: "invoice", invoiceId: null })}
@@ -49,6 +57,7 @@ export function InvoiceShell({ children }: { children: React.ReactNode }) {
         label={t("invoice.sections")}
         tabs={[
           { href: INVOICE_ROUTES.list, label: t("invoice.tabInvoices") },
+          { href: INVOICE_ROUTES.quotes, label: t("quote.tab") },
           { href: INVOICE_ROUTES.recurring, label: t("invoice.tabRecurring") },
           { href: INVOICE_ROUTES.aging, label: t("invoice.tabAging") },
           { href: INVOICE_ROUTES.payables, label: t("invoice.tabPayables") },

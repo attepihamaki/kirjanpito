@@ -11,6 +11,7 @@ import {
   type Party,
   type PartyRole,
   type Product,
+  type Quote,
   type RecurringInvoice,
   type Reminder,
   type Seller,
@@ -117,6 +118,7 @@ export function parseInvoiceSettings(value: unknown): InvoiceSettings {
     interestRate: percentOrNull(value.interestRate),
     products: list(value.products, parseProduct),
     recurring: list(value.recurring, parseRecurringInvoice),
+    quotes: list(value.quotes, parseQuote),
   }
 }
 
@@ -178,6 +180,43 @@ function parseRecurringInvoice(value: unknown): RecurringInvoice | null {
     next,
     until: isoDate(value.until),
     paused: value.paused === true,
+  }
+}
+
+function parseQuote(value: unknown): Quote | null {
+  if (!isRecord(value) || typeof value.id !== "string" || value.id === "")
+    return null
+  const customer = parseParty(value.customer)
+  const date = isoDate(value.date)
+  const validUntil = isoDate(value.validUntil)
+  const { number } = value
+  if (!customer || !date || !validUntil || !Array.isArray(value.rows))
+    return null
+  if (!Number.isInteger(number) || (number as number) < 1) return null
+  const rows = value.rows.map(parseRow)
+  /* A row that cannot be read would change the total, so the whole quote is dropped. */
+  if (rows.some((r) => r === null)) return null
+  return {
+    id: value.id,
+    number: number as number,
+    date,
+    validUntil,
+    customerId:
+      typeof value.customerId === "string" && value.customerId !== ""
+        ? value.customerId
+        : null,
+    customer,
+    language: lang(value.language),
+    rows: rows as InvoiceRow[],
+    note: text(value.note, 2000),
+    outcome:
+      value.outcome === "accepted" || value.outcome === "declined"
+        ? value.outcome
+        : null,
+    invoiceId:
+      typeof value.invoiceId === "string" && value.invoiceId !== ""
+        ? value.invoiceId
+        : null,
   }
 }
 

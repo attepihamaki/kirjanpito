@@ -144,6 +144,7 @@ export const SETTINGS_ROUTES = {
 /** The invoice view's sub-pages (§8.27, §8.30): invoices, money owed both ways, and the registers. */
 export const INVOICE_ROUTES = {
   list: APP_ROUTES.invoices,
+  quotes: `${APP_ROUTES.invoices}/quotes`,
   recurring: `${APP_ROUTES.invoices}/recurring`,
   aging: `${APP_ROUTES.invoices}/aging`,
   payables: `${APP_ROUTES.invoices}/payables`,

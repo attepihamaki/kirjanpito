@@ -49,6 +49,7 @@ export function GeneralSettings() {
         <FeaturesSetting />
         <VatPeriodSetting />
         <BookStartSetting />
+        <BookEndSetting />
         <ExportLanguageSetting />
         <AutosaveSetting />
         <EncryptionSetting />
@@ -404,13 +405,61 @@ function BookStartSetting() {
   )
 }
 
-/** The two selects alone, so the setup dialog (§8.3) shows the same ones. */
+/**
+ * The month the business stopped trading (§6.5). The period it falls in ends
+ * with it and is due on the 12th of the second month after, whatever its
+ * length, and nothing is owed after it.
+ */
+function BookEndSetting() {
+  const f = useFormatters()
+  const bookEnd = useBookStore((s) => s.bookEnd)
+  const setBookEnd = useBookStore((s) => s.setBookEnd)
+
+  return (
+    <SettingCard
+      label={f.t("settings.bookEnd")}
+      help={viewHelp("settings.bookEnd")}
+      editor={
+        <>
+          <div className="flex flex-wrap gap-2">
+            <BookStartSelects
+              value={bookEnd}
+              onChange={setBookEnd}
+              labels={{
+                none: f.t("settings.bookEndNone"),
+                month: f.t("settings.bookEndMonth"),
+                year: f.t("settings.bookEndYear"),
+              }}
+            />
+          </div>
+          <SettingHint>{f.t("settings.bookEndHint")}</SettingHint>
+        </>
+      }
+    >
+      <SettingValue
+        value={
+          bookEnd
+            ? `${f.month(Number(bookEnd.slice(5, 7)) - 1)} ${bookEnd.slice(0, 4)}`
+            : f.t("settings.bookEndNone")
+        }
+        note={bookEnd ? f.t("settings.bookEndNote") : undefined}
+      />
+    </SettingCard>
+  )
+}
+
+/**
+ * The two selects alone, so the setup dialog (§8.3) shows the same ones. The
+ * labels default to the start month's, and the end month passes its own.
+ */
 export function BookStartSelects({
   value,
   onChange,
+  labels,
 }: {
   value: string | null
   onChange: (month: string | null) => void
+  labels?: { none: string; month: string; year: string }
 }) {
   const f = useFormatters()
   const selectedYear = useBookStore((s) => s.year)
@@ -422,7 +471,7 @@ export function BookStartSelects({
   for (let y = thisYear - 10; y <= thisYear + 1; y++) years.add(y)
 
   const monthOptions = [
-    { value: NO_START, label: f.t("settings.bookStartNone") },
+    { value: NO_START, label: labels?.none ?? f.t("settings.bookStartNone") },
     ...Array.from({ length: 12 }, (_, i) => ({
       value: String(i + 1).padStart(2, "0"),
       label: f.month(i),
@@ -435,7 +484,7 @@ export function BookStartSelects({
   return (
     <>
       <OptionSelect
-        label={f.t("settings.bookStartMonth")}
+        label={labels?.month ?? f.t("settings.bookStartMonth")}
         options={monthOptions}
         value={startMonth}
         onChange={(m) => onChange(m === NO_START ? null : `${startYear}-${m}`)}
@@ -443,7 +492,7 @@ export function BookStartSelects({
       />
       {value ? (
         <OptionSelect
-          label={f.t("settings.bookStartYear")}
+          label={labels?.year ?? f.t("settings.bookStartYear")}
           options={yearOptions}
           value={String(startYear)}
           onChange={(y) => onChange(`${y}-${startMonth}`)}

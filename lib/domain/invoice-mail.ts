@@ -1,6 +1,6 @@
 import { formatDate } from "@/lib/domain/dates"
 import { formatIban } from "@/lib/domain/iban"
-import type { Invoice, Reminder } from "@/lib/domain/invoice"
+import type { Invoice, Quote, Reminder, Seller } from "@/lib/domain/invoice"
 import { invoiceTotals } from "@/lib/domain/invoice-calc"
 import { formatReference } from "@/lib/domain/invoice-reference"
 import { formatMoney } from "@/lib/domain/money"
@@ -107,4 +107,26 @@ export function reminderMail(
   }
   lines.push("", fi ? "Ystävällisin terveisin," : "Kind regards,", seller.name)
   return { to: invoice.customer.email.trim(), subject, body: lines.join("\n") }
+}
+
+/** The mail a quote is sent with, in the quote's language (§8.34). */
+export function quoteMail(
+  quote: Quote,
+  seller: Pick<Seller, "name">
+): InvoiceMail {
+  const fi = quote.language === "fi"
+  const amount = formatMoney(invoiceTotals(quote.rows).gross)
+  const valid = formatDate(quote.validUntil, quote.language)
+  const subject = `${fi ? "Tarjous" : "Quotation"} ${quote.number} – ${seller.name}`
+  const body = [
+    fi ? "Hei," : "Hello,",
+    "",
+    fi
+      ? `Oheisena tarjouksemme ${quote.number}, yhteensä ${amount}. Tarjous on voimassa ${valid} asti.`
+      : `Attached is our quotation ${quote.number}, ${amount} in total. It is valid until ${valid}.`,
+    "",
+    fi ? "Ystävällisin terveisin," : "Kind regards,",
+    seller.name,
+  ].join("\n")
+  return { to: quote.customer.email.trim(), subject, body }
 }

@@ -42,6 +42,8 @@ export interface YearEndInput {
   dirty: boolean
   vatPeriod: VatPeriodKind
   bookStart: string | null
+  /** The month the business stopped trading (§6.5), or null while it trades. */
+  bookEnd?: string | null
   vatFiled: Readonly<Record<string, string>>
   changeLog: readonly ChangeRecord[]
   /** The content hashes of the stored receipts read so far (§8.4). */
@@ -174,7 +176,8 @@ export const YEAR_END_RULES = defineRules<
         i.vatPeriod,
         bookStartDate(i.bookStart, first),
         i.today,
-        i.vatFiled
+        i.vatFiled,
+        i.bookEnd ?? null
       )
         .filter(
           (p) =>

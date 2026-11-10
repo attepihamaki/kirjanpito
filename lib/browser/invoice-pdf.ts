@@ -10,7 +10,7 @@ import qrcode from "qrcode-generator"
 import { code128C } from "@/lib/domain/code128"
 import { daysBetween, formatDate } from "@/lib/domain/dates"
 import { formatIban } from "@/lib/domain/iban"
-import type { Invoice, Reminder } from "@/lib/domain/invoice"
+import type { Invoice, Quote, Reminder, Seller } from "@/lib/domain/invoice"
 import { invoiceTotals, rowNet } from "@/lib/domain/invoice-calc"
 import { virtualBarcode } from "@/lib/domain/invoice-barcode"
 import { epcPayload } from "@/lib/domain/invoice-epc"
@@ -26,7 +26,8 @@ import { formatMoneyPlain } from "@/lib/domain/money"
 /**
  * Draw an issued invoice (§8.27) as an A4 PDF with a payment slip at the
  * bottom of the last page: payee, account, reference, due date, amount, the
- * EPC QR code and the virtual barcode. The only module importing the QR
+ * EPC QR code and the virtual barcode. A credit note and a quote (§8.34) are
+ * drawn the same way without the slip. The only module importing the QR
  * library, and always imported dynamically, like pdf-lib itself.
  */
 
@@ -204,7 +205,10 @@ function qrRows(payload: string): boolean[][] {
 /** The payment slip, drawn in the bottom area of the page the cursor is on. */
 function drawSlip(
   c: Cursor,
-  invoice: Invoice,
+  invoice: Pick<
+    Invoice,
+    "seller" | "rows" | "dueDate" | "reference" | "language"
+  >,
   labels: InvoiceLabels,
   pay?: { cents: number; dueDate: string }
 ): void {
@@ -300,11 +304,73 @@ export async function renderInvoicePdf(
   if (!invoice.seller || invoice.number === null || !invoice.reference) {
     throw new Error("only an issued invoice can be drawn")
   }
+  return drawSale(
+    { ...invoice, seller: invoice.seller, number: invoice.number },
+    invoice.credits !== null
+      ? { kind: "credit", creditedNumber }
+      : { kind: "invoice", reference: invoice.reference }
+  )
+}
+
+/**
+ * A quote (§8.34) with the seller as the settings describe it now. It carries
+ * the rows, the VAT and the last valid day, and no payment details.
+ */
+export async function renderQuotePdf(
+  quote: Quote,
+  seller: Seller
+): Promise<Uint8Array> {
+  return drawSale(
+    {
+      ...quote,
+      seller,
+      dueDate: quote.validUntil,
+      supplyFrom: null,
+      supplyTo: null,
+      terms: "",
+      issuedAt: null,
+    },
+    { kind: "quote" }
+  )
+}
+
+/** What is being drawn: each kind has its own heading, facts and ending. */
+type SaleKind =
+  | { kind: "invoice"; reference: string }
+  | { kind: "credit"; creditedNumber: number | null }
+  | { kind: "quote" }
+
+/** The fields of a sale document the drawing reads. */
+type SaleDocument = Pick<
+  Invoice,
+  | "date"
+  | "dueDate"
+  | "supplyFrom"
+  | "supplyTo"
+  | "customer"
+  | "language"
+  | "rows"
+  | "note"
+  | "terms"
+  | "issuedAt"
+> & { seller: Seller; number: number }
+
+async function drawSale(
+  invoice: SaleDocument,
+  sale: SaleKind
+): Promise<Uint8Array> {
   const labels = invoiceLabels(invoice.language)
   const lang = invoice.language
-  const credit = invoice.credits !== null
+  const credit = sale.kind === "credit"
+  const quote = sale.kind === "quote"
   const doc = await PDFDocument.create()
-  doc.setTitle(toWinAnsi(labels.title(invoice.number, credit)))
+  doc.setTitle(
+    toWinAnsi(
+      quote
+        ? labels.quoteTitle(invoice.number)
+        : labels.title(invoice.number, credit)
+    )
+  )
   doc.setCreator("Kirjanpito")
   doc.setCreationDate(new Date(invoice.issuedAt ?? Date.now()))
   const fonts: Fonts = {
@@ -327,17 +393,23 @@ export async function renderInvoicePdf(
   }
   const sellerBottom = c.y
   c.y = top
-  const facts: [string, string][] = [
-    [labels.number, String(invoice.number)],
-    [labels.date, formatDate(invoice.date, lang)],
-  ]
-  if (credit) {
-    if (creditedNumber !== null)
-      facts.push([labels.credits, String(creditedNumber)])
-  } else {
+  const facts: [string, string][] = quote
+    ? [
+        [labels.quoteNumber, String(invoice.number)],
+        [labels.quoteDate, formatDate(invoice.date, lang)],
+        [labels.validUntil, formatDate(invoice.dueDate, lang)],
+      ]
+    : [
+        [labels.number, String(invoice.number)],
+        [labels.date, formatDate(invoice.date, lang)],
+      ]
+  if (sale.kind === "credit") {
+    if (sale.creditedNumber !== null)
+      facts.push([labels.credits, String(sale.creditedNumber)])
+  } else if (sale.kind === "invoice") {
     facts.push(
       [labels.due, formatDate(invoice.dueDate, lang)],
-      [labels.reference, formatReference(invoice.reference)]
+      [labels.reference, formatReference(sale.reference)]
     )
   }
   if (invoice.supplyFrom) {
@@ -348,7 +420,7 @@ export async function renderInvoicePdf(
   put(
     c.page,
     fonts,
-    credit ? labels.creditNote : labels.invoice,
+    quote ? labels.quote : credit ? labels.creditNote : labels.invoice,
     RIGHT,
     c.y - 14,
     {
@@ -498,7 +570,10 @@ export async function renderInvoicePdf(
     align: "right",
   })
   c.y -= 16
-  put(c.page, fonts, labels.total, 330, c.y - 11, { size: 12, bold: true })
+  put(c.page, fonts, quote ? labels.quoteTotal : labels.total, 330, c.y - 11, {
+    size: 12,
+    bold: true,
+  })
   put(c.page, fonts, formatMoneyPlain(totals.gross), RIGHT, c.y - 11, {
     size: 12,
     bold: true,
@@ -510,7 +585,11 @@ export async function renderInvoicePdf(
   const notes = [
     invoice.note,
     invoice.terms,
-    credit ? "" : labels.lateInterest,
+    quote
+      ? labels.quoteValid(formatDate(invoice.dueDate, lang))
+      : credit
+        ? ""
+        : labels.lateInterest,
   ].filter((n) => n.trim() !== "")
   for (const note of notes) {
     ensure(c, 30, MARGIN)
@@ -518,13 +597,13 @@ export async function renderInvoicePdf(
     c.y -= 4
   }
 
-  if (!credit) {
+  if (sale.kind === "invoice") {
     /* The slip needs the bottom of a page; add one when the text has run into it. */
     if (c.y < SLIP_TOP + 12) {
       c.page = doc.addPage(A4)
       c.y = A4[1] - MARGIN
     }
-    drawSlip(c, invoice, labels)
+    drawSlip(c, { ...invoice, reference: sale.reference }, labels)
   }
   return doc.save()
 }

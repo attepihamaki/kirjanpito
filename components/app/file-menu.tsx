@@ -6,6 +6,7 @@ import {
   BookBookmarkIcon,
   DownloadIcon,
   FileArchiveIcon,
+  FileSpreadsheetIcon,
   ListChecksIcon,
   SaveIcon,
   UploadIcon,
@@ -40,6 +41,7 @@ import {
   useShortcut,
 } from "@/hooks/use-save-book"
 import { closeBook } from "@/lib/commands/book-commands"
+import { downloadWorkbook } from "@/lib/commands/xlsx-commands"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -69,6 +71,7 @@ export function FileMenu({
   const importing = useBookStore((s) => s.importing)
   const saving = useBookStore((s) => s.saving)
   const dirty = useBookStore((s) => s.dirty)
+  const year = useBookStore((s) => s.year)
   const openDialog = useBookStore((s) => s.openDialog)
   const busy = useDelayedFlag(importing)
   const savingNow = useDelayedFlag(saving)
@@ -189,6 +192,15 @@ export function FileMenu({
             <DownloadIcon data-icon="inline-start" />
             <span className="flex-1 text-left">{f.t("file.download")}</span>
             <Keys>{downloadKeys.label}</Keys>
+          </Button>
+
+          <Button
+            variant="ghost"
+            className="justify-start"
+            onClick={act(() => void downloadWorkbook(ctx))}
+          >
+            <FileSpreadsheetIcon data-icon="inline-start" />
+            {f.t("file.xlsx", { y: year })}
           </Button>
 
           <Button

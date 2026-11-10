@@ -33,6 +33,17 @@ export interface InvoiceLabels {
   toPay: string
   /** Page title, e.g. "Lasku 1001". */
   title: (number: number, credit: boolean) => string
+  /** The heading of a quote (§8.34). */
+  quote: string
+  quoteNumber: string
+  quoteDate: string
+  validUntil: string
+  /** The total of a quote, which is not asked to be paid. */
+  quoteTotal: string
+  /** The line under a quote's rows that says how long it stands. */
+  quoteValid: (date: string) => string
+  /** A quote's page title, e.g. "Tarjous 3". */
+  quoteTitle: (number: number) => string
 }
 
 const LABELS: Record<InvoiceLang, InvoiceLabels> = {
@@ -64,6 +75,13 @@ const LABELS: Record<InvoiceLang, InvoiceLabels> = {
     payee: "Saaja",
     toPay: "Euroa",
     title: (n, credit) => `${credit ? "Hyvityslasku" : "Lasku"} ${n}`,
+    quote: "TARJOUS",
+    quoteNumber: "Tarjouksen numero",
+    quoteDate: "Tarjouksen päivämäärä",
+    validUntil: "Voimassa asti",
+    quoteTotal: "Yhteensä",
+    quoteValid: (d) => `Tarjous on voimassa ${d} asti.`,
+    quoteTitle: (n) => `Tarjous ${n}`,
   },
   en: {
     invoice: "INVOICE",
@@ -94,6 +112,13 @@ const LABELS: Record<InvoiceLang, InvoiceLabels> = {
     payee: "Payee",
     toPay: "EUR",
     title: (n, credit) => `${credit ? "Credit note" : "Invoice"} ${n}`,
+    quote: "QUOTATION",
+    quoteNumber: "Quotation number",
+    quoteDate: "Quotation date",
+    validUntil: "Valid until",
+    quoteTotal: "Total",
+    quoteValid: (d) => `This quotation is valid until ${d}.`,
+    quoteTitle: (n) => `Quotation ${n}`,
   },
 }
 
@@ -117,6 +142,16 @@ export function invoiceFileName(
       ? "Lasku"
       : "Invoice"
   return `${word} ${number} - ${stem}.pdf`
+}
+
+/** The file name of a quote's PDF (§8.34). */
+export function quoteFileName(
+  lang: InvoiceLang,
+  number: number,
+  customerName: string
+): string {
+  const stem = customerName.replace(/[\/:*?"<>|]/g, "").trim()
+  return `${lang === "fi" ? "Tarjous" : "Quotation"} ${number} - ${stem}.pdf`
 }
 
 /** The words printed on a payment reminder, in the invoice's language (§8.27). */

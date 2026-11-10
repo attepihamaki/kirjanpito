@@ -44,6 +44,7 @@ export function CalendarView() {
   const cats = useBookStore((s) => s.cats)
   const vatPeriod = useBookStore((s) => s.vatPeriod)
   const bookStart = useBookStore((s) => s.bookStart)
+  const bookEnd = useBookStore((s) => s.bookEnd)
   const vatFiled = useBookStore((s) => s.vatFiled)
   const form5Filed = useBookStore((s) => s.form5Filed)
   const payMonths = useBookStore((s) => s.payMonths)
@@ -61,6 +62,7 @@ export function CalendarView() {
             null
           )
         ),
+        endMonth: bookEnd,
         vatFiled,
         form5Filed,
         payMonths,
@@ -72,6 +74,7 @@ export function CalendarView() {
       today,
       vatPeriod,
       bookStart,
+      bookEnd,
       vatFiled,
       form5Filed,
       payMonths,

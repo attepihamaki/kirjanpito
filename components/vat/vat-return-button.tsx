@@ -24,10 +24,10 @@ export function VatReturnButton({ className }: { className?: string }) {
   const { current, currentStatus: status, report } = useVatPeriod()
   const pending = useSettlementPending()
 
-  if (status === "before") {
+  if (status === "before" || status === "ended") {
     return (
       <p className={cn("max-w-xs text-sm text-muted-foreground", className)}>
-        {f.t("vat.beforeStartHint")}
+        {f.t(status === "before" ? "vat.beforeStartHint" : "vat.afterEndHint")}
       </p>
     )
   }
@@ -65,6 +65,11 @@ export function VatReturnButton({ className }: { className?: string }) {
           ? f.t("vat.filedOn", { d: f.date(filedOn(current, vatFiled) ?? "") })
           : f.t("vat.dueDate", { d: f.date(current.due) })}
       </p>
+      {current.final ? (
+        <p className="max-w-xs text-xs text-muted-foreground min-[560px]:text-right">
+          {f.t("vat.finalHint", { d: f.date(current.to) })}
+        </p>
+      ) : null}
     </div>
   )
 }

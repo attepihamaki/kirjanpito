@@ -96,6 +96,8 @@ export interface BookSettings {
   hiddenFeatures: Feature[]
   /** `"2026-10"`: the month the bookkeeping began, or null to follow the first entry. */
   bookStart: string | null
+  /** `"2027-03"`: the month the business stopped trading (§6.5), or null while it trades. */
+  bookEnd: string | null
   /** Period key (`"2026-09"`, `"2026-Q3"`, `"2026"`) → ISO date it was marked. */
   vatFiled: Record<string, string>
   /** Period key → the return's figures on the day it was marked (§6.5). */
@@ -390,6 +392,10 @@ export function parseSettings(text: string): ParsedSettings {
   else if (typeof raw.bookStart === "string" && MONTH.test(raw.bookStart)) {
     out.bookStart = raw.bookStart
   }
+  if (raw.bookEnd === null) out.bookEnd = null
+  else if (typeof raw.bookEnd === "string" && MONTH.test(raw.bookEnd)) {
+    out.bookEnd = raw.bookEnd
+  }
   if (isRecord(raw.vatFiled)) {
     const filed: Record<string, string> = {}
     for (const [key, date] of Object.entries(raw.vatFiled)) {
@@ -643,6 +649,7 @@ export function serializeSettings(s: BookSettings): string {
     traderType: s.traderType,
     hiddenFeatures: [...s.hiddenFeatures],
     bookStart: s.bookStart,
+    bookEnd: s.bookEnd,
     vatFiled: Object.fromEntries(
       Object.entries(s.vatFiled).sort(([a], [b]) => a.localeCompare(b))
     ),

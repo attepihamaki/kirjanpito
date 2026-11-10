@@ -6,6 +6,7 @@ import {
   nextWorkingDay,
   periodStatus,
   vatPeriods,
+  withEnd,
   type VatPeriodKind,
 } from "@/lib/domain/vat-deadline"
 import { NO_TAX_PROFILE, type TaxProfile } from "@/lib/domain/income-tax"
@@ -74,6 +75,8 @@ export interface CalendarInput {
   vatPeriod: VatPeriodKind
   /** The day the book owes VAT returns from, or null (§6.5). */
   startDate: string | null
+  /** The month the business stopped trading, or null while it trades (§6.5). */
+  endMonth?: string | null
   vatFiled: Readonly<Record<string, string>>
   form5Filed: Readonly<Record<string, string>>
   payMonths: PayMonths
@@ -99,13 +102,15 @@ export function taxCalendar(input: CalendarInput): CalendarEvent[] {
 
   // The last periods of the year before fall due in this one.
   for (const y of [year - 1, year]) {
-    for (const p of vatPeriods(input.vatPeriod, y)) {
-      if (yearOf(p.due) !== year) continue
+    for (const whole of vatPeriods(input.vatPeriod, y)) {
+      const p = withEnd(whole, input.endMonth ?? null)
+      if (!p || yearOf(p.due) !== year) continue
       const status = periodStatus(
         p,
         input.today,
         input.vatFiled,
-        input.startDate
+        input.startDate,
+        input.endMonth ?? null
       )
       if (status === "before") continue
       out.push({

@@ -70,6 +70,7 @@ function YearEndForm() {
   const dirty = useBookStore((s) => s.dirty)
   const vatPeriod = useBookStore((s) => s.vatPeriod)
   const bookStart = useBookStore((s) => s.bookStart)
+  const bookEnd = useBookStore((s) => s.bookEnd)
   const vatFiled = useBookStore((s) => s.vatFiled)
   const changeLog = useBookStore((s) => s.changeLog)
   const receiptHashes = useReceiptHashStore((s) => s.hashes)
@@ -88,6 +89,7 @@ function YearEndForm() {
         dirty,
         vatPeriod,
         bookStart,
+        bookEnd,
         vatFiled,
         changeLog,
         receiptHashes,
@@ -106,6 +108,7 @@ function YearEndForm() {
       dirty,
       vatPeriod,
       bookStart,
+      bookEnd,
       vatFiled,
       changeLog,
       receiptHashes,

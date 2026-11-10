@@ -5,6 +5,7 @@ import {
   BookmarkPlusIcon,
   CopyIcon,
   DownloadIcon,
+  FileTextIcon,
   PlusIcon,
   SendIcon,
   Trash2Icon,
@@ -40,6 +41,12 @@ import {
   issueInvoice,
   sendInvoice,
 } from "@/lib/commands/invoice-commands"
+import {
+  downloadQuotePdf,
+  invoiceQuote,
+  saveQuote,
+  sendQuote,
+} from "@/lib/commands/quote-commands"
 import { evalAmount } from "@/lib/domain/amount-expr"
 import { todayIso } from "@/lib/domain/dates"
 import { uid } from "@/lib/domain/id"
@@ -51,6 +58,7 @@ import {
   type Invoice,
   type InvoiceLang,
   type InvoiceRow,
+  type Quote,
 } from "@/lib/domain/invoice"
 import { addDays } from "@/lib/domain/dates"
 import { canCopy, productFromRow, productRow } from "@/lib/domain/invoice-draft"
@@ -62,6 +70,7 @@ import {
 } from "@/lib/domain/invoice-calc"
 import { formatQuantity, parseQuantity } from "@/lib/domain/invoice-input"
 import { formatMoneyPlain } from "@/lib/domain/money"
+import { defaultValidUntil, nextQuoteNumber } from "@/lib/domain/quote"
 import { rateOnDate, validRates } from "@/lib/domain/vat-rates"
 import { useBookStore } from "@/stores/book-store"
 
@@ -127,17 +136,40 @@ function toRow(draft: RowDraft, credit: boolean): InvoiceRow | null {
   }
 }
 
-/** Open the dialog for a new draft, a draft or an issued invoice (§8.27). */
+/**
+ * Open the dialog for a new draft, a draft or an issued invoice (§8.27), or
+ * for a quote (§8.34), which has the same customer and rows and books nothing.
+ */
 export function InvoiceDialog() {
   const dialog = useBookStore((s) => s.dialog)
-  if (dialog.kind !== "invoice") return null
   /* Keyed, so opening a copy from an invoice starts the form afresh. */
-  return (
-    <InvoiceForm key={dialog.invoiceId ?? "new"} invoiceId={dialog.invoiceId} />
-  )
+  if (dialog.kind === "invoice")
+    return (
+      <InvoiceForm
+        key={dialog.invoiceId ?? "new"}
+        invoiceId={dialog.invoiceId}
+        quote={false}
+      />
+    )
+  if (dialog.kind === "quote")
+    return (
+      <InvoiceForm
+        key={`quote-${dialog.quoteId ?? "new"}`}
+        invoiceId={dialog.quoteId}
+        quote
+      />
+    )
+  return null
 }
 
-function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
+function InvoiceForm({
+  invoiceId,
+  quote,
+}: {
+  invoiceId: string | null
+  /** Whether the form edits a quote rather than an invoice. */
+  quote: boolean
+}) {
   const f = useFormatters()
   const ctx = useCommandCtx()
   const invoices = useBookStore((s) => s.invoices)
@@ -149,38 +181,46 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
   const closeDialog = useBookStore((s) => s.closeDialog)
   const openDialog = useBookStore((s) => s.openDialog)
   const products = useBookStore((s) => s.invoiceSettings.products)
+  const quotes = useBookStore((s) => s.invoiceSettings.quotes)
 
   /* A new draft keeps one id however often it is saved, so saving twice is one draft. */
   const [newId] = React.useState(() => uid())
   const draftId = invoiceId ?? newId
-  const existing = invoices.find((i) => i.id === draftId)
+  const existing = quote ? undefined : invoices.find((i) => i.id === draftId)
+  const existingQuote = quote ? quotes.find((q) => q.id === draftId) : undefined
+  const start = existing ?? existingQuote
   const issued = existing !== undefined && existing.number !== null
   /* A credit note takes negative quantities and has no due date. */
   const credit = existing?.credits != null
   const credited = invoices.find((i) => i.id === existing?.credits)
 
-  const [date, setDate] = React.useState(existing?.date ?? todayIso())
+  const [date, setDate] = React.useState(start?.date ?? todayIso())
+  /* On a quote this is the last valid day. */
   const [dueDate, setDueDate] = React.useState(
-    existing?.dueDate ?? addDays(todayIso(), settings.termDays)
+    existing?.dueDate ??
+      existingQuote?.validUntil ??
+      (quote
+        ? defaultValidUntil(todayIso())
+        : addDays(todayIso(), settings.termDays))
   )
   /* A due date the user has set stays put when the customer or the date changes. */
-  const dueTouched = React.useRef(existing !== undefined)
+  const dueTouched = React.useRef(start !== undefined)
   const [supplyFrom, setSupplyFrom] = React.useState(existing?.supplyFrom ?? "")
   const [supplyTo, setSupplyTo] = React.useState(existing?.supplyTo ?? "")
   const [language, setLanguage] = React.useState<InvoiceLang>(
-    existing?.language ?? f.lang
+    start?.language ?? f.lang
   )
   const [customerId, setCustomerId] = React.useState<string | null>(
-    existing?.customerId ?? null
+    start?.customerId ?? null
   )
-  const [party, setParty] = React.useState(existing?.customer ?? emptyParty())
+  const [party, setParty] = React.useState(start?.customer ?? emptyParty())
   const [saveCustomer, setSaveCustomer] = React.useState(false)
   const [rows, setRows] = React.useState<RowDraft[]>(() =>
-    existing && existing.rows.length > 0
-      ? existing.rows.map(toDraft)
-      : [blankRow(existing?.date ?? todayIso(), undefined, undefined, credit)]
+    start && start.rows.length > 0
+      ? start.rows.map(toDraft)
+      : [blankRow(start?.date ?? todayIso(), undefined, undefined, credit)]
   )
-  const [note, setNote] = React.useState(existing?.note ?? "")
+  const [note, setNote] = React.useState(start?.note ?? "")
   const [showErrors, setShowErrors] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
   const ids = { note: React.useId(), language: React.useId() }
@@ -196,25 +236,28 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
     })
   const totals = invoiceTotals(readRows)
   /* A hint only: it never stops the invoice being issued. */
-  const lookalike = issued
-    ? undefined
-    : duplicateInvoice(
-        {
-          id: draftId,
-          date,
-          customerId,
-          customer: party,
-          rows: readRows,
-          credits: existing?.credits ?? null,
-        },
-        invoices
-      )
+  const lookalike =
+    issued || quote
+      ? undefined
+      : duplicateInvoice(
+          {
+            id: draftId,
+            date,
+            customerId,
+            customer: party,
+            rows: readRows,
+            credits: existing?.credits ?? null,
+          },
+          invoices
+        )
   const nameMissing = party.name.trim() === ""
 
   const changeDate = (iso: string) => {
     setDate(iso)
     if (credit) {
       setDueDate(iso)
+    } else if (quote) {
+      if (!dueTouched.current && iso) setDueDate(defaultValidUntil(iso))
     } else if (!dueTouched.current && iso) {
       const customer = customers.find((c) => c.id === customerId)
       setDueDate(addDays(iso, customer?.termDays ?? settings.termDays))
@@ -239,7 +282,7 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
       email: customer.email,
     })
     setLanguage(customer.language)
-    if (!dueTouched.current && date) {
+    if (!quote && !dueTouched.current && date) {
       setDueDate(addDays(date, customer.termDays ?? settings.termDays))
     }
   }
@@ -272,12 +315,8 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
   const patchRow = (key: string, patch: Partial<RowDraft>) =>
     setRows((list) => list.map((r) => (r.key === key ? { ...r, ...patch } : r)))
 
-  /** Store the invoice as a draft. Returns it, or null while the rows cannot be read. */
-  const saveDraft = (): Invoice | null => {
-    if (rowErrors.some(Boolean)) {
-      setShowErrors(true)
-      return null
-    }
+  /** Keep a typed customer in the register when asked to. Returns the register id, or null. */
+  const registerCustomer = (): string | null => {
     let register = customerId
     if (saveCustomer && register === null && !nameMissing) {
       const customer: Customer = {
@@ -293,6 +332,49 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
       register = customer.id
       setCustomerId(register)
     }
+    return register
+  }
+
+  const cleanParty = () => ({
+    ...party,
+    name: party.name.trim(),
+    country: party.country.trim().toUpperCase() || "FI",
+    vatId: party.vatId.replace(/\s/g, "").toUpperCase(),
+  })
+
+  /** Store the quote. Returns it, or null while the rows cannot be read. */
+  const storeQuote = (): Quote | null => {
+    if (rowErrors.some(Boolean)) {
+      setShowErrors(true)
+      return null
+    }
+    const register = registerCustomer()
+    const stored: Quote = {
+      id: draftId,
+      number:
+        existingQuote?.number ??
+        nextQuoteNumber(useBookStore.getState().invoiceSettings.quotes),
+      date,
+      validUntil: dueDate,
+      customerId: register,
+      customer: cleanParty(),
+      language,
+      rows: readRows,
+      note: note.trim(),
+      outcome: existingQuote?.outcome ?? null,
+      invoiceId: existingQuote?.invoiceId ?? null,
+    }
+    saveQuote(stored)
+    return stored
+  }
+
+  /** Store the invoice as a draft. Returns it, or null while the rows cannot be read. */
+  const saveDraft = (): Invoice | null => {
+    if (rowErrors.some(Boolean)) {
+      setShowErrors(true)
+      return null
+    }
+    const register = registerCustomer()
     const draft: Invoice = {
       id: draftId,
       number: null,
@@ -301,12 +383,7 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
       supplyFrom: supplyFrom || null,
       supplyTo: supplyFrom ? supplyTo || null : null,
       customerId: register,
-      customer: {
-        ...party,
-        name: party.name.trim(),
-        country: party.country.trim().toUpperCase() || "FI",
-        vatId: party.vatId.replace(/\s/g, "").toUpperCase(),
-      },
+      customer: cleanParty(),
       language,
       rows: readRows,
       note: note.trim(),
@@ -330,10 +407,32 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
   }
 
   const save = () => {
-    if (!saveDraft()) return
-    toast.add({ title: f.t("invoice.draftSaved") })
+    if (quote) {
+      const stored = storeQuote()
+      if (!stored) return
+      toast.add({ title: f.t("quote.saved", { n: stored.number }) })
+    } else {
+      if (!saveDraft()) return
+      toast.add({ title: f.t("invoice.draftSaved") })
+    }
     closeDialog()
   }
+
+  /* The quote is stored before it is printed, sent or invoiced, so all three use what is on screen. */
+  const quoteAction = (run: (q: Quote) => void) => () => {
+    const stored = storeQuote()
+    if (stored) run(stored)
+  }
+  const toInvoice = quoteAction((q) => {
+    const id = invoiceQuote(q.id)
+    if (id) {
+      toast.add({ title: f.t("quote.invoiced", { n: q.number }) })
+      openDialog({ kind: "invoice", invoiceId: id })
+    }
+  })
+  const quoteInvoice = existingQuote?.invoiceId
+    ? invoices.find((i) => i.id === existingQuote.invoiceId)
+    : undefined
 
   const issue = async () => {
     const draft = saveDraft()
@@ -346,13 +445,17 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
     }
   }
 
-  const title = issued
-    ? f.t(credit ? "invoice.creditViewTitle" : "invoice.viewTitle", {
-        n: existing.number ?? 0,
-      })
-    : existing?.reservedNumber !== undefined
-      ? f.t("invoice.reopenedTitle", { n: existing.reservedNumber })
-      : f.t(credit ? "invoice.creditDraftTitle" : "invoice.draftTitle")
+  const title = quote
+    ? existingQuote
+      ? f.t("quote.viewTitle", { n: existingQuote.number })
+      : f.t("quote.newTitle")
+    : issued
+      ? f.t(credit ? "invoice.creditViewTitle" : "invoice.viewTitle", {
+          n: existing.number ?? 0,
+        })
+      : existing?.reservedNumber !== undefined
+        ? f.t("invoice.reopenedTitle", { n: existing.reservedNumber })
+        : f.t(credit ? "invoice.creditDraftTitle" : "invoice.draftTitle")
 
   return (
     <Dialog open onOpenChange={(open) => !open && closeDialog()}>
@@ -422,7 +525,9 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
 
           <section className="flex flex-wrap gap-3">
             <Field className="w-44">
-              <FieldLabel>{f.t("invoice.date")}</FieldLabel>
+              <FieldLabel>
+                {f.t(quote ? "quote.date" : "invoice.date")}
+              </FieldLabel>
               <DateInput
                 value={date}
                 onValueChange={changeDate}
@@ -431,7 +536,9 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
             </Field>
             {credit ? null : (
               <Field className="w-44">
-                <FieldLabel>{f.t("invoice.dueDate")}</FieldLabel>
+                <FieldLabel>
+                  {f.t(quote ? "quote.validUntil" : "invoice.dueDate")}
+                </FieldLabel>
                 <DateInput
                   value={dueDate}
                   onValueChange={(iso) => {
@@ -444,10 +551,10 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
             )}
             <Field className="w-44">
               <FieldLabel htmlFor={ids.language}>
-                {f.t("invoice.language")}
+                {f.t(quote ? "quote.language" : "invoice.language")}
               </FieldLabel>
               <OptionSelect
-                label={f.t("invoice.language")}
+                label={f.t(quote ? "quote.language" : "invoice.language")}
                 value={language}
                 disabled={issued}
                 onChange={(v) => setLanguage(v as InvoiceLang)}
@@ -459,28 +566,30 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
             </Field>
           </section>
 
-          <section className="flex flex-wrap gap-3">
-            <Field className="w-44">
-              <FieldLabel>{f.t("invoice.supplyFrom")}</FieldLabel>
-              <DateInput
-                value={supplyFrom}
-                onValueChange={setSupplyFrom}
-                disabled={issued}
-              />
-            </Field>
-            <Field className="w-44">
-              <FieldLabel>{f.t("invoice.supplyTo")}</FieldLabel>
-              <DateInput
-                value={supplyTo}
-                onValueChange={setSupplyTo}
-                disabled={issued || supplyFrom === ""}
-                min={supplyFrom || undefined}
-              />
-            </Field>
-            <FieldDescription className="self-end pb-2">
-              {f.t("invoice.supplyHint")}
-            </FieldDescription>
-          </section>
+          {quote ? null : (
+            <section className="flex flex-wrap gap-3">
+              <Field className="w-44">
+                <FieldLabel>{f.t("invoice.supplyFrom")}</FieldLabel>
+                <DateInput
+                  value={supplyFrom}
+                  onValueChange={setSupplyFrom}
+                  disabled={issued}
+                />
+              </Field>
+              <Field className="w-44">
+                <FieldLabel>{f.t("invoice.supplyTo")}</FieldLabel>
+                <DateInput
+                  value={supplyTo}
+                  onValueChange={setSupplyTo}
+                  disabled={issued || supplyFrom === ""}
+                  min={supplyFrom || undefined}
+                />
+              </Field>
+              <FieldDescription className="self-end pb-2">
+                {f.t("invoice.supplyHint")}
+              </FieldDescription>
+            </section>
+          )}
 
           <section className="flex flex-col gap-2">
             <h3 className="text-sm font-semibold">{f.t("invoice.rows")}</h3>
@@ -693,7 +802,40 @@ function InvoiceForm({ invoiceId }: { invoiceId: string | null }) {
           </dl>
         </div>
         <DialogFooter className="m-0 flex-row flex-wrap items-center gap-2 bg-popover px-5 py-3">
-          {issued ? (
+          {quote ? (
+            <>
+              <p className="mr-auto self-center text-xs text-muted-foreground">
+                {quoteInvoice
+                  ? quoteInvoice.number !== null
+                    ? f.t("quote.invoicedAs", { n: quoteInvoice.number })
+                    : f.t("quote.invoicedDraft")
+                  : f.t("quote.hint")}
+              </p>
+              <Button variant="outline" onClick={save}>
+                {f.t("quote.save")}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={quoteAction((q) => void sendQuote(ctx, q))}
+              >
+                <SendIcon data-icon="inline-start" />
+                {f.t("invoice.send")}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={quoteAction((q) => void downloadQuotePdf(ctx, q))}
+              >
+                <DownloadIcon data-icon="inline-start" />
+                {f.t("invoice.download")}
+              </Button>
+              {quoteInvoice ? null : (
+                <Button onClick={toInvoice}>
+                  <FileTextIcon data-icon="inline-start" />
+                  {f.t("quote.toInvoice")}
+                </Button>
+              )}
+            </>
+          ) : issued ? (
             <>
               {canCopy(existing) ? (
                 <Button

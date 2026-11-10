@@ -10,6 +10,7 @@ import {
   periodStatus,
   vatPeriods,
   vatTimeline,
+  withEnd,
   filedKeys,
   filedOn,
 } from "@/lib/domain/vat-deadline"
@@ -258,5 +259,66 @@ describe("filed marks made in another filing period (§6.5)", () => {
       "2026-Q4": "d",
     }
     expect(filedKeys(q("year", 1), filed)).toHaveLength(4)
+  })
+})
+
+describe("a business that stops trading (§6.5)", () => {
+  const month = (y: number, m: number) => vatPeriods("month", y)[m - 1]
+  const quarter = (y: number, q: number) => vatPeriods("quarter", y)[q - 1]
+
+  it("keeps a month's and a quarter's own due date, as vero.fi's examples do", () => {
+    expect(withEnd(month(2027, 2), "2027-02")).toMatchObject({
+      to: "2027-02-28",
+      due: "2027-04-12",
+      final: true,
+    })
+    expect(withEnd(quarter(2027, 1), "2027-02")).toMatchObject({
+      to: "2027-02-28",
+      due: "2027-05-12",
+      final: true,
+    })
+  })
+
+  it("ends a year with the month and moves its due date forward", () => {
+    expect(withEnd(vatPeriods("year", 2026)[0], "2026-12")).toMatchObject({
+      to: "2026-12-31",
+      due: "2027-02-12",
+      final: true,
+    })
+    expect(withEnd(vatPeriods("year", 2027)[0], "2027-06")).toMatchObject({
+      to: "2027-06-30",
+      due: "2027-08-12",
+    })
+  })
+
+  it("leaves earlier periods alone and owes nothing after", () => {
+    expect(withEnd(month(2027, 1), "2027-02")).toEqual(month(2027, 1))
+    expect(withEnd(month(2027, 3), "2027-02")).toBeNull()
+    expect(
+      periodStatus(month(2027, 3), "2027-06-01", {}, "2026-01-01", "2027-02")
+    ).toBe("ended")
+  })
+
+  it("closes the last quarter once the end month is over", () => {
+    expect(
+      periodStatus(quarter(2027, 1), "2027-03-10", {}, "2026-01-01", "2027-02")
+    ).toBe("due")
+  })
+
+  it("stops the timeline at the last period", () => {
+    const timeline = vatTimeline(
+      "month",
+      "2026-11-01",
+      "2027-06-20",
+      {},
+      "2027-02"
+    )
+    expect(timeline.map((p) => p.key)).toEqual([
+      "2026-11",
+      "2026-12",
+      "2027-01",
+      "2027-02",
+    ])
+    expect(timeline.at(-1)).toMatchObject({ final: true, status: "overdue" })
   })
 })

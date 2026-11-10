@@ -1499,6 +1499,15 @@ export const APP_DICT = {
   "vat.dueDate": ["Eräpäivä {d}", "Due {d}"],
   "vat.running": ["Kesken", "In progress"],
   "vat.upcoming": ["Tulossa", "Upcoming"],
+  "vat.afterEnd": ["Toiminta päättynyt", "Trading stopped"],
+  "vat.afterEndHint": [
+    "Jakso alkoi vasta, kun toiminta oli päättynyt, joten siitä ei anneta ilmoitusta.",
+    "The period began after the business stopped trading, so no return is filed for it.",
+  ],
+  "vat.finalHint": [
+    "Viimeinen ilmoitus: se kattaa ajan {d} asti. Anna se myös, jos jaksolla ei ollut toimintaa.",
+    "The last return: it covers up to {d}. File it even if there was no activity in the period.",
+  ],
   "vat.beforeStart": ["Ei ilmoitusta", "No return"],
   "vat.beforeStartHint": [
     "Jakso päättyi ennen kirjanpidon aloituskuukautta, joten siitä ei anneta ilmoitusta.",
@@ -2684,6 +2693,18 @@ export const APP_DICT = {
     "Ensimmäisestä tositteesta",
     "From the first voucher",
   ],
+  "settings.bookEnd": ["Toiminnan päättyminen", "Stopping trading"],
+  "settings.bookEndHint": [
+    "Kuukausi, jona ALV-rekisteröinti päättyi. Sen verokauden ilmoitus on viimeinen, eikä myöhemmiltä jaksoilta odoteta ilmoitusta. Kalenterivuoden verokausi päättyy tähän kuukauteen, ja ilmoitus on annettava seuraavan toisen kuukauden 12. päivään mennessä.",
+    "The month VAT registration ended. The return for its tax period is the last, and no return is expected for later periods. A calendar-year tax period ends with this month, and its return is due by the 12th of the second month after it.",
+  ],
+  "settings.bookEndMonth": ["Päättymiskuukausi", "Last month"],
+  "settings.bookEndYear": ["Päättymisvuosi", "Last year"],
+  "settings.bookEndNone": ["Toiminta jatkuu", "Still trading"],
+  "settings.bookEndNote": [
+    "Viimeinen ALV-ilmoitus tältä kuulta",
+    "The last VAT return covers this month",
+  ],
   "settings.saving": ["Tallennus", "Saving"],
   "settings.autosave": ["Tallenna automaattisesti", "Save automatically"],
   "settings.autosaveHint": [
@@ -3252,6 +3273,56 @@ export const APP_DICT = {
   "invoice.tabPayables": ["Maksettavat", "To pay"],
   "invoice.tabRecurring": ["Toistuvat", "Recurring"],
   "invoice.tabProducts": ["Tuotteet", "Products"],
+  "quote.tab": ["Tarjoukset", "Quotes"],
+  "quote.title": ["Tarjoukset", "Quotes"],
+  "quote.listHint": [
+    "Tarjous ei kirjaa mitään. Kun asiakas hyväksyy sen, tee siitä lasku, niin rivit ja asiakas siirtyvät laskuluonnokseen.",
+    "A quote books nothing. When the customer accepts it, make it an invoice and the rows and customer move to an invoice draft.",
+  ],
+  "quote.empty": [
+    "Ei tarjouksia. Tee ensimmäinen Uusi tarjous -painikkeella.",
+    "No quotes yet. Make the first one with the New quote button.",
+  ],
+  "quote.new": ["Uusi tarjous", "New quote"],
+  "quote.newTitle": ["Uusi tarjous", "New quote"],
+  "quote.viewTitle": ["Tarjous {n}", "Quote {n}"],
+  "quote.date": ["Tarjouksen päivämäärä", "Quote date"],
+  "quote.language": ["Tarjouksen kieli", "Quote language"],
+  "quote.validUntil": ["Voimassa asti", "Valid until"],
+  "quote.colValid": ["Voimassa", "Valid until"],
+  "quote.hint": ["Tarjous ei kirjaa mitään.", "A quote books nothing."],
+  "quote.invoicedAs": ["Laskutettu laskulla {n}.", "Invoiced as invoice {n}."],
+  "quote.invoicedDraft": [
+    "Tarjouksesta on tehty laskuluonnos.",
+    "An invoice draft has been made from this quote.",
+  ],
+  "quote.save": ["Tallenna", "Save"],
+  "quote.saved": ["Tarjous {n} tallennettu", "Quote {n} saved"],
+  "quote.open": ["Avaa tarjous", "Open quote"],
+  "quote.toInvoice": ["Tee lasku", "Make invoice"],
+  "quote.invoiced": [
+    "Tarjouksesta {n} tehtiin laskuluonnos",
+    "Invoice draft made from quote {n}",
+  ],
+  "quote.markAccepted": ["Merkitse hyväksytyksi", "Mark accepted"],
+  "quote.markDeclined": ["Merkitse hylätyksi", "Mark declined"],
+  "quote.clearOutcome": ["Poista vastaus", "Clear the answer"],
+  "quote.delete": ["Poista tarjous", "Delete quote"],
+  "quote.deleteTitle": ["Poistetaanko tarjous {n}?", "Delete quote {n}?"],
+  "quote.deleteMessage": [
+    "Tarjouksesta tehty lasku säilyy. Tarjouksen numeroa ei käytetä uudelleen, ellei se ole viimeisin.",
+    "An invoice made from the quote stays. The quote’s number is not used again unless it is the latest.",
+  ],
+  "quote.deleted": ["Tarjous {n} poistettu", "Quote {n} deleted"],
+  "quote.statusOpen": ["Voimassa", "Open"],
+  "quote.statusExpired": ["Vanhentunut", "Expired"],
+  "quote.statusAccepted": ["Hyväksytty", "Accepted"],
+  "quote.statusDeclined": ["Hylätty", "Declined"],
+  "quote.statusInvoiced": ["Laskutettu", "Invoiced"],
+  "quote.problemValidBeforeDate": [
+    "Voimassaolo ei voi päättyä ennen tarjouksen päivää.",
+    "The quote cannot stop being valid before its own date.",
+  ],
   "invoice.copy": ["Kopioi uudeksi", "Copy as new"],
   "invoice.repeat": ["Tee toistuvaksi", "Repeat invoice"],
   "invoice.fromRecurring": ["Toistuvasta laskusta", "From a recurring invoice"],
@@ -3561,6 +3632,10 @@ export const APP_DICT = {
     "Drop a CSV or ZIP file to open it",
   ],
   /* Neutral on purpose: the row that opens this dialog has two names. */
+  "io.xlsxFailed": [
+    "Excel-taulukon tekeminen epäonnistui. Kirjanpitosi on tallessa.",
+    "The spreadsheet could not be made. Your bookkeeping is safe.",
+  ],
   "io.exportTitle": ["Lataa kirjanpito", "Download books"],
   "io.fileNameLabel": ["Tiedoston nimi", "File name"],
   "io.exportHint": [
@@ -4791,5 +4866,9 @@ export const APP_DICT = {
   ],
   "file.backupSave": ["Tallenna", "Save"],
   "file.backupDownload": ["Lataa kopio", "Download a copy"],
+  "file.xlsx": [
+    "Lataa vuosi {y} Excel-taulukkona",
+    "Download {y} as a spreadsheet",
+  ],
   "file.backupLater": ["Muistuta huomenna", "Remind me tomorrow"],
 } as const satisfies Dict

@@ -17,7 +17,7 @@ import { rateOnDate } from "@/lib/domain/vat-rates"
  * the product register. Pure, so the schedule can be tested without a clock.
  */
 
-/** What a draft is made from: an invoice or a recurring template. */
+/** What a draft is made from: an invoice, a quote or a recurring template. */
 interface DraftSource {
   customerId: string | null
   customer: Party
@@ -90,12 +90,12 @@ export function canCopy(invoice: Invoice): boolean {
 }
 
 /**
- * A new draft with an invoice's customer, rows and note, dated `today`. The
- * supply period, number and reminders are left behind: they belong to the
- * invoice copied.
+ * A new draft with an invoice's or a quote's customer, rows and note, dated
+ * `today`. The supply period, number and reminders are left behind: they
+ * belong to what was copied.
  */
 export function copyDraft(
-  source: Invoice,
+  source: DraftSource,
   today: string,
   ctx: DraftContext
 ): Invoice {
