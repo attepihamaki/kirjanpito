@@ -7,7 +7,6 @@ import { useFormatters } from "@/components/lang-provider"
 import { Button } from "@/components/ui/button"
 import { useCommandCtx } from "@/hooks/use-commands"
 import { downloadStoredBook } from "@/lib/browser/stored-book"
-import { exportBook } from "@/lib/commands/io-commands"
 import { suggestedBaseName } from "@/lib/domain/receipt-path"
 import { useBookStore } from "@/stores/book-store"
 
@@ -41,6 +40,12 @@ export function ErrorRecovery({
     setBusy(true)
     try {
       const s = useBookStore.getState()
+      /*
+       * The root error boundary ships with every page, the landing included,
+       * so the CSV and ZIP code behind the export loads on demand (§11b). A
+       * chunk that fails to load lands in the catch below.
+       */
+      const { exportBook } = await import("@/lib/commands/io-commands")
       await exportBook(ctx, suggestedBaseName(s.fileName, s.exportLang))
     } catch {
       downloadStoredBook()
