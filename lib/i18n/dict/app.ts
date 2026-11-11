@@ -2099,6 +2099,10 @@ export const APP_DICT = {
     "Tappio {a} vahvistetaan verotuksessa. Vahvistettu tappio vähennetään elinkeinotoiminnan tuloksesta seuraavien 10 vuoden aikana, vanhin tappio ensin. Verohallinto tekee vähennyksen itse; Tappiot-välilehti seuraa, mitä on jäljellä.",
     "The loss of {a} is confirmed in the tax assessment. A confirmed loss is deducted from business income over the next 10 years, oldest first. Verohallinto makes the deduction itself; the Losses tab follows what is left.",
   ],
+  "statement.earlierLossNote": [
+    "Verotuksessa tuloksesta vähennetään aiempien vuosien tappioita {a}, vanhin ensin, jolloin verotettavaksi elinkeinotuloksi jää {b}. Verohallinto tekee vähennyksen itse, joten lomakkeelle ilmoitetaan 358 sellaisenaan.",
+    "The assessment deducts {a} of earlier years' losses from the result, oldest first, which leaves {b} of taxable business income. Verohallinto makes the deduction itself, so 358 goes on the form as it is.",
+  ],
   "overview.lossesLeft": [
     "Aiempia tappioita vähennettävissä {a}.",
     "{a} of earlier losses to deduct.",

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 
 import {
   NoEntriesState,
@@ -23,6 +24,7 @@ import { incomeStatement } from "@/lib/domain/income-statement"
 import { indexCategories } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
 import { useStatementDrill } from "@/hooks/use-figure-drill"
+import { useLossInput } from "@/hooks/use-loss-input"
 import { useStatementOptions, useTaxBasisEntries } from "@/hooks/use-tax-basis"
 import {
   DEDUCTIBLE,
@@ -31,6 +33,8 @@ import {
   sideSelection,
 } from "@/lib/domain/figure-vouchers"
 import { balancesAt } from "@/lib/domain/open-items"
+import { lossLedger } from "@/lib/domain/tax-loss"
+import { STATEMENT_ROUTES } from "@/lib/site"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -76,6 +80,13 @@ export function StatementView() {
   const open = React.useMemo(
     () => balancesAt(entries, indexCategories(cats), `${year}-12-31`),
     [entries, cats, year]
+  )
+  const lossInput = useLossInput()
+  const lossDeducted = React.useMemo(
+    () =>
+      lossLedger(lossInput, year).years.find((y) => y.year === year)
+        ?.deducted ?? 0,
+    [lossInput, year]
   )
 
   /**
@@ -362,6 +373,21 @@ export function StatementView() {
             {f.t("statement.lossNote", {
               a: f.money(statement.resultMagnitude),
             })}
+          </p>
+        ) : null}
+
+        {statement.resultLine === "358" && lossDeducted > 0 ? (
+          <p className="mt-6 text-xs text-muted-foreground">
+            {f.t("statement.earlierLossNote", {
+              a: f.money(lossDeducted),
+              b: f.money(statement.resultMagnitude - lossDeducted),
+            })}{" "}
+            <Link
+              href={STATEMENT_ROUTES.losses}
+              className="underline underline-offset-2"
+            >
+              {f.t("losses.tab")}
+            </Link>
           </p>
         ) : null}
 

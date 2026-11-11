@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { LangProvider } from "@/components/lang-provider"
 import { LossesView } from "@/components/statement/losses-view"
+import { StatementView } from "@/components/statement/statement-view"
 import { defaultCategories } from "@/lib/domain/accounts"
 import type { Entry } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
@@ -74,5 +75,31 @@ describe("LossesView", () => {
       "2020": 5_000,
       "2025": 80_000,
     })
+  })
+
+  it("notes on the statement what the earlier losses take off a profit, and leaves 358 as it is", () => {
+    useBookStore.setState({ taxLosses: { "2025": 10_000 } })
+    render(
+      <LangProvider lang="fi">
+        <StatementView />
+      </LangProvider>
+    )
+    const text = document.body.textContent ?? ""
+    expect(text).toContain("aiempien vuosien tappioita 100,00")
+    expect(text).toContain("358 Elinkeinotoiminnan tulos300,00")
+    expect(text).toContain("verotettavaksi elinkeinotuloksi jää 200,00")
+    expect(screen.getByRole("link", { name: "Tappiot" })).toBeTruthy()
+  })
+
+  it("leaves the note out when no earlier loss is left", () => {
+    useBookStore.setState({ taxLosses: { "2025": 0 } })
+    render(
+      <LangProvider lang="fi">
+        <StatementView />
+      </LangProvider>
+    )
+    expect(document.body.textContent).not.toContain(
+      "aiempien vuosien tappioita"
+    )
   })
 })
