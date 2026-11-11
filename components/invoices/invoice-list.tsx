@@ -357,6 +357,23 @@ export function InvoiceList() {
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
+            {sellerReady ? null : (
+              <ol className="flex flex-col gap-2 text-left text-sm">
+                {(
+                  [
+                    "invoice.emptyStepSeller",
+                    "invoice.emptyStepInvoice",
+                  ] as const
+                ).map((step, i) => (
+                  <li key={step} className="flex items-center gap-2">
+                    <span className="tabular grid size-6 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                      {i + 1}
+                    </span>
+                    {f.t(step)}
+                  </li>
+                ))}
+              </ol>
+            )}
             {sellerReady ? (
               <Button
                 onClick={() => openDialog({ kind: "invoice", invoiceId: null })}

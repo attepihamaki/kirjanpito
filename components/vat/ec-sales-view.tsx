@@ -2,11 +2,13 @@
 
 import * as React from "react"
 
+import { ButtonLink } from "@/components/common/button-link"
 import { Money } from "@/components/common/money"
 import { Panel } from "@/components/common/panel"
 import { useFormatters } from "@/components/lang-provider"
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
@@ -21,6 +23,7 @@ import {
 } from "@/components/ui/table"
 import { ecSales } from "@/lib/domain/ec-sales"
 import { indexCategories } from "@/lib/domain/types"
+import { SETTINGS_ROUTES } from "@/lib/site"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -47,6 +50,11 @@ export function EcSalesView() {
             <EmptyTitle>{f.t("vat.ecNone", { y: year })}</EmptyTitle>
             <EmptyDescription>{f.t("vat.ecNoneWhy")}</EmptyDescription>
           </EmptyHeader>
+          <EmptyContent>
+            <ButtonLink variant="link" href={SETTINGS_ROUTES.categories}>
+              {f.t("vat.ecHowTo")}
+            </ButtonLink>
+          </EmptyContent>
         </Empty>
       ) : (
         <p className="max-w-2xl text-sm text-muted-foreground">

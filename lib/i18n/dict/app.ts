@@ -1869,6 +1869,16 @@ export const APP_DICT = {
   ],
   "vat.unmarkFiled": ["Poista merkintä", "Remove the mark"],
   "vat.payableTitle": ["Maksettava arvonlisävero", "VAT payable"],
+  "vat.payableFor": ["Maksettava arvonlisävero, {p}", "VAT payable, {p}"],
+  "vat.refundableFor": [
+    "Palautettava arvonlisävero, {p}",
+    "VAT refundable, {p}",
+  ],
+  "vat.duePill": ["Eräpäivä {w} · {d}", "Due {w} · {d}"],
+  "vat.lateDuePill": ["{n} pv myöhässä · eräp. {d}", "{n} days late · due {d}"],
+  "vat.ecHowTo": ["Miten EU-myynti kirjataan?", "How is an EU sale booked?"],
+  "vat.dueWhenToday": ["tänään", "today"],
+  "vat.dueWhenTomorrow": ["huomenna", "tomorrow"],
   "vat.refundableTitle": ["Palautettava arvonlisävero", "VAT refundable"],
   "vat.formula": [
     "Myynnin vero {a} − ostojen vähennettävä vero {b}",
@@ -2295,6 +2305,17 @@ export const APP_DICT = {
   "statement.expenses": ["Elinkeinotoiminnan kulut", "Business expenses"],
   "statement.profitOrLoss": ["Voitto tai tappio", "Profit or loss"],
   "statement.yearRunning": ["Tilikausi kesken", "Year in progress"],
+  "statement.asideReturn": ["Veroilmoitus", "Tax return"],
+  "statement.asideReturnBody": [
+    "Lomake 5 annetaan tilikauden päätyttyä. Luvut OmaVeroon tulevat tähän vuonna {y}.",
+    "Form 5 is filed after the year ends. The figures for MyTax appear here in {y}.",
+  ],
+  "statement.asideDue": ["Eräpäivä {d}", "Due {d}"],
+  "statement.asideTodo": ["Vielä huomioimatta", "Not yet included"],
+  "statement.asideCalc": ["Laske", "Calculate"],
+  "statement.asideEnter": ["Syötä", "Enter"],
+  "statement.asideStock": ["Varasto {d}", "Stock on {d}"],
+  "statement.printSheet": ["Tulosta laskelma", "Print the statement"],
   "statement.resultFormula": [
     "Tuotot {a} − vähennyskelpoiset kulut {b}",
     "Revenue {a} − deductible expenses {b}",
@@ -2880,6 +2901,11 @@ export const APP_DICT = {
   "deductions.tier": ["Käyttö", "Use"],
   "deductions.result": ["Vähennys", "Deduction"],
   "deductions.book": ["Kirjaa vähennys", "Book deduction"],
+  "deductions.bookAmount": ["Kirjaa {a}", "Book {a}"],
+  "deductions.carCostsFrom": [
+    "Autokulut haettu luokasta Ajoneuvokulut.",
+    "Car costs taken from the Vehicle costs category.",
+  ],
   "deductions.booked": ["Vähennys kirjattu.", "Deduction booked."],
   "deductions.nothing": [
     "Ei vähennettävää: kirjatut kulut ovat vähintään yhtä suuret.",
@@ -3622,6 +3648,11 @@ export const APP_DICT = {
     "An invoice needs the business address and account number. Add them once and every invoice carries them.",
   ],
   "invoice.emptyAddSeller": ["Lisää laskutustiedot", "Add invoicing details"],
+  "invoice.emptyStepSeller": [
+    "Osoite ja tilinumero",
+    "Address and account number",
+  ],
+  "invoice.emptyStepInvoice": ["Lasku asiakkaalle", "An invoice to a customer"],
   "invoice.colNumber": ["Nro", "No."],
   "invoice.colCustomer": ["Asiakas", "Customer"],
   "invoice.colDate": ["Päivämäärä", "Date"],

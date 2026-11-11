@@ -168,7 +168,9 @@ function CalculatorDialog({
                 if (done) closeDialog()
               }}
             >
-              {f.t("deductions.book")}
+              {amount > 0
+                ? f.t("deductions.bookAmount", { a: f.money(amount) })
+                : f.t("deductions.book")}
             </Button>
           </div>
         </DialogFooter>
@@ -256,7 +258,10 @@ function MileageBody({ rates }: { rates: TravelRates }) {
           value={costs}
           onChange={(event) => setCosts(event.target.value)}
         />
-        <FieldDescription>{f.t("deductions.bookedCarHint")}</FieldDescription>
+        <FieldDescription>
+          {f.t("deductions.bookedCarHint")}{" "}
+          {vehicleCosts ? f.t("deductions.carCostsFrom") : null}
+        </FieldDescription>
       </Field>
       {/* The sum as it is worked out, so the result never comes as a surprise. */}
       <dl

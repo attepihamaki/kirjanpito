@@ -8,6 +8,7 @@ import {
   useYearIsEmpty,
 } from "@/components/common/no-entries-state"
 import { Money } from "@/components/common/money"
+import { Pill } from "@/components/common/pill"
 import { PANEL_ROWS, Panel } from "@/components/common/panel"
 import { cn } from "@/lib/utils"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -24,7 +25,9 @@ import {
 import { useFormatters } from "@/components/lang-provider"
 import { VatReturnButton } from "@/components/vat/vat-return-button"
 import { useVatDrill, type AmountPart } from "@/hooks/use-figure-drill"
+import { useToday } from "@/hooks/use-today"
 import { useVatPeriod } from "@/hooks/use-vat-period"
+import { daysBetween } from "@/lib/domain/dates"
 import { viewHelp, type HelpTopic } from "@/lib/domain/field-help"
 import type { Cents } from "@/lib/domain/types"
 import type { VatReport, VatSide } from "@/lib/domain/vat"
@@ -33,7 +36,8 @@ import { useBookStore } from "@/stores/book-store"
 
 export function VatView() {
   const f = useFormatters()
-  const { report, current } = useVatPeriod()
+  const { report, current, currentStatus, label } = useVatPeriod()
+  const today = useToday()
   const vatCash = useBookStore((s) => s.vatCash)
   const yearEmpty = useYearIsEmpty()
   const { drill } = useVatDrill()
@@ -64,8 +68,32 @@ export function VatView() {
       {/* Result banner */}
       <Panel bodyClassName="flex flex-wrap items-end justify-between gap-4 p-5">
         <div>
+          {/* When the return is due, while it waits to be filed (§8.7). */}
+          {currentStatus === "due" || currentStatus === "overdue" ? (
+            <Pill
+              tone={currentStatus === "overdue" ? "expense" : "warning"}
+              className="mb-2 font-medium"
+            >
+              {currentStatus === "overdue"
+                ? f.t("vat.lateDuePill", {
+                    n: daysBetween(current.due, today),
+                    d: f.date(current.due),
+                  })
+                : f.t("vat.duePill", {
+                    w:
+                      current.due === today
+                        ? f.t("vat.dueWhenToday")
+                        : daysBetween(today, current.due) === 1
+                          ? f.t("vat.dueWhenTomorrow")
+                          : f.weekday(current.due),
+                    d: f.date(current.due),
+                  })}
+            </Pill>
+          ) : null}
           <p className="text-sm text-muted-foreground">
-            {refund ? f.t("vat.refundableTitle") : f.t("vat.payableTitle")}
+            {f.t(refund ? "vat.refundableFor" : "vat.payableFor", {
+              p: label,
+            })}
           </p>
           <FigureLink
             label={

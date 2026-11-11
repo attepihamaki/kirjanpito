@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { ArrowRightIcon, PrinterIcon } from "lucide-react"
 
 import {
   NoEntriesState,
@@ -13,6 +14,12 @@ import { HelpHint } from "@/components/common/help-hint"
 import { Money, ZeroDash } from "@/components/common/money"
 import { Pill } from "@/components/common/pill"
 import { useFormatters } from "@/components/lang-provider"
+import { CAT_354, CAT_CAR } from "@/components/statement/deduction-dialog"
+import { Panel } from "@/components/common/panel"
+import { Button } from "@/components/ui/button"
+import { useShownFeatures } from "@/hooks/use-shown-features"
+import { yearOf } from "@/lib/domain/dates"
+import { form5Due } from "@/lib/domain/tax-return-deadline"
 import { Checkbox } from "@/components/ui/checkbox"
 import { VatYearSection } from "@/components/statement/vat-year-section"
 import { YearEndButton } from "@/components/statement/year-end-button"
@@ -197,8 +204,8 @@ export function StatementView() {
   }
 
   return (
-    <>
-      <div className="print-sheet max-w-2xl rounded-lg border border-sheet-edge bg-sheet p-6 shadow-sm md:p-8">
+    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,42rem)_18rem]">
+      <div className="print-sheet rounded-lg border border-sheet-edge bg-sheet p-6 shadow-sm md:p-8">
         <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="font-heading text-xl font-semibold">
@@ -539,6 +546,86 @@ export function StatementView() {
           {f.t("landing.footer")}
         </p>
       </div>
-    </>
+      <StatementAside running={running && !filed} />
+    </div>
+  )
+}
+
+/**
+ * Beside the sheet (§8.8): when the return is due and what the book does not
+ * hold yet. Off paper, since the sheet is the document.
+ */
+function StatementAside({ running }: { running: boolean }) {
+  const f = useFormatters()
+  const year = useBookStore((s) => s.year)
+  const entries = useBookStore((s) => s.entries)
+  const yearEnd = useBookStore((s) => s.yearEnd[year])
+  const shown = useShownFeatures()
+  const due = form5Due(year)
+  const booked = (catId: string) =>
+    entries.some((e) => e.catId === catId && yearOf(e.date) === year)
+
+  const todo = [
+    shown.has("car") && !booked(CAT_CAR)
+      ? {
+          label: f.t("deductions.mileageTitle"),
+          verb: f.t("statement.asideCalc"),
+          href: STATEMENT_ROUTES.deductions,
+        }
+      : null,
+    shown.has("homeOffice") && !booked(CAT_354)
+      ? {
+          label: f.t("deductions.homeTitle"),
+          verb: f.t("statement.asideCalc"),
+          href: STATEMENT_ROUTES.deductions,
+        }
+      : null,
+    !yearEnd
+      ? {
+          label: f.t("statement.asideStock", { d: "31.12." }),
+          verb: f.t("statement.asideEnter"),
+          href: STATEMENT_ROUTES.inventory,
+        }
+      : null,
+  ].filter((x) => x !== null)
+
+  return (
+    <aside className="print-hidden flex flex-col gap-4">
+      {running ? (
+        <Panel
+          title={f.t("statement.asideReturn")}
+          bodyClassName="flex flex-col gap-2 p-4 text-sm"
+        >
+          <p className="text-muted-foreground">
+            {f.t("statement.asideReturnBody", { y: year + 1 })}
+          </p>
+          {due ? <p>{f.t("statement.asideDue", { d: f.date(due) })}</p> : null}
+        </Panel>
+      ) : null}
+      {todo.length ? (
+        <Panel
+          title={f.t("statement.asideTodo")}
+          bodyClassName="flex flex-col p-2"
+        >
+          {todo.map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className="focus-ring flex min-h-9 items-center justify-between gap-3 rounded-md px-2 text-sm text-primary hover:bg-muted"
+            >
+              <span>{item.label}</span>
+              <span className="inline-flex items-center gap-1">
+                {item.verb}
+                <ArrowRightIcon className="size-3.5" aria-hidden />
+              </span>
+            </Link>
+          ))}
+        </Panel>
+      ) : null}
+      <Button variant="outline" onClick={() => window.print()}>
+        <PrinterIcon data-icon="inline-start" />
+        {f.t("statement.printSheet")}
+      </Button>
+    </aside>
   )
 }

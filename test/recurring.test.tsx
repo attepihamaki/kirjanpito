@@ -205,7 +205,7 @@ describe("the statement's new pages", () => {
     fireEvent.change(await screen.findByLabelText("Työajot, km"), {
       target: { value: "1000" },
     })
-    fireEvent.click(screen.getByRole("button", { name: "Kirjaa vähennys" }))
+    fireEvent.click(screen.getByRole("button", { name: /^Kirjaa \d/ }))
 
     await waitFor(() => expect(useBookStore.getState().entries).toHaveLength(2))
     const booked = useBookStore

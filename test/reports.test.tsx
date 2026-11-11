@@ -82,7 +82,7 @@ describe("VatView", () => {
    */
   it("shows October's corrected figures", () => {
     mount(<VatView />)
-    expect(screen.getByText("Maksettava arvonlisävero")).toBeInTheDocument()
+    expect(screen.getByText(/^Maksettava arvonlisävero, /)).toBeInTheDocument()
     expect(screen.getByText(eur(36218))).toBeInTheDocument()
     expect(
       screen.getByText(
