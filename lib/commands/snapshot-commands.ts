@@ -9,6 +9,7 @@ import {
 } from "@/lib/browser/snapshot-store"
 import { capChangeLog, entryChanges } from "@/lib/domain/change-log"
 import { collectLiveIds } from "@/lib/domain/gc"
+import { invoiceFileIds } from "@/lib/domain/invoice-links"
 import { uid } from "@/lib/domain/id"
 import {
   addSnapshot,
@@ -55,10 +56,10 @@ export async function takeSnapshot(
       businessName: s.businessName,
       entries: s.entries.length,
       attachmentIds: [
-        ...collectLiveIds(
-          s.entries,
-          s.inbox.map((i) => i.id)
-        ),
+        ...collectLiveIds(s.entries, [
+          ...s.inbox.map((i) => i.id),
+          ...invoiceFileIds(s.invoices),
+        ]),
       ],
     }
     const next = addSnapshot(metas, meta, new Date())

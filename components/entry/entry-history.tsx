@@ -40,6 +40,7 @@ const FIELD_LABEL = {
   iban: "entry.logFieldIban",
   reference: "entry.logFieldReference",
   tags: "entry.logFieldTags",
+  advance: "entry.logFieldAdvance",
 } as const satisfies Record<LoggedField, string>
 
 /** A field's value as a person reads it. */
@@ -72,6 +73,8 @@ function formatValue(
       return value === "income" ? f.t("common.income") : f.t("common.expense")
     case "cash":
       return f.t("entry.cash")
+    case "advance":
+      return f.t("entry.advanceValue")
     case "split":
       return f.t("entry.logSplitValue")
     case "share":

@@ -245,6 +245,7 @@ export function serializeCsv(
         e.iban ?? "",
         e.reference ?? "",
         defuseFormula(formatTagsCell(e.tags)),
+        e.advance ? CASH_TO_CSV[lang] : "",
       ]
         .map(quote)
         .join(";")
@@ -621,6 +622,7 @@ export function parseCsv(
       ...dueColumn(get("due"), type, paid, cat),
       ...billColumns(get("pay_iban"), get("pay_reference"), type, paid, cat),
       ...tagsField(parseTagsCell(restoreFormula(get("tags")))),
+      ...advanceColumn(get("advance"), type, cat),
     })
 
     const splitRaw = get("split")
@@ -864,6 +866,21 @@ function periodColumns(
   const end = parseCsvDate(to)
   if (!start || !end || !isPeriod(start, end)) return {}
   return { periodFrom: start, periodTo: end }
+}
+
+/**
+ * Whether the sale was booked by an advance invoice (§8.27, §6.17). Kept only
+ * on income on a line that can be paid, where a payment date exists for the
+ * VAT return to read. It is written with the same yes word as `cash`.
+ */
+function advanceColumn(
+  value: string,
+  type: EntryType,
+  cat: Category
+): { advance?: true } {
+  if (!CASH_VALUES.includes(value.trim().toLowerCase())) return {}
+  if (type !== "income" || !canBeUnpaid(LINE_BY_KEY.get(cat.line))) return {}
+  return { advance: true }
 }
 
 /**

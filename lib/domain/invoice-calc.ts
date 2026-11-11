@@ -12,6 +12,11 @@ import type {
 import { buyerRefs, discountField } from "@/lib/domain/invoice"
 import { finnishReference } from "@/lib/domain/invoice-reference"
 import {
+  advanceProblems,
+  type AdvanceProblem,
+} from "@/lib/domain/invoice-advance"
+import { rebillProblems, type RebillProblem } from "@/lib/domain/invoice-rebill"
+import {
   isInvoiceSaleKind,
   rowSaleKind,
   vatProblems,
@@ -47,9 +52,11 @@ function discountBp(discount: number | undefined): bigint {
  * sum is worked in integers, so no discount leaves a half cent to chance.
  */
 export function rowNet(
-  row: Pick<InvoiceRow, "quantityMilli" | "unitCents" | "discount">,
+  row: Pick<InvoiceRow, "quantityMilli" | "unitCents" | "discount" | "advance">,
   docDiscount?: number
 ): Cents {
+  /* A deducted advance is what was paid, which no discount changes. */
+  if (row.advance) docDiscount = undefined
   const numerator =
     BigInt(Math.round(row.quantityMilli)) *
     BigInt(Math.round(row.unitCents)) *
@@ -194,6 +201,8 @@ export type IssueProblem =
   | "dueBeforeDate"
   | "creditOriginal"
   | "creditTooLarge"
+  | AdvanceProblem
+  | RebillProblem
   | VatProblem
 
 /** The business details outside the invoice settings that an invoice needs. */
@@ -228,12 +237,24 @@ export function creditableAmount(
   )
 }
 
+/**
+ * Whether a row's quantity has the sign its document wants: positive on an
+ * invoice and negative on a credit note, and the other way round on a row
+ * that deducts an advance, which also takes no discount of its own (§8.27).
+ */
+function rowSignOk(row: InvoiceRow, credit: boolean): boolean {
+  const negative = row.advance ? !credit : credit
+  if (row.advance && row.discount !== undefined) return false
+  return negative ? row.quantityMilli < 0 : row.quantityMilli > 0
+}
+
 export function issueProblems(
   invoice: Invoice,
   settings: InvoiceSettings,
   business: BusinessDetails,
   cats: readonly Category[],
-  invoices: readonly Invoice[] = []
+  invoices: readonly Invoice[] = [],
+  entries: readonly Entry[] = []
 ): IssueProblem[] {
   const problems: IssueProblem[] = []
   const credit = invoice.credits !== null
@@ -241,9 +262,7 @@ export function issueProblems(
   else if (
     invoice.rows.some(
       (r) =>
-        r.description.trim() === "" ||
-        (credit ? r.quantityMilli >= 0 : r.quantityMilli <= 0) ||
-        r.unitCents < 0
+        r.description.trim() === "" || !rowSignOk(r, credit) || r.unitCents < 0
     )
   )
     problems.push("badRow")
@@ -276,10 +295,16 @@ export function issueProblems(
     else if (-gross > creditableAmount(original, invoices))
       problems.push("creditTooLarge")
   }
+  problems.push(...advanceProblems(invoice, invoices, entries))
+  problems.push(...rebillProblems(invoice, invoices))
   return problems
 }
 
 const WORD: Record<InvoiceLang, string> = { fi: "Lasku", en: "Invoice" }
+const ADVANCE_WORD: Record<InvoiceLang, string> = {
+  fi: "Ennakkolasku",
+  en: "Advance invoice",
+}
 const CREDIT_WORD: Record<InvoiceLang, string> = {
   fi: "Hyvityslasku",
   en: "Credit note",
@@ -353,9 +378,14 @@ export function buildIssue(input: IssueInput): IssueResult {
   const groups = invoiceGroups(invoice.rows, invoice.discount)
   const split = groups.length > 1 ? input.makeId() : undefined
   const credit = invoice.credits !== null
-  const word = (credit ? CREDIT_WORD : WORD)[invoice.language]
+  const word = (
+    credit ? CREDIT_WORD : invoice.kind === "advance" ? ADVANCE_WORD : WORD
+  )[invoice.language]
   const description = `${word} ${number} – ${invoice.customer.name.trim()}`
   const originals = input.originalEntries ?? []
+  /* An advance's VAT falls on its payment date, and so does its credit's (§6.17). */
+  const advance =
+    invoice.kind === "advance" || (credit && originals.some((e) => e.advance))
   /* An EU sale carries the buyer's number, which the EC Sales List reads (§8.7). */
   const buyerVatId = invoice.customer.vatId.replace(/\s/g, "").toUpperCase()
   const entries: Entry[] = groups.map((group) => {
@@ -380,6 +410,7 @@ export function buildIssue(input: IssueInput): IssueResult {
         ? { buyerVatId }
         : {}),
       ...tagsField(invoice.tags),
+      ...(advance ? { advance: true as const } : {}),
     }
   })
   const issued: Invoice = {
@@ -416,6 +447,7 @@ export function creditDraft(
     customerId: original.customerId,
     customer: { ...original.customer },
     language: original.language,
+    /* A deducted advance flips too, and its link gives the deduction back. */
     rows: original.rows.map((r) => ({ ...r, quantityMilli: -r.quantityMilli })),
     ...discountField(original.discount),
     ...tagsField(original.tags),

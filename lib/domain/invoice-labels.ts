@@ -1,4 +1,4 @@
-import type { InvoiceLang } from "@/lib/domain/invoice"
+import type { InvoiceKind, InvoiceLang } from "@/lib/domain/invoice"
 import type { VatNote } from "@/lib/domain/invoice-vat"
 
 /**
@@ -7,6 +7,10 @@ import type { VatNote } from "@/lib/domain/invoice-vat"
  */
 export interface InvoiceLabels {
   invoice: string
+  /** The heading of an advance invoice (§8.27). */
+  advanceInvoice: string
+  /** The line under an advance invoice's rows that says the final invoice deducts it. */
+  advanceNote: string
   creditNote: string
   credits: string
   number: string
@@ -43,7 +47,7 @@ export interface InvoiceLabels {
   payee: string
   toPay: string
   /** Page title, e.g. "Lasku 1001". */
-  title: (number: number, credit: boolean) => string
+  title: (number: number, kind: DocumentKind) => string
   /** The heading of a quote (§8.34). */
   quote: string
   quoteNumber: string
@@ -62,6 +66,8 @@ export interface InvoiceLabels {
 const LABELS: Record<InvoiceLang, InvoiceLabels> = {
   fi: {
     invoice: "LASKU",
+    advanceInvoice: "ENNAKKOLASKU",
+    advanceNote: "Ennakkolasku. Maksettu ennakko vähennetään loppulaskusta.",
     creditNote: "HYVITYSLASKU",
     credits: "Hyvitettävä lasku",
     number: "Laskun numero",
@@ -93,7 +99,7 @@ const LABELS: Record<InvoiceLang, InvoiceLabels> = {
     payeeAccount: "Tilinumero",
     payee: "Saaja",
     toPay: "Euroa",
-    title: (n, credit) => `${credit ? "Hyvityslasku" : "Lasku"} ${n}`,
+    title: (n, kind) => `${FILE_WORD.fi[kind]} ${n}`,
     quote: "TARJOUS",
     quoteNumber: "Tarjouksen numero",
     quoteDate: "Tarjouksen päivämäärä",
@@ -112,6 +118,9 @@ const LABELS: Record<InvoiceLang, InvoiceLabels> = {
   },
   en: {
     invoice: "INVOICE",
+    advanceInvoice: "ADVANCE INVOICE",
+    advanceNote:
+      "Advance invoice. The advance paid is deducted from the final invoice.",
     creditNote: "CREDIT NOTE",
     credits: "Credited invoice",
     number: "Invoice number",
@@ -144,7 +153,7 @@ const LABELS: Record<InvoiceLang, InvoiceLabels> = {
     payeeAccount: "Account",
     payee: "Payee",
     toPay: "EUR",
-    title: (n, credit) => `${credit ? "Credit note" : "Invoice"} ${n}`,
+    title: (n, kind) => `${FILE_WORD.en[kind]} ${n}`,
     quote: "QUOTATION",
     quoteNumber: "Quotation number",
     quoteDate: "Quotation date",
@@ -167,21 +176,34 @@ export function invoiceLabels(lang: InvoiceLang): InvoiceLabels {
   return LABELS[lang]
 }
 
+/** Which of the invoice documents is drawn: it sets the title and the file name. */
+export type DocumentKind = "invoice" | "credit" | "advance"
+
+const FILE_WORD: Record<InvoiceLang, Record<DocumentKind, string>> = {
+  fi: { invoice: "Lasku", credit: "Hyvityslasku", advance: "Ennakkolasku" },
+  en: { invoice: "Invoice", credit: "Credit note", advance: "Advance invoice" },
+}
+
+/** The kind of document an invoice is drawn as. */
+export function documentKind(invoice: {
+  credits: string | null
+  kind?: InvoiceKind
+}): DocumentKind {
+  if (invoice.credits !== null) return "credit"
+  return invoice.kind === "advance" ? "advance" : "invoice"
+}
+
 /** The file name of an issued invoice's PDF, which is also its name as an attachment. */
 export function invoiceFileName(
   lang: InvoiceLang,
   number: number,
   customerName: string,
-  credit = false
+  credit = false,
+  kind?: InvoiceKind
 ): string {
   const stem = customerName.replace(/[\/:*?"<>|]/g, "").trim()
-  const word = credit
-    ? lang === "fi"
-      ? "Hyvityslasku"
-      : "Credit note"
-    : lang === "fi"
-      ? "Lasku"
-      : "Invoice"
+  const word =
+    FILE_WORD[lang][documentKind({ credits: credit ? "" : null, kind })]
   return `${word} ${number} - ${stem}.pdf`
 }
 

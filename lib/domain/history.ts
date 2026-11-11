@@ -1,3 +1,4 @@
+import { invoiceFileIds } from "@/lib/domain/invoice-links"
 import type { Invoice } from "@/lib/domain/invoice"
 import type { Category, Entry } from "@/lib/domain/types"
 
@@ -100,6 +101,7 @@ export function historyAttachmentIds(history: History): string[] {
     for (const e of snapshot.entries) {
       for (const a of e.atts ?? []) if (a.id) ids.add(a.id)
     }
+    for (const id of invoiceFileIds(snapshot.invoices)) ids.add(id)
   }
   return [...ids]
 }

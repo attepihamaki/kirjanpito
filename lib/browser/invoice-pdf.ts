@@ -468,7 +468,11 @@ export async function renderInvoicePdf(
     { ...invoice, seller: invoice.seller, number: invoice.number },
     invoice.credits !== null
       ? { kind: "credit", creditedNumber }
-      : { kind: "invoice", reference: invoice.reference },
+      : {
+          kind: "invoice",
+          reference: invoice.reference,
+          advance: invoice.kind === "advance",
+        },
     look
   )
 }
@@ -499,7 +503,7 @@ export async function renderQuotePdf(
 
 /** What is being drawn: each kind has its own heading, facts and ending. */
 type SaleKind =
-  | { kind: "invoice"; reference: string }
+  | { kind: "invoice"; reference: string; advance: boolean }
   | { kind: "credit"; creditedNumber: number | null }
   | { kind: "quote" }
 
@@ -530,10 +534,14 @@ async function drawSale(
   const lang = invoice.language
   const credit = sale.kind === "credit"
   const quote = sale.kind === "quote"
+  const advance = sale.kind === "invoice" && sale.advance
   const c = await startDocument(
     quote
       ? labels.quoteTitle(invoice.number)
-      : labels.title(invoice.number, credit),
+      : labels.title(
+          invoice.number,
+          credit ? "credit" : advance ? "advance" : "invoice"
+        ),
     look
   )
   const { doc, fonts } = c
@@ -572,7 +580,16 @@ async function drawSale(
     facts.push([labels.supply, to && to !== from ? `${from} - ${to}` : from])
   }
   facts.push(...buyerRefFacts(invoice, labels))
-  heading(c, quote ? labels.quote : credit ? labels.creditNote : labels.invoice)
+  heading(
+    c,
+    quote
+      ? labels.quote
+      : credit
+        ? labels.creditNote
+        : advance
+          ? labels.advanceInvoice
+          : labels.invoice
+  )
   for (const [label, value] of facts) {
     put(c.page, fonts, label, 330, c.y - 9, { size: 8, color: MUTED })
     putFact(c.page, fonts, value, c.y - 9)
@@ -797,6 +814,7 @@ async function drawSale(
   /* Notes and terms. */
   const notes = [
     ...vatNotes(invoice.rows, registered).map((note) => labels.vatNote[note]),
+    advance ? labels.advanceNote : "",
     invoice.note,
     invoice.terms,
     quote

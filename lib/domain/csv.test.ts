@@ -71,10 +71,10 @@ describe("serializeCsv", () => {
   it("starts with a BOM and the exact header of its language", () => {
     expect(out.startsWith(`﻿${csvHeaderLine("fi")}\r\n`)).toBe(true)
     expect(csvHeaderLine("fi")).toBe(
-      "tositenro;päivämäärä;selite;tyyppi;tili;luokka;summa;alv;verollisuus;liitteet;verokausi;maksettu;ostajan_alv;eu_osto;käteinen;jaettu;osuus;korjaa;myy;jakso_alkaa;jakso_päättyy;osapuoli;eräpäivä;maksu_iban;maksuviite;tunnisteet"
+      "tositenro;päivämäärä;selite;tyyppi;tili;luokka;summa;alv;verollisuus;liitteet;verokausi;maksettu;ostajan_alv;eu_osto;käteinen;jaettu;osuus;korjaa;myy;jakso_alkaa;jakso_päättyy;osapuoli;eräpäivä;maksu_iban;maksuviite;tunnisteet;ennakko"
     )
     expect(HEADER).toBe(
-      "voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase;cash;split;share;reverses;sells;period_from;period_to;party;due;pay_iban;pay_reference;tags"
+      "voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase;cash;split;share;reverses;sells;period_from;period_to;party;due;pay_iban;pay_reference;tags;advance"
     )
   })
 
@@ -917,7 +917,7 @@ describe("VAT settlements", () => {
   it("writes and reads back the period a payment settles", () => {
     const text = serializeCsv([payment], cats)
     expect(text).toContain(
-      ";2939;Arvonlisäveron maksu;362,18;0;brutto;;2026-10;;;;;;;;;;;;;;;\r\n"
+      ";2939;Arvonlisäveron maksu;362,18;0;brutto;;2026-10;;;;;;;;;;;;;;;;\r\n"
     )
 
     const back = ok(parseCsv(text, baseCats)).entries[0]
@@ -1296,7 +1296,7 @@ describe("cash column", () => {
 
   it("round-trips in both languages", () => {
     expect(serializeCsv([entry({ cash: true })], cats)).toContain(
-      ";kyllä;;;;;;;;;;;\r\n"
+      ";kyllä;;;;;;;;;;;;\r\n"
     )
     expect(back(entry({ cash: true })).cash).toBe(true)
     expect(back(entry({ cash: true }), "en").cash).toBe(true)
@@ -1329,7 +1329,7 @@ describe("due column", () => {
     ok(parseCsv(serializeCsv([e], cats, { lang }), baseCats)).entries[0]
 
   it("round-trips in both languages", () => {
-    expect(serializeCsv([entry({})], cats)).toContain(";2026-03-24;;;\r\n")
+    expect(serializeCsv([entry({})], cats)).toContain(";2026-03-24;;;;\r\n")
     expect(back(entry({})).due).toBe("2026-03-24")
     expect(back(entry({}), "en").due).toBe("2026-03-24")
     expect(back(entry({ paidOn: "2026-03-20" })).due).toBe("2026-03-24")
@@ -1394,7 +1394,7 @@ describe("split column", () => {
   it("writes the first part's voucher number on every part", () => {
     const text = serializeCsv([part("a", 4), part("b", 5)], cats)
     const rows = text.split("\r\n").filter(Boolean).slice(1)
-    expect(rows.map((r) => r.split(";").at(-11))).toEqual(["4", "4"])
+    expect(rows.map((r) => r.split(";").at(-12))).toEqual(["4", "4"])
   })
 
   it("links the parts again on import, in both languages", () => {
@@ -1443,8 +1443,8 @@ describe("split column", () => {
 
   it("stands a row alone when no other row holds its number, and says so", () => {
     const text = serializeCsv([part("a", 4), part("b", 5)], cats).replace(
-      /;4;;;;;;;;;;\r\n$/,
-      ";9;;;;;;;;;;\r\n"
+      /;4;;;;;;;;;;;\r\n$/,
+      ";9;;;;;;;;;;;\r\n"
     )
     const result = ok(parseCsv(text, baseCats))
     expect(result.entries.every((e) => e.split === undefined)).toBe(true)
@@ -1453,8 +1453,8 @@ describe("split column", () => {
 
   it("ignores a cell that is not a number", () => {
     const text = serializeCsv([part("a", 4), part("b", 5)], cats).replace(
-      /;4;;;;;;;;;;\r\n/g,
-      ";x;;;;;;;;;;\r\n"
+      /;4;;;;;;;;;;;\r\n/g,
+      ";x;;;;;;;;;;;\r\n"
     )
     const result = ok(parseCsv(text, baseCats))
     expect(result.entries.every((e) => e.split === undefined)).toBe(true)
@@ -1556,7 +1556,7 @@ describe("tags column (§8.37)", () => {
   it("round-trips the tags in both languages, in their order", () => {
     const tags = ["Projekti A", "Messut 2026"]
     expect(serializeCsv([entry({ tags })], cats)).toContain(
-      ";Projekti A|Messut 2026\r\n"
+      ";Projekti A|Messut 2026;\r\n"
     )
     expect(back(entry({ tags })).tags).toEqual(tags)
     expect(back(entry({ tags }), "en").tags).toEqual(tags)
@@ -1578,5 +1578,36 @@ describe("tags column (§8.37)", () => {
     const out = serializeCsv([entry({ tags: ["=1+1"] })], cats)
     expect(out).not.toContain(";=1+1")
     expect(back(entry({ tags: ["=1+1"] })).tags).toEqual(["=1+1"])
+  })
+})
+
+describe("advance column (§6.17)", () => {
+  const sale = (over: Partial<Entry> = {}): Entry => ({
+    id: "s",
+    date: "2026-10-01",
+    description: "Ennakkolasku 1001 – Asiakas",
+    type: "income",
+    catId: "300-domestic",
+    amount: 100_000,
+    vatRate: 25.5,
+    amountMode: "net",
+    paidOn: null,
+    ...over,
+  })
+  const back = (e: Entry, lang?: "fi" | "en") =>
+    ok(parseCsv(serializeCsv([e], cats, { lang }), baseCats)).entries[0]
+
+  it("round-trips in both languages", () => {
+    expect(serializeCsv([sale({ advance: true })], cats)).toContain(
+      ";kyllä\r\n"
+    )
+    expect(back(sale({ advance: true })).advance).toBe(true)
+    expect(back(sale({ advance: true }), "en").advance).toBe(true)
+    expect(back(sale()).advance).toBeUndefined()
+  })
+
+  it("is dropped from an expense", () => {
+    const cost = sale({ type: "expense", catId: "333", advance: true })
+    expect(back(cost).advance).toBeUndefined()
   })
 })

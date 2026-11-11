@@ -389,6 +389,11 @@ export function InvoiceList() {
                         {f.t("invoice.fromRecurring")}
                       </div>
                     ) : null}
+                    {invoice.kind === "advance" ? (
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {f.t("invoice.advanceBadge")}
+                      </div>
+                    ) : null}
                     {invoice.reminders?.length ? (
                       <div className="mt-1 text-xs text-muted-foreground">
                         {f.t("invoice.remindersSent", {

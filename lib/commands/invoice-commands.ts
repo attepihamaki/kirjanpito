@@ -1,5 +1,7 @@
 import { toast } from "@/components/ui/toast"
 import { saveBlob } from "@/lib/browser/download"
+import type { AttachedBytes } from "@/lib/browser/invoice-attachments"
+import { getReceipt } from "@/lib/browser/receipt-store"
 import { openMailto, shareFile } from "@/lib/browser/share"
 import { refuseLocked, UNDO_TIMEOUT_MS } from "@/lib/commands/book-commands"
 import type { Ctx } from "@/lib/commands/ctx"
@@ -61,6 +63,47 @@ const PROBLEM_MESSAGES: Record<IssueProblem, MessageKey> = {
   vatUnregistered: "invoice.problemVatUnregistered",
   buyerVatId: "invoice.problemBuyerVatId",
   buyerCountry: "invoice.problemBuyerCountry",
+  advanceOnAdvance: "invoice.problemAdvanceOnAdvance",
+  advanceTooLarge: "invoice.problemAdvanceTooLarge",
+  rebilledTwice: "invoice.problemRebilledTwice",
+}
+
+/**
+ * The invoice's PDF with its attached files after its own pages (§8.27). A
+ * file that is gone from storage or cannot be read is left out with a toast,
+ * so the invoice itself is always drawn.
+ */
+async function drawInvoice(
+  ctx: Ctx,
+  invoice: Invoice,
+  creditedNumber: number | null
+): Promise<Uint8Array> {
+  const { renderInvoicePdf } = await import("@/lib/browser/invoice-pdf")
+  const bytes = await renderInvoicePdf(
+    invoice,
+    creditedNumber,
+    useBookStore.getState().invoiceSettings
+  )
+  if (!invoice.files?.length) return bytes
+  let skipped = 0
+  const files: AttachedBytes[] = []
+  for (const file of invoice.files) {
+    const blob = await getReceipt(file.id).catch(() => undefined)
+    if (!blob) {
+      skipped += 1
+      continue
+    }
+    files.push({
+      type: file.type,
+      bytes: new Uint8Array(await blob.arrayBuffer()),
+    })
+  }
+  const { appendFiles } = await import("@/lib/browser/invoice-attachments")
+  const merged = await appendFiles(bytes, files)
+  skipped += merged.skipped
+  if (skipped > 0)
+    toast.add({ title: ctx.t("invoice.filesSkipped", { n: skipped }) })
+  return merged.bytes
 }
 
 /**
@@ -87,7 +130,8 @@ export async function issueInvoice(
       phone: state.businessPhone,
     },
     state.cats,
-    state.invoices
+    state.invoices,
+    state.entries
   )
   if (problems.length > 0) {
     toast.add({ title: ctx.t(PROBLEM_MESSAGES[problems[0]]) })
@@ -146,16 +190,10 @@ export async function issueInvoice(
       invoice.language,
       invoice.number!,
       invoice.customer.name,
-      invoice.credits !== null
+      invoice.credits !== null,
+      invoice.kind
     ),
-    async () => {
-      const { renderInvoicePdf } = await import("@/lib/browser/invoice-pdf")
-      return renderInvoicePdf(
-        invoice,
-        original?.number ?? null,
-        useBookStore.getState().invoiceSettings
-      )
-    }
+    () => drawInvoice(ctx, invoice, original?.number ?? null)
   )
   if (!att) toast.add({ title: ctx.t("invoice.pdfFailed") })
 
@@ -199,26 +237,23 @@ export async function issueInvoice(
 
 /** The PDF of an issued invoice, drawn again from the invoice as it was issued, with its file name. */
 async function renderIssued(
+  ctx: Ctx,
   invoice: Invoice
 ): Promise<{ bytes: Uint8Array; name: string; creditedNumber: number | null }> {
   if (invoice.number === null) throw new Error("not issued")
-  const { renderInvoicePdf } = await import("@/lib/browser/invoice-pdf")
   const credited = useBookStore
     .getState()
     .invoices.find((i) => i.id === invoice.credits)
   const creditedNumber = credited?.number ?? null
   return {
-    bytes: await renderInvoicePdf(
-      invoice,
-      creditedNumber,
-      useBookStore.getState().invoiceSettings
-    ),
+    bytes: await drawInvoice(ctx, invoice, creditedNumber),
     creditedNumber,
     name: invoiceFileName(
       invoice.language,
       invoice.number,
       invoice.customer.name,
-      invoice.credits !== null
+      invoice.credits !== null,
+      invoice.kind
     ),
   }
 }
@@ -230,7 +265,7 @@ export async function downloadInvoicePdf(
 ): Promise<void> {
   if (invoice.number === null) return
   try {
-    const { bytes, name } = await renderIssued(invoice)
+    const { bytes, name } = await renderIssued(ctx, invoice)
     saveBlob(new Blob([bytes as BlobPart], { type: "application/pdf" }), name)
   } catch (error) {
     console.warn("Invoice PDF could not be made", error)
@@ -248,7 +283,7 @@ export async function sendInvoice(ctx: Ctx, invoice: Invoice): Promise<void> {
   if (invoice.number === null) return
   let rendered: Awaited<ReturnType<typeof renderIssued>>
   try {
-    rendered = await renderIssued(invoice)
+    rendered = await renderIssued(ctx, invoice)
   } catch (error) {
     console.warn("Invoice PDF could not be made", error)
     toast.add({ title: ctx.t("invoice.pdfDownloadFailed") })

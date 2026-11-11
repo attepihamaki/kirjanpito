@@ -12,6 +12,7 @@ import { pruneReceiptText } from "@/lib/browser/receipt-text-db"
 import { heldByAnotherTab } from "@/lib/browser/tab-lock"
 import { todayIso, yearOf } from "@/lib/domain/dates"
 import { collectLiveIds } from "@/lib/domain/gc"
+import { invoiceFileIds } from "@/lib/domain/invoice-links"
 import { historyAttachmentIds } from "@/lib/domain/history"
 import { snapshotAttachmentIds } from "@/lib/domain/save-snapshots"
 import { lockedEntries } from "@/lib/domain/period-lock"
@@ -65,6 +66,7 @@ export async function sweepReceipts(): Promise<void> {
       if (state.importing) return null
       swept.live = collectLiveIds(state.entries, [
         ...state.inbox.map((i) => i.id),
+        ...invoiceFileIds(state.invoices),
         ...snapshotAttachmentIds(useSnapshotStore.getState().metas),
         ...state.draftAttachmentIds,
         ...state.undoAttachmentIds,

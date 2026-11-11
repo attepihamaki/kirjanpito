@@ -68,11 +68,17 @@ function cashBasisApplies(
 export function vatDate(
   e: Pick<
     Entry,
-    "type" | "catId" | "vatRate" | "euPurchase" | "date" | "paidOn"
+    "type" | "catId" | "vatRate" | "euPurchase" | "date" | "paidOn" | "advance"
   >,
   cats: CategoryMap,
   cash: VatCashBasis | null | undefined
 ): string | null {
+  /*
+   * An advance payment is taxed when it is received (AVL 15 §, §6.17),
+   * whichever basis the rest of the book is on, and is on no return while it
+   * is open.
+   */
+  if (e.advance && e.type === "income") return paidDate(e)
   if (!cash) return e.date
   if (e.date < firstDay(cash.from)) return e.date
   const end = cash.to ? dayAfterMonth(cash.to) : null
@@ -101,17 +107,17 @@ export function cashBasisCovers(
 }
 
 /**
- * The entries as the VAT return reads them (§6.16): each moved to its VAT
- * date, and an unpaid purchase on cash basis left out. Ids stay, so a figure
- * still leads to its voucher. Without the cash basis the list is returned as
- * it is.
+ * The entries as the VAT return reads them (§6.16, §6.17): each moved to its
+ * VAT date, and an unpaid purchase on cash basis or an unpaid advance left
+ * out. Ids stay, so a figure still leads to its voucher. Without the cash
+ * basis and with no advance the list is returned as it is.
  */
 export function vatBasisEntries(
   entries: readonly Entry[],
   cats: CategoryMap,
   cash: VatCashBasis | null | undefined
 ): readonly Entry[] {
-  if (!cash) return entries
+  if (!cash && !entries.some((e) => e.advance)) return entries
   return entries.flatMap((e) => {
     const on = vatDate(e, cats, cash)
     if (on === null) return []

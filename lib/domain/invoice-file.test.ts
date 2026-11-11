@@ -157,9 +157,21 @@ describe("invoices.json", () => {
   })
 
   it("is lenient about the file", () => {
-    expect(parseInvoices("not json")).toEqual({ invoices: [], skipped: 0 })
-    expect(parseInvoices("[]")).toEqual({ invoices: [], skipped: 0 })
-    expect(parseInvoices("{}")).toEqual({ invoices: [], skipped: 0 })
+    expect(parseInvoices("not json")).toEqual({
+      invoices: [],
+      skipped: 0,
+      filePaths: new Map(),
+    })
+    expect(parseInvoices("[]")).toEqual({
+      invoices: [],
+      skipped: 0,
+      filePaths: new Map(),
+    })
+    expect(parseInvoices("{}")).toEqual({
+      invoices: [],
+      skipped: 0,
+      filePaths: new Map(),
+    })
   })
 
   it("drops and counts an invoice it cannot trust", () => {

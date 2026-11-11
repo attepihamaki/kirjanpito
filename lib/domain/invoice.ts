@@ -221,6 +221,18 @@ export interface InvoiceRow {
   catId: string
   /** The row's discount in percent (§8.27). Absent while the row has none. */
   discount?: number
+  /**
+   * The expense entry the row bills on to the customer (§8.27). One entry is
+   * billed on by one invoice; a credit note's row keeps the link and gives it
+   * back. Absent on every other row.
+   */
+  rebills?: string
+  /**
+   * On a final invoice, the advance invoice the row deducts (§8.27): its
+   * quantity has the opposite sign of the document's other rows, it takes no
+   * discount, and the document's discount leaves it alone. Absent otherwise.
+   */
+  advance?: string
 }
 
 /**
@@ -296,6 +308,53 @@ export interface Invoice extends BuyerRefs, DocDiscount, DocTags {
   reminders?: Reminder[]
   /** The recurring invoice it was made from (§8.27). Absent otherwise. */
   recurring?: string
+  /**
+   * `"advance"` on an advance invoice (ennakkolasku, §8.27), whose entries
+   * carry `advance` so their VAT falls on the payment date (§6.17). Absent on
+   * an ordinary invoice and on a credit note, which takes its kind from the
+   * invoice it credits.
+   */
+  kind?: InvoiceKind
+  /**
+   * Files that go with the invoice, such as a timesheet (§8.27), printed after
+   * the invoice's own pages whenever its PDF is drawn. Absent while none.
+   */
+  files?: InvoiceFile[]
+}
+
+/** The kinds of invoice besides an ordinary one. */
+export type InvoiceKind = "advance"
+
+/**
+ * A file attached to an invoice (§8.27), stored like a receipt in IndexedDB
+ * under `id` and written into the ZIP beside the receipts.
+ */
+export interface InvoiceFile {
+  /** The stored file's IndexedDB id. */
+  id: string
+  name: string
+  type: InvoiceFileType
+  size: number
+}
+
+/** The files an invoice can carry: a PDF's pages are copied, an image gets a page of its own. */
+export const INVOICE_FILE_TYPES = [
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+] as const
+
+export type InvoiceFileType = (typeof INVOICE_FILE_TYPES)[number]
+
+/** How many files one invoice carries at most. */
+export const INVOICE_FILES_MAX = 5
+
+/** The largest file an invoice carries, in bytes. */
+export const INVOICE_FILE_BYTES_MAX = 10 * 1024 * 1024
+
+/** Whether `type` is one of `INVOICE_FILE_TYPES`. */
+export function isInvoiceFileType(type: unknown): type is InvoiceFileType {
+  return (INVOICE_FILE_TYPES as readonly unknown[]).includes(type)
 }
 
 /** A product or service in the register, which fills an invoice row (§8.27). */

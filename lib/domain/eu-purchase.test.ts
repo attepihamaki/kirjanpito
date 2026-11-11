@@ -160,7 +160,7 @@ describe("the eu_purchase column", () => {
 
   it("round-trips with Finnish values", () => {
     expect(serializeCsv([purchase()], cats)).toContain(
-      ";palvelu;;;;;;;;;;;;\r\n"
+      ";palvelu;;;;;;;;;;;;;\r\n"
     )
     expect(back({}).euPurchase).toBe("services")
     expect(back({ euPurchase: "goods" }).euPurchase).toBe("goods")

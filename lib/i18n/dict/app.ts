@@ -1441,6 +1441,8 @@ export const APP_DICT = {
   "entry.logFieldIban": ["Saajan tilinumero", "Payee’s account"],
   "entry.logFieldReference": ["Viite", "Reference"],
   "entry.logFieldTags": ["Tunnisteet", "Tags"],
+  "entry.logFieldAdvance": ["Ennakkomaksu", "Advance payment"],
+  "entry.advanceValue": ["Ennakkolasku", "Advance invoice"],
   "ledger.allTags": ["Kaikki tunnisteet", "All tags"],
   "ledger.tagFilter": ["Tunniste", "Tag"],
   "entry.tags": ["Tunnisteet", "Tags"],
@@ -4176,6 +4178,107 @@ export const APP_DICT = {
   "invoice.problemCreditTooLarge": [
     "Hyvitys on suurempi kuin laskusta on vielä hyvitettävissä.",
     "The credit is larger than what is left to credit on the invoice.",
+  ],
+  "invoice.problemAdvanceOnAdvance": [
+    "Ennakkolasku ei voi vähentää toista ennakkolaskua.",
+    "An advance invoice cannot deduct another advance invoice.",
+  ],
+  "invoice.problemAdvanceTooLarge": [
+    "Ennakkoa vähennetään enemmän kuin siitä on maksettu ja vähentämättä.",
+    "More of the advance is deducted than was paid and is left to deduct.",
+  ],
+  "invoice.problemRebilledTwice": [
+    "Sama kulu on jo laskutettu edelleen toisella laskulla tai kahdesti tällä.",
+    "The same cost is already billed on by another invoice, or twice on this one.",
+  ],
+  "invoice.advanceKind": ["Ennakkolasku", "Advance invoice"],
+  "invoice.advanceKindHint": [
+    "Ennakon arvonlisävero ilmoitetaan sinä kuukautena, jona se maksetaan. Loppulasku vähentää maksetun ennakon.",
+    "VAT on an advance is reported in the month it is paid. The final invoice deducts the advance paid.",
+  ],
+  "invoice.advanceKindDeducting": [
+    "Tämä lasku vähentää ennakon, joten se on loppulasku.",
+    "This invoice deducts an advance, so it is a final invoice.",
+  ],
+  "invoice.advanceRow": [
+    "Vähentää ennakkolaskusta {n} maksetun osan.",
+    "Deducts what was paid of advance invoice {n}.",
+  ],
+  "invoice.advanceDeduct": [
+    "Vähennä ennakkolasku {n} ({m})",
+    "Deduct advance invoice {n} ({m})",
+  ],
+  "invoice.advanceBadge": ["Ennakko", "Advance"],
+  "invoice.files": ["Liitteet", "Attachments"],
+  "invoice.filesAdd": ["Liitä tiedosto…", "Attach a file…"],
+  "invoice.filesHint": [
+    "PDF, PNG tai JPEG, enintään {n} tiedostoa ja 10 Mt kukin. Ne tulostuvat laskun PDF:n perään.",
+    "PDF, PNG or JPEG, at most {n} files of 10 MB each. They are printed after the invoice in its PDF.",
+  ],
+  "invoice.filesOpen": ["Avaa {x}", "Open {x}"],
+  "invoice.filesRemove": ["Poista liite {x}", "Remove attachment {x}"],
+  "invoice.filesNoStorage": [
+    "Selain ei voi tallentaa liitteitä.",
+    "This browser cannot store attachments.",
+  ],
+  "invoice.filesTooMany": [
+    "Laskulla voi olla enintään {n} liitettä.",
+    "An invoice can have at most {n} attachments.",
+  ],
+  "invoice.filesBadType": [
+    "{x}: liitteeksi käy PDF, PNG tai JPEG.",
+    "{x}: an attachment must be a PDF, PNG or JPEG.",
+  ],
+  "invoice.filesTooLarge": ["{x} on yli 10 Mt.", "{x} is over 10 MB."],
+  "invoice.filesUnreadable": [
+    "{x} ei aukea, esimerkiksi salasanan vuoksi.",
+    "{x} cannot be read, for example because it is password protected.",
+  ],
+  "invoice.filesFailed": [
+    "Liitettä ei voitu tallentaa.",
+    "The attachment could not be stored.",
+  ],
+  "invoice.filesMissing": [
+    "Liitettä {x} ei löydy selaimen tallennuksesta.",
+    "Attachment {x} is not in the browser's storage.",
+  ],
+  "invoice.filesSkipped": [
+    pl(
+      "1 liite jäi pois laskun PDF:stä, koska sitä ei voitu lukea.",
+      "{n} liitettä jäi pois laskun PDF:stä, koska niitä ei voitu lukea."
+    ),
+    pl(
+      "1 attachment was left out of the invoice PDF because it could not be read.",
+      "{n} attachments were left out of the invoice PDF because they could not be read."
+    ),
+  ],
+  "invoice.rebillOpen": ["Laskuta kuluja edelleen…", "Bill on costs…"],
+  "invoice.rebillSearch": ["Hae kuluista", "Search costs"],
+  "invoice.rebillMarkup": ["Lisä %", "Markup %"],
+  "invoice.rebillMarkupBad": [
+    "Lisä on prosentti 0–1000.",
+    "The markup is a percent from 0 to 1000.",
+  ],
+  "invoice.rebillNone": [
+    "Kirjanpidossa ei ole kuluja, joita ei olisi jo laskutettu edelleen.",
+    "The book has no costs that are not billed on already.",
+  ],
+  "invoice.rebillNoMatch": ["Haku ei löytänyt kuluja.", "No costs match."],
+  "invoice.rebillHint": [
+    "Kulu laskutetaan arvonlisäverottomana, lisättynä lisällä, ja rivi saa laskun myyntiluokan ja verokannan, koska edelleenlaskutettu kulu on osa myynnin hintaa. Kulu pysyy kuluna kirjanpidossa.",
+    "The cost is billed without VAT plus the markup, and the row takes the invoice's sales category and rate, since a cost billed on is part of the sale's price. The cost stays a cost in the book.",
+  ],
+  "invoice.rebillAdd": [
+    pl("Lisää 1 kulu", "Lisää {n} kulua"),
+    pl("Add 1 cost", "Add {n} costs"),
+  ],
+  "invoice.rebillRowFrom": [
+    "Edelleenlaskutettu kulu {d}: {x}, veroton {m}",
+    "Cost billed on, {d}: {x}, {m} without VAT",
+  ],
+  "invoice.rebillRowGone": [
+    "Edelleenlaskutettu kulu ei ole enää kirjanpidossa.",
+    "The cost billed on is no longer in the book.",
   ],
   "invoice.credit": ["Hyvitä", "Credit"],
   "invoice.creditNote": ["Hyvityslasku", "Credit note"],

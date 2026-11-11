@@ -15,7 +15,8 @@ import type { Lang } from "@/lib/domain/types"
  * for a liikkeenharjoittaja's accrual (§6.3). `party` is the id of the
  * counterparty in `customers.json` (§8.29). `due` is the due date of a bill
  * received, `pay_iban` and `pay_reference` how it is paid (§8.30). `tags`
- * holds the voucher's tags separated by `|` (§8.37).
+ * holds the voucher's tags separated by `|` (§8.37). `advance` marks a sale
+ * booked by an advance invoice, whose VAT falls on its payment date (§6.17).
  *
  * These names are the canonical ones the parser works in. What a file is
  * written with is `csvHeaderLine`, which follows the book's export language;
@@ -53,6 +54,7 @@ export const CSV_HEADER = [
   "pay_iban",
   "pay_reference",
   "tags",
+  "advance",
 ] as const
 
 export type CsvColumn = (typeof CSV_HEADER)[number]
@@ -90,6 +92,7 @@ const FINNISH_LABELS: Readonly<Record<CsvColumn, string>> = {
   pay_iban: "maksu_iban",
   pay_reference: "maksuviite",
   tags: "tunnisteet",
+  advance: "ennakko",
 }
 
 /** The label a column is written under, for a header or an error message. */

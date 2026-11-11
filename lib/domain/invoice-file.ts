@@ -8,6 +8,9 @@ import {
   type BuyerRefs,
   type Customer,
   type Invoice,
+  type InvoiceFile,
+  INVOICE_FILES_MAX,
+  isInvoiceFileType,
   type InvoiceLang,
   type InvoiceRow,
   type InvoiceLook,
@@ -22,6 +25,7 @@ import {
   type Reminder,
   type Seller,
 } from "@/lib/domain/invoice"
+import { invoiceFileKey } from "@/lib/domain/invoice-links"
 import { readTags } from "@/lib/domain/tags"
 
 /*
@@ -393,6 +397,50 @@ function parseRow(value: unknown): InvoiceRow | null {
   }
 }
 
+/** An invoice's row: a row with its links to a re-billed entry and a deducted advance (§8.27). */
+function parseInvoiceRow(value: unknown): InvoiceRow | null {
+  const row = parseRow(value)
+  if (!row || !isRecord(value)) return row
+  const link = (v: unknown) => (typeof v === "string" && v !== "" ? v : null)
+  const rebills = link(value.rebills)
+  const advance = link(value.advance)
+  return {
+    ...row,
+    ...(rebills ? { rebills } : {}),
+    ...(advance ? { advance } : {}),
+  }
+}
+
+/**
+ * An invoice's attached files (§8.27). In `invoices.json` each names its
+ * bytes by `path` in the ZIP; in the browser's own copy by `id`. A record
+ * with neither, or with a type an invoice does not carry, is dropped.
+ */
+function parseInvoiceFiles(
+  value: unknown,
+  invoiceId: string,
+  paths: Map<string, string>
+): InvoiceFile[] {
+  if (!Array.isArray(value)) return []
+  const files: InvoiceFile[] = []
+  for (const item of value.slice(0, INVOICE_FILES_MAX)) {
+    if (!isRecord(item) || !isInvoiceFileType(item.type)) continue
+    const size = item.size
+    if (!Number.isInteger(size) || (size as number) < 0) continue
+    const id = typeof item.id === "string" ? item.id : ""
+    const path = typeof item.path === "string" ? item.path : ""
+    if (!id && !path) continue
+    if (path) paths.set(invoiceFileKey(invoiceId, files.length), path)
+    files.push({
+      id,
+      name: text(item.name, 200) || "liite",
+      type: item.type,
+      size: size as number,
+    })
+  }
+  return files
+}
+
 function parseSeller(value: unknown): Seller | null {
   if (!isRecord(value)) return null
   const party = parseParty(value)
@@ -441,14 +489,17 @@ function parseReminder(value: unknown): Reminder | null {
   }
 }
 
-function parseInvoice(value: unknown): Invoice | null {
+function parseInvoice(
+  value: unknown,
+  filePaths: Map<string, string>
+): Invoice | null {
   if (!isRecord(value) || typeof value.id !== "string" || value.id === "")
     return null
   const date = isoDate(value.date)
   const dueDate = isoDate(value.dueDate)
   const customer = parseParty(value.customer)
   if (!date || !dueDate || !customer || !Array.isArray(value.rows)) return null
-  const rows = value.rows.map(parseRow)
+  const rows = value.rows.map(parseInvoiceRow)
   /* A row that cannot be read would change the total, so the whole invoice is dropped. */
   if (rows.some((r) => r === null)) return null
   const number =
@@ -520,13 +571,25 @@ function parseInvoice(value: unknown): Invoice | null {
     ...(typeof value.recurring === "string" && value.recurring !== ""
       ? { recurring: value.recurring }
       : {}),
+    ...(value.kind === "advance" ? { kind: "advance" as const } : {}),
+    ...filesField(parseInvoiceFiles(value.files, value.id, filePaths)),
   }
+}
+
+function filesField(files: InvoiceFile[]): { files?: InvoiceFile[] } {
+  return files.length > 0 ? { files } : {}
 }
 
 export interface ParsedInvoices {
   invoices: Invoice[]
   /** How many records were dropped. */
   skipped: number
+  /**
+   * Where in the ZIP each attached file's bytes are, keyed by
+   * `invoiceFileKey`. Such a file has no stored id yet; the opener stores the
+   * bytes and gives it one.
+   */
+  filePaths: Map<string, string>
 }
 
 export function parseInvoices(source: string): ParsedInvoices {
@@ -534,24 +597,50 @@ export function parseInvoices(source: string): ParsedInvoices {
   try {
     raw = JSON.parse(source)
   } catch {
-    return { invoices: [], skipped: 0 }
+    return { invoices: [], skipped: 0, filePaths: new Map() }
   }
   const list = isRecord(raw) && Array.isArray(raw.invoices) ? raw.invoices : []
   const seen = new Set<string>()
   const invoices: Invoice[] = []
+  const filePaths = new Map<string, string>()
   for (const item of list) {
-    const invoice = parseInvoice(item)
+    const paths = new Map<string, string>()
+    const invoice = parseInvoice(item, paths)
     if (invoice && !seen.has(invoice.id)) {
       seen.add(invoice.id)
       invoices.push(invoice)
+      for (const [k, v] of paths) filePaths.set(k, v)
     }
   }
-  return { invoices, skipped: list.length - invoices.length }
+  return { invoices, skipped: list.length - invoices.length, filePaths }
 }
 
-/** Pretty-printed with a trailing newline. Issued invoices come in number order, drafts after them by date. */
-export function serializeInvoices(invoices: readonly Invoice[]): string {
-  const sorted = [...invoices].sort((a, b) => {
+/**
+ * Pretty-printed with a trailing newline. Issued invoices come in number
+ * order, drafts after them by date. With `filePaths`, keyed by
+ * `invoiceFileKey`, each attached file is written with its path in the ZIP in
+ * place of its stored id, and a file with no path is left out.
+ */
+export function serializeInvoices(
+  invoices: readonly Invoice[],
+  filePaths?: ReadonlyMap<string, string>
+): string {
+  const written = filePaths
+    ? invoices.map((invoice) => {
+        if (!invoice.files) return invoice
+        const files = invoice.files.flatMap((f, i) => {
+          const path = filePaths.get(invoiceFileKey(invoice.id, i))
+          return path
+            ? [{ name: f.name, type: f.type, size: f.size, path }]
+            : []
+        })
+        const out: Record<string, unknown> = { ...invoice }
+        if (files.length > 0) out.files = files
+        else delete out.files
+        return out as unknown as Invoice
+      })
+    : invoices
+  const sorted = [...written].sort((a, b) => {
     if (a.number !== null && b.number !== null) return a.number - b.number
     if (a.number !== null) return -1
     if (b.number !== null) return 1

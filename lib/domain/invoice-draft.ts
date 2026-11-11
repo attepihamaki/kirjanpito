@@ -8,6 +8,7 @@ import {
   type DocTags,
   type Customer,
   Invoice,
+  type InvoiceKind,
   InvoiceLang,
   InvoiceRow,
   type Party,
@@ -30,6 +31,22 @@ interface DraftSource extends BuyerRefs, DocDiscount, DocTags {
   language: InvoiceLang
   rows: readonly InvoiceRow[]
   note: string
+  /** A copy of an advance invoice is an advance invoice too. */
+  kind?: InvoiceKind
+}
+
+/**
+ * The rows a new document takes from another: a deducted advance belongs to
+ * the final invoice it was on, and a re-billed cost is billed once (§8.27).
+ */
+function plainRows(rows: readonly InvoiceRow[]): InvoiceRow[] {
+  return rows
+    .filter((r) => !r.advance)
+    .map((r) => {
+      const row = { ...r }
+      delete row.rebills
+      return row
+    })
 }
 
 /** What making a draft needs besides its source. */
@@ -77,7 +94,7 @@ function draftOf(
     customerId: customer ? customer.id : null,
     customer: partyOf(source, ctx.customers),
     language: source.language,
-    rows: source.rows.map((r) => ({
+    rows: plainRows(source.rows).map((r) => ({
       ...r,
       vatRate: rateOnDate(r.vatRate, date),
     })),
@@ -94,6 +111,7 @@ function draftOf(
     issuedAt: null,
     entryIds: [],
     credits: null,
+    ...(source.kind ? { kind: source.kind } : {}),
   }
 }
 
@@ -157,7 +175,7 @@ export function templateFromInvoice(
     customerId: source.customerId,
     customer: { ...source.customer },
     language: source.language,
-    rows: source.rows.map((r) => ({ ...r })),
+    rows: plainRows(source.rows),
     ...discountField(source.discount),
     ...tagsField(source.tags),
     note: source.note,

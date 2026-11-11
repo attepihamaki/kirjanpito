@@ -231,6 +231,75 @@ describe("saving back to the opened file", () => {
     expect(state.invoiceSettings.city).toBe("Helsinki")
   })
 
+  it("keeps an issued invoice's entries and attached files across a save and an open (§7.6, §8.27)", async () => {
+    const zip = fakeHandle("kirjanpito.zip")
+    stubPickers(zip)
+    linkZip(zip)
+    const sale = { ...sample(), amountMode: "net" as const, paidOn: null }
+    useBookStore.getState().upsertEntry(sale)
+    vi.mocked(getReceipt).mockImplementation(async (id) =>
+      id === "a-sheet"
+        ? new Blob(["%PDF-1.4"], { type: "application/pdf" })
+        : undefined
+    )
+    const party = { ...emptyParty(), name: "Asiakas Oy" }
+    const invoice: Invoice = {
+      id: "i1",
+      number: 1001,
+      date: "2026-01-08",
+      dueDate: "2026-01-22",
+      supplyFrom: null,
+      supplyTo: null,
+      customerId: null,
+      customer: party,
+      language: "fi",
+      rows: [],
+      note: "",
+      terms: "",
+      reference: "10016",
+      seller: {
+        ...party,
+        businessId: "0112038-9",
+        phone: "",
+        iban: "",
+        vatRegistered: true,
+      },
+      issuedAt: "2026-01-08T10:00:00Z",
+      entryIds: ["e1"],
+      credits: null,
+      files: [
+        {
+          id: "a-sheet",
+          name: "Tuntilista.pdf",
+          type: "application/pdf",
+          size: 8,
+        },
+      ],
+    }
+    useBookStore.getState().setInvoices([invoice])
+
+    await saveBook(ctx, "kirjanpito")
+    vi.mocked(getReceipt).mockRestore()
+    const archive = await unzipped(zip.written[0])
+    expect(archive?.invoicesText).toContain('"#1/2026"')
+    expect(archive?.invoicesText).toContain(
+      "laskujen-liitteet/1001-Tuntilista.pdf"
+    )
+
+    useBookStore.setState({ dirty: false })
+    const reopened = new File([zip.written[0]], "kirjanpito.zip", {
+      type: "application/zip",
+    })
+    await openFile(ctx, reopened, null)
+    const state = useBookStore.getState()
+    const [back] = state.invoices
+    expect(back.entryIds).toEqual([state.entries[0].id])
+    expect(state.entries[0].id).not.toBe("e1")
+    expect(back.files).toHaveLength(1)
+    expect(back.files![0].id).not.toBe("")
+    expect(back.files![0].id).not.toBe("a-sheet")
+  })
+
   it("writes neither invoice file for a book that has none", async () => {
     const zip = fakeHandle("kirjanpito.zip")
     stubPickers(zip)

@@ -6,7 +6,9 @@ import {
   CopyIcon,
   DownloadIcon,
   FileTextIcon,
+  MinusIcon,
   PlusIcon,
+  ReceiptIcon,
   SendIcon,
   Trash2Icon,
 } from "lucide-react"
@@ -16,7 +18,9 @@ import { DateInput } from "@/components/common/date-input"
 import { Money } from "@/components/common/money"
 import { OptionSelect } from "@/components/common/option-select"
 import { TagsInput } from "@/components/common/tags-input"
+import { InvoiceFiles } from "@/components/invoices/invoice-files"
 import { PartyFields } from "@/components/invoices/party-fields"
+import { RebillPicker } from "@/components/invoices/rebill-picker"
 import { useFormatters } from "@/components/lang-provider"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -60,10 +64,13 @@ import {
   emptyParty,
   type Customer,
   type Invoice,
+  type InvoiceFile,
   type InvoiceLang,
   type InvoiceRow,
   type Quote,
 } from "@/lib/domain/invoice"
+import { deductionRows, openAdvances } from "@/lib/domain/invoice-advance"
+import { rebillCost } from "@/lib/domain/invoice-rebill"
 import { addDays } from "@/lib/domain/dates"
 import { canCopy, productFromRow, productRow } from "@/lib/domain/invoice-draft"
 import { duplicateInvoice } from "@/lib/domain/invoice-duplicate"
@@ -101,6 +108,10 @@ interface RowDraft {
   discount: string
   vatRate: number
   catId: string
+  /** The expense the row bills on (§8.27), carried through unchanged. */
+  rebills?: string
+  /** The advance invoice the row deducts (§8.27); its figures are not edited. */
+  advance?: string
 }
 
 function blankRow(
@@ -131,6 +142,8 @@ function toDraft(row: InvoiceRow): RowDraft {
     discount: formatDiscount(row.discount),
     vatRate: row.vatRate,
     catId: row.catId,
+    ...(row.rebills ? { rebills: row.rebills } : {}),
+    ...(row.advance ? { advance: row.advance } : {}),
   }
 }
 
@@ -140,7 +153,8 @@ const isBlank = (r: RowDraft) =>
 
 /** The row as numbers, or null when its quantity or price cannot be read. */
 function toRow(draft: RowDraft, credit: boolean): InvoiceRow | null {
-  const quantityMilli = parseQuantity(draft.quantity, credit)
+  /* A deducted advance has the opposite sign of the document's other rows. */
+  const quantityMilli = parseQuantity(draft.quantity, credit || !!draft.advance)
   const unitCents = evalAmount(draft.price)
   const discount = parseDiscount(draft.discount)
   if (quantityMilli === null || unitCents === null || unitCents < 0) return null
@@ -153,6 +167,8 @@ function toRow(draft: RowDraft, credit: boolean): InvoiceRow | null {
     vatRate: draft.vatRate,
     catId: draft.catId,
     ...discountField(discount),
+    ...(draft.rebills ? { rebills: draft.rebills } : {}),
+    ...(draft.advance ? { advance: draft.advance } : {}),
   }
 }
 
@@ -276,6 +292,14 @@ function InvoiceForm({
     () => allTags([...bookEntries, ...invoices]),
     [bookEntries, invoices]
   )
+  /* An advance invoice taxes its sale when it is paid (§8.27, §6.17). */
+  const [advanceKind, setAdvanceKind] = React.useState(
+    existing?.kind === "advance"
+  )
+  const [files, setFiles] = React.useState<InvoiceFile[]>(() => [
+    ...(existing?.files ?? []),
+  ])
+  const [rebilling, setRebilling] = React.useState(false)
   const [buyerReference, setBuyerReference] = React.useState(
     existing?.buyerReference ?? ""
   )
@@ -331,6 +355,40 @@ function InvoiceForm({
           invoices
         )
   const nameMissing = party.name.trim() === ""
+  const entryById = React.useMemo(
+    () => new Map(bookEntries.map((e) => [e.id, e])),
+    [bookEntries]
+  )
+  const invoiceById = React.useMemo(
+    () => new Map(invoices.map((i) => [i.id, i])),
+    [invoices]
+  )
+  const deducting = rows.some((r) => r.advance)
+  const taken = React.useMemo(
+    () => new Set(rows.flatMap((r) => (r.rebills ? [r.rebills] : []))),
+    [rows]
+  )
+  /* Advances of this customer with something left, less those a row already deducts. */
+  const advances =
+    issued || quote || credit || advanceKind
+      ? []
+      : openAdvances(
+          { customerId, name: party.name },
+          invoices,
+          entryById,
+          draftId
+        ).filter(({ advance }) => !rows.some((r) => r.advance === advance.id))
+  /* Re-billed rows start on the invoice's own sales category and rate. */
+  const saleRow = rows.filter((r) => !r.advance).at(-1)
+  const sale = {
+    id: saleRow?.catId ?? DEFAULT_CAT,
+    vatRate: saleRow?.vatRate ?? rateOnDate(25.5, date || todayIso()),
+  }
+  const addRows = (added: InvoiceRow[]) =>
+    setRows((list) => {
+      const kept = list.length === 1 && isBlank(list[0]) ? [] : list
+      return [...kept, ...added.map((r) => fitRate(toDraft(r)))]
+    })
 
   const changeDate = (iso: string) => {
     setDate(iso)
@@ -484,6 +542,8 @@ function InvoiceForm({
       ...(existing?.reservedNumber !== undefined
         ? { reservedNumber: existing.reservedNumber }
         : {}),
+      ...(advanceKind && !credit ? { kind: "advance" as const } : {}),
+      ...(files.length > 0 ? { files } : {}),
     }
     const all = useBookStore.getState().invoices
     setInvoices(
@@ -654,6 +714,28 @@ function InvoiceForm({
             </Field>
           </section>
 
+          {quote || credit ? null : (
+            <section className="flex flex-col gap-1">
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={advanceKind}
+                  disabled={issued || deducting}
+                  onCheckedChange={(v) => setAdvanceKind(v === true)}
+                />
+                {f.t("invoice.advanceKind")}
+              </label>
+              {issued ? null : (
+                <FieldDescription>
+                  {f.t(
+                    deducting
+                      ? "invoice.advanceKindDeducting"
+                      : "invoice.advanceKindHint"
+                  )}
+                </FieldDescription>
+              )}
+            </section>
+          )}
+
           {quote ? null : (
             <section className="flex flex-wrap gap-3">
               <Field className="w-44">
@@ -719,6 +801,14 @@ function InvoiceForm({
             {rows.map((row, index) => {
               const parsed = toRow(row, credit)
               const bad = showErrors && rowErrors[index]
+              /* A deducted advance's figures come from what was paid. */
+              const fixed = issued || !!row.advance
+              const rebilled = row.rebills
+                ? entryById.get(row.rebills)
+                : undefined
+              const deducted = row.advance
+                ? invoiceById.get(row.advance)
+                : undefined
               return (
                 <div
                   key={row.key}
@@ -737,6 +827,8 @@ function InvoiceForm({
                     />
                     {!issued &&
                     !credit &&
+                    !row.advance &&
+                    !row.rebills &&
                     parsed &&
                     parsed.description !== "" &&
                     !known.has(parsed.description.toLocaleLowerCase("fi")) ? (
@@ -774,7 +866,7 @@ function InvoiceForm({
                       <Input
                         inputMode="decimal"
                         className="tabular text-right"
-                        disabled={issued}
+                        disabled={fixed}
                         aria-invalid={bad || undefined}
                         value={row.quantity}
                         onChange={(e) =>
@@ -804,7 +896,7 @@ function InvoiceForm({
                       </FieldLabel>
                       <AmountInput
                         className="text-right"
-                        disabled={issued}
+                        disabled={fixed}
                         aria-invalid={bad || undefined}
                         value={row.price}
                         onChange={(e) =>
@@ -820,7 +912,7 @@ function InvoiceForm({
                         aria-label={`${f.t("invoice.rowDiscount")} ${index + 1}`}
                         inputMode="decimal"
                         className="tabular text-right"
-                        disabled={issued}
+                        disabled={fixed}
                         aria-invalid={bad || undefined}
                         value={row.discount}
                         onChange={(e) =>
@@ -836,7 +928,7 @@ function InvoiceForm({
                         <OptionSelect
                           label={f.t("invoice.rowVat")}
                           disabled={
-                            issued || isZeroRated(rowSaleKind(row.catId))
+                            fixed || isZeroRated(rowSaleKind(row.catId))
                           }
                           value={String(row.vatRate)}
                           onChange={(v) =>
@@ -858,7 +950,7 @@ function InvoiceForm({
                       </FieldLabel>
                       <OptionSelect
                         label={f.t("invoice.rowCategory")}
-                        disabled={issued}
+                        disabled={fixed}
                         value={row.catId}
                         onChange={(v) => patchRow(row.key, { catId: v })}
                         options={(incomeCats.some((c) => c.id === row.catId)
@@ -877,6 +969,24 @@ function InvoiceForm({
                       {parsed ? <Money cents={rowNet(parsed)} /> : null}
                     </div>
                   </div>
+                  {row.rebills ? (
+                    <p className="text-xs text-muted-foreground">
+                      {rebilled
+                        ? f.t("invoice.rebillRowFrom", {
+                            d: f.date(rebilled.date),
+                            x: rebilled.description,
+                            m: f.money(rebillCost(rebilled)),
+                          })
+                        : f.t("invoice.rebillRowGone")}
+                    </p>
+                  ) : null}
+                  {row.advance ? (
+                    <p className="text-xs text-muted-foreground">
+                      {f.t("invoice.advanceRow", {
+                        n: deducted?.number ?? "",
+                      })}
+                    </p>
+                  ) : null}
                   {bad ? (
                     <FieldError>{f.t("invoice.problemBadRow")}</FieldError>
                   ) : null}
@@ -918,7 +1028,46 @@ function InvoiceForm({
                       .map((p) => ({ value: p.id, label: p.name }))}
                   />
                 ) : null}
+                {!credit && !rebilling ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRebilling(true)}
+                  >
+                    <ReceiptIcon data-icon="inline-start" />
+                    {f.t("invoice.rebillOpen")}
+                  </Button>
+                ) : null}
+                {advances.map(({ advance, left }) => (
+                  <Button
+                    key={advance.id}
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      addRows(deductionRows(advance, left, language))
+                    }
+                  >
+                    <MinusIcon data-icon="inline-start" />
+                    {f.t("invoice.advanceDeduct", {
+                      n: advance.number ?? "",
+                      m: f.money(left.reduce((sum, p) => sum + p.net, 0)),
+                    })}
+                  </Button>
+                ))}
               </div>
+            ) : null}
+            {rebilling && !issued ? (
+              <RebillPicker
+                invoiceId={draftId}
+                taken={taken}
+                sale={sale}
+                language={language}
+                onAdd={(added) => {
+                  addRows(added)
+                  setRebilling(false)
+                }}
+                onClose={() => setRebilling(false)}
+              />
             ) : null}
           </section>
 
@@ -939,6 +1088,10 @@ function InvoiceForm({
               <FieldError>{f.t("invoice.discountBad")}</FieldError>
             ) : null}
           </Field>
+
+          {quote || credit ? null : (
+            <InvoiceFiles files={files} onChange={setFiles} disabled={issued} />
+          )}
 
           {issued && tags.length === 0 ? null : (
             <Field>

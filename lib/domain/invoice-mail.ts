@@ -2,6 +2,7 @@ import { formatDate } from "@/lib/domain/dates"
 import { formatIban } from "@/lib/domain/iban"
 import type { Invoice, Quote, Reminder, Seller } from "@/lib/domain/invoice"
 import { invoiceTotals } from "@/lib/domain/invoice-calc"
+import { documentKind, invoiceLabels } from "@/lib/domain/invoice-labels"
 import { formatReference } from "@/lib/domain/invoice-reference"
 import { formatMoney } from "@/lib/domain/money"
 
@@ -31,14 +32,9 @@ export function invoiceMail(
     invoiceTotals(invoice.rows, invoice.discount).gross
   )
   const fi = lang === "fi"
-  const word = credit
-    ? fi
-      ? "Hyvityslasku"
-      : "Credit note"
-    : fi
-      ? "Lasku"
-      : "Invoice"
-  const subject = `${word} ${number} – ${seller.name}`
+  const advance = !credit && invoice.kind === "advance"
+  const word = invoiceLabels(lang).title(number, documentKind(invoice))
+  const subject = `${word} – ${seller.name}`
 
   const lines: string[] = [fi ? "Hei," : "Hello,", ""]
   if (credit) {
@@ -50,8 +46,8 @@ export function invoiceMail(
   } else {
     lines.push(
       fi
-        ? `Oheisena lasku ${number}, yhteensä ${amount}. Eräpäivä on ${formatDate(invoice.dueDate, lang)}.`
-        : `Attached is invoice ${number}, ${amount} in total. It is due on ${formatDate(invoice.dueDate, lang)}.`
+        ? `Oheisena ${advance ? "ennakkolasku" : "lasku"} ${number}, yhteensä ${amount}. Eräpäivä on ${formatDate(invoice.dueDate, lang)}.`
+        : `Attached is ${advance ? "advance invoice" : "invoice"} ${number}, ${amount} in total. It is due on ${formatDate(invoice.dueDate, lang)}.`
     )
     if (invoice.reference && seller.iban) {
       lines.push(

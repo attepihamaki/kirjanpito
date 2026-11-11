@@ -194,3 +194,12 @@ Stock is valued at its acquisition cost, or at a lower probable sale or replacem
 - **The VAT view** says when the period on screen has months on cash basis (`vat.cashNote`).
 - **A part payment** of an invoice splits its entry into a paid part and an open one (§8.27), so each part's tax goes on the return of its own payment.
 - **Not handled:** a turnover above the limit for an unforeseen reason, which lets the basis continue to the end of the financial year, and the 500 000 € limit itself, which the app neither counts nor warns about.
+
+### 6.17 Advance payments (ennakkomaksut)
+
+`lib/domain/vat-basis.ts` (pure, tested). AVL 15 § makes the tax on an advance payment received before the goods or services are supplied due in the period the payment is received. A sale booked by an advance invoice (§8.27) carries `advance` (the CSV's `advance` column, §7.1), and so does its credit note's.
+
+- **The VAT date** (`vatDate`) of such an entry is its payment date (`paidDate`, §6.3), whichever basis the rest of the book is on, and it is on no return while it is open. There is no 12-month limit as on the cash basis (§6.16): an advance never paid is never taxed. A part payment splits the entry (§8.27), so each part is taxed when it arrives.
+- **Every view of the return reads it so** through `vatBasisEntries`, which runs whenever an entry carries `advance` even without the cash basis. Locks and the filed-change prompt follow the VAT date as on the cash basis, so recording a payment that lands in a filed period asks first.
+- **The final invoice deducts what was paid** with rows on the advance's category and rate (§8.27), so its own entries carry only the rest, on the final invoice's date. Its VAT is worked out on that rest, which may differ by a cent from the full price's VAT less the advance's.
+- **The income statement is unchanged**: the entries are ordinary income dated on the advance invoice. A liikkeenharjoittaja whose advance and final invoice fall in different years reports the advance in the year it was invoiced; treating it as a liability until delivery is not handled.

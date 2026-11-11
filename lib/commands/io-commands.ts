@@ -60,7 +60,13 @@ import {
   serializeCustomers,
   serializeInvoices,
 } from "@/lib/domain/invoice-file"
-import type { Customer, Invoice } from "@/lib/domain/invoice"
+import type { Customer, Invoice, InvoiceFile } from "@/lib/domain/invoice"
+import {
+  invoiceFileKey,
+  invoiceFilePaths,
+  invoicesForFile,
+  relinkInvoices,
+} from "@/lib/domain/invoice-links"
 import {
   EMPTY_INVENTORY,
   hasInventory,
@@ -401,7 +407,37 @@ async function importZip(
 
   const invoiceRecords = unpacked.invoicesText
     ? parseInvoices(unpacked.invoicesText)
-    : { invoices: [], skipped: 0 }
+    : { invoices: [], skipped: 0, filePaths: new Map<string, string>() }
+  /* An invoice's attached file that cannot be read is dropped, like a missing receipt. */
+  const invoices: Invoice[] = []
+  for (const invoice of relinkInvoices(invoiceRecords.invoices, entries)) {
+    if (!invoice.files) {
+      invoices.push(invoice)
+      continue
+    }
+    const files: InvoiceFile[] = []
+    for (const [index, file] of invoice.files.entries()) {
+      const path = invoiceRecords.filePaths.get(
+        invoiceFileKey(invoice.id, index)
+      )
+      const bytes = canStore && path ? await unpacked.readReceipt(path) : null
+      if (!bytes) {
+        missing += 1
+        continue
+      }
+      const id = `a-${uid()}`
+      try {
+        await putReceipt(id, new Blob([bytes as BlobPart], { type: file.type }))
+        files.push({ ...file, id })
+        imported += 1
+      } catch {
+        missing += 1
+      }
+    }
+    const kept: Invoice = { ...invoice, files }
+    if (files.length === 0) delete kept.files
+    invoices.push(kept)
+  }
   const customerRecords = unpacked.customersText
     ? parseCustomers(unpacked.customersText)
     : { customers: [], skipped: 0 }
@@ -420,7 +456,7 @@ async function importZip(
     {
       encrypted: unpacked.encrypted,
       password,
-      invoices: invoiceRecords.invoices,
+      invoices,
       customers: customerRecords.customers,
       inventory: inventoryRecords.inventory,
       inbox,
@@ -887,7 +923,17 @@ export async function buildBookFile(
   const { invoices, customers } = only
     ? invoicesOfEntries(only.entries, state.invoices, state.customers)
     : state
-  const invoicesText = invoices.length ? serializeInvoices(invoices) : undefined
+  const invoiceFiles = invoiceFilePaths(invoices, exportLang)
+  for (const [key, path] of invoiceFiles) paths.set(key, path)
+  for (const invoice of invoices) {
+    for (const [i, file] of (invoice.files ?? []).entries()) {
+      attachmentIds.set(invoiceFileKey(invoice.id, i), file.id)
+    }
+  }
+  /* The file names entries by voucher, since their ids are new on every open (§7.6). */
+  const invoicesText = invoices.length
+    ? serializeInvoices(invoicesForFile(invoices, entries), invoiceFiles)
+    : undefined
   const customersText = customers.length
     ? serializeCustomers(customers)
     : undefined

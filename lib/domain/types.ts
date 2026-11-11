@@ -185,6 +185,13 @@ export interface Entry {
    * the user gave them. They report nothing; the tag report reads them.
    */
   tags?: string[]
+  /**
+   * Set on a sale booked by an advance invoice (ennakkolasku, §8.27) and on
+   * its credit note. AVL 15 § makes the tax on an advance due when it is paid,
+   * so the VAT return reads it on its payment date and leaves it out while it
+   * is open (§6.17). Only on income on a line that can be paid.
+   */
+  advance?: true
 }
 
 /** A category (luokka) the user books entries to. */
