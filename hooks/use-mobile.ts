@@ -7,20 +7,30 @@ import * as React from "react"
  */
 const MOBILE_BREAKPOINT = 900
 
-function subscribe(onStoreChange: () => void) {
-  const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-  mql.addEventListener("change", onStoreChange)
-  return () => mql.removeEventListener("change", onStoreChange)
-}
+/** Tailwind's `sm`: below it a view is on a phone held upright (§8.4). */
+const PHONE_BREAKPOINT = 640
 
-function getSnapshot() {
-  return window.innerWidth < MOBILE_BREAKPOINT
-}
-
-function getServerSnapshot() {
-  return false
+function useBelow(width: number) {
+  const subscribe = React.useCallback(
+    (onStoreChange: () => void) => {
+      const mql = window.matchMedia(`(max-width: ${width - 1}px)`)
+      mql.addEventListener("change", onStoreChange)
+      return () => mql.removeEventListener("change", onStoreChange)
+    },
+    [width]
+  )
+  return React.useSyncExternalStore(
+    subscribe,
+    () => window.innerWidth < width,
+    () => false
+  )
 }
 
 export function useIsMobile() {
-  return React.useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
+  return useBelow(MOBILE_BREAKPOINT)
+}
+
+/** Whether the window is narrower than Tailwind's `sm`. */
+export function useIsPhone() {
+  return useBelow(PHONE_BREAKPOINT)
 }

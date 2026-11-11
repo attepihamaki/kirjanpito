@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { XIcon } from "lucide-react"
+import { ListFilterIcon, PlusIcon, XIcon } from "lucide-react"
 
 import {
   SearchInput,
@@ -23,6 +23,14 @@ import { MonthChips } from "@/components/ledger/month-chips"
 import { RecurringNotice } from "@/components/ledger/recurring-dialog"
 import { TotalsCards } from "@/components/ledger/totals-cards"
 import { Button } from "@/components/ui/button"
+import {
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
+import { useIsPhone } from "@/hooks/use-mobile"
 import {
   Empty,
   EmptyContent,
@@ -99,6 +107,8 @@ export function LedgerView() {
   const clearFilters = useBookStore((s) => s.clearLedgerFilters)
   const setYear = useBookStore((s) => s.setYear)
   const setMonth = useBookStore((s) => s.setMonth)
+  const openDialog = useBookStore((s) => s.openDialog)
+  const readOnly = useBookStore((s) => s.archiveYear !== null)
 
   const catMap = React.useMemo(() => indexCategories(cats), [cats])
 
@@ -319,6 +329,57 @@ export function LedgerView() {
       ? `${f.t("ledger.wholeYear")} ${year}`
       : `${f.month(month - 1)} ${year}`
 
+  /*
+   * The selects of the toolbar (§8.4). On a phone they sit in a sheet behind
+   * "Suodata", so the first entry is not pushed a screen down.
+   */
+  const phone = useIsPhone()
+  const [filtersOpen, setFiltersOpen] = React.useState(false)
+  const activeFilters = [typeFilter, catFilter, tagFilter, checkFilter].filter(
+    (v) => v !== "all"
+  ).length
+  const filters = (
+    <>
+      <TypeFilterSelect value={typeFilter} onChange={setType} />
+
+      <OptionSelect
+        options={catFilterOptions}
+        value={catFilter}
+        onChange={setCat}
+        label={f.t("ledger.colCategory")}
+        className="w-[13rem]"
+      />
+
+      {usedTags.length ? (
+        <OptionSelect
+          options={[
+            { value: "all", label: f.t("ledger.allTags") },
+            ...usedTags.map((t) => ({ value: t, label: t })),
+          ]}
+          value={tagFilter}
+          onChange={setTag}
+          label={f.t("ledger.tagFilter")}
+          className="w-[11rem]"
+        />
+      ) : null}
+
+      <OptionSelect
+        options={[
+          { value: "all", label: f.t("ledger.checkAll") },
+          { value: "open", label: f.t("ledger.openItems") },
+          ...ENTRY_CHECKS.map((check) => ({
+            value: check,
+            label: f.t(CHECK_LABEL[check]),
+          })),
+        ]}
+        value={checkFilter}
+        onChange={(value) => setCheck(value as CheckFilter)}
+        label={f.t("ledger.checkFilter")}
+        className="w-[14rem]"
+      />
+    </>
+  )
+
   if (entries.length === 0) {
     return (
       <>
@@ -349,13 +410,23 @@ export function LedgerView() {
             <PrintButton onPrint={() => setPrintAll(true)} />
             <BankImportButton />
             <BankSyncButton />
-            <NewEntryButton />
+            <NewEntryButton className="max-sm:hidden" />
           </>
         }
       />
       <div className="print-hidden">
         <LedgerTabs />
       </div>
+      {/* On a phone "Uusi tosite" floats over the list, within reach of a thumb. */}
+      <Button
+        size="icon"
+        className="print-hidden fixed right-4 bottom-4 z-40 size-14 rounded-2xl shadow-lg sm:hidden [&_svg:not([class*='size-'])]:size-6"
+        aria-label={f.t("ledger.newEntry")}
+        disabled={readOnly}
+        onClick={() => openDialog({ kind: "entry", mode: "new" })}
+      >
+        <PlusIcon />
+      </Button>
 
       <div className="flex flex-col gap-4">
         <div className="print-hidden flex flex-col gap-4 empty:hidden">
@@ -379,47 +450,29 @@ export function LedgerView() {
                 value={query}
                 onChange={setQuery}
                 placeholder={f.t("ledger.search")}
+                className="max-sm:w-auto max-sm:min-w-0 max-sm:flex-1"
               />
 
-              <TypeFilterSelect value={typeFilter} onChange={setType} />
-
-              <OptionSelect
-                options={catFilterOptions}
-                value={catFilter}
-                onChange={setCat}
-                label={f.t("ledger.colCategory")}
-                className="w-[13rem]"
-              />
-
-              {usedTags.length ? (
-                <OptionSelect
-                  options={[
-                    { value: "all", label: f.t("ledger.allTags") },
-                    ...usedTags.map((t) => ({ value: t, label: t })),
-                  ]}
-                  value={tagFilter}
-                  onChange={setTag}
-                  label={f.t("ledger.tagFilter")}
-                  className="w-[11rem]"
-                />
-              ) : null}
-
-              <OptionSelect
-                options={[
-                  { value: "all", label: f.t("ledger.checkAll") },
-                  { value: "open", label: f.t("ledger.openItems") },
-                  ...ENTRY_CHECKS.map((check) => ({
-                    value: check,
-                    label: f.t(CHECK_LABEL[check]),
-                  })),
-                ]}
-                value={checkFilter}
-                onChange={(value) => setCheck(value as CheckFilter)}
-                label={f.t("ledger.checkFilter")}
-                className="w-[14rem]"
-              />
-
-              <ColumnsMenu />
+              {phone ? (
+                <Button
+                  variant="outline"
+                  aria-haspopup="dialog"
+                  onClick={() => setFiltersOpen(true)}
+                >
+                  <ListFilterIcon data-icon="inline-start" />
+                  {f.t("ledger.filter")}
+                  {activeFilters ? (
+                    <span className="tabular rounded-full bg-primary px-1.5 text-xs text-primary-foreground">
+                      {activeFilters}
+                    </span>
+                  ) : null}
+                </Button>
+              ) : (
+                <>
+                  {filters}
+                  <ColumnsMenu />
+                </>
+              )}
 
               {hasFilters ? (
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
@@ -428,6 +481,35 @@ export function LedgerView() {
                 </Button>
               ) : null}
             </div>
+
+            {phone ? (
+              <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+                <SheetContent side="bottom" className="rounded-t-xl">
+                  <SheetHeader>
+                    <SheetTitle>{f.t("ledger.filter")}</SheetTitle>
+                  </SheetHeader>
+                  <div className="flex flex-col gap-2 px-4 [&_[data-slot=select-trigger]]:w-full">
+                    {filters}
+                  </div>
+                  <SheetFooter className="flex-row">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      disabled={!hasFilters}
+                      onClick={clearFilters}
+                    >
+                      {f.t("ledger.clearFilters")}
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      onClick={() => setFiltersOpen(false)}
+                    >
+                      {f.t("ledger.filterShow", { n: view.total })}
+                    </Button>
+                  </SheetFooter>
+                </SheetContent>
+              </Sheet>
+            ) : null}
 
             {hitsElsewhere.length > 0 ? (
               <div className="print-hidden flex flex-wrap items-center gap-2 text-sm text-muted-foreground">

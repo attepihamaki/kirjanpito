@@ -1200,6 +1200,11 @@ export const APP_DICT = {
   ],
   "ledger.noEntriesFor": ["Ei tositteita: {p}.", "No vouchers: {p}."],
   "ledger.clearFilters": ["Tyhjennä suodattimet", "Clear filters"],
+  "ledger.filter": ["Suodata", "Filter"],
+  "ledger.filterShow": [
+    pl("Näytä 1 tosite", "Näytä {n} tositetta"),
+    pl("Show 1 voucher", "Show {n} vouchers"),
+  ],
   "ledger.allCategories": ["Kaikki luokat", "All categories"],
   "ledger.openItems": ["Avoimet", "Open"],
   "ledger.openPill": ["Avoin", "Open"],
