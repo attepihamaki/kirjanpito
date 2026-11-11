@@ -8,6 +8,7 @@ import { SubPageTabs } from "@/components/common/sub-page-tabs"
 import { useT } from "@/components/lang-provider"
 import { Button } from "@/components/ui/button"
 import { INVOICE_ROUTES } from "@/lib/site"
+import { INVOICE_GROUPS } from "@/lib/ui/sub-pages"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -53,18 +54,7 @@ export function InvoiceShell({ children }: { children: React.ReactNode }) {
           )
         }
       />
-      <SubPageTabs
-        label={t("invoice.sections")}
-        tabs={[
-          { href: INVOICE_ROUTES.list, label: t("invoice.tabInvoices") },
-          { href: INVOICE_ROUTES.quotes, label: t("quote.tab") },
-          { href: INVOICE_ROUTES.recurring, label: t("invoice.tabRecurring") },
-          { href: INVOICE_ROUTES.aging, label: t("invoice.tabAging") },
-          { href: INVOICE_ROUTES.payables, label: t("invoice.tabPayables") },
-          { href: INVOICE_ROUTES.parties, label: t("party.tab") },
-          { href: INVOICE_ROUTES.products, label: t("invoice.tabProducts") },
-        ]}
-      />
+      <SubPageTabs label={t("invoice.sections")} groups={INVOICE_GROUPS} />
       {children}
     </>
   )

@@ -14,6 +14,8 @@ const TOAST_HISTORY_LIMIT = 50
 
 let records: readonly ToastRecord[] = []
 let nextId = 1
+/** The newest id the messages dialog has shown; anything after it is unread. */
+let seenId = 0
 const listeners = new Set<() => void>()
 
 /**
@@ -43,6 +45,24 @@ export function recordToast(options: {
   listeners.forEach((l) => l())
 }
 
+/** Mark every recorded message read, as opening the messages dialog does. */
+export function markToastsSeen(): void {
+  const newest = records[0]?.id ?? 0
+  if (newest <= seenId) return
+  seenId = newest
+  listeners.forEach((l) => l())
+}
+
+/** How many recorded messages arrived after the dialog last showed them. */
+export function unreadToastCount(): number {
+  let n = 0
+  for (const r of records) {
+    if (r.id <= seenId) break
+    n += 1
+  }
+  return n
+}
+
 export function clearToastHistory(): void {
   if (records.length === 0) return
   records = []
@@ -65,4 +85,9 @@ export function useToastHistory(): readonly ToastRecord[] {
     () => records,
     () => EMPTY
   )
+}
+
+/** The number of unread messages, for the top bar's bell (§8.2). */
+export function useUnreadToastCount(): number {
+  return React.useSyncExternalStore(subscribe, unreadToastCount, () => 0)
 }

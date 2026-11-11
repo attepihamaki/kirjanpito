@@ -348,7 +348,7 @@ The bookkeeping holds a business's figures and its receipts, and the file may si
 
 ### 7.10 Spreadsheet (.xlsx)
 
-"Lataa vuosi {y} Excel-taulukkona" in the file menu (`downloadWorkbook`, `lib/domain/ledger-workbook.ts`, `lib/domain/xlsx.ts`) downloads the selected year as `Kirjanpito 2026.xlsx` (`Bookkeeping 2026.xlsx`), in the book's export language. It is a copy to read and sum in a spreadsheet, never opened back into the book.
+"Lataa vuosi {y} Excel-taulukkona" in Asetukset's "Lisää toimintoja" menu (§8.10) and the command palette (`downloadWorkbook`, `lib/domain/ledger-workbook.ts`, `lib/domain/xlsx.ts`) downloads the selected year as `Kirjanpito 2026.xlsx` (`Bookkeeping 2026.xlsx`), in the book's export language. It is a copy to read and sum in a spreadsheet, never opened back into the book.
 
 - **One sheet per month and a summary first.** A month sheet lists the month's entries by date and voucher: voucher, date, description, category, kind, VAT rate, net, VAT, gross and the payment date ("avoin" while open). Amounts are signed, income positive and expenses negative, and the last row totals net, VAT and gross with `SUM` formulas. An empty month keeps its header, an empty row and zero totals.
 - **Kind** is "Tulo", "Meno" or "Muu". "Muu" is an entry off the income statement (`offStatement`: VAT settlements, the owner's transfers, loans, fixed assets), listed but kept out of the summary's income and expenses.

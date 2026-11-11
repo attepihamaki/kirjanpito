@@ -3,6 +3,7 @@
 import Link from "next/link"
 
 import { AppNav } from "@/components/app/app-nav"
+import { InboxDropBox } from "@/components/app/inbox-drop-box"
 import { BrandMark } from "@/components/common/brand-mark"
 import {
   Sidebar,
@@ -16,9 +17,10 @@ import { useT } from "@/components/lang-provider"
 import { LANDING } from "@/lib/site"
 
 /**
- * Brand and navigation (§8.2). Everything here is a menu row, so collapsing to
- * icons loses nothing but the words: the file and the financial year live in
- * the top bar's `FileMenu`, which is one button wide at every width.
+ * Brand, navigation and, at the foot, the receipt inbox's drop box (§8.2,
+ * §8.31). Collapsing to icons loses nothing but the words and the dashed
+ * tile: the inbox row still takes a drop, and the file and the financial year
+ * live in the top bar's `FileMenu`, which is one button wide at every width.
  */
 export function AppSidebar() {
   const t = useT()
@@ -56,6 +58,8 @@ export function AppSidebar() {
       <SidebarContent>
         <AppNav />
       </SidebarContent>
+
+      <InboxDropBox />
     </Sidebar>
   )
 }

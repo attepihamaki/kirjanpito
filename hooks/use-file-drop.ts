@@ -23,6 +23,10 @@ export function isBookFile(file: File): boolean {
  * The depth counter is reset on `drop` and on `dragend` as well as being
  * decremented on `dragleave`: a drag that ends outside the window never fires
  * a matching leave, which would otherwise leave the overlay stuck open.
+ *
+ * A drop that an element in the page has already taken, by calling
+ * `preventDefault` on it, only resets the overlay: the sidebar's inbox box
+ * (§8.31) handles its own drops.
  */
 export function useFileDrop({
   onDropFiles,
@@ -64,8 +68,11 @@ export function useFileDrop({
     }
     const onDrop = (e: DragEvent) => {
       if (!e.dataTransfer?.types?.includes("Files")) return
+      const handled = e.defaultPrevented
       e.preventDefault()
       reset()
+      // A drop target in the page that took the files says so this way.
+      if (handled) return
       const handleFor = dropHandles(e.dataTransfer.items)
       const files = Array.from(e.dataTransfer.files ?? [])
       if (files.length) onDropFiles(files, handleFor)

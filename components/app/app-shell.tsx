@@ -40,7 +40,11 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import {
+  SidebarInset,
+  SidebarProvider,
+  useSidebar,
+} from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { toast } from "@/components/ui/toast"
 import { useBeforeUnload } from "@/hooks/use-before-unload"
@@ -145,6 +149,33 @@ function OpenInAnotherTab() {
         </EmptyHeader>
       </Empty>
     </div>
+  )
+}
+
+/**
+ * The drag-and-drop hint (§8.2). Not blocking: a blocking scrim would swallow
+ * the drop itself. Outside the entry dialog it leaves the desktop sidebar
+ * uncovered, so the inbox box at its foot (§8.31) stays in sight to drop on.
+ */
+function DropHint({ media }: { media: boolean }) {
+  const t = useT()
+  const { isMobile, open } = useSidebar()
+  return (
+    <Overlay
+      blocking={false}
+      className={cn(
+        media && "bg-background/60",
+        !media &&
+          !isMobile &&
+          (open ? "left-(--sidebar-width)" : "left-(--sidebar-width-icon)")
+      )}
+    >
+      <div className="rounded-xl border-2 border-dashed border-primary px-8 py-6 text-center">
+        <p className="font-heading text-lg font-medium">
+          {media ? t("receipt.drop") : t("io.dropHere")}
+        </p>
+      </div>
+    </Overlay>
   )
 }
 
@@ -263,19 +294,7 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
           </div>
         </SidebarInset>
 
-        {dragging ? (
-          // Not blocking: a blocking scrim would swallow the drop itself.
-          <Overlay
-            blocking={false}
-            className={cn(draggingMedia && "bg-background/60")}
-          >
-            <div className="rounded-xl border-2 border-dashed border-primary px-8 py-6 text-center">
-              <p className="font-heading text-lg font-medium">
-                {draggingMedia ? t("receipt.drop") : t("io.dropHere")}
-              </p>
-            </div>
-          </Overlay>
-        ) : null}
+        {dragging ? <DropHint media={draggingMedia} /> : null}
 
         <ImportOverlay />
 

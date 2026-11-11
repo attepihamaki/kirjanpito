@@ -13,7 +13,7 @@ import { clearToastHistory, useToastHistory } from "@/stores/toast-history"
 
 /**
  * The toasts raised this session, newest first, so a message that timed out
- * unread can be read again. Opened from the file menu.
+ * unread can be read again. Opened from the top bar's bell.
  */
 export function MessagesDialog({
   open,

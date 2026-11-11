@@ -5,6 +5,7 @@ import { PanelLeftIcon, SearchIcon } from "lucide-react"
 import { FileMenu } from "@/components/app/file-menu"
 import { SavedClock } from "@/components/app/file-status"
 import { LangToggle } from "@/components/app/lang-toggle"
+import { MessagesButton } from "@/components/app/messages-button"
 import { ThemeToggle } from "@/components/app/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/components/ui/sidebar"
@@ -74,6 +75,7 @@ export function AppTopbar({
           <SavedClock />
           <ThemeToggle />
           <LangToggle />
+          <MessagesButton />
           <FileMenu onOpenFile={onOpenFile} onExport={onExport} />
         </div>
       </div>

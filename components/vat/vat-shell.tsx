@@ -35,10 +35,20 @@ export function VatShell({ children }: { children: React.ReactNode }) {
       <div className="print-hidden">
         <SubPageTabs
           label={f.t("vat.sections")}
-          tabs={[
-            { href: VAT_ROUTES.sheet, label: f.t("vat.sheetTab") },
+          groups={[
+            {
+              label: "vat.sheetTab",
+              pages: [{ href: VAT_ROUTES.sheet, label: "vat.sheetTab" }],
+            },
             ...(showEc || monthlyList
-              ? [{ href: VAT_ROUTES.ec, label: f.t("vat.ecTab") }]
+              ? [
+                  {
+                    label: "vat.ecTab" as const,
+                    pages: [
+                      { href: VAT_ROUTES.ec, label: "vat.ecTab" as const },
+                    ],
+                  },
+                ]
               : []),
           ]}
         />

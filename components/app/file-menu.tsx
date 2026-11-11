@@ -2,12 +2,8 @@
 
 import * as React from "react"
 import {
-  BellIcon,
   BookBookmarkIcon,
   DownloadIcon,
-  FileArchiveIcon,
-  FileSpreadsheetIcon,
-  ListChecksIcon,
   SaveIcon,
   UploadIcon,
   XIcon,
@@ -21,7 +17,6 @@ import {
   StatusDot,
   useFileStatusText,
 } from "@/components/app/file-status"
-import { MessagesDialog } from "@/components/app/messages-dialog"
 import { YearSelect } from "@/components/app/year-select"
 import { BusyButton, BusyIcon } from "@/components/common/busy-button"
 import { Button } from "@/components/ui/button"
@@ -41,7 +36,6 @@ import {
   useShortcut,
 } from "@/hooks/use-save-book"
 import { closeBook } from "@/lib/commands/book-commands"
-import { downloadWorkbook } from "@/lib/commands/xlsx-commands"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -66,13 +60,10 @@ export function FileMenu({
   const f = useFormatters()
   const ctx = useCommandCtx()
   const [open, setOpen] = React.useState(false)
-  const [messagesOpen, setMessagesOpen] = React.useState(false)
   const fileName = useBookStore((s) => s.fileName)
   const importing = useBookStore((s) => s.importing)
   const saving = useBookStore((s) => s.saving)
   const dirty = useBookStore((s) => s.dirty)
-  const year = useBookStore((s) => s.year)
-  const openDialog = useBookStore((s) => s.openDialog)
   const busy = useDelayedFlag(importing)
   const savingNow = useDelayedFlag(saving)
   const status = useFileStatusText()
@@ -197,42 +188,6 @@ export function FileMenu({
           <Button
             variant="ghost"
             className="justify-start"
-            onClick={act(() => void downloadWorkbook(ctx))}
-          >
-            <FileSpreadsheetIcon data-icon="inline-start" />
-            {f.t("file.xlsx", { y: year })}
-          </Button>
-
-          <Button
-            variant="ghost"
-            className="justify-start"
-            onClick={act(() => openDialog({ kind: "check-book" }))}
-          >
-            <ListChecksIcon data-icon="inline-start" />
-            {f.t("file.check")}
-          </Button>
-
-          <Button
-            variant="ghost"
-            className="justify-start"
-            onClick={act(() => openDialog({ kind: "audit-package" }))}
-          >
-            <FileArchiveIcon data-icon="inline-start" />
-            {f.t("file.audit")}
-          </Button>
-
-          <Button
-            variant="ghost"
-            className="justify-start"
-            onClick={act(() => setMessagesOpen(true))}
-          >
-            <BellIcon data-icon="inline-start" />
-            {f.t("file.messages")}
-          </Button>
-
-          <Button
-            variant="ghost"
-            className="justify-start"
             onClick={act(() => void closeBook(ctx))}
           >
             <XIcon data-icon="inline-start" />
@@ -240,7 +195,6 @@ export function FileMenu({
           </Button>
         </div>
       </PopoverContent>
-      <MessagesDialog open={messagesOpen} onOpenChange={setMessagesOpen} />
     </Popover>
   )
 }

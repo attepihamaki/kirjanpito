@@ -1,6 +1,12 @@
 "use client"
 
-import { CalendarPlusIcon, EllipsisIcon } from "lucide-react"
+import {
+  CalendarPlusIcon,
+  EllipsisIcon,
+  FileArchiveIcon,
+  FileSpreadsheetIcon,
+  ListChecksIcon,
+} from "lucide-react"
 import * as React from "react"
 
 import { useFormatters } from "@/components/lang-provider"
@@ -15,6 +21,7 @@ import {
 import { useCommandCtx } from "@/hooks/use-commands"
 import { useToday } from "@/hooks/use-today"
 import { deleteBook, renumberVouchers } from "@/lib/commands/book-commands"
+import { downloadWorkbook } from "@/lib/commands/xlsx-commands"
 import { newYearTarget } from "@/lib/domain/new-year"
 import { renumberYear } from "@/lib/domain/voucher"
 import { useBookStore } from "@/stores/book-store"
@@ -36,8 +43,10 @@ export function useRenumberChanges(): number {
 /**
  * What the general settings page does rather than holds, on the title row:
  * the way into opening a year (§8.14), for the year `newYearTarget` names, and
- * a menu of the less common actions. Deleting the bookkeeping erases it from
- * this browser, so it is last and in the destructive colour.
+ * a menu of the less common actions: the book check (§8.23), the audit
+ * package (§8.25) and the spreadsheet (§7.10), then the renumbering. Deleting
+ * the bookkeeping erases it from this browser, so it is last and in the
+ * destructive colour.
  */
 export function GeneralActions() {
   const f = useFormatters()
@@ -72,6 +81,21 @@ export function GeneralActions() {
           <EllipsisIcon />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-auto min-w-56">
+          <DropdownMenuItem onClick={() => openDialog({ kind: "check-book" })}>
+            <ListChecksIcon />
+            {f.t("file.check")}…
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => openDialog({ kind: "audit-package" })}
+          >
+            <FileArchiveIcon />
+            {f.t("file.audit")}…
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => void downloadWorkbook(ctx)}>
+            <FileSpreadsheetIcon />
+            {f.t("file.xlsx", { y: selectedYear })}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem
             disabled={changes === 0}
             onClick={() => void renumberVouchers(ctx, selectedYear)}

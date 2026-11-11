@@ -125,6 +125,10 @@ export const APP_DICT = {
     "Tämän istunnon ilmoitukset, uusin ensin.",
     "Notices from this session, newest first.",
   ],
+  "file.messagesUnread": [
+    pl("Viestit, 1 lukematon", "Viestit, {n} lukematonta"),
+    pl("Messages, 1 unread", "Messages, {n} unread"),
+  ],
   "file.messagesEmpty": ["Ei viestejä vielä.", "No messages yet."],
   "file.messagesClear": ["Tyhjennä", "Clear"],
 
@@ -977,6 +981,7 @@ export const APP_DICT = {
   "ledger.entriesTab": ["Tositteet", "Vouchers"],
   "ledger.journalTab": ["Päiväkirja", "Journal"],
   "ledger.accountsTab": ["Pääkirja", "General ledger"],
+  "ledger.booksTab": ["Kirjat", "Books"],
   "entry.logAdd": ["Tosite lisätty", "Voucher added"],
   "entry.logDelete": ["Tosite poistettu", "Voucher deleted"],
   "entry.logRestore": ["Tosite palautettu", "Voucher restored"],
@@ -2253,6 +2258,7 @@ export const APP_DICT = {
   // --- Fixed assets ---
 
   "balance.tab": ["Varat ja velat", "Assets and liabilities"],
+  "balance.summaryTab": ["Yhteenveto", "Summary"],
   "balance.intro": [
     "Varat ja velat ratkaisevat, kuinka suuri osa tuloksesta on pääomatuloa. Ilmoita ne OmaVerossa tilikauden lopun tilanteen mukaan.",
     "Assets and liabilities decide how much of the profit counts as capital income. Enter them in MyTax as they stood at the end of the financial year.",
@@ -3527,6 +3533,8 @@ export const APP_DICT = {
   "invoice.tabPayables": ["Maksettavat", "To pay"],
   "invoice.tabRecurring": ["Toistuvat", "Recurring"],
   "invoice.tabProducts": ["Tuotteet", "Products"],
+  "invoice.tabOpen": ["Avoimet", "Outstanding"],
+  "invoice.tabRegisters": ["Rekisterit", "Registers"],
   "quote.tab": ["Tarjoukset", "Quotes"],
   "quote.title": ["Tarjoukset", "Quotes"],
   "quote.listHint": [
@@ -5043,6 +5051,12 @@ export const APP_DICT = {
   "inbox.tabCount": [
     pl("Saapuneet (1)", "Saapuneet ({n})"),
     pl("Inbox (1)", "Inbox ({n})"),
+  ],
+  "inbox.boxLabel": ["Saapuneiden pudotuslaatikko", "Inbox drop box"],
+  "inbox.boxTitle": ["Pudota kuitit tähän", "Drop receipts here"],
+  "inbox.boxHint": [
+    "Ne odottavat saapuneissa kirjaamista",
+    "They wait in the inbox to be booked",
   ],
   "inbox.subtitle": [
     "Tositteet, jotka odottavat kirjaamista",

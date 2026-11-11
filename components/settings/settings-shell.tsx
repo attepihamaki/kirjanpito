@@ -9,6 +9,7 @@ import { useT } from "@/components/lang-provider"
 import { GeneralActions } from "@/components/settings/general-actions"
 import { Button } from "@/components/ui/button"
 import { SETTINGS_ROUTES } from "@/lib/site"
+import { SETTINGS_GROUPS } from "@/lib/ui/sub-pages"
 import { useBookStore } from "@/stores/book-store"
 
 /** "Lisää luokka", the categories page's counterpart of "Uusi tosite" (§8.10). */
@@ -49,17 +50,7 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
           ) : undefined
         }
       />
-      <SubPageTabs
-        label={t("settings.sections")}
-        tabs={[
-          { href: SETTINGS_ROUTES.general, label: t("settings.general") },
-          { href: SETTINGS_ROUTES.categories, label: t("settings.categories") },
-          { href: SETTINGS_ROUTES.recurring, label: t("recurring.tab") },
-          { href: SETTINGS_ROUTES.calendar, label: t("settings.calendarTab") },
-          { href: SETTINGS_ROUTES.rules, label: t("settings.rulesTab") },
-          { href: SETTINGS_ROUTES.invoicing, label: t("invoice.settingsTab") },
-        ]}
-      />
+      <SubPageTabs label={t("settings.sections")} groups={SETTINGS_GROUPS} />
       {children}
     </>
   )

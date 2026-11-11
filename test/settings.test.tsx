@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, render, screen, waitFor } from "@testing-library/react"
+import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -55,13 +55,22 @@ describe("settings sub-pages", () => {
       </SettingsShell>
     )
 
-    expect(screen.getByRole("link", { name: "Yleiset" })).toHaveAttribute(
+    const tabs = screen.getByRole("navigation", { name: "Asetusten osiot" })
+    expect(within(tabs).getByRole("link", { name: "Yleiset" })).toHaveAttribute(
       "aria-current",
-      "page"
+      "true"
     )
-    expect(screen.getByRole("link", { name: "Luokat" })).not.toHaveAttribute(
-      "aria-current"
-    )
+    expect(
+      within(tabs).getByRole("link", { name: "Luokat" })
+    ).not.toHaveAttribute("aria-current")
+    // Kalenteri shares the Yleiset tab, behind its switch.
+    const general = screen.getByRole("navigation", { name: "Yleiset" })
+    expect(
+      within(general).getByRole("link", { name: "Yleiset" })
+    ).toHaveAttribute("aria-current", "page")
+    expect(
+      within(general).getByRole("link", { name: "Kalenteri" })
+    ).toHaveAttribute("href", "/app/settings/calendar")
     expect(screen.getByText("ALV-ilmoitusjakso")).toBeVisible()
     expect(screen.getByText("Kirjanpidon aloitus")).toBeVisible()
     expect(screen.getByRole("button", { name: /^Aloita vuosi/ })).toBeVisible()
@@ -79,10 +88,12 @@ describe("settings sub-pages", () => {
       </SettingsShell>
     )
 
-    expect(screen.getByRole("link", { name: "Luokat" })).toHaveAttribute(
-      "aria-current",
-      "page"
-    )
+    expect(
+      within(screen.getByRole("navigation", { name: "Luokat" })).getByRole(
+        "link",
+        { name: "Luokat" }
+      )
+    ).toHaveAttribute("aria-current", "page")
     expect(screen.getByRole("button", { name: "Lisää luokka" })).toBeVisible()
     expect(screen.queryByText("Lisää oma luokka")).toBeNull()
     expect(

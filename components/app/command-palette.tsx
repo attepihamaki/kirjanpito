@@ -6,6 +6,7 @@ import { SearchIcon } from "lucide-react"
 
 import { Keys } from "@/components/common/keys"
 import { useFormatters } from "@/components/lang-provider"
+import { useCommandCtx } from "@/hooks/use-commands"
 import {
   Dialog,
   DialogContent,
@@ -18,6 +19,7 @@ import {
   useSaveBook,
   useShortcut,
 } from "@/hooks/use-save-book"
+import { downloadWorkbook } from "@/lib/commands/xlsx-commands"
 import { calcEntry } from "@/lib/domain/calc"
 import { yearOf } from "@/lib/domain/dates"
 import { formatMoneyPlain } from "@/lib/domain/money"
@@ -120,6 +122,8 @@ export function CommandPalette({
   const canSave = useCanSaveToFile()
   const save = useSaveBook()
   const shortcut = useShortcut()
+  const ctx = useCommandCtx()
+  const year = useBookStore((s) => s.year)
   const [query, setQuery] = React.useState("")
   const [active, setActive] = React.useState(0)
   const listRef = React.useRef<HTMLUListElement>(null)
@@ -174,6 +178,12 @@ export function CommandPalette({
         : []),
       action("export", "palette.export", onExport, shortcut("S", true).label),
       action("check", "palette.checkBook", dialog({ kind: "check-book" })),
+      action("audit", "file.audit", dialog({ kind: "audit-package" })),
+      {
+        ...action("xlsx", "file.xlsx", () => void downloadWorkbook(ctx)),
+        label: f.t("file.xlsx", { y: year }),
+        text: f.t("file.xlsx", { y: year }),
+      },
       action("year-end", "palette.yearEnd", dialog({ kind: "year-end" })),
       action(
         "shortcuts",
@@ -274,6 +284,8 @@ export function CommandPalette({
     save,
     shortcut,
     setLayer,
+    ctx,
+    year,
     entries,
     invoices,
     customers,

@@ -107,7 +107,7 @@ Anything that appears in two views is a component in `components/common/`, takin
 | the root of a document       | `LangRoot` in `lang-provider.tsx` — the app shell, the landing page and the 404 all start with it |
 | a form for copying into OmaVero | `tax-form.tsx`: `TaxForm` and `TaxFormStep`, for Form 5 (§8.8) and the VAT return (§8.7) |
 | sortable column headers      | `sortable-header.tsx` |
-| tabs between sub-pages       | `sub-page-tabs.tsx`, used by Kirjanpito, Asetukset, Tuloslaskelma and ALV-laskelma |
+| tabs between sub-pages       | `sub-page-tabs.tsx`, used by Kirjanpito, Laskutus, Asetukset, Tuloslaskelma and ALV-laskelma; the groups are `lib/ui/sub-pages.ts` (§8.2) |
 | a figure that opens its vouchers | `figure-link.tsx` (`FigureLink`) in a view, `tax-form.tsx`'s own list button in a form; both open `figure-dialog.tsx` (§8.18) |
 | the income and expense chart | `income-expense-chart.tsx`: `IncomeExpenseChart` and `IncomeExpenseLegend`, on the overview and Yhteenveto |
 | single-choice selects        | `option-select.tsx` |
