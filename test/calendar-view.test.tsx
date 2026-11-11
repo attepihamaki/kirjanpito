@@ -59,13 +59,12 @@ describe("tax calendar", () => {
     useBookStore.setState({ payMonths: { ...NO_PAY_MONTHS, yel: [7] } })
     mount()
     expect(screen.getByText("YEL-maksu")).toBeInTheDocument()
-    expect(screen.queryByText(/YEL-maksun eräpäivät puuttuvat/)).toBeNull()
-    expect(
-      screen.getByText(/Ennakkoveron eräpäivät puuttuvat/)
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole("link", { name: "Valitse kuukaudet" })
-    ).toHaveAttribute("href", "/app/settings/calendar")
+    expect(screen.getByText("Puuttuuko jotain?")).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "YEL-maksut" })).toBeNull()
+    expect(screen.getByRole("link", { name: "Ennakkovero" })).toHaveAttribute(
+      "href",
+      "/app/settings/calendar"
+    )
   })
 
   it("links to the settings under the list once both sets of months are chosen", () => {
@@ -73,7 +72,7 @@ describe("tax calendar", () => {
       payMonths: { ...NO_PAY_MONTHS, yel: [7], advanceTax: [3] },
     })
     mount()
-    expect(screen.queryByRole("link", { name: "Valitse kuukaudet" })).toBeNull()
+    expect(screen.queryByText("Puuttuuko jotain?")).toBeNull()
     expect(screen.getByRole("link", { name: /asetuksissa/ })).toHaveAttribute(
       "href",
       "/app/settings/calendar"
@@ -88,9 +87,12 @@ describe("tax calendar", () => {
     })
     mount()
 
-    const fold = screen.getByRole("button", { name: "Mennyt päivä (1)" })
+    const fold = screen.getByRole("button", {
+      name: /Hoidetut tänä vuonna · 1/,
+    })
     expect(fold).toHaveAttribute("aria-expanded", "false")
-    // August's return fell due in October and is not filed, so it stays up.
+    // August's return fell due in October and is not filed, so it is late.
+    expect(screen.getByRole("heading", { name: "Myöhässä" })).toBeTruthy()
     const august = screen.getByText("ALV-ilmoitus, Elokuu 2026")
     expect(
       fold.compareDocumentPosition(august) & Node.DOCUMENT_POSITION_PRECEDING

@@ -3,13 +3,12 @@
 import * as React from "react"
 import { Empty, EmptyContent, EmptyDescription } from "@/components/ui/empty"
 import { NewEntryButton } from "@/components/common/new-entry-button"
-import { ChevronRightIcon, DownloadIcon } from "lucide-react"
+import { ChevronDownIcon, DownloadIcon, PlusIcon } from "lucide-react"
 import Link from "next/link"
 
 import { ButtonLink } from "@/components/common/button-link"
 import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
-import { Pill } from "@/components/common/pill"
 import { useFormatters } from "@/components/lang-provider"
 import { Button } from "@/components/ui/button"
 import { useCommandCtx } from "@/hooks/use-commands"
@@ -24,7 +23,15 @@ import {
 import { uid } from "@/lib/domain/id"
 import { incomeStatement } from "@/lib/domain/income-statement"
 import { estimateIncomeTax, incomeTaxRow } from "@/lib/domain/income-tax"
-import { bookStartDate, daysBetween } from "@/lib/domain/vat-deadline"
+import {
+  asPeriod,
+  bookStartDate,
+  daysBetween,
+  periodFromKey,
+} from "@/lib/domain/vat-deadline"
+import { filterPeriod } from "@/lib/domain/period"
+import { vatReport } from "@/lib/domain/vat"
+import { useVatBasisEntries } from "@/hooks/use-tax-basis"
 import {
   taxCalendar,
   toIcs,
@@ -105,10 +112,49 @@ export function CalendarView() {
       : { ahead: events, behind: [] }
   }, [events, today])
   const [showPast, setShowPast] = React.useState(false)
-  const missing = [
-    payMonths.yel.length ? null : f.t("calendar.missingYel"),
-    payMonths.advanceTax.length ? null : f.t("calendar.missingAdvanceTax"),
-  ].filter((m): m is string => m !== null)
+  const missing = (
+    [
+      payMonths.yel.length ? null : "calendar.addYel",
+      payMonths.advanceTax.length ? null : "calendar.addAdvanceTax",
+    ] as const
+  ).filter((m) => m !== null)
+
+  /* What is ahead, by how soon the user has to act (§8.22). */
+  const groups = React.useMemo(() => {
+    const late: CalendarEvent[] = []
+    const week: CalendarEvent[] = []
+    const later: CalendarEvent[] = []
+    for (const e of ahead) {
+      const days = daysBetween(today, e.date)
+      if (days < 0) late.push(e)
+      else if (days < 7) week.push(e)
+      else later.push(e)
+    }
+    return [
+      { key: "late", label: "calendar.groupLate", events: late },
+      { key: "week", label: "calendar.groupWeek", events: week },
+      { key: "later", label: "calendar.groupLater", events: later },
+    ] as const
+  }, [ahead, today])
+
+  /*
+   * A VAT return's amount, from the book as it stands, once its period has
+   * ended. Null while the period runs, since the figure is not final; other
+   * kinds keep their own amount.
+   */
+  const vatEntries = useVatBasisEntries()
+  const vatAmount = React.useCallback(
+    (e: CalendarEvent): number | null | undefined => {
+      if (e.kind !== "vat") return undefined
+      const p = periodFromKey(e.ref)
+      if (!p || today <= p.to) return null
+      return vatReport(
+        filterPeriod(vatEntries, asPeriod(p)),
+        indexCategories(cats)
+      ).due
+    },
+    [vatEntries, cats, today]
+  )
 
   const exportIcs = () => {
     const ics = toIcs(
@@ -135,21 +181,9 @@ export function CalendarView() {
       <PageHeader
         title={f.t("nav.calendar")}
         subtitle={f.t("calendar.subtitle", { y: year })}
-        actions={
-          <Button
-            variant="outline"
-            onClick={exportIcs}
-            disabled={events.length === 0}
-          >
-            <DownloadIcon />
-            {f.t("calendar.export")}
-          </Button>
-        }
       />
 
-      <div className="space-y-6">
-        <AdvanceTaxSummary />
-
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <Panel>
           {events.length === 0 ? (
             <Empty>
@@ -160,67 +194,123 @@ export function CalendarView() {
             </Empty>
           ) : (
             <>
-              {/* A date the app cannot work out is asked for where it would be listed. */}
-              {missing.length ? (
-                <ul className="divide-y border-b">
-                  {missing.map((text) => (
-                    <li
-                      key={text}
-                      className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3"
+              {groups.map((group) =>
+                group.events.length ? (
+                  <section key={group.key}>
+                    <h2
+                      className={cn(
+                        "px-5 pt-4 pb-1 text-xs font-semibold tracking-wide uppercase",
+                        group.key === "late"
+                          ? "text-expense"
+                          : "text-muted-foreground"
+                      )}
                     >
-                      <span className="min-w-0 flex-1 text-sm">{text}</span>
-                      <ButtonLink
-                        variant="outline"
-                        size="sm"
-                        href={SETTINGS_ROUTES.calendar}
-                      >
-                        {f.t("calendar.pickMonths")}
-                      </ButtonLink>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              <MonthList events={ahead} today={today} />
+                      {f.t(group.label)}
+                    </h2>
+                    <ul className="divide-y">
+                      {group.events.map((e) => (
+                        <EventRow
+                          key={e.id}
+                          event={e}
+                          today={today}
+                          amount={vatAmount(e)}
+                        />
+                      ))}
+                    </ul>
+                  </section>
+                ) : null
+              )}
               {behind.length ? (
-                <div className="border-t">
+                <div className="mt-2 border-t">
                   <Button
                     variant="ghost"
-                    className="print-hidden h-auto w-full justify-start rounded-none px-5 py-3 text-muted-foreground"
+                    className="print-hidden h-auto w-full justify-between rounded-none px-5 py-3 text-muted-foreground"
                     aria-expanded={showPast}
                     onClick={() => setShowPast((v) => !v)}
                   >
-                    <ChevronRightIcon
-                      data-icon="inline-start"
-                      className={cn(
-                        "transition-transform",
-                        showPast && "rotate-90"
-                      )}
-                    />
-                    {f.t("calendar.past", { n: behind.length })}
+                    <span>{f.t("calendar.handled", { n: behind.length })}</span>
+                    <span className="inline-flex items-center gap-1">
+                      {f.t(showPast ? "calendar.hide" : "calendar.show")}
+                      <ChevronDownIcon
+                        data-icon="inline-end"
+                        className={cn(
+                          "transition-transform",
+                          showPast && "rotate-180"
+                        )}
+                      />
+                    </span>
                   </Button>
-                  <div className={cn(!showPast && "hidden print:block")}>
-                    <MonthList events={behind} today={today} />
-                  </div>
+                  <ul
+                    className={cn(
+                      "divide-y border-t",
+                      !showPast && "hidden print:block"
+                    )}
+                  >
+                    {behind.map((e) => (
+                      <EventRow
+                        key={e.id}
+                        event={e}
+                        today={today}
+                        amount={vatAmount(e)}
+                      />
+                    ))}
+                  </ul>
                 </div>
               ) : null}
             </>
           )}
         </Panel>
 
-        <p className="text-sm text-muted-foreground">
-          {f.t("calendar.note")}
-          {missing.length ? null : (
-            <>
-              {" "}
-              <Link
-                href={SETTINGS_ROUTES.calendar}
-                className="underline underline-offset-2"
-              >
-                {f.t("calendar.setMonths")}
-              </Link>
-            </>
-          )}
-        </p>
+        <aside className="flex flex-col gap-4">
+          {/* A date the app cannot work out is asked for beside the list (§8.22). */}
+          {missing.length ? (
+            <Panel
+              title={f.t("calendar.missingTitle")}
+              bodyClassName="flex flex-col gap-3 p-4"
+            >
+              <p className="text-sm text-muted-foreground">
+                {f.t("calendar.missingBody")}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {missing.map((m) => (
+                  <ButtonLink
+                    key={m}
+                    variant="outline"
+                    size="sm"
+                    href={SETTINGS_ROUTES.calendar}
+                  >
+                    <PlusIcon data-icon="inline-start" />
+                    {f.t(m)}
+                  </ButtonLink>
+                ))}
+              </div>
+            </Panel>
+          ) : null}
+          <AdvanceTaxSummary />
+          <Button
+            variant="outline"
+            className="print-hidden"
+            onClick={exportIcs}
+            disabled={events.length === 0}
+          >
+            <DownloadIcon data-icon="inline-start" />
+            {f.t("calendar.exportIcs")}
+          </Button>
+          <p className="text-sm text-muted-foreground">
+            {f.t("calendar.note")}
+            {missing.length ? null : (
+              <>
+                {" "}
+                <Link
+                  href={SETTINGS_ROUTES.calendar}
+                  className="underline underline-offset-2"
+                >
+                  {f.t("calendar.setMonths")}
+                </Link>
+              </>
+            )}
+          </p>
+        </aside>
       </div>
     </>
   )
@@ -241,99 +331,112 @@ function isOpenTask(event: CalendarEvent): boolean {
   )
 }
 
-/** The events under a heading per month, in the order given. */
-function MonthList({
-  events,
-  today,
-}: {
-  events: readonly CalendarEvent[]
-  today: string
-}) {
-  const f = useFormatters()
-  const groups = new Map<string, CalendarEvent[]>()
-  for (const e of events) {
-    const key = e.date.slice(0, 7)
-    groups.set(key, [...(groups.get(key) ?? []), e])
-  }
-  return (
-    <ol className="divide-y">
-      {[...groups.entries()].map(([key, list]) => (
-        <li key={key}>
-          <h2 className="bg-muted/50 px-5 py-2 text-sm font-medium">
-            {f.month(Number(key.slice(5, 7)) - 1)}
-          </h2>
-          <ul className="divide-y">
-            {list.map((e) => (
-              <EventRow key={e.id} event={e} today={today} />
-            ))}
-          </ul>
-        </li>
-      ))}
-    </ol>
-  )
+/**
+ * Where a date stands, under its title: late by how many days, today,
+ * tomorrow or in how many days, or done. A bill says it is one first.
+ */
+function statusText(
+  f: ReturnType<typeof useFormatters>,
+  event: CalendarEvent,
+  days: number
+): string {
+  const when = event.done
+    ? f.t(
+        event.kind === "advanceTax" || event.kind === "bill"
+          ? "calendar.paid"
+          : "calendar.done"
+      )
+    : days < 0
+      ? isOpenTask(event)
+        ? f.t("payables.daysLate", { n: -days })
+        : f.t("calendar.daysAgo", { n: -days })
+      : days === 0
+        ? f.t("calendar.today")
+        : days === 1
+          ? f.t("overview.tomorrow")
+          : f.t("calendar.inDays", { n: days })
+  return event.kind === "bill" ? `${f.t("overview.todoBill")} · ${when}` : when
 }
 
-function EventRow({ event, today }: { event: CalendarEvent; today: string }) {
+function EventRow({
+  event,
+  today,
+  amount,
+}: {
+  event: CalendarEvent
+  today: string
+  /** What a VAT return comes to, or null while its period is still running. */
+  amount: number | null | undefined
+}) {
   const f = useFormatters()
   const days = daysBetween(today, event.date)
-  const past = days < 0
+  const late = days < 0 && isOpenTask(event)
+  const thisWeek = days >= 0 && days < 7
   const book = useBookInstalment(event, today)
   const openDialog = useBookStore((s) => s.openDialog)
+  const shown = amount === undefined ? event.amount : amount
+  const tile =
+    days === 0
+      ? f.t("calendar.today")
+      : thisWeek
+        ? f.weekday(event.date)
+        : f.month(Number(event.date.slice(5, 7)) - 1, true)
 
   return (
     <li
       className={cn(
-        "flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3",
-        ((past && !isOpenTask(event)) || event.done) && "text-muted-foreground"
+        "flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3",
+        event.done && "text-muted-foreground"
       )}
     >
-      <span className="tabular w-28 shrink-0 text-sm">
-        {f.weekday(event.date)} {f.date(event.date)}
-      </span>
-      <span className="min-w-0 flex-1 text-sm font-medium">
-        {event.kind === "bill" ? (
-          <button
-            type="button"
-            className="text-left underline-offset-2 hover:underline"
-            onClick={() =>
-              openDialog({ kind: "entry", mode: "edit", entryId: event.ref })
-            }
-          >
-            {eventTitle(f, event)}
-          </button>
-        ) : (
-          eventTitle(f, event)
+      {/* The date as a tile: the month (or the weekday this week) over the day. */}
+      <span
+        className={cn(
+          "flex w-14 shrink-0 flex-col items-center rounded-lg border py-1",
+          late && "border-expense/40 bg-expense-subtle text-expense",
+          !late && thisWeek && !event.done && "border-warning/40 bg-warning/10"
         )}
+        title={f.date(event.date)}
+      >
+        <span className="text-[0.65rem] font-semibold tracking-wide uppercase">
+          {tile}
+        </span>
+        <span className="tabular text-lg leading-tight font-semibold">
+          {Number(event.date.slice(8, 10))}
+        </span>
       </span>
-      {event.amount === undefined ? null : (
-        <span className="tabular text-sm">{f.money(event.amount)}</span>
-      )}
-      {book}
-      {event.done ? (
-        <Pill tone="income">
-          {f.t(
-            event.kind === "advanceTax" || event.kind === "bill"
-              ? "calendar.paid"
-              : "calendar.done"
+      <span className="flex min-w-0 flex-[1_1_14rem] flex-col gap-0.5">
+        <span className="text-sm font-medium">
+          {event.kind === "bill" ? (
+            <button
+              type="button"
+              className="text-left underline-offset-2 hover:underline"
+              onClick={() =>
+                openDialog({ kind: "entry", mode: "edit", entryId: event.ref })
+              }
+            >
+              {eventTitle(f, event)}
+            </button>
+          ) : (
+            eventTitle(f, event)
           )}
-        </Pill>
-      ) : (
-        <Pill
-          tone={
-            past && isOpenTask(event)
-              ? "expense"
-              : days >= 0 && days <= 1
-                ? "warning"
-                : "neutral"
-          }
+        </span>
+        <span
+          className={cn(
+            "text-xs",
+            late ? "text-expense" : "text-muted-foreground"
+          )}
         >
-          {days === 0
-            ? f.t("calendar.today")
-            : past
-              ? f.t("calendar.daysAgo", { n: -days })
-              : f.t("calendar.inDays", { n: days })}
-        </Pill>
-      )}
+          {statusText(f, event, days)}
+          {amount === null && event.kind === "vat"
+            ? ` · ${f.t("calendar.amountLater")}`
+            : null}
+        </span>
+      </span>
+      {book}
+      <span className="tabular w-24 shrink-0 text-right text-sm font-semibold">
+        {shown === undefined || shown === null ? "–" : f.money(shown)}
+      </span>
     </li>
   )
 }

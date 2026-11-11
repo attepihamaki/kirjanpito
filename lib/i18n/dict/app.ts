@@ -5094,19 +5094,27 @@ export const APP_DICT = {
     "Pick the YEL and advance tax months in settings.",
   ],
   "calendar.noMonths": ["Ei valittu", "None chosen"],
-  "calendar.missingYel": [
-    "YEL-maksun eräpäivät puuttuvat, koska kuukausia ei ole valittu.",
-    "The YEL due dates are missing, because no months are chosen.",
+  "calendar.groupLate": ["Myöhässä", "Late"],
+  "calendar.groupWeek": ["Tällä viikolla", "This week"],
+  "calendar.groupLater": ["Myöhemmin", "Later"],
+  "calendar.handled": [
+    pl("Hoidetut tänä vuonna · 1", "Hoidetut tänä vuonna · {n}"),
+    pl("Done this year · 1", "Done this year · {n}"),
   ],
-  "calendar.missingAdvanceTax": [
-    "Ennakkoveron eräpäivät puuttuvat, koska kuukausia ei ole valittu.",
-    "The advance tax due dates are missing, because no months are chosen.",
+  "calendar.show": ["Näytä", "Show"],
+  "calendar.hide": ["Piilota", "Hide"],
+  "calendar.amountLater": [
+    "summa selviää kauden lopussa",
+    "the amount is known when the period ends",
   ],
-  "calendar.pickMonths": ["Valitse kuukaudet", "Pick the months"],
-  "calendar.past": [
-    pl("Mennyt päivä (1)", "Menneet päivät ({n})"),
-    pl("Past date (1)", "Past dates ({n})"),
+  "calendar.missingTitle": ["Puuttuuko jotain?", "Anything missing?"],
+  "calendar.missingBody": [
+    "Lisää YEL-maksun ja ennakkoveron kuukaudet, niin ne näkyvät listassa ja yleiskatsauksessa.",
+    "Add the months of the YEL contribution and advance tax, and they show in the list and on the overview.",
   ],
+  "calendar.addYel": ["YEL-maksut", "YEL contributions"],
+  "calendar.addAdvanceTax": ["Ennakkovero", "Advance tax"],
+  "calendar.exportIcs": ["Vie kalenteriin (.ics)", "Export to calendar (.ics)"],
   "calendar.payIntro": [
     "YEL-maksun ja ennakkoveron kuukaudet riippuvat eläkeyhtiön laskusta ja OmaVeron ennakkoveropäätöksestä, joten valitse ne itse. YEL erääntyy yleensä kuun 20. päivänä ja ennakkovero 23. päivänä. Viikonloppuna tai pyhänä päivä siirtyy seuraavaan arkipäivään.",
     "The months of the YEL contribution and advance tax depend on your pension company's invoice and your advance tax decision in MyTax, so pick them yourself. YEL usually falls due on the 20th and advance tax on the 23rd. On a weekend or holiday the date moves to the next working day.",
