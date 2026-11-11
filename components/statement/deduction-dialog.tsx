@@ -258,6 +258,37 @@ function MileageBody({ rates }: { rates: TravelRates }) {
         />
         <FieldDescription>{f.t("deductions.bookedCarHint")}</FieldDescription>
       </Field>
+      {/* The sum as it is worked out, so the result never comes as a surprise. */}
+      <dl
+        className="grid gap-1.5 rounded-lg bg-muted/50 p-3 text-sm min-[560px]:col-span-2"
+        aria-live="polite"
+      >
+        <div className="flex justify-between gap-4">
+          <dt className="text-muted-foreground">
+            {f.t("deductions.kmTimesRate", {
+              k: kilometres,
+              r: f.money(rates.km),
+            })}
+          </dt>
+          <dd>
+            <Money cents={mileageAllowance(kilometres, rates)} />
+          </dd>
+        </div>
+        <div className="flex justify-between gap-4">
+          <dt className="text-muted-foreground">
+            {f.t("deductions.lessCarCosts")}
+          </dt>
+          <dd>
+            <Money cents={bookedCosts} />
+          </dd>
+        </div>
+        <div className="flex justify-between gap-4 border-t pt-1.5 font-medium">
+          <dt>{f.t("deductions.result")}</dt>
+          <dd>
+            <Money cents={amount} />
+          </dd>
+        </div>
+      </dl>
     </CalculatorDialog>
   )
 }

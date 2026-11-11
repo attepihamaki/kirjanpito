@@ -2472,10 +2472,6 @@ export const APP_DICT = {
     "Kiinteistöjä (703) ja arvopapereita (705, 745) kirjanpito ei täytä, koska ne eritellään lomakkeilla 18B ja 8B. Oikaistu negatiivinen oma pääoma (747) täytetään OmaVerossa. Jos sinulla on näitä, kohdat 718, 725 ja nettovarallisuus ovat OmaVerossa eri summat kuin tässä.",
     "The app does not fill real estate (703) or securities (705, 745), which are itemised on Forms 18B and 8B. Adjusted negative equity (747) is entered in MyTax. If you have any of these, fields 718 and 725 and the net worth differ in MyTax from the amounts here.",
   ],
-  "balance.figuresTitle": [
-    "Mistä varat ja velat tulevat",
-    "Where the assets and liabilities come from",
-  ],
   "balance.editFigures": ["Muokkaa lukuja", "Edit the figures"],
   "balance.figures": [
     "Tositteista: myyntisaamiset {r}, ostovelat {p}, lainat {l}. Poistolaskelmasta: koneet ja kalusto {m}.",
@@ -2806,7 +2802,6 @@ export const APP_DICT = {
     "Matkojen ja yksityisauton lisävähennykset kirjataan riville 364 (veroilmoituksen kohdat 388 ja 392) ja työhuonevähennys riville 354, kirjanpidon ulkopuolisiin vähennyskelpoisiin kuluihin. Laskelmat käyttävät Verohallinnon vuoden {y} määriä, ja ne ovat apuväline: säilytä ajopäiväkirja ja matkojen tiedot itse.",
     "The travel and private car deductions go on line 364 (fields 388 and 392 of the return), and the home office deduction on line 354, deductible expenses outside the books. The calculators use the Tax Administration’s amounts for {y}. They are an aid: keep your own logbook and trip records.",
   ],
-  "deductions.noRates": ["Ei määriä vuodelle {y}", "No amounts for {y}"],
   "deductions.noTravelRates": [
     "Sovelluksessa ei ole Verohallinnon matkakorvausten määriä vuodelle {y}.",
     "The app does not have the Tax Administration’s travel amounts for {y}.",
@@ -2889,6 +2884,16 @@ export const APP_DICT = {
     "A home office deduction is already booked for {y}.",
   ],
   "deductions.statBooked": ["Kirjattu yhteensä", "Booked in total"],
+  "deductions.calculatorsTitle": ["Laske ja kirjaa", "Calculate and book"],
+  "deductions.bookedSoFar": [
+    pl("Kirjattu {s}, 1 tosite", "Kirjattu {s}, {n} tositetta"),
+    pl("{s} booked, 1 voucher", "{s} booked, {n} vouchers"),
+  ],
+  "deductions.kmTimesRate": ["{k} km × {r}", "{k} km × {r}"],
+  "deductions.lessCarCosts": [
+    "− jo kirjatut autokulut",
+    "− car costs already booked",
+  ],
   "deductions.statVouchers": ["Tositteita", "Vouchers"],
   "deductions.bookedTitle": ["Kirjattu vuodelle {y}", "Booked for {y}"],
   "deductions.noneBooked": [

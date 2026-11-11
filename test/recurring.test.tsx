@@ -198,7 +198,9 @@ describe("the statement's new pages", () => {
       </>
     )
     fireEvent.click(
-      screen.getAllByRole("button", { name: "Laske ja kirjaa" })[0]
+      screen.getByRole("button", {
+        name: "Laske ja kirjaa: Kilometrivähennys",
+      })
     )
     fireEvent.change(await screen.findByLabelText("Työajot, km"), {
       target: { value: "1000" },
@@ -217,6 +219,10 @@ describe("the statement's new pages", () => {
   it("says so when the app has no amounts for the year", () => {
     useBookStore.setState({ year: 2010 })
     mount(<DeductionsView />)
-    expect(screen.getAllByText("Ei määriä vuodelle 2010")).toHaveLength(3)
+    // Each calculator keeps its row and says why it has no button.
+    expect(screen.getAllByText(/ei ole .* vuodelle 2010/)).toHaveLength(3)
+    expect(
+      screen.queryByRole("button", { name: /^Laske ja kirjaa/ })
+    ).not.toBeInTheDocument()
   })
 })
