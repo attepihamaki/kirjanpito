@@ -122,13 +122,21 @@ describe("VatView", () => {
     expect(screen.getByText(eur(480000))).toBeInTheDocument()
   })
 
-  it("hides the 0 % row on purchases but keeps it on sales", () => {
+  it("leaves a rate with no amount out until asked, and 0 % purchases always", () => {
     useBookStore.setState({ vatPeriod: "year" })
     mount(<VatView />)
 
     const tables = screen.getAllByRole("table")
     const sales = within(tables[0])
     const purchases = within(tables[1])
+    expect(sales.queryByText("0 %")).not.toBeInTheDocument()
+
+    fireEvent.click(
+      sales.getByRole("button", { name: /Näytä myös tyhjät verokannat/ })
+    )
+    fireEvent.click(
+      purchases.getByRole("button", { name: /Näytä myös tyhjät verokannat/ })
+    )
     expect(sales.getByText("0 %")).toBeInTheDocument()
     expect(purchases.queryByText("0 %")).not.toBeInTheDocument()
   })

@@ -52,8 +52,17 @@ describe("the VAT view's period", () => {
     expect(current.key).toBe("2026-Q4")
   })
 
-  it("starts on today's month for a monthly filer", () => {
+  it("starts on the month whose return is waiting, for a monthly filer", () => {
     useBookStore.setState({ vatPeriod: "month" })
+
+    expect(period().current.key).toBe("2026-10")
+  })
+
+  it("starts on today's month once every closed one is filed", () => {
+    useBookStore.setState({
+      vatPeriod: "month",
+      vatFiled: { "2026-10": "2026-11-01" },
+    })
 
     expect(period().current.key).toBe("2026-11")
   })
