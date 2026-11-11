@@ -1,8 +1,10 @@
 "use client"
 
 import * as React from "react"
+import { PencilIcon } from "lucide-react"
 
 import { useFormatters } from "@/components/lang-provider"
+import { Button } from "@/components/ui/button"
 import {
   Field,
   FieldError,
@@ -132,5 +134,46 @@ export function PartyFields({
         </Field>
       </div>
     </FieldGroup>
+  )
+}
+
+/**
+ * A party as a few read-only lines, for an invoice whose customer comes from
+ * the register or is already issued (§8.27). `onEdit` opens the fields for
+ * this invoice only; without it the card cannot be changed.
+ */
+export function PartyCard({
+  value,
+  onEdit,
+}: {
+  value: Party
+  onEdit?: () => void
+}) {
+  const f = useFormatters()
+  const place = [value.postcode, value.city].filter(Boolean).join(" ")
+  const country = value.country && value.country !== "FI" ? value.country : ""
+  const lines = [
+    value.street,
+    [place, country].filter(Boolean).join(", "),
+    [value.vatId, value.email].filter(Boolean).join(" · "),
+  ].filter(Boolean)
+
+  return (
+    <div className="flex items-start gap-3 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <p className="font-medium">{value.name}</p>
+        {lines.map((line, index) => (
+          <p key={index} className="truncate text-muted-foreground">
+            {line}
+          </p>
+        ))}
+      </div>
+      {onEdit ? (
+        <Button variant="ghost" size="sm" onClick={onEdit}>
+          <PencilIcon data-icon="inline-start" />
+          {f.t("invoice.editOnInvoice")}
+        </Button>
+      ) : null}
+    </div>
   )
 }

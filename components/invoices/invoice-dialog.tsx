@@ -3,6 +3,7 @@
 import * as React from "react"
 import {
   BookmarkPlusIcon,
+  ChevronDownIcon,
   CopyIcon,
   DownloadIcon,
   FileTextIcon,
@@ -19,7 +20,7 @@ import { Money } from "@/components/common/money"
 import { OptionSelect } from "@/components/common/option-select"
 import { TagsInput } from "@/components/common/tags-input"
 import { InvoiceFiles } from "@/components/invoices/invoice-files"
-import { PartyFields } from "@/components/invoices/party-fields"
+import { PartyCard, PartyFields } from "@/components/invoices/party-fields"
 import { RebillPicker } from "@/components/invoices/rebill-picker"
 import { useFormatters } from "@/components/lang-provider"
 import { Button } from "@/components/ui/button"
@@ -255,6 +256,8 @@ function InvoiceForm({
   )
   const [party, setParty] = React.useState(start?.customer ?? emptyParty())
   const [saveCustomer, setSaveCustomer] = React.useState(false)
+  /* A register customer shows as a card until its details are opened for this invoice. */
+  const [editParty, setEditParty] = React.useState(false)
   /*
    * The rate a row's category allows: 0 on a zero-rated sale and for a seller
    * outside the VAT register, otherwise the row's own. Leaving a zero-rated
@@ -354,7 +357,36 @@ function InvoiceForm({
           },
           invoices
         )
+  /* The optional parts of "Lisätiedot" that hold something, so it opens when one does. */
+  const extrasFilled = [
+    advanceKind,
+    supplyFrom !== "",
+    buyerReference.trim() !== "" || orderNumber.trim() !== "",
+    files.length > 0,
+    tags.length > 0,
+  ].filter(Boolean).length
+  const [moreOpen, setMoreOpen] = React.useState(() => extrasFilled > 0)
+  const tagsInput =
+    issued && tags.length === 0 ? null : (
+      <Field>
+        <FieldLabel htmlFor={ids.tags}>{f.t("entry.tags")}</FieldLabel>
+        <TagsInput
+          id={ids.tags}
+          value={tags}
+          disabled={issued}
+          suggestions={tagSuggestions}
+          placeholder={f.t("entry.tagsPlaceholder")}
+          removeLabel={(tag) => f.t("entry.tagRemove", { tag })}
+          onChange={setTags}
+        />
+        {issued ? null : (
+          <FieldDescription>{f.t("invoice.tagsHint")}</FieldDescription>
+        )}
+      </Field>
+    )
   const nameMissing = party.name.trim() === ""
+  const partyOpen =
+    !issued && (customerId === null || editParty || (showErrors && nameMissing))
   const entryById = React.useMemo(
     () => new Map(bookEntries.map((e) => [e.id, e])),
     [bookEntries]
@@ -410,6 +442,7 @@ function InvoiceForm({
     const customer = customers.find((c) => c.id === id)
     if (!customer) return
     setCustomerId(id)
+    setEditParty(false)
     setParty({
       name: customer.name,
       street: customer.street,
@@ -632,169 +665,100 @@ function InvoiceForm({
             </div>
           ) : null}
 
-          <section className="flex flex-col gap-3">
-            <h3 className="text-sm font-semibold">{f.t("invoice.customer")}</h3>
-            {!issued ? (
-              <Field className="max-w-xs">
+          <div className="grid gap-5 sm:grid-cols-[1fr_11rem]">
+            <section className="flex min-w-0 flex-col gap-3">
+              <h3 className="text-sm font-semibold">
+                {f.t("invoice.customer")}
+              </h3>
+              {!issued ? (
+                <Field className="max-w-xs">
+                  <OptionSelect
+                    label={f.t("invoice.customer")}
+                    value={customerId ?? ""}
+                    onChange={pickCustomer}
+                    options={[
+                      { value: "", label: f.t("invoice.customerTyped") },
+                      ...customers
+                        .filter((c) => isCustomer(c) || c.id === customerId)
+                        .sort((a, b) => f.collator.compare(a.name, b.name))
+                        .map((c) => ({ value: c.id, label: c.name })),
+                    ]}
+                  />
+                </Field>
+              ) : null}
+              {partyOpen ? (
+                <PartyFields
+                  value={party}
+                  onChange={setParty}
+                  nameError={
+                    showErrors && nameMissing
+                      ? f.t("invoice.customerNeedsName")
+                      : undefined
+                  }
+                />
+              ) : (
+                <PartyCard
+                  value={party}
+                  onEdit={issued ? undefined : () => setEditParty(true)}
+                />
+              )}
+              {!issued && customerId === null ? (
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={saveCustomer}
+                    onCheckedChange={(v) => setSaveCustomer(v === true)}
+                  />
+                  {f.t("invoice.saveCustomer")}
+                </label>
+              ) : null}
+            </section>
+
+            <section className="flex flex-col gap-3">
+              <h3 className="text-sm font-semibold">
+                {f.t(quote ? "quote.details" : "invoice.details")}
+              </h3>
+              <Field>
+                <FieldLabel>
+                  {f.t(quote ? "quote.date" : "invoice.date")}
+                </FieldLabel>
+                <DateInput
+                  value={date}
+                  onValueChange={changeDate}
+                  disabled={issued}
+                />
+              </Field>
+              {credit ? null : (
+                <Field>
+                  <FieldLabel>
+                    {f.t(quote ? "quote.validUntil" : "invoice.dueDate")}
+                  </FieldLabel>
+                  <DateInput
+                    value={dueDate}
+                    onValueChange={(iso) => {
+                      dueTouched.current = true
+                      setDueDate(iso)
+                    }}
+                    disabled={issued}
+                  />
+                </Field>
+              )}
+              <Field>
+                <FieldLabel htmlFor={ids.language}>
+                  {f.t(quote ? "quote.language" : "invoice.language")}
+                </FieldLabel>
                 <OptionSelect
-                  label={f.t("invoice.customer")}
-                  value={customerId ?? ""}
-                  onChange={pickCustomer}
+                  label={f.t(quote ? "quote.language" : "invoice.language")}
+                  value={language}
+                  disabled={issued}
+                  onChange={(v) => setLanguage(v as InvoiceLang)}
                   options={[
-                    { value: "", label: f.t("invoice.customerTyped") },
-                    ...customers
-                      .filter((c) => isCustomer(c) || c.id === customerId)
-                      .sort((a, b) => f.collator.compare(a.name, b.name))
-                      .map((c) => ({ value: c.id, label: c.name })),
+                    { value: "fi", label: "Suomi" },
+                    { value: "en", label: "English" },
                   ]}
                 />
               </Field>
-            ) : null}
-            <PartyFields
-              value={party}
-              onChange={setParty}
-              disabled={issued}
-              nameError={
-                showErrors && nameMissing
-                  ? f.t("invoice.customerNeedsName")
-                  : undefined
-              }
-            />
-            {!issued && customerId === null ? (
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={saveCustomer}
-                  onCheckedChange={(v) => setSaveCustomer(v === true)}
-                />
-                {f.t("invoice.saveCustomer")}
-              </label>
-            ) : null}
-          </section>
-
-          <section className="flex flex-wrap gap-3">
-            <Field className="w-44">
-              <FieldLabel>
-                {f.t(quote ? "quote.date" : "invoice.date")}
-              </FieldLabel>
-              <DateInput
-                value={date}
-                onValueChange={changeDate}
-                disabled={issued}
-              />
-            </Field>
-            {credit ? null : (
-              <Field className="w-44">
-                <FieldLabel>
-                  {f.t(quote ? "quote.validUntil" : "invoice.dueDate")}
-                </FieldLabel>
-                <DateInput
-                  value={dueDate}
-                  onValueChange={(iso) => {
-                    dueTouched.current = true
-                    setDueDate(iso)
-                  }}
-                  disabled={issued}
-                />
-              </Field>
-            )}
-            <Field className="w-44">
-              <FieldLabel htmlFor={ids.language}>
-                {f.t(quote ? "quote.language" : "invoice.language")}
-              </FieldLabel>
-              <OptionSelect
-                label={f.t(quote ? "quote.language" : "invoice.language")}
-                value={language}
-                disabled={issued}
-                onChange={(v) => setLanguage(v as InvoiceLang)}
-                options={[
-                  { value: "fi", label: "Suomi" },
-                  { value: "en", label: "English" },
-                ]}
-              />
-            </Field>
-          </section>
-
-          {quote || credit ? null : (
-            <section className="flex flex-col gap-1">
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={advanceKind}
-                  disabled={issued || deducting}
-                  onCheckedChange={(v) => setAdvanceKind(v === true)}
-                />
-                {f.t("invoice.advanceKind")}
-              </label>
-              {issued ? null : (
-                <FieldDescription>
-                  {f.t(
-                    deducting
-                      ? "invoice.advanceKindDeducting"
-                      : "invoice.advanceKindHint"
-                  )}
-                </FieldDescription>
-              )}
             </section>
-          )}
-
-          {quote ? null : (
-            <section className="flex flex-wrap gap-3">
-              <Field className="w-44">
-                <FieldLabel>{f.t("invoice.supplyFrom")}</FieldLabel>
-                <DateInput
-                  value={supplyFrom}
-                  onValueChange={setSupplyFrom}
-                  disabled={issued}
-                />
-              </Field>
-              <Field className="w-44">
-                <FieldLabel>{f.t("invoice.supplyTo")}</FieldLabel>
-                <DateInput
-                  value={supplyTo}
-                  onValueChange={setSupplyTo}
-                  disabled={issued || supplyFrom === ""}
-                  min={supplyFrom || undefined}
-                />
-              </Field>
-              <FieldDescription className="self-end pb-2">
-                {f.t("invoice.supplyHint")}
-              </FieldDescription>
-            </section>
-          )}
-
-          {quote ? null : (
-            <section className="flex flex-col gap-2">
-              <div className="flex flex-wrap gap-3">
-                <Field className="w-60">
-                  <FieldLabel htmlFor={ids.buyerReference}>
-                    {f.t("invoice.buyerReference")}
-                  </FieldLabel>
-                  <Input
-                    id={ids.buyerReference}
-                    value={buyerReference}
-                    maxLength={BUYER_REF_MAX}
-                    disabled={issued}
-                    onChange={(event) => {
-                      buyerRefTouched.current = true
-                      setBuyerReference(event.target.value)
-                    }}
-                  />
-                </Field>
-                <Field className="w-60">
-                  <FieldLabel htmlFor={ids.orderNumber}>
-                    {f.t("invoice.orderNumber")}
-                  </FieldLabel>
-                  <Input
-                    id={ids.orderNumber}
-                    value={orderNumber}
-                    maxLength={BUYER_REF_MAX}
-                    disabled={issued}
-                    onChange={(event) => setOrderNumber(event.target.value)}
-                  />
-                </Field>
-              </div>
-              <FieldDescription>{f.t("invoice.buyerRefHint")}</FieldDescription>
-            </section>
-          )}
+          </div>
 
           <section className="flex flex-col gap-2">
             <h3 className="text-sm font-semibold">{f.t("invoice.rows")}</h3>
@@ -1071,45 +1035,73 @@ function InvoiceForm({
             ) : null}
           </section>
 
-          <Field className="max-w-48">
-            <FieldLabel htmlFor={ids.discount}>
-              {f.t("invoice.docDiscount")}
-            </FieldLabel>
-            <Input
-              id={ids.discount}
-              inputMode="decimal"
-              className="tabular text-right"
-              disabled={issued}
-              aria-invalid={(showErrors && discountBad) || undefined}
-              value={docDiscount}
-              onChange={(e) => setDocDiscount(e.target.value)}
-            />
-            {showErrors && discountBad ? (
-              <FieldError>{f.t("invoice.discountBad")}</FieldError>
-            ) : null}
-          </Field>
-
-          {quote || credit ? null : (
-            <InvoiceFiles files={files} onChange={setFiles} disabled={issued} />
-          )}
-
-          {issued && tags.length === 0 ? null : (
-            <Field>
-              <FieldLabel htmlFor={ids.tags}>{f.t("entry.tags")}</FieldLabel>
-              <TagsInput
-                id={ids.tags}
-                value={tags}
-                disabled={issued}
-                suggestions={tagSuggestions}
-                placeholder={f.t("entry.tagsPlaceholder")}
-                removeLabel={(tag) => f.t("entry.tagRemove", { tag })}
-                onChange={setTags}
-              />
-              {issued ? null : (
-                <FieldDescription>{f.t("invoice.tagsHint")}</FieldDescription>
-              )}
-            </Field>
-          )}
+          <section className="grid gap-4 border-t pt-4 sm:grid-cols-[1fr_auto]">
+            <div className="flex flex-col gap-3">
+              <Field className="max-w-48">
+                <FieldLabel htmlFor={ids.discount}>
+                  {f.t("invoice.docDiscount")}
+                </FieldLabel>
+                <Input
+                  id={ids.discount}
+                  inputMode="decimal"
+                  className="tabular text-right"
+                  disabled={issued}
+                  aria-invalid={(showErrors && discountBad) || undefined}
+                  value={docDiscount}
+                  onChange={(e) => setDocDiscount(e.target.value)}
+                />
+                {showErrors && discountBad ? (
+                  <FieldError>{f.t("invoice.discountBad")}</FieldError>
+                ) : null}
+              </Field>
+              {notes.length > 0 ? (
+                <div className="flex flex-col gap-0.5 text-sm text-muted-foreground">
+                  <p className="text-xs font-medium">
+                    {f.t("invoice.vatNotes")}
+                  </p>
+                  {notes.map((note) => (
+                    <p key={note}>{note}</p>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            <dl className="grid min-w-64 grid-cols-[1fr_auto] content-start gap-x-6 gap-y-1 text-sm">
+              {discount !== undefined ? (
+                <>
+                  <dt className="text-muted-foreground">
+                    {f.t("invoice.totalDiscount", { p: f.rate(discount) })}
+                  </dt>
+                  <dd className="text-right">
+                    <Money cents={-docDiscountCents(readRows, discount)} />
+                  </dd>
+                </>
+              ) : null}
+              {registered ? (
+                <>
+                  <dt className="text-muted-foreground">
+                    {f.t("invoice.totalNet")}
+                  </dt>
+                  <dd className="text-right">
+                    <Money cents={totals.net} />
+                  </dd>
+                </>
+              ) : null}
+              {(registered ? totals.rates : []).map((line) => (
+                <React.Fragment key={line.vatRate}>
+                  <dt className="text-muted-foreground">
+                    {f.t("invoice.totalVat")} {f.rate(line.vatRate)}
+                  </dt>
+                  <dd className="text-right">
+                    <Money cents={line.vat} />
+                  </dd>
+                </React.Fragment>
+              ))}
+              <dt className="font-semibold">{f.t("invoice.totalGross")}</dt>
+              <dd className="text-right font-semibold">
+                <Money cents={totals.gross} />
+              </dd>
+            </dl>
+          </section>
 
           <Field>
             <FieldLabel htmlFor={ids.note}>{f.t("invoice.note")}</FieldLabel>
@@ -1121,51 +1113,118 @@ function InvoiceForm({
             />
           </Field>
 
-          {notes.length > 0 ? (
-            <div className="flex flex-col gap-0.5 text-sm text-muted-foreground">
-              <p className="text-xs font-medium">{f.t("invoice.vatNotes")}</p>
-              {notes.map((note) => (
-                <p key={note}>{note}</p>
-              ))}
-            </div>
-          ) : null}
+          {quote ? (
+            tagsInput
+          ) : issued && extrasFilled === 0 ? null : (
+            <details
+              className="group border-t pt-1"
+              open={moreOpen}
+              onToggle={(e) => setMoreOpen(e.currentTarget.open)}
+            >
+              <summary className="focus-ring flex min-h-11 cursor-pointer list-none items-center gap-3 rounded-md text-sm [&::-webkit-details-marker]:hidden">
+                <span className="font-semibold">{f.t("invoice.more")}</span>
+                <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                  {extrasFilled > 0
+                    ? f.t("invoice.moreFilled", { n: extrasFilled })
+                    : f.t(
+                        credit ? "invoice.moreHintCredit" : "invoice.moreHint"
+                      )}
+                </span>
+                <ChevronDownIcon
+                  aria-hidden
+                  className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+                />
+              </summary>
+              <div className="flex flex-col gap-5 pt-2 pb-1">
+                {credit ? null : (
+                  <section className="flex flex-col gap-1">
+                    <label className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={advanceKind}
+                        disabled={issued || deducting}
+                        onCheckedChange={(v) => setAdvanceKind(v === true)}
+                      />
+                      {f.t("invoice.advanceKind")}
+                    </label>
+                    {issued ? null : (
+                      <FieldDescription>
+                        {f.t(
+                          deducting
+                            ? "invoice.advanceKindDeducting"
+                            : "invoice.advanceKindHint"
+                        )}
+                      </FieldDescription>
+                    )}
+                  </section>
+                )}
 
-          <dl className="ml-auto grid min-w-64 grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-sm">
-            {discount !== undefined ? (
-              <>
-                <dt className="text-muted-foreground">
-                  {f.t("invoice.totalDiscount", { p: f.rate(discount) })}
-                </dt>
-                <dd className="text-right">
-                  <Money cents={-docDiscountCents(readRows, discount)} />
-                </dd>
-              </>
-            ) : null}
-            {registered ? (
-              <>
-                <dt className="text-muted-foreground">
-                  {f.t("invoice.totalNet")}
-                </dt>
-                <dd className="text-right">
-                  <Money cents={totals.net} />
-                </dd>
-              </>
-            ) : null}
-            {(registered ? totals.rates : []).map((line) => (
-              <React.Fragment key={line.vatRate}>
-                <dt className="text-muted-foreground">
-                  {f.t("invoice.totalVat")} {f.rate(line.vatRate)}
-                </dt>
-                <dd className="text-right">
-                  <Money cents={line.vat} />
-                </dd>
-              </React.Fragment>
-            ))}
-            <dt className="font-semibold">{f.t("invoice.totalGross")}</dt>
-            <dd className="text-right font-semibold">
-              <Money cents={totals.gross} />
-            </dd>
-          </dl>
+                <section className="flex flex-wrap gap-3">
+                  <Field className="w-44">
+                    <FieldLabel>{f.t("invoice.supplyFrom")}</FieldLabel>
+                    <DateInput
+                      value={supplyFrom}
+                      onValueChange={setSupplyFrom}
+                      disabled={issued}
+                    />
+                  </Field>
+                  <Field className="w-44">
+                    <FieldLabel>{f.t("invoice.supplyTo")}</FieldLabel>
+                    <DateInput
+                      value={supplyTo}
+                      onValueChange={setSupplyTo}
+                      disabled={issued || supplyFrom === ""}
+                      min={supplyFrom || undefined}
+                    />
+                  </Field>
+                  <FieldDescription className="self-end pb-2">
+                    {f.t("invoice.supplyHint")}
+                  </FieldDescription>
+                </section>
+                <section className="flex flex-col gap-2">
+                  <div className="flex flex-wrap gap-3">
+                    <Field className="w-60">
+                      <FieldLabel htmlFor={ids.buyerReference}>
+                        {f.t("invoice.buyerReference")}
+                      </FieldLabel>
+                      <Input
+                        id={ids.buyerReference}
+                        value={buyerReference}
+                        maxLength={BUYER_REF_MAX}
+                        disabled={issued}
+                        onChange={(event) => {
+                          buyerRefTouched.current = true
+                          setBuyerReference(event.target.value)
+                        }}
+                      />
+                    </Field>
+                    <Field className="w-60">
+                      <FieldLabel htmlFor={ids.orderNumber}>
+                        {f.t("invoice.orderNumber")}
+                      </FieldLabel>
+                      <Input
+                        id={ids.orderNumber}
+                        value={orderNumber}
+                        maxLength={BUYER_REF_MAX}
+                        disabled={issued}
+                        onChange={(event) => setOrderNumber(event.target.value)}
+                      />
+                    </Field>
+                  </div>
+                  <FieldDescription>
+                    {f.t("invoice.buyerRefHint")}
+                  </FieldDescription>
+                </section>
+                {credit ? null : (
+                  <InvoiceFiles
+                    files={files}
+                    onChange={setFiles}
+                    disabled={issued}
+                  />
+                )}
+                {tagsInput}
+              </div>
+            </details>
+          )}
         </div>
         <DialogFooter className="m-0 flex-row flex-wrap items-center gap-2 bg-popover px-5 py-3">
           {quote ? (

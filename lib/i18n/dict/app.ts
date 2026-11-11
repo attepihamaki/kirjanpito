@@ -4165,6 +4165,22 @@ export const APP_DICT = {
   ],
   "invoice.newCustomer": ["Uusi asiakas", "New customer"],
   "invoice.editCustomer": ["Muokkaa asiakasta", "Edit customer"],
+  "invoice.editOnInvoice": ["Muokkaa tällä laskulla", "Edit on this invoice"],
+  "invoice.more": ["Lisätiedot", "More details"],
+  "invoice.details": ["Laskun tiedot", "Invoice details"],
+  "quote.details": ["Tarjouksen tiedot", "Quote details"],
+  "invoice.moreHint": [
+    "Ennakkolasku, toimitusaika, asiakkaan viitteet, liitteet ja tunnisteet",
+    "Advance invoice, delivery period, customer references, attachments and tags",
+  ],
+  "invoice.moreHintCredit": [
+    "Toimitusaika, asiakkaan viitteet ja tunnisteet",
+    "Delivery period, customer references and tags",
+  ],
+  "invoice.moreFilled": [
+    pl("1 kohta täytetty", "{n} kohtaa täytetty"),
+    pl("1 item filled in", "{n} items filled in"),
+  ],
   "invoice.customerNeedsName": [
     "Asiakkaalla pitää olla nimi.",
     "A customer needs a name.",
