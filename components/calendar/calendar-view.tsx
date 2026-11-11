@@ -3,9 +3,10 @@
 import * as React from "react"
 import { Empty, EmptyContent, EmptyDescription } from "@/components/ui/empty"
 import { NewEntryButton } from "@/components/common/new-entry-button"
-import { DownloadIcon } from "lucide-react"
+import { ChevronRightIcon, DownloadIcon } from "lucide-react"
 import Link from "next/link"
 
+import { ButtonLink } from "@/components/common/button-link"
 import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
 import { Pill } from "@/components/common/pill"
@@ -91,14 +92,23 @@ export function CalendarView() {
     ]
   )
 
-  const byMonth = React.useMemo(() => {
-    const groups = new Map<number, CalendarEvent[]>()
-    for (const e of events) {
-      const m = Number(e.date.slice(5, 7))
-      groups.set(m, [...(groups.get(m) ?? []), e])
-    }
-    return [...groups.entries()]
-  }, [events])
+  /*
+   * What is still ahead leads the list: every date from today on, and an
+   * earlier one the user can still act on. The rest of the past folds away
+   * under it. A year with nothing ahead lists everything, since there is
+   * nothing to lead with.
+   */
+  const { ahead, behind } = React.useMemo(() => {
+    const waiting = events.filter((e) => e.date >= today || isOpenTask(e))
+    return waiting.length
+      ? { ahead: waiting, behind: events.filter((e) => !waiting.includes(e)) }
+      : { ahead: events, behind: [] }
+  }, [events, today])
+  const [showPast, setShowPast] = React.useState(false)
+  const missing = [
+    payMonths.yel.length ? null : f.t("calendar.missingYel"),
+    payMonths.advanceTax.length ? null : f.t("calendar.missingAdvanceTax"),
+  ].filter((m): m is string => m !== null)
 
   const exportIcs = () => {
     const ics = toIcs(
@@ -149,34 +159,117 @@ export function CalendarView() {
               </EmptyContent>
             </Empty>
           ) : (
-            <ol className="divide-y">
-              {byMonth.map(([month, list]) => (
-                <li key={month}>
-                  <h2 className="bg-muted/50 px-5 py-2 text-sm font-medium">
-                    {f.month(month - 1)}
-                  </h2>
-                  <ul className="divide-y">
-                    {list.map((e) => (
-                      <EventRow key={e.id} event={e} today={today} />
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </ol>
+            <>
+              {/* A date the app cannot work out is asked for where it would be listed. */}
+              {missing.length ? (
+                <ul className="divide-y border-b">
+                  {missing.map((text) => (
+                    <li
+                      key={text}
+                      className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3"
+                    >
+                      <span className="min-w-0 flex-1 text-sm">{text}</span>
+                      <ButtonLink
+                        variant="outline"
+                        size="sm"
+                        href={SETTINGS_ROUTES.calendar}
+                      >
+                        {f.t("calendar.pickMonths")}
+                      </ButtonLink>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <MonthList events={ahead} today={today} />
+              {behind.length ? (
+                <div className="border-t">
+                  <Button
+                    variant="ghost"
+                    className="print-hidden h-auto w-full justify-start rounded-none px-5 py-3 text-muted-foreground"
+                    aria-expanded={showPast}
+                    onClick={() => setShowPast((v) => !v)}
+                  >
+                    <ChevronRightIcon
+                      data-icon="inline-start"
+                      className={cn(
+                        "transition-transform",
+                        showPast && "rotate-90"
+                      )}
+                    />
+                    {f.t("calendar.past", { n: behind.length })}
+                  </Button>
+                  <div className={cn(!showPast && "hidden print:block")}>
+                    <MonthList events={behind} today={today} />
+                  </div>
+                </div>
+              ) : null}
+            </>
           )}
         </Panel>
 
         <p className="text-sm text-muted-foreground">
-          {f.t("calendar.note")}{" "}
-          <Link
-            href={SETTINGS_ROUTES.calendar}
-            className="underline underline-offset-2"
-          >
-            {f.t("calendar.setMonths")}
-          </Link>
+          {f.t("calendar.note")}
+          {missing.length ? null : (
+            <>
+              {" "}
+              <Link
+                href={SETTINGS_ROUTES.calendar}
+                className="underline underline-offset-2"
+              >
+                {f.t("calendar.setMonths")}
+              </Link>
+            </>
+          )}
         </p>
       </div>
     </>
+  )
+}
+
+/**
+ * Whether a date already passed still waits for the user: a return not filed,
+ * an instalment with an amount not booked, a bill not paid. The other kinds
+ * have nothing to mark, so their past dates are history.
+ */
+function isOpenTask(event: CalendarEvent): boolean {
+  if (event.done) return false
+  return (
+    event.kind === "vat" ||
+    event.kind === "form5" ||
+    event.kind === "bill" ||
+    (event.kind === "advanceTax" && event.amount !== undefined)
+  )
+}
+
+/** The events under a heading per month, in the order given. */
+function MonthList({
+  events,
+  today,
+}: {
+  events: readonly CalendarEvent[]
+  today: string
+}) {
+  const f = useFormatters()
+  const groups = new Map<string, CalendarEvent[]>()
+  for (const e of events) {
+    const key = e.date.slice(0, 7)
+    groups.set(key, [...(groups.get(key) ?? []), e])
+  }
+  return (
+    <ol className="divide-y">
+      {[...groups.entries()].map(([key, list]) => (
+        <li key={key}>
+          <h2 className="bg-muted/50 px-5 py-2 text-sm font-medium">
+            {f.month(Number(key.slice(5, 7)) - 1)}
+          </h2>
+          <ul className="divide-y">
+            {list.map((e) => (
+              <EventRow key={e.id} event={e} today={today} />
+            ))}
+          </ul>
+        </li>
+      ))}
+    </ol>
   )
 }
 
@@ -191,7 +284,7 @@ function EventRow({ event, today }: { event: CalendarEvent; today: string }) {
     <li
       className={cn(
         "flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3",
-        (past || event.done) && "text-muted-foreground"
+        ((past && !isOpenTask(event)) || event.done) && "text-muted-foreground"
       )}
     >
       <span className="tabular w-28 shrink-0 text-sm">
@@ -225,7 +318,15 @@ function EventRow({ event, today }: { event: CalendarEvent; today: string }) {
           )}
         </Pill>
       ) : (
-        <Pill>
+        <Pill
+          tone={
+            past && isOpenTask(event)
+              ? "expense"
+              : days >= 0 && days <= 1
+                ? "warning"
+                : "neutral"
+          }
+        >
           {days === 0
             ? f.t("calendar.today")
             : past
