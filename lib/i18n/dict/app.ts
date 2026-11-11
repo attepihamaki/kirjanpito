@@ -2278,6 +2278,15 @@ export const APP_DICT = {
   "statement.revenue": ["Tuotot", "Revenue"],
   "statement.expenses": ["Elinkeinotoiminnan kulut", "Business expenses"],
   "statement.profitOrLoss": ["Voitto tai tappio", "Profit or loss"],
+  "statement.yearRunning": ["Tilikausi kesken", "Year in progress"],
+  "statement.resultFormula": [
+    "Tuotot {a} − vähennyskelpoiset kulut {b}",
+    "Revenue {a} − deductible expenses {b}",
+  ],
+  "statement.showEmpty": [
+    pl("Näytä myös tyhjä rivi (1)", "Näytä myös tyhjät rivit ({n})"),
+    pl("Show the empty line too (1)", "Show the empty lines too ({n})"),
+  ],
   "statement.revenueTotal": [
     "Veronalaiset tuotot yhteensä",
     "Total taxable revenue",

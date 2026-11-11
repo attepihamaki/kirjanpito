@@ -11,7 +11,9 @@ import { BusinessLine } from "@/components/common/business-line"
 import { FigureLink } from "@/components/common/figure-link"
 import { HelpHint } from "@/components/common/help-hint"
 import { Money, ZeroDash } from "@/components/common/money"
+import { Pill } from "@/components/common/pill"
 import { useFormatters } from "@/components/lang-provider"
+import { Checkbox } from "@/components/ui/checkbox"
 import { VatYearSection } from "@/components/statement/vat-year-section"
 import { YearEndButton } from "@/components/statement/year-end-button"
 import {
@@ -25,6 +27,7 @@ import { indexCategories } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
 import { useStatementDrill } from "@/hooks/use-figure-drill"
 import { useLossInput } from "@/hooks/use-loss-input"
+import { useToday } from "@/hooks/use-today"
 import { useStatementOptions, useTaxBasisEntries } from "@/hooks/use-tax-basis"
 import {
   DEDUCTIBLE,
@@ -52,6 +55,7 @@ export function StatementView() {
   const cats = useBookStore((s) => s.cats)
   const year = useBookStore((s) => s.year)
   const traderType = useBookStore((s) => s.traderType)
+  const today = useToday()
 
   const options = useStatementOptions()
   const { selectionDrill, resultDrill, form5Drill } = useStatementDrill()
@@ -142,6 +146,51 @@ export function StatementView() {
     return out
   }, [statement, f])
 
+  /*
+   * A line with no amount is left out until the user asks for every line of
+   * the form, and a group heading goes with its last line (§8.8).
+   */
+  const [showEmpty, setShowEmpty] = React.useState(false)
+  const emptyCount =
+    rows.filter((r) => r.kind === "line" && !r.net).length +
+    balanceSections.reduce(
+      (n, s) => n + s.rows.filter((r) => r.kind !== "group" && !r.value).length,
+      0
+    )
+  const shownRows = React.useMemo(() => {
+    if (showEmpty) return rows
+    const kept = rows.filter((r) => r.kind !== "line" || r.net)
+    return kept.filter(
+      (r, i) => r.kind !== "group" || kept[i + 1]?.kind === "line"
+    )
+  }, [rows, showEmpty])
+  const shownSections = React.useMemo(
+    () =>
+      showEmpty
+        ? balanceSections
+        : balanceSections
+            .map((section) => {
+              const kept = section.rows.filter(
+                (r) => r.kind === "group" || r.value
+              )
+              return {
+                ...section,
+                rows: kept.filter(
+                  (r, i) =>
+                    r.kind !== "group" ||
+                    (kept[i + 1] && kept[i + 1].kind !== "group")
+                ),
+              }
+            })
+            .filter((section) => section.rows.length > 0),
+    [balanceSections, showEmpty]
+  )
+  const running = today <= `${year}-12-31`
+  const resultLabel =
+    statement.resultLine === "358"
+      ? f.t("statement.profit")
+      : f.t("statement.loss")
+
   /* A year already marked as filed keeps its statement, even with no entries. */
   if (yearEmpty && !filed) {
     return <NoEntriesState bodyKey="empty.statementBody" />
@@ -163,12 +212,41 @@ export function StatementView() {
               })}
             </p>
           </div>
-          <YearEndButton className="print-hidden" />
+          {running && !filed ? (
+            <Pill className="print-hidden">{f.t("statement.yearRunning")}</Pill>
+          ) : (
+            <YearEndButton className="print-hidden" />
+          )}
         </header>
+
+        {/* The answer first: the result the lines below add up to. */}
+        <div className="mb-2 border-y border-sheet-edge py-4">
+          <p className="text-sm text-muted-foreground">{resultLabel}</p>
+          <Money
+            cents={statement.resultMagnitude}
+            className="mt-1 block font-heading text-4xl font-semibold tracking-tight"
+          />
+          <p className="mt-2 text-sm text-muted-foreground">
+            {f.t("statement.resultFormula", {
+              a: f.money(statement.revenueTotal),
+              b: f.money(statement.deductibleTotal),
+            })}
+          </p>
+        </div>
+
+        {emptyCount ? (
+          <label className="print-hidden flex min-h-9 items-center justify-end gap-2 text-sm">
+            <Checkbox
+              checked={showEmpty}
+              onCheckedChange={(checked) => setShowEmpty(checked === true)}
+            />
+            {f.t("statement.showEmpty", { n: emptyCount })}
+          </label>
+        ) : null}
 
         <table className="w-full text-sm">
           <tbody>
-            {rows.map((row) =>
+            {shownRows.map((row) =>
               row.kind === "section" ? (
                 <tr key={`sec-${row.side}`}>
                   <th
@@ -312,7 +390,7 @@ export function StatementView() {
         </table>
 
         {/* The assets, liabilities and wages Form 5 asks for beside the result (§8.8). */}
-        {balanceSections.map((section) => (
+        {shownSections.map((section) => (
           <table key={section.title.fi} className="mt-6 w-full text-sm">
             <tbody>
               <tr>

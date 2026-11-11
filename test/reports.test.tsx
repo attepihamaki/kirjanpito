@@ -173,13 +173,27 @@ describe("VatView", () => {
 })
 
 describe("StatementView", () => {
-  it("opens the year-end dialog from the sheet", () => {
+  it("leaves the way into the return out while the year is running", () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date(2026, 10, 11, 9, 0) })
+    useBookStore.setState({ form5Filed: {}, dialog: { kind: "none" } })
+    mount(<StatementView />)
+
+    expect(screen.getByText("Tilikausi kesken")).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Ilmoita OmaVerossa" })
+    ).not.toBeInTheDocument()
+    vi.useRealTimers()
+  })
+
+  it("opens the year-end dialog from the sheet once the year has ended", () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date(2027, 1, 10, 9, 0) })
     useBookStore.setState({ form5Filed: {}, dialog: { kind: "none" } })
     mount(<StatementView />)
 
     fireEvent.click(screen.getByRole("button", { name: "Ilmoita OmaVerossa" }))
 
     expect(useBookStore.getState().dialog).toEqual({ kind: "year-end" })
+    vi.useRealTimers()
   })
 
   it("shows a locked year with the date it was marked", () => {
@@ -206,8 +220,13 @@ describe("StatementView", () => {
     ).toBeInTheDocument()
   })
 
-  it("renders every line, with a dash for the empty ones", () => {
+  it("renders every line on request, with a dash for the empty ones", () => {
     mount(<StatementView />)
+    expect(screen.queryByText("–")).not.toBeInTheDocument()
+    expect(screen.queryByText("Maksetut palkat")).not.toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Näytä myös tyhjät rivit (39)" })
+    )
     /*
      * All 33 lines render; the sample touches eight, so 25 show a dash. The
      * assets, liabilities and wages below the result add 14 more.
@@ -265,18 +284,17 @@ describe("StatementView", () => {
     })
     mount(<StatementView />)
 
-    expect(
-      screen.getByText("359 Elinkeinotoiminnan tappio")
-    ).toBeInTheDocument()
+    expect(screen.getAllByText("359 Elinkeinotoiminnan tappio")).toHaveLength(2)
     // Positive, as form 5 expects (§6.3).
-    expect(screen.getByText(eur(50000))).toBeInTheDocument()
+    expect(screen.getAllByText(eur(50000))).toHaveLength(2)
   })
 
   it("translates the lines into English while keeping Finnish money", () => {
     mount(<StatementView />, "en")
     expect(screen.getByText("Net sales")).toBeInTheDocument()
-    expect(screen.getByText("358 Business profit")).toBeInTheDocument()
-    expect(screen.getByText(eur(1064253))).toBeInTheDocument()
+    // Once at the head of the sheet and once on the result line.
+    expect(screen.getAllByText("358 Business profit")).toHaveLength(2)
+    expect(screen.getAllByText(eur(1064253))).toHaveLength(2)
   })
 })
 
