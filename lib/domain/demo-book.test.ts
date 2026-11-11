@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest"
 
 import { defaultCategories } from "@/lib/domain/accounts"
 import { billIban, billReference } from "@/lib/domain/bill-payment"
-import { demoBook, demoYear } from "@/lib/domain/demo-book"
+import { calcEntry } from "@/lib/domain/calc"
+import { demoBook, demoYear, receiptPdf } from "@/lib/domain/demo-book"
+import { invoiceTotals, nextInvoiceNumber } from "@/lib/domain/invoice-calc"
+import { isFinnishReference } from "@/lib/domain/invoice-reference"
 import { incomeStatement } from "@/lib/domain/income-statement"
 import { indexCategories } from "@/lib/domain/types"
 
@@ -57,6 +60,53 @@ describe("demoBook", () => {
       expect(billReference(e.reference)).toBe(e.reference)
       expect(e.due! > e.date).toBe(true)
     }
+  })
+
+  it("has an issued invoice for every sale, with the entry's own figures", () => {
+    const { entries, invoices, invoiceSettings } = demoBook("2026-11-10")
+    const sales = entries.filter((e) => e.type === "income")
+    expect(invoices).toHaveLength(sales.length)
+    for (const invoice of invoices) {
+      const entry = entries.find((e) => e.id === invoice.entryIds[0])
+      expect(entry?.description).toContain(`Lasku ${invoice.number}`)
+      expect(invoiceTotals(invoice.rows).gross).toBe(calcEntry(entry!).gross)
+      expect(invoice.customerId).toBe(entry?.party)
+      expect(invoice.reference && isFinnishReference(invoice.reference)).toBe(
+        true
+      )
+    }
+    // The next invoice continues the series.
+    expect(nextInvoiceNumber(invoices, invoiceSettings.firstNumber)).toBe(
+      Math.max(...invoices.map((i) => i.number ?? 0)) + 1
+    )
+    expect(billIban(invoiceSettings.iban)).toBe(invoiceSettings.iban)
+  })
+
+  it("has a quote that became an invoice and one still open", () => {
+    const { invoices, invoiceSettings } = demoBook("2026-11-10")
+    const [accepted, open] = invoiceSettings.quotes
+    expect(accepted.outcome).toBe("accepted")
+    expect(invoices.some((i) => i.id === accepted.invoiceId)).toBe(true)
+    expect(open.outcome).toBeNull()
+    expect(open.validUntil > "2026-11-10").toBe(true)
+  })
+
+  it("puts receipts in the inbox as PDFs with a text layer", () => {
+    const { receipts } = demoBook("2026-11-10")
+    expect(receipts.length).toBeGreaterThan(0)
+    const bytes = receiptPdf(receipts[0].lines("2026-11-10"))
+    const text = new TextDecoder("latin1").decode(bytes)
+    expect(text.startsWith("%PDF-1.4")).toBe(true)
+    expect(text).toContain("(Yhteensä 73,59 EUR) Tj")
+    // The cross-reference table points at each object's first byte.
+    const xref = Number(/startxref\n(\d+)/.exec(text)?.[1])
+    expect(text.slice(xref, xref + 4)).toBe("xref")
+    const offsets = [...text.matchAll(/^(\d{10}) 00000 n /gm)].map((m) =>
+      Number(m[1])
+    )
+    offsets.forEach((offset, i) => {
+      expect(text.slice(offset).startsWith(`${i + 1} 0 obj`)).toBe(true)
+    })
   })
 
   it("ends the year in a profit", () => {

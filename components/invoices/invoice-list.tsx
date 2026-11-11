@@ -9,11 +9,15 @@ import {
   BellOffIcon,
   FilePenLineIcon,
   PencilIcon,
+  PlusIcon,
   Repeat2Icon,
   SendIcon,
   Trash2Icon,
   Undo2Icon,
 } from "lucide-react"
+
+import { ButtonLink } from "@/components/common/button-link"
+import { SETTINGS_ROUTES } from "@/lib/site"
 
 import { DateInput } from "@/components/common/date-input"
 import { EuroInput } from "@/components/common/euro-input"
@@ -31,7 +35,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Empty, EmptyDescription } from "@/components/ui/empty"
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import { Input } from "@/components/ui/input"
 import {
   Table,
@@ -295,6 +305,10 @@ export function InvoiceList() {
   const entries = useBookStore((s) => s.entries)
   const setInvoices = useBookStore((s) => s.setInvoices)
   const openDialog = useBookStore((s) => s.openDialog)
+  /* An invoice cannot be issued without the seller's address and account (§8.27). */
+  const sellerReady = useBookStore(
+    (s) => s.invoiceSettings.street !== "" && s.invoiceSettings.iban !== ""
+  )
   const [paying, setPaying] = React.useState<Invoice | null>(null)
   const [reminding, setReminding] = React.useState<Invoice | null>(null)
   const [repeating, setRepeating] = React.useState<Invoice | null>(null)
@@ -334,8 +348,28 @@ export function InvoiceList() {
     <Panel>
       {sorted.length === 0 ? (
         <Empty>
-          <EmptyDescription>{f.t("invoice.empty")}</EmptyDescription>
-          <EmptyDescription>{f.t("invoice.emptyHint")}</EmptyDescription>
+          <EmptyHeader>
+            <EmptyTitle>{f.t("invoice.empty")}</EmptyTitle>
+            <EmptyDescription>
+              {f.t(
+                sellerReady ? "invoice.emptyHint" : "invoice.emptyNeedsSeller"
+              )}
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            {sellerReady ? (
+              <Button
+                onClick={() => openDialog({ kind: "invoice", invoiceId: null })}
+              >
+                <PlusIcon data-icon="inline-start" />
+                {f.t("invoice.new")}
+              </Button>
+            ) : (
+              <ButtonLink href={SETTINGS_ROUTES.invoicing}>
+                {f.t("invoice.emptyAddSeller")}
+              </ButtonLink>
+            )}
+          </EmptyContent>
         </Empty>
       ) : (
         <Table>

@@ -4,7 +4,6 @@ import * as React from "react"
 import { CameraIcon, InboxIcon, Trash2Icon, UploadIcon } from "lucide-react"
 
 import { BusyIcon } from "@/components/common/busy-button"
-import { DropTile } from "@/components/common/drop-tile"
 import { PageHeader } from "@/components/common/page-header"
 import { useSectionHeading } from "@/components/common/sub-page-tabs"
 import { Panel } from "@/components/common/panel"
@@ -125,24 +124,6 @@ export function InboxView() {
         onChange={onPicked}
       />
 
-      {readOnly ? null : (
-        <DropTile
-          disabled={busy}
-          onClick={() => pickRef.current?.click()}
-          className="mb-6 flex w-full items-center gap-3 rounded-lg px-4 py-4"
-        >
-          <InboxIcon aria-hidden className="size-5 text-muted-foreground" />
-          <span>
-            <span className="block text-sm font-medium">
-              {f.t("inbox.dropTitle")}
-            </span>
-            <span className="block text-sm text-muted-foreground">
-              {f.t("inbox.dropHint")}
-            </span>
-          </span>
-        </DropTile>
-      )}
-
       {inbox.length === 0 ? (
         <Empty>
           <EmptyHeader>
@@ -169,6 +150,11 @@ export function InboxView() {
             </li>
           ))}
         </ul>
+      )}
+      {readOnly ? null : (
+        <p className="mt-4 text-sm text-muted-foreground">
+          {f.t("inbox.dropAnywhere")}
+        </p>
       )}
     </>
   )

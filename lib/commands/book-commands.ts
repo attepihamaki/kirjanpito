@@ -10,7 +10,8 @@ import {
 import { pruneReceiptHashes } from "@/lib/browser/receipt-hash-db"
 import { pruneReceiptText } from "@/lib/browser/receipt-text-db"
 import { heldByAnotherTab } from "@/lib/browser/tab-lock"
-import { todayIso, yearOf } from "@/lib/domain/dates"
+import { addDays, todayIso, yearOf } from "@/lib/domain/dates"
+import type { InboxItem } from "@/lib/domain/inbox"
 import { collectLiveIds } from "@/lib/domain/gc"
 import { invoiceFileIds } from "@/lib/domain/invoice-links"
 import { historyAttachmentIds } from "@/lib/domain/history"
@@ -145,15 +146,42 @@ export async function startDemoBook(ctx: Ctx): Promise<void> {
   if (!(await guardDirty(ctx, true))) return
   releaseAllObjectUrls()
   await unlinkFile()
-  const { demoBook, DEMO_BUSINESS } = await import("@/lib/domain/demo-book")
+  const { demoBook, receiptPdf, DEMO_BUSINESS } =
+    await import("@/lib/domain/demo-book")
   const today = todayIso()
-  const book = demoBook(today)
+  const { receipts, ...book } = demoBook(today)
+  /*
+   * The inbox's receipts are real files in the browser's store, like any the
+   * user adds. One that cannot be stored is left out, and the demo opens
+   * without it.
+   */
+  const { storeInboxFile } = await import("@/lib/commands/inbox-commands")
+  const inbox: InboxItem[] = []
+  for (const receipt of receipts) {
+    const file = new File(
+      [receiptPdf(receipt.lines(today)) as BlobPart],
+      receipt.name,
+      { type: "application/pdf" }
+    )
+    try {
+      inbox.push(
+        await storeInboxFile(
+          file,
+          addDays(today, -receipt.daysAgo),
+          receipt.name
+        )
+      )
+    } catch {
+      /* The demo is whole without it. */
+    }
+  }
   /* The returns already due are filed, as a trader keeping up would have. */
   const filed = vatTimeline("month", `${book.year}-01-01`, today, {})
     .filter((p) => p.due < today)
     .map((p) => ({ key: p.key, on: p.due }))
   useBookStore.getState().startDemo({
     ...book,
+    inbox,
     businessName: DEMO_BUSINESS.name,
     businessId: DEMO_BUSINESS.id,
     filed,

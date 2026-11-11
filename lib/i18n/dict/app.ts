@@ -1864,6 +1864,10 @@ export const APP_DICT = {
     "Deductible VAT on purchases",
   ],
   "vat.otherRates": ["Muut verokannat", "Other rates"],
+  "vat.ecNoneWhy": [
+    "Yhteenvetoilmoitus annetaan vain kuukausilta, joilla myyt tavaroita tai palveluja yrityksille muihin EU-maihin. Kirjaa sellainen myynti luokalle Myynti – EU, tavarat tai Myynti – EU, palvelut, niin kuukausi tulee tähän.",
+    "The EC Sales List is filed only for months with sales of goods or services to businesses in other EU countries. Book such a sale on Sales – EU, goods or Sales – EU, services and its month appears here.",
+  ],
   "vat.showEmptyRates": [
     "Näytä myös tyhjät verokannat ({x})",
     "Show the empty rates too ({x})",
@@ -3590,9 +3594,14 @@ export const APP_DICT = {
   "invoice.new": ["Uusi lasku", "New invoice"],
   "invoice.empty": ["Ei vielä laskuja.", "No invoices yet."],
   "invoice.emptyHint": [
-    "Tee ensimmäinen lasku. Ennen sitä lisää yrityksen osoite ja tilinumero Asetusten Laskutus-välilehdellä.",
-    "Make your first invoice. Before that, add the business address and account number under Invoicing in settings.",
+    "Tee ensimmäinen lasku. Annettu lasku kirjautuu avoimena tulona.",
+    "Make your first invoice. An issued invoice books as open income.",
   ],
+  "invoice.emptyNeedsSeller": [
+    "Laskuun tarvitaan yrityksen osoite ja tilinumero. Lisää ne kerran, niin ne tulevat jokaiseen laskuun.",
+    "An invoice needs the business address and account number. Add them once and every invoice carries them.",
+  ],
+  "invoice.emptyAddSeller": ["Lisää laskutustiedot", "Add invoicing details"],
   "invoice.colNumber": ["Nro", "No."],
   "invoice.colCustomer": ["Asiakas", "Customer"],
   "invoice.colDate": ["Päivämäärä", "Date"],
@@ -5630,13 +5639,9 @@ export const APP_DICT = {
   ],
   "inbox.add": ["Lisää tositteita", "Add receipts"],
   "inbox.camera": ["Ota kuva", "Take a photo"],
-  "inbox.dropTitle": [
-    "Pudota tositteita tähän tai valitse tiedostot",
-    "Drop receipts here or choose files",
-  ],
-  "inbox.dropHint": [
-    "Kuvat ja PDF:t odottavat täällä, kunnes kirjaat ne. Ne tallentuvat kirjanpidon tiedostoon.",
-    "Images and PDFs wait here until you book them. They are saved in the bookkeeping file.",
+  "inbox.dropAnywhere": [
+    "Voit myös pudottaa kuitit tälle sivulle, tai sivupalkin Saapuneet-laatikkoon mistä tahansa näkymästä. Ne tallentuvat kirjanpidon tiedostoon.",
+    "You can also drop receipts on this page, or on the Inbox box in the sidebar from any view. They are saved in the bookkeeping file.",
   ],
   "inbox.emptyTitle": ["Ei odottavia tositteita", "No receipts waiting"],
   "inbox.emptyHint": [

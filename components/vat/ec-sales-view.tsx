@@ -6,6 +6,12 @@ import { Money } from "@/components/common/money"
 import { Panel } from "@/components/common/panel"
 import { useFormatters } from "@/components/lang-provider"
 import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import {
   Table,
   TableBody,
   TableCell,
@@ -35,14 +41,18 @@ export function EcSalesView() {
 
   return (
     <div className="flex flex-col gap-6">
-      <p className="max-w-2xl text-sm text-muted-foreground">
-        {f.t("vat.ecIntro")}
-      </p>
       {months.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          {f.t("vat.ecNone", { y: year })}
+        <Empty>
+          <EmptyHeader>
+            <EmptyTitle>{f.t("vat.ecNone", { y: year })}</EmptyTitle>
+            <EmptyDescription>{f.t("vat.ecNoneWhy")}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : (
+        <p className="max-w-2xl text-sm text-muted-foreground">
+          {f.t("vat.ecIntro")}
         </p>
-      ) : null}
+      )}
       {months.map((m) => (
         <Panel
           key={m.key}

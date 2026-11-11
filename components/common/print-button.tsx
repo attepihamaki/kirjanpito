@@ -9,10 +9,21 @@ import { useT } from "@/components/lang-provider"
  * The "Tulosta" button of a printable view (§8.8). `onPrint` replaces the
  * plain `window.print()` for a view that has to change what it shows first.
  */
-export function PrintButton({ onPrint }: { onPrint?: () => void }) {
+export function PrintButton({
+  onPrint,
+  disabled,
+}: {
+  onPrint?: () => void
+  /** Set while the view has nothing to put on paper. */
+  disabled?: boolean
+}) {
   const t = useT()
   return (
-    <Button variant="outline" onClick={onPrint ?? (() => window.print())}>
+    <Button
+      variant="outline"
+      disabled={disabled}
+      onClick={onPrint ?? (() => window.print())}
+    >
       <PrinterIcon data-icon="inline-start" />
       {t("common.print")}
     </Button>

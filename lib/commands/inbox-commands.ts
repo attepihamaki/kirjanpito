@@ -28,6 +28,28 @@ async function readGuess(file: File): Promise<InboxGuess | undefined> {
 }
 
 /**
+ * Store `file` and describe it as an inbox item added on `day`, reading what
+ * a PDF's text gives. It throws when the browser cannot store the file.
+ */
+export async function storeInboxFile(
+  file: File,
+  day: string,
+  fallbackName: string
+): Promise<InboxItem> {
+  const id = `a-${uid()}`
+  await putReceipt(id, file)
+  const guess = await readGuess(file)
+  return {
+    id,
+    name: file.name || fallbackName,
+    type: file.type,
+    size: file.size,
+    added: day,
+    ...(guess ? { guess } : {}),
+  }
+}
+
+/**
  * Store each image or PDF among `files` and add it to the inbox. Anything else
  * is refused with a toast. Returns how many were added.
  */
@@ -39,22 +61,14 @@ export async function addToInbox(ctx: Ctx, files: File[]): Promise<number> {
   const added: InboxItem[] = []
   const day = todayIso()
   for (const file of accepted) {
-    const id = `a-${uid()}`
     try {
-      await putReceipt(id, file)
+      added.push(
+        await storeInboxFile(file, day, ctx.t("inbox.photoName", { d: day }))
+      )
     } catch {
       toast.add({ title: ctx.t("inbox.storeFailed"), priority: "high" })
       break
     }
-    const guess = await readGuess(file)
-    added.push({
-      id,
-      name: file.name || ctx.t("inbox.photoName", { d: day }),
-      type: file.type,
-      size: file.size,
-      added: day,
-      ...(guess ? { guess } : {}),
-    })
   }
   useBookStore.getState().addInboxItems(added)
   if (added.length) {

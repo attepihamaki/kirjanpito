@@ -526,6 +526,10 @@ export interface BookActions {
     year: number
     entries: Entry[]
     customers: Customer[]
+    invoices: Invoice[]
+    invoiceSettings: InvoiceSettings
+    /** The receipts waiting in the inbox, already stored (§8.31). */
+    inbox: InboxItem[]
     businessName: string
     businessId: string
     /** VAT periods to mark filed, each on its due date (§8.32). */
@@ -1187,12 +1191,15 @@ export const useBookStore = create<BookStore>()(
           entries: book.entries,
           cats: defaultCategories(),
           customers: book.customers,
+          invoices: book.invoices,
+          inbox: book.inbox,
           fileName: null,
           fileHandle: null,
           savedAt: null,
           year: book.year,
           dirty: false,
           settings: {
+            invoiceSettings: book.invoiceSettings,
             exportLang: "fi",
             businessName: book.businessName,
             businessId: book.businessId,
