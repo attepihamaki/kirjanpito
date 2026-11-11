@@ -2,6 +2,7 @@ import { parseIban } from "@/lib/domain/iban"
 import {
   BUYER_REF_MAX,
   buyerRefs,
+  discountField,
   DEFAULT_INVOICE_SETTINGS,
   PARTY_ROLES,
   type BuyerRefs,
@@ -186,6 +187,7 @@ function parseRecurringInvoice(value: unknown): RecurringInvoice | null {
     customer,
     language: lang(value.language),
     rows: rows as InvoiceRow[],
+    ...discountField(value.discount),
     note: text(value.note, 2000),
     ...parseBuyerRefs(value),
     every: every as number,
@@ -221,6 +223,7 @@ function parseQuote(value: unknown): Quote | null {
     customer,
     language: lang(value.language),
     rows: rows as InvoiceRow[],
+    ...discountField(value.discount),
     note: text(value.note, 2000),
     outcome:
       value.outcome === "accepted" || value.outcome === "declined"
@@ -343,6 +346,7 @@ function parseRow(value: unknown): InvoiceRow | null {
     unitCents: unitCents as number,
     vatRate,
     catId: value.catId,
+    ...discountField(value.discount),
   }
 }
 
@@ -453,6 +457,7 @@ function parseInvoice(value: unknown): Invoice | null {
     customer,
     language: lang(value.language),
     rows: rows as InvoiceRow[],
+    ...discountField(value.discount),
     note: text(value.note, 2000),
     ...parseBuyerRefs(value),
     terms: text(value.terms, 2000),

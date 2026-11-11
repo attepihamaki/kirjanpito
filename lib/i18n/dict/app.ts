@@ -396,6 +396,33 @@ export const APP_DICT = {
   "overview.widgetRecent": ["Viimeisimmät tositteet", "Latest vouchers"],
   "overview.widgetChecks": ["Tarkistettavaa", "To check"],
   "overview.widgetTax": ["Verot ja YEL", "Tax and YEL"],
+  "overview.widgetCashflow": ["Kassavirtaennuste", "Cash-flow forecast"],
+  "overview.cashflowEnd": [
+    "Pankkitilillä arviolta {n} viikon päästä ({d})",
+    "Bank account in {n} weeks ({d}), estimated",
+  ],
+  "overview.cashflowNoBalance": [
+    "Pankkitilin saldoa ei ole annettu, joten luku on vain tulevien maksujen erotus. Anna saldo Pankkitili-kortissa.",
+    "No bank balance is given, so this is only the difference of the payments ahead. Enter the balance on the Bank account card.",
+  ],
+  "overview.cashflowToday": ["Tänään", "Today"],
+  "overview.cashflowStart": ["Lähtösaldo", "Starting from"],
+  "overview.cashflowIn": ["Tulossa", "Coming in"],
+  "overview.cashflowOut": ["Lähdössä", "Going out"],
+  "overview.cashflowLowest": ["Alimmillaan", "Lowest"],
+  "overview.cashflowWeekOf": ["viikolla {d}", "week of {d}"],
+  "overview.cashflowOverdue": [
+    "Ensimmäisellä viikolla mukana erääntyneitä saatavia {a} ja maksamatta olevia laskuja ja ilmoituksia {b}.",
+    "The first week includes overdue receivables of {a} and overdue bills and returns of {b}.",
+  ],
+  "overview.cashflowWeeks": ["Näytä viikoittain", "Show by week"],
+  "overview.cashflowWeek": ["Viikko alkaen", "Week from"],
+  "overview.cashflowBalance": ["Saldo", "Balance"],
+  "overview.cashflowAdvanceTax": ["Ennakkovero", "Advance tax"],
+  "overview.cashflowNote": [
+    "Arvio kirjanpidon tiedoista: avoimet laskut ja maksettavat eräpäivinään, toistuvat tositteet ja laskut, ALV-ilmoitukset ja ennakkoverot. YEL ja muut kirjaamattomat maksut eivät ole mukana.",
+    "An estimate from the book: open invoices and bills on their due dates, recurring entries and invoices, VAT returns and advance tax. YEL and other payments not in the book are left out.",
+  ],
 
   "overview.bankOn": ["Pankkitilin saldo {d}", "Bank balance on {d}"],
   "overview.bankMovement": [
@@ -3389,8 +3416,8 @@ export const APP_DICT = {
     "The invoice has no rows.",
   ],
   "invoice.problemBadRow": [
-    "Jokaisella rivillä pitää olla kuvaus, positiivinen määrä ja hinta.",
-    "Every row needs a description, a positive quantity and a price.",
+    "Jokaisella rivillä pitää olla kuvaus, positiivinen määrä ja hinta, ja alennus voi olla 0–100 %.",
+    "Every row needs a description, a positive quantity and a price, and a discount from 0 to 100 %.",
   ],
   "invoice.problemNoCustomer": [
     "Laskulta puuttuu asiakkaan nimi.",
@@ -3615,6 +3642,39 @@ export const APP_DICT = {
   "invoice.rowPrice": ["À-hinta (alv 0 %)", "Unit price (excl. VAT)"],
   "invoice.rowPricePlain": ["À-hinta", "Unit price"],
   "invoice.rowVat": ["ALV %", "VAT %"],
+  "invoice.rowDiscount": ["Ale %", "Disc. %"],
+  "statement.title": ["Tiliote", "Statement"],
+  "statement.includePaid": ["Näytä myös maksetut", "Include paid"],
+  "statement.from": ["Alkaen", "From"],
+  "statement.to": ["Asti", "To"],
+  "statement.empty": [
+    "Ei laskuja tällä rajauksella.",
+    "No invoices with this selection.",
+  ],
+  "statement.summary": [
+    pl("1 lasku, avoinna {o}.", "{n} laskua, avoinna {o}."),
+    pl("1 invoice, {o} open.", "{n} invoices, {o} open."),
+  ],
+  "statement.summaryOverdue": [
+    pl(
+      "1 lasku, avoinna {o}, josta erääntynyt {d}.",
+      "{n} laskua, avoinna {o}, josta erääntynyt {d}."
+    ),
+    pl(
+      "1 invoice, {o} open, of which {d} overdue.",
+      "{n} invoices, {o} open, of which {d} overdue."
+    ),
+  ],
+  "statement.download": ["Lataa tiliote (PDF)", "Download statement (PDF)"],
+  "invoice.docDiscount": [
+    "Alennus koko laskusta, %",
+    "Discount on the whole invoice, %",
+  ],
+  "invoice.discountBad": [
+    "Anna alennus prosentteina 0–100, enintään kahdella desimaalilla.",
+    "Give the discount as a percent from 0 to 100, with at most two decimals.",
+  ],
+  "invoice.totalDiscount": ["Alennus {p}", "Discount {p}"],
   "invoice.rowCategory": ["Luokka", "Category"],
   "invoice.rowTotal": ["Yhteensä", "Total"],
   "invoice.addRow": ["Lisää rivi", "Add row"],

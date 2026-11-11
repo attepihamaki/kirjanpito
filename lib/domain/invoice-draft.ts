@@ -2,6 +2,8 @@ import { addDays } from "@/lib/domain/dates"
 import {
   buyerRefs,
   type BuyerRefs,
+  discountField,
+  type DocDiscount,
   type Customer,
   Invoice,
   InvoiceLang,
@@ -20,7 +22,7 @@ import { rateOnDate } from "@/lib/domain/vat-rates"
  */
 
 /** What a draft is made from: an invoice, a quote or a recurring template. */
-interface DraftSource extends BuyerRefs {
+interface DraftSource extends BuyerRefs, DocDiscount {
   customerId: string | null
   customer: Party
   language: InvoiceLang
@@ -77,6 +79,7 @@ function draftOf(
       ...r,
       vatRate: rateOnDate(r.vatRate, date),
     })),
+    ...discountField(source.discount),
     note: source.note,
     ...buyerRefs({
       buyerReference: source.buyerReference ?? customer?.reference,
@@ -152,6 +155,7 @@ export function templateFromInvoice(
     customer: { ...source.customer },
     language: source.language,
     rows: source.rows.map((r) => ({ ...r })),
+    ...discountField(source.discount),
     note: source.note,
     ...buyerRefs(source),
     every,

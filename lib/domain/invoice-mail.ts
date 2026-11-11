@@ -27,7 +27,9 @@ export function invoiceMail(
   if (number === null || !seller)
     throw new Error("only an issued invoice can be sent")
   const credit = invoice.credits !== null
-  const amount = formatMoney(invoiceTotals(invoice.rows).gross)
+  const amount = formatMoney(
+    invoiceTotals(invoice.rows, invoice.discount).gross
+  )
   const fi = lang === "fi"
   const word = credit
     ? fi
@@ -115,7 +117,7 @@ export function quoteMail(
   seller: Pick<Seller, "name">
 ): InvoiceMail {
   const fi = quote.language === "fi"
-  const amount = formatMoney(invoiceTotals(quote.rows).gross)
+  const amount = formatMoney(invoiceTotals(quote.rows, quote.discount).gross)
   const valid = formatDate(quote.validUntil, quote.language)
   const subject = `${fi ? "Tarjous" : "Quotation"} ${quote.number} – ${seller.name}`
   const body = [

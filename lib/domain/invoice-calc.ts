@@ -8,7 +8,7 @@ import type {
   InvoiceSettings,
   Seller,
 } from "@/lib/domain/invoice"
-import { buyerRefs } from "@/lib/domain/invoice"
+import { buyerRefs, discountField } from "@/lib/domain/invoice"
 import { finnishReference } from "@/lib/domain/invoice-reference"
 import {
   isInvoiceSaleKind,
@@ -16,7 +16,6 @@ import {
   vatProblems,
   type VatProblem,
 } from "@/lib/domain/invoice-vat"
-import { roundCents } from "@/lib/domain/money"
 import type { Category, Cents, Entry } from "@/lib/domain/types"
 
 /**
@@ -36,11 +35,48 @@ export function isInvoiceCategory(cat: Category): boolean {
  * Amounts
  * ---------------------------------------------------------------------- */
 
-/** One row's price without VAT: quantity times unit price, to the cent. */
+/** A discount in hundredths of a percent, 0 when there is none. */
+function discountBp(discount: number | undefined): bigint {
+  return BigInt(discount === undefined ? 0 : Math.round(discount * 100))
+}
+
+/**
+ * One row's price without VAT: quantity times unit price, less the row's
+ * discount and then the document's, rounded to the cent once (§8.27). The
+ * sum is worked in integers, so no discount leaves a half cent to chance.
+ */
 export function rowNet(
-  row: Pick<InvoiceRow, "quantityMilli" | "unitCents">
+  row: Pick<InvoiceRow, "quantityMilli" | "unitCents" | "discount">,
+  docDiscount?: number
 ): Cents {
-  return roundCents((row.quantityMilli * row.unitCents) / 1000)
+  const numerator =
+    BigInt(Math.round(row.quantityMilli)) *
+    BigInt(Math.round(row.unitCents)) *
+    (BigInt(10000) - discountBp(row.discount)) *
+    (BigInt(10000) - discountBp(docDiscount))
+  const denominator = BigInt(1000) * BigInt(10000) * BigInt(10000)
+  const negative = numerator < BigInt(0)
+  const abs = negative ? -numerator : numerator
+  const rounded = Number(
+    (abs * BigInt(2) + denominator) / (denominator * BigInt(2))
+  )
+  return (negative ? -rounded : rounded) + 0
+}
+
+/**
+ * What the document's discount takes off the rows, in cents: the rows after
+ * their own discounts less the same rows after the document's too. The PDF
+ * and the dialog print it as one line above the totals.
+ */
+export function docDiscountCents(
+  rows: readonly InvoiceRow[],
+  docDiscount: number | undefined
+): Cents {
+  if (docDiscount === undefined) return 0
+  return rows.reduce(
+    (sum, row) => sum + rowNet(row) - rowNet(row, docDiscount),
+    0
+  )
 }
 
 /** The rows that book as one entry: the same category and the same VAT rate. */
@@ -56,7 +92,10 @@ export interface InvoiceGroup {
  * VAT of a group is what `calcEntry` gives the entry the group becomes, so the
  * invoice and the VAT return always agree to the cent (§8.27).
  */
-export function invoiceGroups(rows: readonly InvoiceRow[]): InvoiceGroup[] {
+export function invoiceGroups(
+  rows: readonly InvoiceRow[],
+  docDiscount?: number
+): InvoiceGroup[] {
   const groups = new Map<string, InvoiceGroup>()
   for (const row of rows) {
     const key = `${row.catId}|${row.vatRate}`
@@ -66,7 +105,7 @@ export function invoiceGroups(rows: readonly InvoiceRow[]): InvoiceGroup[] {
       net: 0,
       vat: 0,
     }
-    group.net += rowNet(row)
+    group.net += rowNet(row, docDiscount)
     groups.set(key, group)
   }
   return [...groups.values()].map((group) => ({
@@ -93,9 +132,13 @@ export interface InvoiceTotals {
   rates: RateLine[]
 }
 
-export function invoiceTotals(rows: readonly InvoiceRow[]): InvoiceTotals {
+/** The totals of `rows`, after the document's discount when there is one. */
+export function invoiceTotals(
+  rows: readonly InvoiceRow[],
+  docDiscount?: number
+): InvoiceTotals {
   const byRate = new Map<number, RateLine>()
-  for (const group of invoiceGroups(rows)) {
+  for (const group of invoiceGroups(rows, docDiscount)) {
     const line = byRate.get(group.vatRate) ?? {
       vatRate: group.vatRate,
       net: 0,
@@ -169,7 +212,7 @@ export function creditedAmount(
 ): Cents {
   return invoices
     .filter((i) => i.credits === invoice.id && i.number !== null)
-    .reduce((sum, i) => sum - invoiceTotals(i.rows).gross, 0)
+    .reduce((sum, i) => sum - invoiceTotals(i.rows, i.discount).gross, 0)
 }
 
 /** What a credit note may still take off an invoice: its gross less what was credited. */
@@ -179,7 +222,8 @@ export function creditableAmount(
 ): Cents {
   return Math.max(
     0,
-    invoiceTotals(invoice.rows).gross - creditedAmount(invoice, invoices)
+    invoiceTotals(invoice.rows, invoice.discount).gross -
+      creditedAmount(invoice, invoices)
   )
 }
 
@@ -221,7 +265,7 @@ export function issueProblems(
   }
   if (invoice.rows.some((r) => !usable(r.catId))) problems.push("badCategory")
   problems.push(...vatProblems(invoice.rows, customer, settings.vatRegistered))
-  const gross = invoiceTotals(invoice.rows).gross
+  const gross = invoiceTotals(invoice.rows, invoice.discount).gross
   if (invoice.rows.length > 0 && (credit ? gross >= 0 : gross <= 0))
     problems.push("noTotal")
   if (invoice.dueDate < invoice.date) problems.push("dueBeforeDate")
@@ -305,7 +349,7 @@ export function buildIssue(input: IssueInput): IssueResult {
   const reference = finnishReference(number)
   if (reference === null) throw new Error("invoice number out of range")
   const seller = sellerOf(settings, business)
-  const groups = invoiceGroups(invoice.rows)
+  const groups = invoiceGroups(invoice.rows, invoice.discount)
   const split = groups.length > 1 ? input.makeId() : undefined
   const credit = invoice.credits !== null
   const word = (credit ? CREDIT_WORD : WORD)[invoice.language]
@@ -371,6 +415,7 @@ export function creditDraft(
     customer: { ...original.customer },
     language: original.language,
     rows: original.rows.map((r) => ({ ...r, quantityMilli: -r.quantityMilli })),
+    ...discountField(original.discount),
     note: "",
     /* The customer's accounts payable matches the credit to its invoice by these. */
     ...buyerRefs(original),

@@ -111,7 +111,7 @@ export async function issueInvoice(
     original !== undefined &&
     originalEntries.length > 0 &&
     originalOpen.length === originalEntries.length &&
-    owed === -invoiceTotals(draft.rows).gross &&
+    owed === -invoiceTotals(draft.rows, draft.discount).gross &&
     draft.date >= original.date &&
     !paidChangeHitsForm5(null, draft.date, state)
   const settledBefore = settled ? originalOpen : []

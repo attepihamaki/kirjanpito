@@ -1,11 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { PencilIcon } from "lucide-react"
+import { FileDownIcon, PencilIcon } from "lucide-react"
 
+import { DateInput } from "@/components/common/date-input"
 import { Money } from "@/components/common/money"
 import { useFormatters } from "@/components/lang-provider"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -22,8 +24,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useCommandCtx } from "@/hooks/use-commands"
+import { downloadStatementPdf } from "@/lib/commands/statement-commands"
 import { calcEntry } from "@/lib/domain/calc"
+import { customerStatement } from "@/lib/domain/customer-statement"
 import { todayIso } from "@/lib/domain/dates"
+import { isCustomer } from "@/lib/domain/invoice"
 import { partySummary } from "@/lib/domain/parties"
 import { indexCategories } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
@@ -173,6 +179,8 @@ function PartyView({ partyId }: { partyId: string }) {
           </p>
         )}
 
+        {isCustomer(party) ? <StatementSection partyId={party.id} /> : null}
+
         <DialogFooter>
           <Button
             variant="outline"
@@ -187,5 +195,103 @@ function PartyView({ partyId }: { partyId: string }) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/**
+ * The customer statement (§8.29): what is open today, or with "Näytä myös
+ * maksetut" every invoice of a period, and a PDF of it in the customer's
+ * language. Hidden while the customer has no issued invoice.
+ */
+function StatementSection({ partyId }: { partyId: string }) {
+  const f = useFormatters()
+  const ctx = useCommandCtx()
+  const invoices = useBookStore((s) => s.invoices)
+  const entries = useBookStore((s) => s.entries)
+  const year = useBookStore((s) => s.year)
+  const [includePaid, setIncludePaid] = React.useState(false)
+  const [from, setFrom] = React.useState(`${year}-01-01`)
+  const [to, setTo] = React.useState(`${year}-12-31`)
+  const [busy, setBusy] = React.useState(false)
+  const today = todayIso()
+  const options = {
+    today,
+    includePaid,
+    from: includePaid ? from || null : null,
+    to: includePaid ? to || null : null,
+  }
+  const byId = React.useMemo(
+    () => new Map(entries.map((e) => [e.id, e])),
+    [entries]
+  )
+  const statement = customerStatement(partyId, invoices, byId, options)
+  const invoiced = invoices.some(
+    (i) => i.customerId === partyId && i.number !== null
+  )
+  if (!invoiced) return null
+
+  return (
+    <section className="flex flex-col gap-2 rounded-lg border p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-medium">{f.t("statement.title")}</h3>
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox
+            checked={includePaid}
+            onCheckedChange={(v) => setIncludePaid(v === true)}
+          />
+          {f.t("statement.includePaid")}
+        </label>
+      </div>
+      {includePaid ? (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-muted-foreground">{f.t("statement.from")}</span>
+          <DateInput
+            className="w-36"
+            aria-label={f.t("statement.from")}
+            value={from}
+            onValueChange={setFrom}
+          />
+          <span className="text-muted-foreground">{f.t("statement.to")}</span>
+          <DateInput
+            className="w-36"
+            aria-label={f.t("statement.to")}
+            value={to}
+            onValueChange={setTo}
+          />
+        </div>
+      ) : null}
+      <p className="text-sm">
+        {statement.lines.length === 0
+          ? f.t("statement.empty")
+          : f.t(
+              statement.overdue !== 0
+                ? "statement.summaryOverdue"
+                : "statement.summary",
+              {
+                n: statement.lines.length,
+                o: f.money(statement.open),
+                d: f.money(statement.overdue),
+              }
+            )}
+      </p>
+      <div>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true)
+            try {
+              await downloadStatementPdf(ctx, partyId, options)
+            } finally {
+              setBusy(false)
+            }
+          }}
+        >
+          <FileDownIcon data-icon="inline-start" />
+          {f.t("statement.download")}
+        </Button>
+      </div>
+    </section>
   )
 }

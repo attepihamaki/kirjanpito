@@ -87,6 +87,22 @@ describe("invoices.json", () => {
     expect(read).not.toHaveProperty("orderNumber")
   })
 
+  it("round-trips row and invoice discounts and drops unreadable ones", () => {
+    const list = [
+      issued({
+        discount: 12.5,
+        rows: [{ ...issued().rows[0], discount: 10 }],
+      }),
+    ]
+    expect(parseInvoices(serializeInvoices(list)).invoices).toEqual(list)
+    const broken = JSON.parse(serializeInvoices(list))
+    broken.invoices[0].discount = 0
+    broken.invoices[0].rows[0].discount = 150
+    const read = parseInvoices(JSON.stringify(broken)).invoices[0]
+    expect(read).not.toHaveProperty("discount")
+    expect(read.rows[0]).not.toHaveProperty("discount")
+  })
+
   it("round-trips the reminders of an issued invoice and drops unreadable ones", () => {
     const reminder = {
       id: "r1",

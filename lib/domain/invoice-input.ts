@@ -17,3 +17,27 @@ export function formatQuantity(milli: number): string {
     .toLocaleString("fi-FI", { maximumFractionDigits: 3, useGrouping: false })
     .replace("−", "-")
 }
+
+/**
+ * Read a discount typed as a percent, `10` or `12,5` (§8.27). An empty field
+ * or a zero is no discount (`undefined`); anything that is not a percent up
+ * to 100, to two decimals, gives null.
+ */
+export function parseDiscount(input: string): number | undefined | null {
+  const text = input.trim().replace(",", ".").replace(/\s*%$/, "")
+  if (text === "") return undefined
+  if (!/^\d+(\.\d{1,2})?$/.test(text)) return null
+  const value = Number(text)
+  if (value === 0) return undefined
+  return value <= 100 ? value : null
+}
+
+/** A discount as it is typed: `12.5` is "12,5". */
+export function formatDiscount(value: number | undefined): string {
+  return value === undefined
+    ? ""
+    : value.toLocaleString("fi-FI", {
+        maximumFractionDigits: 2,
+        useGrouping: false,
+      })
+}

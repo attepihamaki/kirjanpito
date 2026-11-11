@@ -115,7 +115,9 @@ export function QuoteList() {
                     {f.date(quote.validUntil)}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Money cents={invoiceTotals(quote.rows).gross} />
+                    <Money
+                      cents={invoiceTotals(quote.rows, quote.discount).gross}
+                    />
                   </TableCell>
                   <TableCell>
                     <Pill tone={STATUS_TONE[status]}>{label[status]}</Pill>

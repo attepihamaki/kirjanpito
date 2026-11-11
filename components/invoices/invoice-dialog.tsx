@@ -54,6 +54,7 @@ import {
   BUYER_REF_MAX,
   buyerRefs,
   CUSTOMER_DEFAULTS,
+  discountField,
   isCustomer,
   emptyParty,
   type Customer,
@@ -66,11 +67,17 @@ import { addDays } from "@/lib/domain/dates"
 import { canCopy, productFromRow, productRow } from "@/lib/domain/invoice-draft"
 import { duplicateInvoice } from "@/lib/domain/invoice-duplicate"
 import {
+  docDiscountCents,
   invoiceTotals,
   isInvoiceCategory,
   rowNet,
 } from "@/lib/domain/invoice-calc"
-import { formatQuantity, parseQuantity } from "@/lib/domain/invoice-input"
+import {
+  formatDiscount,
+  formatQuantity,
+  parseDiscount,
+  parseQuantity,
+} from "@/lib/domain/invoice-input"
 import { invoiceLabels } from "@/lib/domain/invoice-labels"
 import { isZeroRated, rowSaleKind, vatNotes } from "@/lib/domain/invoice-vat"
 import { formatMoneyPlain } from "@/lib/domain/money"
@@ -88,6 +95,8 @@ interface RowDraft {
   quantity: string
   unit: string
   price: string
+  /** The row's discount percent as typed, "" for none. */
+  discount: string
   vatRate: number
   catId: string
 }
@@ -104,6 +113,7 @@ function blankRow(
     quantity: credit ? "-1" : "1",
     unit: "",
     price: "",
+    discount: "",
     vatRate: rateOnDate(rate, date),
     catId,
   }
@@ -116,6 +126,7 @@ function toDraft(row: InvoiceRow): RowDraft {
     quantity: formatQuantity(row.quantityMilli),
     unit: row.unit,
     price: formatMoneyPlain(row.unitCents),
+    discount: formatDiscount(row.discount),
     vatRate: row.vatRate,
     catId: row.catId,
   }
@@ -129,7 +140,9 @@ const isBlank = (r: RowDraft) =>
 function toRow(draft: RowDraft, credit: boolean): InvoiceRow | null {
   const quantityMilli = parseQuantity(draft.quantity, credit)
   const unitCents = evalAmount(draft.price)
+  const discount = parseDiscount(draft.discount)
   if (quantityMilli === null || unitCents === null || unitCents < 0) return null
+  if (discount === null) return null
   return {
     description: draft.description.trim(),
     quantityMilli,
@@ -137,6 +150,7 @@ function toRow(draft: RowDraft, credit: boolean): InvoiceRow | null {
     unitCents,
     vatRate: draft.vatRate,
     catId: draft.catId,
+    ...discountField(discount),
   }
 }
 
@@ -248,6 +262,9 @@ function InvoiceForm({
         ]
   )
   const [note, setNote] = React.useState(start?.note ?? "")
+  const [docDiscount, setDocDiscount] = React.useState(
+    formatDiscount(start?.discount)
+  )
   const [buyerReference, setBuyerReference] = React.useState(
     existing?.buyerReference ?? ""
   )
@@ -263,6 +280,7 @@ function InvoiceForm({
     language: React.useId(),
     buyerReference: React.useId(),
     orderNumber: React.useId(),
+    discount: React.useId(),
   }
 
   /* A seller outside the VAT register sells domestically only (`vatProblems`). */
@@ -281,7 +299,10 @@ function InvoiceForm({
       const row = toRow(r, credit)
       return row ? [row] : []
     })
-  const totals = invoiceTotals(readRows)
+  const docDiscountValue = parseDiscount(docDiscount)
+  const discountBad = docDiscountValue === null
+  const discount = docDiscountValue ?? undefined
+  const totals = invoiceTotals(readRows, discount)
   /* A hint only: it never stops the invoice being issued. */
   const lookalike =
     issued || quote
@@ -394,7 +415,7 @@ function InvoiceForm({
 
   /** Store the quote. Returns it, or null while the rows cannot be read. */
   const storeQuote = (): Quote | null => {
-    if (rowErrors.some(Boolean)) {
+    if (rowErrors.some(Boolean) || discountBad) {
       setShowErrors(true)
       return null
     }
@@ -410,6 +431,7 @@ function InvoiceForm({
       customer: cleanParty(),
       language,
       rows: readRows,
+      ...discountField(discount),
       note: note.trim(),
       outcome: existingQuote?.outcome ?? null,
       invoiceId: existingQuote?.invoiceId ?? null,
@@ -420,7 +442,7 @@ function InvoiceForm({
 
   /** Store the invoice as a draft. Returns it, or null while the rows cannot be read. */
   const saveDraft = (): Invoice | null => {
-    if (rowErrors.some(Boolean)) {
+    if (rowErrors.some(Boolean) || discountBad) {
       setShowErrors(true)
       return null
     }
@@ -436,6 +458,7 @@ function InvoiceForm({
       customer: cleanParty(),
       language,
       rows: readRows,
+      ...discountField(discount),
       note: note.trim(),
       ...buyerRefs({ buyerReference, orderNumber }),
       terms: "",
@@ -775,6 +798,22 @@ function InvoiceForm({
                         }
                       />
                     </Field>
+                    <Field className="w-16">
+                      <FieldLabel className="text-xs">
+                        {f.t("invoice.rowDiscount")}
+                      </FieldLabel>
+                      <Input
+                        aria-label={`${f.t("invoice.rowDiscount")} ${index + 1}`}
+                        inputMode="decimal"
+                        className="tabular text-right"
+                        disabled={issued}
+                        aria-invalid={bad || undefined}
+                        value={row.discount}
+                        onChange={(e) =>
+                          patchRow(row.key, { discount: e.target.value })
+                        }
+                      />
+                    </Field>
                     {registered ? (
                       <Field className="w-24">
                         <FieldLabel className="text-xs">
@@ -869,6 +908,24 @@ function InvoiceForm({
             ) : null}
           </section>
 
+          <Field className="max-w-48">
+            <FieldLabel htmlFor={ids.discount}>
+              {f.t("invoice.docDiscount")}
+            </FieldLabel>
+            <Input
+              id={ids.discount}
+              inputMode="decimal"
+              className="tabular text-right"
+              disabled={issued}
+              aria-invalid={(showErrors && discountBad) || undefined}
+              value={docDiscount}
+              onChange={(e) => setDocDiscount(e.target.value)}
+            />
+            {showErrors && discountBad ? (
+              <FieldError>{f.t("invoice.discountBad")}</FieldError>
+            ) : null}
+          </Field>
+
           <Field>
             <FieldLabel htmlFor={ids.note}>{f.t("invoice.note")}</FieldLabel>
             <Input
@@ -889,6 +946,16 @@ function InvoiceForm({
           ) : null}
 
           <dl className="ml-auto grid min-w-64 grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-sm">
+            {discount !== undefined ? (
+              <>
+                <dt className="text-muted-foreground">
+                  {f.t("invoice.totalDiscount", { p: f.rate(discount) })}
+                </dt>
+                <dd className="text-right">
+                  <Money cents={-docDiscountCents(readRows, discount)} />
+                </dd>
+              </>
+            ) : null}
             {registered ? (
               <>
                 <dt className="text-muted-foreground">

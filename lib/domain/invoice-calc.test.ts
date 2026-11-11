@@ -18,6 +18,7 @@ import {
   creditDraft,
   invoicesOfEntries,
   creditedAmount,
+  docDiscountCents,
   invoiceGroups,
   invoiceTotals,
   issueProblems,
@@ -83,6 +84,55 @@ describe("rowNet", () => {
     expect(rowNet({ quantityMilli: 1500, unitCents: 6000 })).toBe(9000)
     expect(rowNet({ quantityMilli: 333, unitCents: 1000 })).toBe(333)
     expect(rowNet({ quantityMilli: 1, unitCents: 1 })).toBe(0)
+  })
+})
+
+describe("discounts (§8.27)", () => {
+  it("takes the row's discount, then the document's, rounding once", () => {
+    expect(rowNet(row({ discount: 10 }))).toBe(9000)
+    expect(rowNet(row({ discount: 10 }), 10)).toBe(8100)
+    expect(rowNet(row(), 12.5)).toBe(8750)
+    /* 1,5 × 0,33 € less 50 % is 0,2475 €, which rounds once to 25 cents. */
+    expect(rowNet({ quantityMilli: 1500, unitCents: 33, discount: 50 })).toBe(
+      25
+    )
+    expect(rowNet(row({ quantityMilli: -1000, discount: 10 }))).toBe(-9000)
+    expect(rowNet(row({ discount: 100 }))).toBe(0)
+  })
+
+  it("totals and groups after the document's discount", () => {
+    const rows = [row(), row({ vatRate: 14, unitCents: 5000, discount: 20 })]
+    const totals = invoiceTotals(rows, 10)
+    expect(totals.net).toBe(9000 + 3600)
+    expect(totals.rates.map((r) => r.net)).toEqual([3600, 9000])
+    expect(invoiceGroups(rows, 10).map((g) => g.net)).toEqual([9000, 3600])
+    expect(docDiscountCents(rows, 10)).toBe(10_000 + 4000 - 12_600)
+    expect(docDiscountCents(rows, undefined)).toBe(0)
+  })
+
+  it("books the discounted amounts on issue, and a credit note keeps the discount", () => {
+    const discounted = draft({
+      rows: [row({ discount: 20 })],
+      discount: 5,
+    })
+    const { invoice, entries } = buildIssue({
+      invoice: discounted,
+      settings,
+      business,
+      invoices: [],
+      now: "2026-11-01T09:00:00.000Z",
+      makeId: createIdFactory("d"),
+    })
+    expect(entries.map((e) => e.amount)).toEqual([7600])
+    const credit = creditDraft(invoice, "c1", "2026-11-20")
+    expect(credit.discount).toBe(5)
+    expect(credit.rows[0].discount).toBe(20)
+    expect(invoiceTotals(credit.rows, credit.discount).gross).toBe(
+      -invoiceTotals(invoice.rows, invoice.discount).gross
+    )
+    expect(creditableAmount(invoice, [invoice])).toBe(
+      invoiceTotals(invoice.rows, invoice.discount).gross
+    )
   })
 })
 

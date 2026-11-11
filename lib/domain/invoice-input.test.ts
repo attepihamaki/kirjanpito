@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest"
 
-import { formatQuantity, parseQuantity } from "@/lib/domain/invoice-input"
+import {
+  formatDiscount,
+  formatQuantity,
+  parseDiscount,
+  parseQuantity,
+} from "@/lib/domain/invoice-input"
 
 describe("parseQuantity", () => {
   it.each([
@@ -54,5 +59,29 @@ describe("formatQuantity", () => {
 
   it("writes a negative quantity with an ASCII minus", () => {
     expect(formatQuantity(-1500)).toBe("-1,5")
+  })
+})
+
+describe("parseDiscount", () => {
+  it.each([
+    ["10", 10],
+    ["12,5", 12.5],
+    ["7.25 %", 7.25],
+    ["100", 100],
+  ])("reads %s as %d", (text, value) => {
+    expect(parseDiscount(text)).toBe(value)
+  })
+
+  it.each(["", "  ", "0", "0,00"])("reads %j as no discount", (text) => {
+    expect(parseDiscount(text)).toBeUndefined()
+  })
+
+  it.each(["101", "-5", "1,234", "abc"])("refuses %s", (text) => {
+    expect(parseDiscount(text)).toBeNull()
+  })
+
+  it("formats as it is typed", () => {
+    expect(formatDiscount(12.5)).toBe("12,5")
+    expect(formatDiscount(undefined)).toBe("")
   })
 })

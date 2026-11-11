@@ -134,7 +134,7 @@ export function RecurringInvoiceList() {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Money cents={invoiceTotals(r.rows).gross} />
+                    <Money cents={invoiceTotals(r.rows, r.discount).gross} />
                   </TableCell>
                   <TableCell className="tabular hidden sm:table-cell">
                     {made}
@@ -254,7 +254,7 @@ export function RecurringInvoiceDialog({
           <DialogDescription>
             {f.t("invoice.recurringDialogHint", {
               x: from.customer.name || "–",
-              n: f.money(invoiceTotals(from.rows).gross),
+              n: f.money(invoiceTotals(from.rows, from.discount).gross),
             })}
           </DialogDescription>
         </DialogHeader>

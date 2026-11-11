@@ -369,7 +369,11 @@ export function InvoiceList() {
                     {f.date(invoice.dueDate)}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Money cents={invoiceTotals(invoice.rows).gross} />
+                    <Money
+                      cents={
+                        invoiceTotals(invoice.rows, invoice.discount).gross
+                      }
+                    />
                     {partlyPaid(invoice, byId) ? (
                       <div className="text-xs text-muted-foreground">
                         {f.t("invoice.stillOwed", {

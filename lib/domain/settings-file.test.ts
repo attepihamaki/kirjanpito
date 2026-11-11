@@ -500,6 +500,7 @@ describe("overview layout", () => {
       "tax",
       "vat",
       "bank",
+      "cashflow",
       "months",
       "sales",
       "expenses",

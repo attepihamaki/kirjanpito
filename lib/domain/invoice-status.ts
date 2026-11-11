@@ -48,7 +48,7 @@ export function invoiceStatus(
 ): InvoiceStatus {
   if (invoice.number === null) return "draft"
   if (invoice.credits !== null) return "credit"
-  const gross = invoiceTotals(invoice.rows).gross
+  const gross = invoiceTotals(invoice.rows, invoice.discount).gross
   if (gross > 0 && creditedAmount(invoice, invoices) >= gross) return "credited"
   if (openEntries(invoice, byId).length === 0) return "paid"
   return invoice.dueDate < today ? "overdue" : "open"

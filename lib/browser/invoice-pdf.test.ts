@@ -5,6 +5,7 @@ import {
   renderInvoicePdf,
   renderQuotePdf,
   renderReminderPdf,
+  renderStatementPdf,
 } from "@/lib/browser/invoice-pdf"
 import { createIdFactory } from "@/lib/domain/id"
 import {
@@ -121,6 +122,16 @@ describe("renderInvoicePdf", () => {
     expect(bytes.length).toBeGreaterThan(plain.length)
   })
 
+  it("draws row discounts in their own column and the invoice's discount as a line", async () => {
+    const plain = await renderInvoicePdf(issued([row(1), row(2)]))
+    const discounted = issued([row(1, { discount: 10 }), row(2)], {
+      discount: 5,
+    })
+    const bytes = await renderInvoicePdf(discounted)
+    expect(await pages(bytes)).toBe(1)
+    expect(bytes.length).toBeGreaterThan(plain.length)
+  })
+
   it("draws the invoice without a barcode when the account is not Finnish", async () => {
     const invoice = issued([row(1)])
     invoice.seller = { ...invoice.seller!, iban: "DE89370400440532013000" }
@@ -215,5 +226,54 @@ describe("renderQuotePdf (§8.34)", () => {
     expect(doc.getTitle()).toBe("Quotation 3")
     /* No barcode or QR code to draw, so the file is smaller than the invoice. */
     expect(bytes.length).toBeLessThan((await renderInvoicePdf(invoice)).length)
+  })
+})
+
+describe("renderStatementPdf (§8.29)", () => {
+  const invoice = issued([row(1)])
+  const line = (number: number, over = {}) => ({
+    invoiceId: `i${number}`,
+    number,
+    credit: false,
+    date: "2026-10-01",
+    dueDate: "2026-10-15",
+    total: 15_000,
+    paid: 5000,
+    open: 10_000,
+    overdueDays: 26,
+    ...over,
+  })
+
+  it("draws open invoices in both languages, over pages when long", async () => {
+    for (const language of ["fi", "en"] as const) {
+      const lines = [
+        line(1001),
+        line(1002, { credit: true, dueDate: null, overdueDays: 0 }),
+      ]
+      const bytes = await renderStatementPdf(
+        { lines, total: 30_000, paid: 10_000, open: 20_000, overdue: 10_000 },
+        invoice.customer,
+        invoice.seller!,
+        language,
+        { today: "2026-11-10", includePaid: false, from: null, to: null }
+      )
+      const doc = await PDFDocument.load(bytes)
+      expect(doc.getPageCount()).toBe(1)
+      expect(doc.getTitle()).toBe(language === "fi" ? "TILIOTE" : "STATEMENT")
+    }
+    const many = Array.from({ length: 80 }, (_, i) => line(1000 + i))
+    const bytes = await renderStatementPdf(
+      { lines: many, total: 0, paid: 0, open: 0, overdue: 0 },
+      invoice.customer,
+      invoice.seller!,
+      "fi",
+      {
+        today: "2026-11-10",
+        includePaid: true,
+        from: "2026-01-01",
+        to: null,
+      }
+    )
+    expect(await pages(bytes)).toBeGreaterThan(1)
   })
 })

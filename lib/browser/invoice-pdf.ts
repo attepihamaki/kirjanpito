@@ -11,14 +11,24 @@ import { code128C } from "@/lib/domain/code128"
 import { daysBetween, formatDate } from "@/lib/domain/dates"
 import { formatIban } from "@/lib/domain/iban"
 import type {
+  CustomerStatement,
+  StatementOptions,
+} from "@/lib/domain/customer-statement"
+import type {
   BuyerRefs,
   Invoice,
+  InvoiceLang,
   InvoiceRow,
+  Party,
   Quote,
   Reminder,
   Seller,
 } from "@/lib/domain/invoice"
-import { invoiceTotals, rowNet } from "@/lib/domain/invoice-calc"
+import {
+  docDiscountCents,
+  invoiceTotals,
+  rowNet,
+} from "@/lib/domain/invoice-calc"
 import { virtualBarcode } from "@/lib/domain/invoice-barcode"
 import { epcPayload } from "@/lib/domain/invoice-epc"
 import { formatReference } from "@/lib/domain/invoice-reference"
@@ -30,6 +40,7 @@ import {
 import {
   invoiceLabels,
   reminderLabels,
+  statementLabels,
   type InvoiceLabels,
 } from "@/lib/domain/invoice-labels"
 import { toWinAnsi } from "@/lib/domain/memo-voucher"
@@ -247,14 +258,16 @@ function drawSlip(
   c: Cursor,
   invoice: Pick<
     Invoice,
-    "seller" | "rows" | "dueDate" | "reference" | "language"
+    "seller" | "rows" | "dueDate" | "reference" | "language" | "discount"
   >,
   labels: InvoiceLabels,
   pay?: { cents: number; dueDate: string }
 ): void {
   const { page, fonts } = c
   const seller = invoice.seller!
-  const totals = { gross: pay?.cents ?? invoiceTotals(invoice.rows).gross }
+  const totals = {
+    gross: pay?.cents ?? invoiceTotals(invoice.rows, invoice.discount).gross,
+  }
   const dueDate = pay?.dueDate ?? invoice.dueDate
   const reference = invoice.reference!
   const left = MARGIN
@@ -395,6 +408,7 @@ type SaleDocument = Pick<
   | "issuedAt"
   | "buyerReference"
   | "orderNumber"
+  | "discount"
 > & { seller: Seller; number: number }
 
 async function drawSale(
@@ -492,14 +506,29 @@ async function drawSale(
   }
   c.y -= 14
 
-  /* The rows. The last page keeps the slip's room clear. */
-  const columns = {
-    description: MARGIN,
-    quantity: 300,
-    unitPrice: 395,
-    vat: 440,
-    amount: RIGHT,
-  }
+  /*
+   * The rows. The last page keeps the slip's room clear. A discount column
+   * appears only when a row has a discount, and narrows the description.
+   */
+  const discounted = invoice.rows.some((row) => row.discount !== undefined)
+  const columns = discounted
+    ? {
+        description: MARGIN,
+        quantity: 265,
+        unitPrice: 345,
+        discount: 390,
+        vat: 440,
+        amount: RIGHT,
+      }
+    : {
+        description: MARGIN,
+        quantity: 300,
+        unitPrice: 395,
+        discount: 0,
+        vat: 440,
+        amount: RIGHT,
+      }
+  const descriptionWidth = discounted ? 210 : 250
   const header = () => {
     put(c.page, fonts, labels.description, columns.description, c.y - 8, {
       size: 8,
@@ -522,6 +551,12 @@ async function drawSale(
         align: "right",
       }
     )
+    if (discounted)
+      put(c.page, fonts, labels.discountRate, columns.discount, c.y - 8, {
+        size: 8,
+        color: MUTED,
+        align: "right",
+      })
     if (registered)
       put(c.page, fonts, labels.vatRate, columns.vat, c.y - 8, {
         size: 8,
@@ -541,7 +576,7 @@ async function drawSale(
   }
   header()
   for (const row of invoice.rows) {
-    const lines = wrap(row.description, fonts.regular, 10, 250)
+    const lines = wrap(row.description, fonts.regular, 10, descriptionWidth)
     const height = lines.length * 13.5 + 4
     if (c.y - height < MARGIN) {
       c.page = doc.addPage(A4)
@@ -569,6 +604,10 @@ async function drawSale(
       base,
       { align: "right" }
     )
+    if (discounted && row.discount !== undefined)
+      put(c.page, fonts, percent(row.discount), columns.discount, base, {
+        align: "right",
+      })
     if (registered)
       put(
         c.page,
@@ -590,12 +629,32 @@ async function drawSale(
    * totals but have no rate line, and a seller outside the VAT register shows
    * the total alone.
    */
-  const totals = invoiceTotals(invoice.rows)
+  const totals = invoiceTotals(invoice.rows, invoice.discount)
   const charged = invoice.rows.filter((row) => !reverse(row))
-  const rates = registered ? invoiceTotals(charged).rates : []
+  const rates = registered ? invoiceTotals(charged, invoice.discount).rates : []
   const showVat = registered && charged.length > 0
-  const totalsHeight = (rates.length + 4) * 14 + 30
+  const totalsHeight = (rates.length + 5) * 14 + 30
   ensure(c, totalsHeight, MARGIN)
+  /* The rows print their amounts before the document's discount, which takes its own line. */
+  if (invoice.discount !== undefined) {
+    put(
+      c.page,
+      fonts,
+      labels.docDiscount(percent(invoice.discount)),
+      330,
+      c.y - 9,
+      { size: 9, color: MUTED }
+    )
+    put(
+      c.page,
+      fonts,
+      formatMoneyPlain(-docDiscountCents(invoice.rows, invoice.discount)),
+      RIGHT,
+      c.y - 9,
+      { size: 9, align: "right" }
+    )
+    c.y -= 15
+  }
   for (const line of rates) {
     put(
       c.page,
@@ -783,5 +842,157 @@ export async function renderReminderPdf(
   })
 
   drawSlip(c, invoice, labels, { cents: total, dueDate: reminder.newDueDate })
+  return doc.save()
+}
+
+/**
+ * A customer statement (§8.29): the seller, the customer, what the statement
+ * covers and one line per invoice or credit note, with the open total and how
+ * to pay it. It has no payment slip, since each invoice keeps its own
+ * reference.
+ */
+export async function renderStatementPdf(
+  statement: CustomerStatement,
+  customer: Party,
+  seller: Seller,
+  lang: InvoiceLang,
+  options: StatementOptions
+): Promise<Uint8Array> {
+  const labels = invoiceLabels(lang)
+  const words = statementLabels(lang)
+  const doc = await PDFDocument.create()
+  doc.setTitle(toWinAnsi(words.title))
+  doc.setCreator("Kirjanpito")
+  const fonts: Fonts = {
+    regular: await doc.embedFont(StandardFonts.Helvetica),
+    bold: await doc.embedFont(StandardFonts.HelveticaBold),
+  }
+  const c: Cursor = { doc, page: doc.addPage(A4), fonts, y: A4[1] - MARGIN }
+
+  const top = c.y
+  paragraph(c, seller.name, MARGIN, 260, { size: 14, bold: true })
+  for (const line of partyLines(seller, seller.businessId, labels).slice(1)) {
+    paragraph(c, line, MARGIN, 260, { size: 9, color: MUTED })
+  }
+  const sellerBottom = c.y
+  c.y = top
+  put(c.page, fonts, words.title, RIGHT, c.y - 14, {
+    size: 16,
+    bold: true,
+    align: "right",
+  })
+  c.y -= 26
+  put(c.page, fonts, words.date, 330, c.y - 9, { size: 8, color: MUTED })
+  putFact(c.page, fonts, formatDate(options.today, lang), c.y - 9)
+  c.y -= 14
+  c.y = Math.min(c.y, sellerBottom) - 14
+
+  paragraph(c, labels.buyer, MARGIN, 260, { size: 8, color: MUTED })
+  paragraph(c, customer.name, MARGIN, 260, { bold: true })
+  for (const line of partyLines(customer, null, labels).slice(1)) {
+    paragraph(c, line, MARGIN, 260, { size: 9 })
+  }
+  c.y -= 14
+  const date = (iso: string | null) => (iso ? formatDate(iso, lang) : null)
+  paragraph(
+    c,
+    options.includePaid
+      ? words.periodScope(date(options.from), date(options.to))
+      : words.openScope(formatDate(options.today, lang)),
+    MARGIN,
+    RIGHT - MARGIN,
+    { bold: true }
+  )
+  c.y -= 8
+
+  const columns = {
+    invoice: MARGIN,
+    date: 130,
+    due: 205,
+    total: 380,
+    paid: 455,
+    open: RIGHT,
+  }
+  const header = () => {
+    const head = { size: 8, color: MUTED }
+    const right = { ...head, align: "right" as const }
+    put(c.page, fonts, words.invoice, columns.invoice, c.y - 8, head)
+    put(c.page, fonts, words.invoiceDate, columns.date, c.y - 8, head)
+    put(c.page, fonts, words.dueDate, columns.due, c.y - 8, head)
+    put(c.page, fonts, words.total, columns.total, c.y - 8, right)
+    put(c.page, fonts, words.paid, columns.paid, c.y - 8, right)
+    put(c.page, fonts, words.open, columns.open, c.y - 8, right)
+    c.y -= 12
+    rule(c)
+  }
+  header()
+  if (statement.lines.length === 0) {
+    paragraph(c, words.none, MARGIN, RIGHT - MARGIN, { color: MUTED })
+  }
+  for (const line of statement.lines) {
+    if (c.y - 16 < MARGIN) {
+      c.page = doc.addPage(A4)
+      c.y = A4[1] - MARGIN
+      header()
+    }
+    const base = c.y - 10
+    put(
+      c.page,
+      fonts,
+      line.credit
+        ? `${line.number} (${words.creditNote})`
+        : String(line.number),
+      columns.invoice,
+      base
+    )
+    put(c.page, fonts, formatDate(line.date, lang), columns.date, base)
+    if (line.dueDate !== null) {
+      put(c.page, fonts, formatDate(line.dueDate, lang), columns.due, base)
+      if (line.overdueDays > 0)
+        put(c.page, fonts, words.overdueDays(line.overdueDays), 265, base, {
+          size: 8,
+          color: MUTED,
+        })
+    }
+    put(c.page, fonts, formatMoneyPlain(line.total), columns.total, base, {
+      align: "right",
+    })
+    put(c.page, fonts, formatMoneyPlain(line.paid), columns.paid, base, {
+      align: "right",
+    })
+    put(c.page, fonts, formatMoneyPlain(line.open), columns.open, base, {
+      align: "right",
+      bold: line.overdueDays > 0,
+    })
+    c.y -= 16
+  }
+  rule(c)
+
+  ensure(c, 80, MARGIN)
+  put(c.page, fonts, words.openTotal, 330, c.y - 12, { size: 12, bold: true })
+  put(c.page, fonts, formatMoneyPlain(statement.open), RIGHT, c.y - 12, {
+    size: 12,
+    bold: true,
+    align: "right",
+  })
+  c.y -= 20
+  if (statement.overdue !== 0) {
+    put(c.page, fonts, words.overdueTotal, 330, c.y - 9, { size: 9 })
+    put(c.page, fonts, formatMoneyPlain(statement.overdue), RIGHT, c.y - 9, {
+      size: 9,
+      align: "right",
+    })
+    c.y -= 15
+  }
+  c.y -= 10
+  if (statement.open > 0 && seller.iban) {
+    paragraph(
+      c,
+      words.howToPay(formatIban(seller.iban)),
+      MARGIN,
+      RIGHT - MARGIN,
+      { size: 9, color: MUTED }
+    )
+  }
   return doc.save()
 }

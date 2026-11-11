@@ -190,9 +190,36 @@ export interface InvoiceRow {
   vatRate: number
   /** The income category the row books on. */
   catId: string
+  /** The row's discount in percent (§8.27). Absent while the row has none. */
+  discount?: number
 }
 
-export interface Invoice extends BuyerRefs {
+/**
+ * A discount over the whole document in percent, taken off every row after
+ * the row's own (§8.27). Absent while there is none, so a document without
+ * one is written as it was before discounts existed.
+ */
+export interface DocDiscount {
+  discount?: number
+}
+
+/** Whether `value` can be a discount: above 0, at most 100, to two decimals. */
+function isDiscount(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value > 0 &&
+    value <= 100 &&
+    Math.abs(Math.round(value * 100) - value * 100) < 1e-6
+  )
+}
+
+/** `{ discount }` when it is a discount, `{}` otherwise, for spreading into a row or a document. */
+export function discountField(value: unknown): { discount?: number } {
+  return isDiscount(value) ? { discount: Math.round(value * 100) / 100 } : {}
+}
+
+export interface Invoice extends BuyerRefs, DocDiscount {
   id: string
   /** The invoice number, or null while it is a draft. */
   number: number | null
@@ -256,7 +283,7 @@ export const RECURRING_EVERY = [1, 2, 3, 6, 12] as const
  * when the app opens on or after `next`, the template becomes a draft to
  * review, and `next` moves on by `every` months.
  */
-export interface RecurringInvoice extends BuyerRefs {
+export interface RecurringInvoice extends BuyerRefs, DocDiscount {
   id: string
   /** The register customer, whose current details each draft takes, or null for one typed in. */
   customerId: string | null
@@ -318,7 +345,7 @@ export type QuoteOutcome = "accepted" | "declined"
  * until a date. It is not a voucher and books nothing; accepting it makes an
  * invoice draft with the same rows.
  */
-export interface Quote {
+export interface Quote extends DocDiscount {
   id: string
   /** The quote's own number, from a series of its own starting at 1. */
   number: number

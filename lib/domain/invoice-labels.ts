@@ -27,6 +27,10 @@ export interface InvoiceLabels {
   /** The unit price heading of a seller outside the VAT register, which says nothing of VAT. */
   unitPricePlain: string
   vatRate: string
+  /** The row discount column's heading. */
+  discountRate: string
+  /** The line of the whole document's discount, with its percent. */
+  docDiscount: (percent: string) => string
   amount: string
   amountPlain: string
   vatBase: string
@@ -76,6 +80,8 @@ const LABELS: Record<InvoiceLang, InvoiceLabels> = {
     unitPrice: "À-hinta (alv 0 %)",
     unitPricePlain: "À-hinta",
     vatRate: "ALV %",
+    discountRate: "Ale %",
+    docDiscount: (p) => `Alennus ${p} %`,
     amount: "Yhteensä (alv 0 %)",
     amountPlain: "Yhteensä",
     vatBase: "Veroton",
@@ -124,6 +130,8 @@ const LABELS: Record<InvoiceLang, InvoiceLabels> = {
     unitPrice: "Unit price (excl. VAT)",
     unitPricePlain: "Unit price",
     vatRate: "VAT %",
+    discountRate: "Disc. %",
+    docDiscount: (p) => `Discount ${p} %`,
     amount: "Total (excl. VAT)",
     amountPlain: "Total",
     vatBase: "Net",
@@ -231,4 +239,90 @@ const REMINDER_LABELS: Record<InvoiceLang, ReminderLabels> = {
 
 export function reminderLabels(lang: InvoiceLang): ReminderLabels {
   return REMINDER_LABELS[lang]
+}
+
+/** The words printed on a customer statement, in the customer's language (§8.29). */
+export interface StatementLabels {
+  title: string
+  date: string
+  /** The line under the buyer saying what the statement covers. */
+  openScope: (date: string) => string
+  periodScope: (from: string | null, to: string | null) => string
+  invoice: string
+  invoiceDate: string
+  dueDate: string
+  total: string
+  paid: string
+  open: string
+  creditNote: string
+  overdueDays: (days: number) => string
+  openTotal: string
+  overdueTotal: string
+  /** How to pay what is open: each invoice with its own reference. */
+  howToPay: (iban: string) => string
+  none: string
+  fileName: (customer: string, date: string) => string
+}
+
+const STATEMENT_LABELS: Record<InvoiceLang, StatementLabels> = {
+  fi: {
+    title: "TILIOTE",
+    date: "Päivämäärä",
+    openScope: (date) => `Avoimet laskut ${date}`,
+    periodScope: (from, to) =>
+      from && to
+        ? `Laskut ${from}–${to}`
+        : from
+          ? `Laskut ${from} alkaen`
+          : to
+            ? `Laskut ${to} asti`
+            : "Kaikki laskut",
+    invoice: "Lasku",
+    invoiceDate: "Päiväys",
+    dueDate: "Eräpäivä",
+    total: "Summa",
+    paid: "Maksettu",
+    open: "Avoinna",
+    creditNote: "hyvitys",
+    overdueDays: (days) => `${days} pv myöhässä`,
+    openTotal: "Avoinna yhteensä",
+    overdueTotal: "Josta erääntynyt",
+    howToPay: (iban) =>
+      `Maksathan avoimet laskut tilille ${iban} kunkin laskun omalla viitenumerolla. Jos olet jo maksanut, tämä tiliote ei vaadi toimenpiteitä.`,
+    none: "Ei laskuja.",
+    fileName: (customer, date) =>
+      `Tiliote ${date} - ${customer.trim() || "asiakas"}.pdf`,
+  },
+  en: {
+    title: "STATEMENT",
+    date: "Date",
+    openScope: (date) => `Open invoices on ${date}`,
+    periodScope: (from, to) =>
+      from && to
+        ? `Invoices from ${from} to ${to}`
+        : from
+          ? `Invoices from ${from}`
+          : to
+            ? `Invoices up to ${to}`
+            : "All invoices",
+    invoice: "Invoice",
+    invoiceDate: "Date",
+    dueDate: "Due",
+    total: "Amount",
+    paid: "Paid",
+    open: "Open",
+    creditNote: "credit",
+    overdueDays: (days) => `${days} days overdue`,
+    openTotal: "Total open",
+    overdueTotal: "Of which overdue",
+    howToPay: (iban) =>
+      `Please pay the open invoices to ${iban}, each with its own reference number. If you have already paid, no action is needed.`,
+    none: "No invoices.",
+    fileName: (customer, date) =>
+      `Statement ${date} - ${customer.trim() || "customer"}.pdf`,
+  },
+}
+
+export function statementLabels(lang: InvoiceLang): StatementLabels {
+  return STATEMENT_LABELS[lang]
 }
