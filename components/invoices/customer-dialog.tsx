@@ -24,6 +24,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { LINE_BY_KEY } from "@/lib/domain/accounts"
 import { looksLikeVatId } from "@/lib/domain/ec-sales"
+import { billIban } from "@/lib/domain/bill-payment"
+import { formatIban } from "@/lib/domain/iban"
 import { uid } from "@/lib/domain/id"
 import {
   emptyParty,
@@ -85,8 +87,12 @@ function CustomerForm({
   const [rate, setRate] = React.useState(
     existing?.vatRate == null ? "" : String(existing.vatRate)
   )
+  const [iban, setIban] = React.useState(
+    existing?.iban ? formatIban(existing.iban) : ""
+  )
   const [showErrors, setShowErrors] = React.useState(false)
   const termId = React.useId()
+  const ibanId = React.useId()
 
   const sells = role !== "supplier"
   const buys = role !== "customer"
@@ -95,6 +101,8 @@ function CustomerForm({
   const termBad =
     termValue !== null &&
     (!Number.isInteger(termValue) || termValue < 0 || termValue > 365)
+  const ibanValue = iban.trim() === "" ? null : billIban(iban)
+  const ibanBad = buys && iban.trim() !== "" && ibanValue === null
 
   /* Enabled categories on one side, plus the one already chosen. */
   const catOptions = (side: EntryType, chosen: string) => [
@@ -117,7 +125,7 @@ function CustomerForm({
   ]
 
   const save = () => {
-    if (nameMissing || (sells && termBad)) {
+    if (nameMissing || termBad || ibanBad) {
       setShowErrors(true)
       return
     }
@@ -129,10 +137,11 @@ function CustomerForm({
       id: existing?.id ?? uid(),
       role,
       language,
-      termDays: sells ? termValue : (existing?.termDays ?? null),
+      termDays: termValue,
       incomeCat: sells && incomeCat ? incomeCat : null,
       expenseCat: buys && expenseCat ? expenseCat : null,
       vatRate: rate === "" ? null : Number(rate),
+      ...(buys && ibanValue ? { iban: ibanValue } : {}),
     }
     setCustomers(
       existing
@@ -192,8 +201,8 @@ function CustomerForm({
         {vatIdBad ? (
           <p className="-mt-2 text-sm text-warning">{f.t("party.vatIdBad")}</p>
         ) : null}
-        {sells ? (
-          <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2">
+          {sells ? (
             <Field>
               <div className="flex min-h-6 items-center">
                 <FieldLabel>{f.t("invoice.customerLanguage")}</FieldLabel>
@@ -208,26 +217,53 @@ function CustomerForm({
                 ]}
               />
             </Field>
-            <Field>
-              <div className="flex min-h-6 items-center gap-1">
-                <FieldLabel htmlFor={termId}>
-                  {f.t("invoice.customerTerm")}
-                </FieldLabel>
-                <InfoPopover label={f.t("invoice.customerTerm")}>
-                  {f.t("invoice.customerTermHint")}
-                </InfoPopover>
+          ) : null}
+          <Field>
+            <div className="flex min-h-6 items-center gap-1">
+              <FieldLabel htmlFor={termId}>
+                {f.t("invoice.customerTerm")}
+              </FieldLabel>
+              <InfoPopover label={f.t("invoice.customerTerm")}>
+                {f.t(
+                  role === "supplier"
+                    ? "party.supplierTermHint"
+                    : role === "both"
+                      ? "party.bothTermHint"
+                      : "invoice.customerTermHint"
+                )}
+              </InfoPopover>
+            </div>
+            <Input
+              id={termId}
+              inputMode="numeric"
+              className="tabular"
+              aria-invalid={(showErrors && termBad) || undefined}
+              value={term}
+              onChange={(e) => setTerm(e.target.value)}
+            />
+          </Field>
+          {buys ? (
+            <Field data-invalid={(showErrors && ibanBad) || undefined}>
+              <div className="flex min-h-6 items-center">
+                <FieldLabel htmlFor={ibanId}>{f.t("party.iban")}</FieldLabel>
               </div>
               <Input
-                id={termId}
-                inputMode="numeric"
+                id={ibanId}
+                autoComplete="off"
+                spellCheck={false}
                 className="tabular"
-                aria-invalid={(showErrors && termBad) || undefined}
-                value={term}
-                onChange={(e) => setTerm(e.target.value)}
+                aria-invalid={(showErrors && ibanBad) || undefined}
+                value={iban}
+                onChange={(e) => setIban(e.target.value.toUpperCase())}
               />
+              {showErrors && ibanBad ? (
+                <FieldDescription className="text-destructive">
+                  {f.t("entry.ibanBad")}
+                </FieldDescription>
+              ) : null}
             </Field>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
         <FieldSet>
           <FieldLegend variant="label">{f.t("party.defaults")}</FieldLegend>
           <FieldDescription>{f.t("party.defaultsHint")}</FieldDescription>

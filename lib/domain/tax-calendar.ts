@@ -1,5 +1,8 @@
 import { instalmentAmounts, paidMonths } from "@/lib/domain/advance-tax"
+import { LINE_BY_KEY } from "@/lib/domain/accounts"
+import { calcEntry } from "@/lib/domain/calc"
 import { ecSales } from "@/lib/domain/ec-sales"
+import { canBeUnpaid } from "@/lib/domain/open-items"
 import { isoDate, monthOf, yearOf } from "@/lib/domain/dates"
 import { retentionDates } from "@/lib/domain/retention"
 import { form5Due } from "@/lib/domain/tax-return-deadline"
@@ -59,6 +62,7 @@ export type CalendarKind =
   | "advanceTax"
   | "retentionVouchers"
   | "retentionBooks"
+  | "bill"
 
 export interface CalendarEvent {
   /** Stable across exports, so a calendar app updates an event in place. */
@@ -74,8 +78,10 @@ export interface CalendarEvent {
   ref: string
   /** Already dealt with: a return marked as filed, an instalment booked. */
   done: boolean
-  /** What an advance tax instalment comes to, when the decision is entered. */
+  /** What an advance tax instalment or a bill comes to. */
   amount?: Cents
+  /** A bill's description, as the voucher has it. */
+  label?: string
 }
 
 export interface CalendarInput {
@@ -212,9 +218,48 @@ export function taxCalendar(input: CalendarInput): CalendarEvent[] {
     })
   }
 
+  out.push(...billEvents(input.entries, input.cats, year))
+
   return out.sort(
     (a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id)
   )
+}
+
+/**
+ * The due dates of bills received in the year (§8.30), one per voucher with
+ * the parts of a split receipt together, done once every part is paid. The
+ * date is the bill's own: a supplier's due date is not moved off a weekend.
+ */
+function billEvents(
+  entries: readonly Entry[],
+  cats: CategoryMap,
+  year: number
+): CalendarEvent[] {
+  const bills = new Map<string, Entry[]>()
+  for (const e of entries) {
+    if (e.type !== "expense" || !e.due || yearOf(e.due) !== year) continue
+    const cat = cats.get(e.catId)
+    if (!canBeUnpaid(cat && LINE_BY_KEY.get(cat.line))) continue
+    const key = e.split ? `split:${e.split}` : e.id
+    bills.set(key, [...(bills.get(key) ?? []), e])
+  }
+  return [...bills.values()].map((parts) => {
+    const lead = parts[0]
+    const due = parts.map((e) => e.due!).sort()[0]
+    const open = parts.filter((e) => e.paidOn === null)
+    return {
+      id: `bill-${lead.id}`,
+      kind: "bill" as const,
+      date: due,
+      ref: lead.id,
+      done: open.length === 0,
+      amount: (open.length ? open : parts).reduce(
+        (sum, e) => sum + calcEntry(e).gross,
+        0
+      ),
+      label: lead.description,
+    }
+  })
 }
 
 /* -------------------------------------------------------------------------

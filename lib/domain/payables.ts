@@ -1,4 +1,5 @@
 import { LINE_BY_KEY } from "@/lib/domain/accounts"
+import { billBarcode } from "@/lib/domain/bill-payment"
 import { calcEntry } from "@/lib/domain/calc"
 import { daysBetween } from "@/lib/domain/dates"
 import { canBeUnpaid } from "@/lib/domain/open-items"
@@ -44,6 +45,11 @@ export interface Payable {
   /** Whole days past the due date, 0 when not past it. */
   daysLate: number
   group: PayableGroup
+  /** The payee's IBAN and the reference, from the first part that has them. */
+  iban?: string
+  reference?: string
+  /** The virtual barcode for what is still to pay, when the details make one. */
+  barcode?: string
 }
 
 export interface PayablesReport {
@@ -101,6 +107,10 @@ export function payablesReport(
       .filter((d): d is string => !!d)
       .sort()[0]
     const group = payableGroup(due, today)
+    const iban = parts.find((e) => e.iban)?.iban
+    const reference = parts.find((e) => e.reference)?.reference
+    const barcode =
+      open > 0 ? billBarcode({ ...lead, iban, reference, due }, open) : null
     items.push({
       entries: parts,
       lead,
@@ -108,6 +118,9 @@ export function payablesReport(
       ...(due ? { due } : {}),
       daysLate: due ? Math.max(0, daysBetween(due, today)) : 0,
       group,
+      ...(iban ? { iban } : {}),
+      ...(reference ? { reference } : {}),
+      ...(barcode ? { barcode } : {}),
     })
     totals[group] += open
     total += open

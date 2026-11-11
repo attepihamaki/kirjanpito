@@ -50,6 +50,7 @@ function reportInput(state: BookState, year: number): VatReturnInput {
     bookStart: state.bookStart,
     vatFiled: state.vatFiled,
     vatFiledFigures: state.vatFiledFigures,
+    vatCash: state.vatCash,
     year,
     entries: state.entries,
     cats: state.cats,

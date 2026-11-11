@@ -95,6 +95,7 @@ export async function exportAuditPackage(
         exportLang: now.exportLang,
         vatFiled: now.vatFiled,
         vatFiledFigures: now.vatFiledFigures,
+        vatCash: now.vatCash,
         vatPeriod: now.vatPeriod,
         bookStart: now.bookStart,
       },

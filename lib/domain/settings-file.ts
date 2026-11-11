@@ -47,6 +47,7 @@ import {
   type SalesKind,
 } from "@/lib/domain/types"
 import type { TraderType } from "@/lib/domain/open-items"
+import type { VatCashBasis } from "@/lib/domain/vat-basis"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 import type { ArchiveStub } from "@/lib/domain/year-archive"
 
@@ -99,6 +100,8 @@ export interface BookSettings {
   bookStart: string | null
   /** `"2027-03"`: the month the business stopped trading (§6.5), or null while it trades. */
   bookEnd: string | null
+  /** The months VAT is reported on payment (§6.16); absent or null for none. */
+  vatCash?: VatCashBasis | null
   /** Period key (`"2026-09"`, `"2026-Q3"`, `"2026"`) → ISO date it was marked. */
   vatFiled: Record<string, string>
   /** Period key → the return's figures on the day it was marked (§6.5). */
@@ -401,6 +404,21 @@ export function parseSettings(text: string): ParsedSettings {
   else if (typeof raw.bookEnd === "string" && MONTH.test(raw.bookEnd)) {
     out.bookEnd = raw.bookEnd
   }
+  if (raw.vatCash === null) out.vatCash = null
+  else if (
+    isRecord(raw.vatCash) &&
+    typeof raw.vatCash.from === "string" &&
+    MONTH.test(raw.vatCash.from)
+  ) {
+    const to = raw.vatCash.to
+    out.vatCash = {
+      from: raw.vatCash.from,
+      to:
+        typeof to === "string" && MONTH.test(to) && to >= raw.vatCash.from
+          ? to
+          : null,
+    }
+  }
   if (isRecord(raw.vatFiled)) {
     const filed: Record<string, string> = {}
     for (const [key, date] of Object.entries(raw.vatFiled)) {
@@ -678,6 +696,7 @@ export function serializeSettings(s: BookSettings): string {
     hiddenFeatures: [...s.hiddenFeatures],
     bookStart: s.bookStart,
     bookEnd: s.bookEnd,
+    vatCash: s.vatCash ?? null,
     vatFiled: Object.fromEntries(
       Object.entries(s.vatFiled).sort(([a], [b]) => a.localeCompare(b))
     ),

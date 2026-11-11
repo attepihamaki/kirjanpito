@@ -21,6 +21,7 @@ import { isPeriod } from "@/lib/domain/accrual"
 import { parseCsvDate, yearOf } from "@/lib/domain/dates"
 import { canBeEuPurchase, isEuSaleKind } from "@/lib/domain/accounts"
 import { canBeUnpaid } from "@/lib/domain/open-items"
+import { billIban, billReference } from "@/lib/domain/bill-payment"
 import { uid } from "@/lib/domain/id"
 import {
   formatAmountForCsv,
@@ -240,6 +241,8 @@ export function serializeCsv(
         e.periodTo ?? "",
         e.party && PARTY_ID.test(e.party) ? e.party : "",
         e.due ?? "",
+        e.iban ?? "",
+        e.reference ?? "",
       ]
         .map(quote)
         .join(";")
@@ -614,6 +617,7 @@ export function parseCsv(
       ...periodColumns(get("period_from"), get("period_to"), cat),
       ...partyColumn(get("party")),
       ...dueColumn(get("due"), type, paid, cat),
+      ...billColumns(get("pay_iban"), get("pay_reference"), type, paid, cat),
     })
 
     const splitRaw = get("split")
@@ -801,6 +805,24 @@ function dueColumn(
   if (!canBeUnpaid(LINE_BY_KEY.get(cat.line))) return {}
   const due = parseCsvDate(value)
   return due ? { due } : {}
+}
+
+/**
+ * How a bill received is paid (§8.30), kept on the same entries as its due
+ * date. An IBAN or a reference whose check digits fail reads as none.
+ */
+function billColumns(
+  iban: string,
+  reference: string,
+  type: EntryType,
+  paid: { paidOn?: string | null },
+  cat: Category
+): { iban?: string; reference?: string } {
+  if (type !== "expense" || paid.paidOn === undefined) return {}
+  if (!canBeUnpaid(LINE_BY_KEY.get(cat.line))) return {}
+  const i = billIban(iban)
+  const r = billReference(reference)
+  return { ...(i ? { iban: i } : {}), ...(r ? { reference: r } : {}) }
 }
 
 function buyerColumn(value: string, cat: Category): { buyerVatId?: string } {

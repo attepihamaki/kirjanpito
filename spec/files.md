@@ -12,8 +12,8 @@ category names, the ZIP's suggested name, the CSV's name and the receipt folder
 (§7.2) — and nothing else.
 
 - **Header row**, always these columns in this order, in one of two spellings:
-  - fi: `tositenro;päivämäärä;selite;tyyppi;tili;luokka;summa;alv;verollisuus;liitteet;verokausi;maksettu;ostajan_alv;eu_osto;käteinen;jaettu;osuus;korjaa;myy;jakso_alkaa;jakso_päättyy;osapuoli;eräpäivä`
-  - en: `voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase;cash;split;share;reverses;sells;period_from;period_to;party;due`
+  - fi: `tositenro;päivämäärä;selite;tyyppi;tili;luokka;summa;alv;verollisuus;liitteet;verokausi;maksettu;ostajan_alv;eu_osto;käteinen;jaettu;osuus;korjaa;myy;jakso_alkaa;jakso_päättyy;osapuoli;eräpäivä;maksu_iban;maksuviite`
+  - en: `voucher;date;description;type;account;category;amount;vat;mode;receipts;settles;paid;buyer_vat;eu_purchase;cash;split;share;reverses;sells;period_from;period_to;party;due;pay_iban;pay_reference`
 - **`lib/domain/csv-header.ts` is the one place a column name is spelled.** The
   English names are the canonical ones the parser works in; `FINNISH_LABELS`
   gives the Finnish spelling of each, `csvHeaderLine(lang)` builds a header and
@@ -49,6 +49,7 @@ category names, the ZIP's suggested name, the CSV's name and the receipt folder
   - `period_from` and `period_to` are the first and last day an entry covers (§6.3), as ISO dates, and empty on an entry with no period. The import keeps them only as a pair of real dates with the end not before the start, on a line that can be paid; anything else reads as no period.
   - `party` is the id of the entry's counterparty in `customers.json` (§8.29), and empty on an entry with none. The import keeps any cell shaped like an id (letters, digits, `-` and `_`, at most 64) and checks it against the register only where it is shown, since a bare CSV has no register beside it.
   - `due` is the due date of a bill received (§8.30), ISO like every date, and empty on every other row. The import keeps it only on an expense on a line that can be paid whose `paid` cell is not empty, since a due date means nothing on a voucher paid on its own date; an unreadable date reads as none. A file written before the column existed reads as having no due dates.
+  - `pay_iban` and `pay_reference` are how a bill received is paid (§8.30): the payee's IBAN and the Finnish or RF reference, compact, kept on the same rows as `due` and empty on every other. A value whose check digits fail reads as none. The names carry `pay_` so a bank statement's own "Viite" or "Saajan tilinumero" column is never taken for the book's (§8.16).
   - `sells` names the purchase voucher a sale of machinery or equipment disposes of (§8.8), written as `#number/year` like `reverses`, and empty on every other row. The import finds the purchase by year and number; a cell that is unreadable, names no row of the file or names the row itself links nothing, and the toast counts those rows. `Entry.sells` itself is the purchase's id.
   - `eu_purchase` is `tavara`/`palvelu` or `goods`/`services` on an EU purchase (§6.9), empty on every other row. A CSV opened on its own has no `settings.json`, so this is what tells a custom EU category it is one. A row marked on any other category moves to an EU category when the book opens.
   - Rows are sorted by date, then by voucher number. Nothing about the format depends on the **UI** language, only on the book's.
@@ -219,6 +220,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
   "traderType": "professional",
   "bookStart": "2026-10",
   "bookEnd": null,
+  "vatCash": null,
   "vatFiled": { "2026-08": "2026-10-12" },
   "vatFiledFigures": { "2026-08": { "301": 12000, "308": 4500 } },
   "taxPayment": { "iban": "", "reference": "" },
@@ -316,7 +318,7 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
 - **The overview layout** goes through `normalizeLayout` in `lib/domain/overview-layout.ts`: an unknown widget id is dropped and a missing one goes right after the widget it follows in the default layout, at its default size, so a file from an older or newer version still opens and a new widget does not land at the bottom of the page.
 - **Language and theme** are written from the browser's own keys (§12) at save. Opening a file switches the app to them. They are preferences of the browser as much as of the book, so changing them does not mark the book dirty, and the landing page goes on using the browser's keys. The theme is applied through `Ctx.setTheme`, because only React can reach next-themes.
 - **Page sizes and autosave** are saved the same way: written at save, applied on open, never dirty.
-- **The export language, whether the file is encrypted (§7.8), the business's name and ID, the VAT period, the trader type, the start month, the month trading stopped (`bookEnd`, §6.5), the filed marks, the archived years, the layout, the categories, the recurring templates, the category rules, the opening balances, the year-end figures, the bank balance and the payment months do mark the book dirty**, since the file no longer matches.
+- **The export language, whether the file is encrypted (§7.8), the business's name and ID, the VAT period, the trader type, the start month, the month trading stopped (`bookEnd`, §6.5), the cash-basis VAT months (`vatCash`, §6.16), the filed marks, the archived years, the layout, the categories, the recurring templates, the category rules, the opening balances, the year-end figures, the bank balance and the payment months do mark the book dirty**, since the file no longer matches.
 - A plain CSV has no settings. Opening one starts with no filed marks and no start month, and keeps the rest as it was.
 - `lib/domain/settings-file.test.ts` covers the round trip and the lenient reading; `lib/commands/io-commands.test.ts` covers opening a ZIP with settings.
 

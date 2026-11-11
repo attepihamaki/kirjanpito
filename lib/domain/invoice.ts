@@ -93,6 +93,8 @@ export interface Customer extends Party {
   expenseCat: string | null
   /** The VAT rate an entry for this party starts with, or null for the category's own. */
   vatRate: number | null
+  /** A supplier's IBAN, compact, that a bill from it starts with (§8.30). */
+  iban?: string
 }
 
 /** The register fields an invoicing customer starts with. */

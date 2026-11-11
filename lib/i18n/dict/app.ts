@@ -648,6 +648,22 @@ export const APP_DICT = {
     "Yli 1 200 euron laite on yleensä kirjattava käyttöomaisuudeksi ja poistettava. Kerralla sen voi vähentää vain, jos käyttöikä on enintään 3 vuotta.",
     "Equipment over 1,200 euros is usually booked as a fixed asset and depreciated. Deducting it at once works only if its useful life is 3 years or less.",
   ],
+  "overview.billsOverdue": [
+    pl("1 lasku on myöhässä", "{n} laskua on myöhässä"),
+    pl("1 bill is overdue", "{n} bills are overdue"),
+  ],
+  "overview.billsOverdueSub": [
+    "Maksamatta {s}, vanhin eräpäivä {d}.",
+    "{s} unpaid, the oldest due on {d}.",
+  ],
+  "overview.billsDueSoon": [
+    pl("1 lasku erääntyy pian", "{n} laskua erääntyy pian"),
+    pl("1 bill falls due soon", "{n} bills fall due soon"),
+  ],
+  "overview.billsDueSoonSub": [
+    "Maksettavaa {s}, ensimmäinen eräpäivä {d}.",
+    "{s} to pay, the first due on {d}.",
+  ],
   "overview.openItems": [
     pl("1 avoin tosite", "{n} avointa tositetta"),
     pl("1 open voucher", "{n} open vouchers"),
@@ -1343,11 +1359,36 @@ export const APP_DICT = {
   "entry.logFieldPeriodFrom": ["Jakso alkaa", "Period starts"],
   "entry.logFieldPeriodTo": ["Jakso päättyy", "Period ends"],
   "entry.due": ["Eräpäivä", "Due date"],
+  "entry.iban": ["Saajan tilinumero (IBAN)", "Payee’s account (IBAN)"],
+  "entry.reference": ["Viite", "Reference"],
+  "entry.ibanBad": [
+    "Tilinumero ei ole kelvollinen IBAN. Tarkista se laskusta.",
+    "The account number is not a valid IBAN. Check it on the bill.",
+  ],
+  "entry.referenceBad": [
+    "Viite ei ole kelvollinen suomalainen viite tai RF-viite. Tarkista se laskusta.",
+    "The reference is not a valid Finnish or RF reference. Check it on the bill.",
+  ],
+  "entry.barcode": ["Virtuaaliviivakoodi", "Virtual barcode"],
+  "entry.barcodeHint": [
+    "Liitä laskun 54-numeroinen virtuaaliviivakoodi, niin tilinumero, viite, eräpäivä ja tyhjä summa täyttyvät siitä.",
+    "Paste the bill’s 54-digit virtual barcode to fill in the account, the reference, the due date and an empty amount.",
+  ],
+  "entry.barcodeBad": [
+    "Tätä virtuaaliviivakoodia ei voitu lukea. Tarkista, että kaikki 54 numeroa ovat mukana.",
+    "This virtual barcode could not be read. Check that all 54 digits are there.",
+  ],
+  "entry.barcodeRead": [
+    "Maksutiedot luettiin virtuaaliviivakoodista",
+    "Payment details read from the virtual barcode",
+  ],
   "entry.dueHint": [
     "Laskun eräpäivä. Avoin lasku näkyy Maksettavat-välilehdellä eräpäivän mukaan.",
     "The bill’s due date. An open bill shows under To pay by its due date.",
   ],
   "entry.logFieldDue": ["Eräpäivä", "Due date"],
+  "entry.logFieldIban": ["Saajan tilinumero", "Payee’s account"],
+  "entry.logFieldReference": ["Viite", "Reference"],
   "entry.restoreAction": ["Palauta tämä versio", "Restore this version"],
   "entry.restoreTitle": ["Palautetaanko tämä versio?", "Restore this version?"],
   "entry.restoreMessage": [
@@ -1764,6 +1805,10 @@ export const APP_DICT = {
   "vat.reverseChargeSales": [
     "Rakentamispalveluiden ja metalliromun myynti (käännetty verovelvollisuus)",
     "Construction services and scrap metal sales (reverse charge)",
+  ],
+  "vat.cashNote": [
+    "Maksuperuste: kotimaiset myynnit ja ostot ovat tällä kaudella maksupäivänsä mukaan, ja maksamaton myynti tulee mukaan viimeistään 12 kuukauden kuluttua toimituksesta. Maksamattomat ostot odottavat maksua.",
+    "Cash basis: domestic sales and purchases are in this period by their payment date, and an unpaid sale is included 12 months after delivery at the latest. Unpaid purchases wait for payment.",
   ],
   "vat.note": [
     "Ostojen 0 %:n tositteet (esim. palkat, YEL, pankkikulut) eivät vaikuta arvonlisäveroon, joten niitä ei näytetä vähennyksissä. Tarkista luvut ennen ilmoittamista OmaVerossa.",
@@ -2902,6 +2947,30 @@ export const APP_DICT = {
     "Ensimmäisestä tositteesta",
     "From the first voucher",
   ],
+  "settings.vatCash": ["ALV:n tilitysperuste", "VAT accounting basis"],
+  "settings.vatCashOff": [
+    "Suorite- tai laskutusperuste",
+    "Delivery or invoice basis",
+  ],
+  "settings.vatCashOn": ["Maksuperuste", "Cash basis"],
+  "settings.vatCashHint": [
+    "Maksuperusteella myynnin ALV ilmoitetaan maksukuukauden kaudella ja oston ALV vähennetään, kun lasku on maksettu. Käytettävissä, kun liikevaihto on enintään 500 000 € vuodessa. Koskee vain kotimaisia myyntejä ja ostoja.",
+    "On cash basis a sale's VAT is reported in the period of the month it is paid, and a purchase's VAT is deducted once the bill is paid. Allowed while turnover is at most 500 000 € a year. Covers domestic sales and purchases only.",
+  ],
+  "settings.vatCashFrom": ["Alkaen", "From"],
+  "settings.vatCashFromYear": ["Alkamisvuosi", "From year"],
+  "settings.vatCashTo": ["Päättyen", "Until"],
+  "settings.vatCashToYear": ["Päättymisvuosi", "Until year"],
+  "settings.vatCashToNone": ["Käytössä edelleen", "Still in use"],
+  "settings.vatCashFromValue": [
+    "Maksuperuste {m} alkaen",
+    "Cash basis from {m}",
+  ],
+  "settings.vatCashRangeValue": ["Maksuperuste {m}–{n}", "Cash basis {m}–{n}"],
+  "settings.vatCashNote": [
+    "Maksamaton myynti ilmoitetaan viimeistään 12 kuukauden kuluttua",
+    "An unpaid sale is reported after 12 months at the latest",
+  ],
   "settings.bookEnd": ["Toiminnan päättyminen", "Stopping trading"],
   "settings.bookEndHint": [
     "Kuukausi, jona ALV-rekisteröinti päättyi. Sen verokauden ilmoitus on viimeinen, eikä myöhemmiltä jaksoilta odoteta ilmoitusta. Kalenterivuoden verokausi päättyy tähän kuukauteen, ja ilmoitus on annettava seuraavan toisen kuukauden 12. päivään mennessä.",
@@ -3438,6 +3507,15 @@ export const APP_DICT = {
   "invoice.customerEmail": ["Sähköposti", "Email"],
   "invoice.customerLanguage": ["Laskun kieli", "Invoice language"],
   "invoice.customerTerm": ["Maksuaika (pv)", "Payment term (days)"],
+  "party.supplierTermHint": [
+    "Toimittajan laskujen maksuaika. Uuden laskun eräpäivä täytetään tämän verran päiviä laskun päivän jälkeen.",
+    "The supplier’s payment term. A new bill’s due date is filled in this many days after the bill’s date.",
+  ],
+  "party.bothTermHint": [
+    "Maksuaika molempiin suuntiin: omien laskujen eräpäivä ja toimittajan laskun eräpäivä. Tyhjä käyttää omissa laskuissa laskutusasetusten maksuaikaa.",
+    "The term both ways: the due date of your invoices and of the bills it sends. Empty uses the invoice settings’ term on your own invoices.",
+  ],
+  "party.iban": ["Tilinumero (IBAN)", "Account (IBAN)"],
   "invoice.customerTermHint": [
     "Tyhjä käyttää laskutusasetusten maksuaikaa.",
     "Empty uses the term from the invoice settings.",
@@ -3708,6 +3786,15 @@ export const APP_DICT = {
   "payables.colDescription": ["Kuvaus", "Description"],
   "payables.colAmount": ["Maksettava", "To pay"],
   "payables.voucher": ["Nro {n} · {d}", "No. {n} · {d}"],
+  "payables.iban": ["Tili", "Account"],
+  "payables.reference": ["Viite", "Reference"],
+  "payables.barcode": ["Virtuaaliviivakoodi", "Virtual barcode"],
+  "payables.copy": ["Kopioi: {x}", "Copy: {x}"],
+  "payables.copyBarcode": [
+    "Kopioi virtuaaliviivakoodi",
+    "Copy virtual barcode",
+  ],
+  "payables.copied": ["Kopioitu: {x}", "Copied: {x}"],
   "payables.dueLate": ["{d}, {n} pv myöhässä", "{d}, {n} days late"],
   "payables.pay": ["Maksa", "Pay"],
   "payables.payTitle": ["Merkitse maksetuksi", "Mark as paid"],
@@ -4499,6 +4586,7 @@ export const APP_DICT = {
     "Vuoden {y} tositteiden säilytys päättyy",
     "Retention of the {y} vouchers ends",
   ],
+  "calendar.bill": ["Lasku erääntyy: {x}", "Bill due: {x}"],
   "calendar.retentionBooks": [
     "Vuoden {y} kirjanpidon säilytys päättyy",
     "Retention of the {y} books ends",

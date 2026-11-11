@@ -22,10 +22,12 @@ export function VatYearSection() {
   const vatPeriod = useBookStore((s) => s.vatPeriod)
   const bookStart = useBookStore((s) => s.bookStart)
   const vatFiled = useBookStore((s) => s.vatFiled)
+  const vatCash = useBookStore((s) => s.vatCash)
 
   const vat = React.useMemo(
-    () => vatYear({ entries, cats, year, vatPeriod, bookStart, vatFiled }),
-    [entries, cats, year, vatPeriod, bookStart, vatFiled]
+    () =>
+      vatYear({ entries, cats, year, vatPeriod, bookStart, vatFiled, vatCash }),
+    [entries, cats, year, vatPeriod, bookStart, vatFiled, vatCash]
   )
   if (!vat.rows.length) return null
 

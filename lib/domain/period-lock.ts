@@ -2,6 +2,7 @@ import { paidDate, type TraderType } from "@/lib/domain/open-items"
 import { defineRules, evaluate } from "@/lib/domain/rules/engine"
 import type { CategoryMap, Entry } from "@/lib/domain/types"
 import { countsOnVatReturn } from "@/lib/domain/vat"
+import { vatDate, type VatCashBasis } from "@/lib/domain/vat-basis"
 
 /**
  * KPL 2:7: the content of a voucher or a book may not be changed or deleted
@@ -33,6 +34,8 @@ export interface LockMarks {
   traderType?: TraderType
   /** The book's invoices; the entries of an issued one are locked (§8.27). */
   invoices?: readonly InvoiceRef[]
+  /** The months VAT is reported on payment (§6.16); a filed period then holds what was paid in it. */
+  vatCash?: VatCashBasis | null
 }
 
 /** What the invoice lock needs of an invoice. */
@@ -50,6 +53,8 @@ export interface LockContext {
   paid: string | null
   /** Whether the VAT return counts the entry. A filed period holds only these. */
   countsOnVat: boolean
+  /** The date the VAT return reads it on (§6.16), null while it is on none; absent means `date`. */
+  vatDate?: string | null
   /** The issued invoice the entry belongs to, or null. */
   invoice?: { number: number; since: string } | null
   marks: LockMarks
@@ -85,8 +90,9 @@ export const LOCK_RULES = defineRules<LockContext, PeriodLock>([
     id: "filed",
     severity: "blocker",
     source: "KPL 2:7",
-    check: ({ date, countsOnVat, marks }) => {
-      if (!countsOnVat) return []
+    check: ({ date: own, vatDate: on, countsOnVat, marks }) => {
+      const date = on === undefined ? own : on
+      if (!countsOnVat || date === null) return []
       const year = date.slice(0, 4)
       const month = date.slice(0, 7)
       const quarter = `${year}-Q${Math.ceil(Number(date.slice(5, 7)) / 3)}`
@@ -204,6 +210,7 @@ export function entryLock(
     date: entry.date,
     paid: paidDate(entry),
     countsOnVat: countsOnVatReturn(entry, cats),
+    vatDate: vatDate(entry, cats, marks.vatCash),
     invoice: invoiceOf(marks.invoices, entry.id),
     marks,
   })

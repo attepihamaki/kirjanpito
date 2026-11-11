@@ -261,7 +261,8 @@ function Review({
         entries,
         catMap,
         useBookStore.getState().vatPeriod,
-        todayIso()
+        todayIso(),
+        useBookStore.getState().vatCash
       ),
     })
   )
@@ -391,6 +392,7 @@ function Review({
             businessId: state.businessId ?? "",
             vatFiled: state.vatFiled,
             vatFiledFigures: state.vatFiledFigures,
+            vatCash: state.vatCash,
           },
           period
         )

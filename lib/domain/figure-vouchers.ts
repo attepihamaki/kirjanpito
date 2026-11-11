@@ -11,6 +11,7 @@ import {
 import type { Period } from "@/lib/domain/period"
 import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
 import { countsOnVatReturn, vatReport, type VatReport } from "@/lib/domain/vat"
+import { vatDate, type VatCashBasis } from "@/lib/domain/vat-basis"
 import type { VatPeriodKind } from "@/lib/domain/vat-deadline"
 import { vatReturnSections, vatReturnValues } from "@/lib/domain/vat-return"
 
@@ -294,6 +295,8 @@ export interface FigureRefContext {
   trader: TraderType
   /** The years whose year-end figures are asked about (711, 725, 749, 394). */
   years: readonly number[]
+  /** The months VAT is reported on payment (§6.16). */
+  vatCash?: VatCashBasis | null
 }
 
 /** Form 5's income and expense fields a voucher can add to, besides the totals. */
@@ -333,9 +336,10 @@ export function entryFigureRefs(
 ): FigureRef[] {
   const out: FigureRef[] = []
 
-  if (countsOnVatReturn(e, cats)) {
+  const onVat = vatDate(e, cats, ctx.vatCash)
+  if (countsOnVatReturn(e, cats) && onVat !== null) {
     const values = vatReturnValues(vatReturnSections(vatReport([e], cats)))
-    const period = vatPeriodOf(ctx.vatPeriod, e.date)
+    const period = vatPeriodOf(ctx.vatPeriod, onVat)
     for (const [code, amount] of values) {
       if (code !== "308" && amount !== 0) {
         out.push({ kind: "vat", code, period, amount })

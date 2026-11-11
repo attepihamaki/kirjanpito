@@ -86,3 +86,33 @@ describe("payablesReport", () => {
     expect(report.items[0].due).toBe("2026-11-12")
   })
 })
+
+describe("how a bill is paid", () => {
+  it("carries the IBAN, the reference and a barcode for what is open", () => {
+    const report = payablesReport(
+      [
+        bill({
+          due: "2026-11-20",
+          iban: "FI2112345600000785",
+          reference: "1232",
+        }),
+      ],
+      cats,
+      "2026-11-05"
+    )
+    const [item] = report.items
+    expect(item.iban).toBe("FI2112345600000785")
+    expect(item.reference).toBe("1232")
+    expect(item.barcode).toMatch(/^4\d{53}$/)
+    expect(item.barcode?.slice(17, 25)).toBe("00010000")
+  })
+
+  it("has no barcode without a reference", () => {
+    const [item] = payablesReport(
+      [bill({ iban: "FI2112345600000785" })],
+      cats,
+      "2026-11-05"
+    ).items
+    expect(item.barcode).toBeUndefined()
+  })
+})

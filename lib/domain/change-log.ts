@@ -62,6 +62,8 @@ export const LOGGED_FIELDS = [
   "periodFrom",
   "periodTo",
   "due",
+  "iban",
+  "reference",
 ] as const
 export type LoggedField = (typeof LOGGED_FIELDS)[number]
 

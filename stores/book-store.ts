@@ -61,6 +61,7 @@ import type {
   Lang,
 } from "@/lib/domain/types"
 import type { TraderType } from "@/lib/domain/open-items"
+import { vatBasisEntries, type VatCashBasis } from "@/lib/domain/vat-basis"
 import { filterPeriod } from "@/lib/domain/period"
 import { vatReport } from "@/lib/domain/vat"
 import { applyHiddenFeatures, type Feature } from "@/lib/domain/features"
@@ -175,6 +176,8 @@ export type EntryPrefill = Partial<
     | "buyerVatId"
     | "share"
     | "due"
+    | "iban"
+    | "reference"
   >
 >
 
@@ -318,6 +321,8 @@ export interface BookState {
    * no VAT return is owed, or null while it trades.
    */
   bookEnd: string | null
+  /** The months VAT is reported on payment (§6.16), or null for none. */
+  vatCash: VatCashBasis | null
   /** Period key → ISO date the return was marked as filed (§6.5). */
   vatFiled: Record<string, string>
   /**
@@ -561,6 +566,7 @@ export interface BookActions {
       hiddenFeatures?: Feature[]
       bookStart?: string | null
       bookEnd?: string | null
+      vatCash?: VatCashBasis | null
       vatFiled?: Record<string, string>
       vatFiledFigures?: Record<string, Record<string, number>>
       taxPayment?: TaxPayment
@@ -647,6 +653,8 @@ export interface BookActions {
   setBusinessPhone(phone: string | null): void
   setBookStart(month: string | null): void
   setBookEnd(month: string | null): void
+  /** Report VAT on payment for these months, or not at all with null (§6.16). */
+  setVatCash(cash: VatCashBasis | null): void
   /** Mark a period as filed on `date`, or clear the mark with null. */
   setVatFiled(key: string, date: string | null): void
   setTaxPayment(payment: TaxPayment): void
@@ -756,6 +764,7 @@ function initialState(): BookState {
     hiddenFeatures: [],
     bookStart: null,
     bookEnd: null,
+    vatCash: null,
     vatFiled: {},
     vatFiledFigures: {},
     taxPayment: NO_TAX_PAYMENT,
@@ -842,6 +851,7 @@ type PersistedBook = Pick<
   | "hiddenFeatures"
   | "bookStart"
   | "bookEnd"
+  | "vatCash"
   | "vatFiled"
   | "vatFiledFigures"
   | "taxPayment"
@@ -1028,6 +1038,7 @@ const BOOK_DATA_KEYS: readonly (keyof BookState)[] = [
   "hiddenFeatures",
   "bookStart",
   "bookEnd",
+  "vatCash",
   "vatFiled",
   "vatFiledFigures",
   "taxPayment",
@@ -1131,6 +1142,7 @@ export const useBookStore = create<BookStore>()(
           hiddenFeatures: [],
           bookStart: null,
           bookEnd: null,
+          vatCash: null,
           vatFiled: {},
           vatFiledFigures: {},
           taxPayment: NO_TAX_PAYMENT,
@@ -1241,6 +1253,7 @@ export const useBookStore = create<BookStore>()(
           businessPhone: null,
           bookStart: null,
           bookEnd: null,
+          vatCash: null,
           vatFiled: {},
           vatFiledFigures: {},
           taxPayment: NO_TAX_PAYMENT,
@@ -1311,6 +1324,7 @@ export const useBookStore = create<BookStore>()(
           hiddenFeatures: s.hiddenFeatures ?? [],
           bookStart: s.bookStart ?? null,
           bookEnd: s.bookEnd ?? null,
+          vatCash: s.vatCash ?? null,
           vatFiled: s.vatFiled ?? {},
           vatFiledFigures: s.vatFiledFigures ?? {},
           taxPayment: { ...NO_TAX_PAYMENT, ...s.taxPayment },
@@ -1509,6 +1523,7 @@ export const useBookStore = create<BookStore>()(
       setBusinessPhone: (businessPhone) => set({ businessPhone, dirty: true }),
       setBookStart: (bookStart) => set({ bookStart, dirty: true }),
       setBookEnd: (bookEnd) => set({ bookEnd, dirty: true }),
+      setVatCash: (vatCash) => set({ vatCash, dirty: true }),
       setVatFiled: (key, date) => {
         const vatFiled = { ...get().vatFiled }
         const vatFiledFigures = { ...get().vatFiledFigures }
@@ -1520,7 +1535,14 @@ export const useBookStore = create<BookStore>()(
             vatFiledFigures[key] = {
               ...filingFigures(
                 vatReport(
-                  filterPeriod(get().entries, asPeriod(period)),
+                  filterPeriod(
+                    vatBasisEntries(
+                      get().entries,
+                      indexCategories(get().cats),
+                      get().vatCash
+                    ),
+                    asPeriod(period)
+                  ),
                   indexCategories(get().cats)
                 )
               ),
@@ -1788,6 +1810,7 @@ export const useBookStore = create<BookStore>()(
         hiddenFeatures: s.hiddenFeatures,
         bookStart: s.bookStart,
         bookEnd: s.bookEnd,
+        vatCash: s.vatCash,
         vatFiled: s.vatFiled,
         vatFiledFigures: s.vatFiledFigures,
         taxPayment: s.taxPayment,

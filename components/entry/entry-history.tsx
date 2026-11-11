@@ -37,6 +37,8 @@ const FIELD_LABEL = {
   periodFrom: "entry.logFieldPeriodFrom",
   periodTo: "entry.logFieldPeriodTo",
   due: "entry.logFieldDue",
+  iban: "entry.logFieldIban",
+  reference: "entry.logFieldReference",
 } as const satisfies Record<LoggedField, string>
 
 /** A field's value as a person reads it. */

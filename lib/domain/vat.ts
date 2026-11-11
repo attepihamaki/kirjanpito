@@ -205,10 +205,15 @@ export interface LedgerTotals {
   due: Cents
 }
 
-/** The three figures in the ledger's totals cards (§6.2). */
+/**
+ * The three figures in the ledger's totals cards (§6.2). The tax due reads
+ * `vatEntries`, the period's entries as the VAT return reads them (§6.16),
+ * which are the entries themselves unless VAT is on cash basis.
+ */
 export function ledgerTotals(
   entries: readonly Entry[],
-  cats: CategoryMap
+  cats: CategoryMap,
+  vatEntries: readonly Entry[] = entries
 ): LedgerTotals {
   let incomeNet = 0
   let expenseNet = 0
@@ -220,5 +225,5 @@ export function ledgerTotals(
     if (e.type === "income") incomeNet += net
     else expenseNet += net
   }
-  return { incomeNet, expenseNet, due: vatReport(entries, cats).due }
+  return { incomeNet, expenseNet, due: vatReport(vatEntries, cats).due }
 }

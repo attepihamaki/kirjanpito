@@ -1,6 +1,7 @@
 import { filterPeriod } from "@/lib/domain/period"
 import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
 import { vatReport } from "@/lib/domain/vat"
+import { vatBasisEntries, type VatCashBasis } from "@/lib/domain/vat-basis"
 import {
   asPeriod,
   filedOn,
@@ -70,15 +71,19 @@ function sameEntry(a: Entry, b: Entry): boolean {
  * The filed VAT periods whose return a change to the entries would alter
  * (§8.11), in date order. A change to a description or a receipt alters no
  * figure and is not reported, and neither is an entry on a 0 % line that no
- * field counts.
+ * field counts. On cash basis (§6.16) the entries are read on their VAT date,
+ * so a payment dated in a filed period alters that period's return.
  */
 export function filedPeriodChanges(
-  before: readonly Entry[],
-  after: readonly Entry[],
+  rawBefore: readonly Entry[],
+  rawAfter: readonly Entry[],
   cats: CategoryMap,
   kind: VatPeriodKind,
-  filed: Readonly<Record<string, string>>
+  filed: Readonly<Record<string, string>>,
+  vatCash: VatCashBasis | null = null
 ): FiledPeriodChange[] {
+  const before = vatBasisEntries(rawBefore, cats, vatCash)
+  const after = vatBasisEntries(rawAfter, cats, vatCash)
   const touched = new Map<string, VatPeriod>()
   const mark = (e: Entry) => {
     const p = periodContaining(kind, e.date)

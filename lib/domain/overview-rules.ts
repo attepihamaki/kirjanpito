@@ -22,7 +22,8 @@ import {
   form5Reminder,
   type Form5Reminder,
 } from "@/lib/domain/tax-return-deadline"
-import type { CategoryMap, Entry } from "@/lib/domain/types"
+import { payablesReport } from "@/lib/domain/payables"
+import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
 import { daysBetween, type TimelinePeriod } from "@/lib/domain/vat-deadline"
 
 /**
@@ -66,6 +67,8 @@ export interface OverviewData {
   vatOverdue: { period: TimelinePeriod }
   vatDueSoon: { period: TimelinePeriod; days: number }
   openItems: OpenBalances
+  billsOverdue: BillsDue
+  billsDueSoon: BillsDue
   form5Due: Form5Reminder
   rulesStale: { gaps: RuleGap[] }
   missingReceipts: { count: number }
@@ -80,6 +83,30 @@ export interface OverviewData {
     books: string
     vouchers: string
   }
+}
+
+/** Bills received in one group of the payables list (§8.30). */
+export interface BillsDue {
+  count: number
+  /** Gross still to pay. */
+  total: Cents
+  /** The earliest due date among them. */
+  first: string
+}
+
+/** The bills of one payables group, or nothing when it has none. */
+function billsIn(ctx: OverviewContext, group: "overdue" | "soon"): BillsDue[] {
+  const bills = payablesReport(ctx.entries, ctx.cats, ctx.today).items.filter(
+    (b) => b.group === group && b.due
+  )
+  if (bills.length === 0) return []
+  return [
+    {
+      count: bills.length,
+      total: bills.reduce((sum, b) => sum + b.open, 0),
+      first: bills[0].due!,
+    },
+  ]
 }
 
 export type OverviewRuleId = keyof OverviewData
@@ -134,6 +161,8 @@ export const OVERVIEW_RULES = defineRules<OverviewContext, AnyData>([
       .map((period) => ({ period, days: daysBetween(ctx.today, period.due) }))
       .filter((d) => d.days <= VAT_DUE_SOON_DAYS)
   ),
+  rule("billsOverdue", "warn", "app", (ctx) => billsIn(ctx, "overdue")),
+  rule("billsDueSoon", "info", "app", (ctx) => billsIn(ctx, "soon")),
   rule("openItems", "info", "KPL 1:1a", (ctx) => {
     const open = balancesAt(ctx.entries, ctx.cats, ctx.today)
     return open.count ? [open] : []

@@ -124,6 +124,7 @@ function VatReturnForm() {
   const vatFiledFigures = useBookStore((s) => s.vatFiledFigures)
   const changeLog = useBookStore((s) => s.changeLog)
   const receiptHashes = useReceiptHashStore((s) => s.hashes)
+  const vatCash = useBookStore((s) => s.vatCash)
 
   const items = React.useMemo(
     () =>
@@ -140,6 +141,7 @@ function VatReturnForm() {
         vatFiled,
         changeLog,
         receiptHashes,
+        vatCash,
       }),
     [
       entries,
@@ -154,6 +156,7 @@ function VatReturnForm() {
       vatFiled,
       changeLog,
       receiptHashes,
+      vatCash,
     ]
   )
   const sections = React.useMemo(() => vatReturnSections(report), [report])

@@ -333,6 +333,7 @@ function LedgerRow({
   const form5Filed = useBookStore((s) => s.form5Filed)
   const traderType = useBookStore((s) => s.traderType)
   const invoices = useBookStore((s) => s.invoices)
+  const vatCash = useBookStore((s) => s.vatCash)
   const catMap = React.useMemo(() => indexCategories(allCats), [allCats])
   /*
    * The menu hides what a locked voucher refuses (§8.11). Marking paid stays,
@@ -341,7 +342,7 @@ function LedgerRow({
   const locked =
     entryLock(
       entry,
-      { vatFiled, yearsArchived, form5Filed, traderType, invoices },
+      { vatFiled, yearsArchived, form5Filed, traderType, invoices, vatCash },
       catMap
     ) !== null
   const canSplit =

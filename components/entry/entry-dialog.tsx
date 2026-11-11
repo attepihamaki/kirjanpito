@@ -78,6 +78,7 @@ import {
   describeInvoice,
   isEmptyGuess,
   parseInvoiceText,
+  parseVirtualBarcode,
   previousEntryFrom,
   suggestCategory,
 } from "@/lib/domain/invoice-text"
@@ -90,7 +91,10 @@ import {
   vatNotDeductible,
 } from "@/lib/domain/entry-checks"
 import { isPdf } from "@/lib/domain/receipt-path"
-import { isoDate, monthOf, todayIso, yearOf } from "@/lib/domain/dates"
+import { addDays, isoDate, monthOf, todayIso, yearOf } from "@/lib/domain/dates"
+import { billIban, billReference } from "@/lib/domain/bill-payment"
+import { formatIban } from "@/lib/domain/iban"
+import { formatReference } from "@/lib/domain/invoice-reference"
 import { viewHelp } from "@/lib/domain/field-help"
 import { canSplitLine, splitSiblings } from "@/lib/domain/split"
 import { sellCandidates } from "@/lib/domain/assets"
@@ -100,6 +104,7 @@ import {
   reversalLabel,
   reversingEntries,
 } from "@/lib/domain/reversal"
+import type { Customer } from "@/lib/domain/invoice"
 import { partyDefaults, partyFitsSide } from "@/lib/domain/parties"
 import { rateMismatch, rateOnDate } from "@/lib/domain/vat-rates"
 import { uid } from "@/lib/domain/id"
@@ -166,10 +171,14 @@ interface FormState {
   periodTo: string
   /** The due date of a bill received, "" for none (§8.30). */
   due: string
+  /** The payee's IBAN and the reference of a bill received, as typed (§8.30). */
+  iban: string
+  reference: string
 }
 
 /** The fields §8.5 validates, named as they are in `FormState`. */
-type ErrorField = "date" | "amount" | "catId" | "share" | "period"
+type ErrorField =
+  "date" | "amount" | "catId" | "share" | "period" | "iban" | "reference"
 
 type FieldErrorState = { field: ErrorField; message: string } | null
 
@@ -240,6 +249,8 @@ function initialForm({
       periodFrom: "",
       periodTo: "",
       due: prefill?.due ?? "",
+      iban: prefill?.iban ? formatIban(prefill.iban) : "",
+      reference: prefill?.reference ? formatReference(prefill.reference) : "",
     }
   }
   const today = todayIso()
@@ -276,7 +287,147 @@ function initialForm({
     periodTo: mode === "edit" ? (editing.periodTo ?? "") : "",
     // A copy is a new bill, which falls due on a day of its own.
     due: mode === "edit" ? (editing.due ?? "") : "",
+    // A copy pays the same supplier the same way, but a new bill has its own reference.
+    iban: editing.iban ? formatIban(editing.iban) : "",
+    reference:
+      mode === "edit" && editing.reference
+        ? formatReference(editing.reference)
+        : "",
   }
+}
+
+/**
+ * What a supplier fills on a bill from it (§8.30): its IBAN while none is
+ * typed, and a due date its payment term away while none is set. Only on an
+ * expense not paid on its own date, where the fields exist.
+ */
+function billDefaults(
+  party: Customer | undefined,
+  form: Pick<FormState, "type" | "paid" | "date" | "due" | "iban">
+): Partial<FormState> {
+  if (!party || form.type !== "expense" || form.paid === "") return {}
+  if (!partyFitsSide(party, "expense")) return {}
+  return {
+    ...(party.iban && !form.iban.trim()
+      ? { iban: formatIban(party.iban) }
+      : {}),
+    ...(party.termDays !== null && !form.due && form.date
+      ? { due: addDays(form.date, party.termDays) }
+      : {}),
+  }
+}
+
+/**
+ * The register keeps the IBAN of a supplier that has none once a bill from it
+ * carries one, so the next bill starts with it (§8.29, §8.30).
+ */
+function rememberSupplierIban(entry: Entry) {
+  if (entry.type !== "expense" || !entry.iban || !entry.party) return
+  const { customers, setCustomers } = useBookStore.getState()
+  const party = customers.find((c) => c.id === entry.party)
+  if (!party || party.iban) return
+  setCustomers(
+    customers.map((c) => (c.id === party.id ? { ...c, iban: entry.iban } : c))
+  )
+}
+
+/**
+ * How a bill received is paid (§8.30): the payee's IBAN and the reference, and
+ * a field that reads both, the due date and an untyped amount from a pasted
+ * virtual barcode.
+ */
+function BillPaymentFields({
+  form,
+  update,
+  invalid,
+}: {
+  form: FormState
+  update: (patch: Partial<FormState>) => void
+  invalid: (field: ErrorField) => true | undefined
+}) {
+  const f = useFormatters()
+  const [barcode, setBarcode] = React.useState("")
+  const [unread, setUnread] = React.useState(false)
+
+  const readBarcode = (text: string) => {
+    setBarcode(text)
+    const digits = text.replace(/\s+/g, "")
+    if (digits.length < 54) {
+      setUnread(false)
+      return
+    }
+    const code = parseVirtualBarcode(digits)
+    const iban = code && billIban(code.iban)
+    if (!code || !iban) {
+      setUnread(true)
+      return
+    }
+    setUnread(false)
+    setBarcode("")
+    const reference = billReference(code.reference)
+    update({
+      iban: formatIban(iban),
+      ...(reference ? { reference: formatReference(reference) } : {}),
+      ...(code.dueDate ? { due: code.dueDate } : {}),
+      ...(!form.amount.trim() && code.amount > 0
+        ? {
+            amount: formatMoneyPlain(code.amount),
+            amountMode: "gross" as const,
+          }
+        : {}),
+    })
+    toast.add({ title: f.t("entry.barcodeRead") })
+  }
+
+  return (
+    <>
+      <Field data-invalid={unread || undefined}>
+        <FieldLabel htmlFor="entry-barcode">{f.t("entry.barcode")}</FieldLabel>
+        <Input
+          id="entry-barcode"
+          inputMode="numeric"
+          autoComplete="off"
+          value={barcode}
+          aria-invalid={unread || undefined}
+          onChange={(e) => readBarcode(e.target.value)}
+          className="tabular"
+        />
+        <FieldDescription>
+          {f.t(unread ? "entry.barcodeBad" : "entry.barcodeHint")}
+        </FieldDescription>
+      </Field>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field data-invalid={invalid("iban")}>
+          <FieldLabel htmlFor="entry-iban">{f.t("entry.iban")}</FieldLabel>
+          <Input
+            id="entry-iban"
+            autoComplete="off"
+            spellCheck={false}
+            value={form.iban}
+            aria-invalid={invalid("iban")}
+            onChange={(e) => update({ iban: e.target.value.toUpperCase() })}
+            className="tabular"
+          />
+        </Field>
+        <Field data-invalid={invalid("reference")}>
+          <FieldLabel htmlFor="entry-reference">
+            {f.t("entry.reference")}
+          </FieldLabel>
+          <Input
+            id="entry-reference"
+            autoComplete="off"
+            spellCheck={false}
+            value={form.reference}
+            aria-invalid={invalid("reference")}
+            onChange={(e) =>
+              update({ reference: e.target.value.toUpperCase() })
+            }
+            className="tabular"
+          />
+        </Field>
+      </div>
+    </>
+  )
 }
 
 /** A button that opens the voucher at the other end of a reversal. */
@@ -498,6 +649,22 @@ function EntryDialogForm({
             ? { type: "expense" as const, catId: suggested.id }
             : {}),
         amount: guess.amount != null ? formatMoneyPlain(guess.amount) : "",
+        /*
+         * A bill not yet due is a bill to pay (§8.30): it opens with its due
+         * date and how to pay it. One already past due was most likely paid.
+         */
+        ...(guess.dueDate &&
+        guess.dueDate >= todayIso() &&
+        (previousCat?.type ?? (suggested ? "expense" : prev.type)) === "expense"
+          ? {
+              paid: "open",
+              due: guess.dueDate,
+              iban: guess.iban ? formatIban(guess.iban) : prev.iban,
+              reference: guess.reference
+                ? formatReference(guess.reference)
+                : prev.reference,
+            }
+          : {}),
         vatRate:
           readRate ??
           rateOnDate(
@@ -661,12 +828,14 @@ function EntryDialogForm({
   const form5Filed = useBookStore((s) => s.form5Filed)
   const traderType = useBookStore((s) => s.traderType)
   const invoices = useBookStore((s) => s.invoices)
+  const vatCash = useBookStore((s) => s.vatCash)
   const marks = {
     vatFiled: vatFiledMarks,
     yearsArchived,
     form5Filed,
     traderType,
     invoices,
+    vatCash,
   }
   // Read-only apart from the payment date (KPL 2:7, §8.11).
   const lock =
@@ -720,6 +889,7 @@ function EntryDialogForm({
       ...(isEuSaleKind(cat?.kind) && !form.buyerVatId.trim() && party.vatId
         ? { buyerVatId: party.vatId }
         : {}),
+      ...billDefaults(party, form),
     })
   }
   const euPurchase = selectedCat?.euPurchase
@@ -929,6 +1099,16 @@ function EntryDialogForm({
       setError({ field: "period", message: f.t("entry.periodBad") })
       return null
     }
+    if (dueApplies && form.iban.trim() && !billIban(form.iban)) {
+      setTab("payment")
+      setError({ field: "iban", message: f.t("entry.ibanBad") })
+      return null
+    }
+    if (dueApplies && form.reference.trim() && !billReference(form.reference)) {
+      setTab("payment")
+      setError({ field: "reference", message: f.t("entry.referenceBad") })
+      return null
+    }
     setError(null)
     return {
       id: editing && mode === "edit" ? editing.id : uid(),
@@ -952,6 +1132,12 @@ function EntryDialogForm({
         ? { periodFrom: form.periodFrom, periodTo: form.periodTo }
         : {}),
       ...(dueApplies && form.due ? { due: form.due } : {}),
+      ...(dueApplies && billIban(form.iban)
+        ? { iban: billIban(form.iban)! }
+        : {}),
+      ...(dueApplies && billReference(form.reference)
+        ? { reference: billReference(form.reference)! }
+        : {}),
       ...(euSale && form.buyerVatId.trim()
         ? { buyerVatId: normalizeVatId(form.buyerVatId) }
         : {}),
@@ -1027,6 +1213,7 @@ function EntryDialogForm({
 
     upsertEntry(saved)
     if (settles) upsertEntry(settles.target)
+    rememberSupplierIban(saved)
     /* The inbox item is done once its receipt is on the entry (§8.31). */
     if (inboxId && saved.atts?.length) {
       useBookStore.getState().removeInboxItem(inboxId)
@@ -1595,6 +1782,12 @@ function EntryDialogForm({
                           }
                           onChange={(value) =>
                             update({
+                              ...(value === "same"
+                                ? {}
+                                : billDefaults(
+                                    customers.find((c) => c.id === form.party),
+                                    { ...form, paid: "open" }
+                                  )),
                               paid:
                                 value === "same"
                                   ? ""
@@ -1641,6 +1834,14 @@ function EntryDialogForm({
                         {f.t("entry.dueHint")}
                       </FieldDescription>
                     </Field>
+                  ) : null}
+
+                  {dueApplies ? (
+                    <BillPaymentFields
+                      form={form}
+                      update={update}
+                      invalid={invalid}
+                    />
                   ) : null}
 
                   <fieldset disabled={!!lock} className="contents">

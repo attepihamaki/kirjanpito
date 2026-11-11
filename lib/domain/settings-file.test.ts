@@ -42,6 +42,7 @@ function settings(): BookSettings {
     hiddenFeatures: ["car", "euSales"],
     bookStart: "2025-10",
     bookEnd: "2027-03",
+    vatCash: { from: "2026-01", to: null },
     vatFiled: { "2026-Q2": "2026-08-10", "2026-Q1": "2026-05-11" },
     vatFiledFigures: {
       "2026-Q1": { "301": 12_000, "308": -4_500, "311/312": 800 },
@@ -263,6 +264,7 @@ describe("settings.json", () => {
         traderType: "hobbyist",
         bookStart: "2026-13",
         bookEnd: "2027",
+        vatCash: { from: "2026", to: "2026-05" },
         vatFiled: { "2026-09": "2026-11-10", "2026-13": "2026-01-01", x: 1 },
         yearsArchived: { "2025": "2026-01-20", "25": "2026-01-20", "2024": 1 },
         pageSize: { ledger: 7, categories: 25 },
@@ -274,6 +276,19 @@ describe("settings.json", () => {
       vatFiled: { "2026-09": "2026-11-10" },
       yearsArchived: { "2025": "2026-01-20" },
     })
+  })
+
+  it("keeps a cash basis whose last month is not before its first", () => {
+    expect(
+      parseSettings(
+        JSON.stringify({ vatCash: { from: "2026-03", to: "2026-01" } })
+      ).vatCash
+    ).toEqual({ from: "2026-03", to: null })
+    expect(
+      parseSettings(
+        JSON.stringify({ vatCash: { from: "2026-03", to: "2027-06" } })
+      ).vatCash
+    ).toEqual({ from: "2026-03", to: "2027-06" })
   })
 
   it("keeps only whole-cent amounts under real field codes for the filed figures", () => {

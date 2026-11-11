@@ -14,6 +14,7 @@ import {
   withEnd,
   type VatPeriodStatus,
 } from "@/lib/domain/vat-deadline"
+import { useVatBasisEntries } from "@/hooks/use-tax-basis"
 import { useToday } from "@/hooks/use-today"
 import { useBookStore } from "@/stores/book-store"
 
@@ -25,6 +26,7 @@ import { useBookStore } from "@/stores/book-store"
 export function useVatPeriod() {
   const f = useFormatters()
   const entries = useBookStore((s) => s.entries)
+  const vatEntries = useVatBasisEntries()
   const cats = useBookStore((s) => s.cats)
   const year = useBookStore((s) => s.year)
   const mode = useBookStore((s) => s.vatPeriod)
@@ -54,8 +56,8 @@ export function useVatPeriod() {
   }, [mode, index, year])
 
   const report = React.useMemo(
-    () => vatReport(filterPeriod(entries, period), catMap),
-    [entries, period, catMap]
+    () => vatReport(filterPeriod(vatEntries, period), catMap),
+    [vatEntries, period, catMap]
   )
 
   const start = React.useMemo(

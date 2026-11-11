@@ -9,6 +9,7 @@ import {
   previousEntryFrom,
   suggestCategory,
 } from "@/lib/domain/invoice-text"
+import { virtualBarcode } from "@/lib/domain/invoice-barcode"
 import type { Entry } from "@/lib/domain/types"
 
 /* A typical Finnish invoice as extractPdfText lays it out. */
@@ -36,7 +37,31 @@ describe("parseInvoiceText", () => {
       vendor: "Mäkinen Rakennus Oy",
       invoiceNumber: "1005",
       items: ["Laatoitustyö"],
+      iban: null,
+      reference: null,
     })
+  })
+
+  it("reads the payee's IBAN and the reference beside its label", () => {
+    const text = [
+      "Saajan tilinumero FI21 1234 5600 0007 85",
+      "Viitenumero 123 45678 90120",
+      "Yhteensä 100,00",
+    ].join("\n")
+    const guess = parseInvoiceText(text)
+    expect(guess.iban).toBe("FI2112345600000785")
+    expect(guess.reference).toBe("1234567890120")
+  })
+
+  it("takes an RF reference on the line after its label", () => {
+    const guess = parseInvoiceText("Viite\nRF18 5390 0754 7034\nYhteensä 10,00")
+    expect(guess.reference).toBe("RF18539007547034")
+  })
+
+  it("leaves out an IBAN or a reference whose check digits fail", () => {
+    const guess = parseInvoiceText("IBAN FI21 1234 5600 0007 86\nViite 12346")
+    expect(guess.iban).toBeNull()
+    expect(guess.reference).toBeNull()
   })
 
   it("skips the net and VAT subtotals when picking the total", () => {
@@ -106,7 +131,27 @@ describe("parseVirtualBarcode", () => {
       "0".repeat(21) +
       "12" +
       "000000"
-    expect(parseVirtualBarcode(code)).toEqual({ amount: 12450, dueDate: null })
+    expect(parseVirtualBarcode(code)).toEqual({
+      amount: 12450,
+      dueDate: null,
+      iban: "FI7915800000000017",
+      reference: "RF0012",
+    })
+  })
+
+  it("reads the IBAN and the Finnish reference of version 4, groups and all", () => {
+    const code = virtualBarcode({
+      iban: "FI21 1234 5600 0007 85",
+      cents: 12_345,
+      reference: "1232",
+      dueDate: "2026-12-01",
+    })!
+    expect(parseVirtualBarcode(code.replace(/(.{6})/g, "$1 "))).toEqual({
+      amount: 12_345,
+      dueDate: "2026-12-01",
+      iban: "FI2112345600000785",
+      reference: "1232",
+    })
   })
 
   it("rejects anything but 54 digits starting with 4 or 5", () => {

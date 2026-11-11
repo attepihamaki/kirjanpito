@@ -9,6 +9,7 @@
  */
 
 import { RATES } from "@/lib/domain/accounts"
+import { billIban, billReference } from "@/lib/domain/bill-payment"
 import { isoDate } from "@/lib/domain/dates"
 import { parseAmount } from "@/lib/domain/money"
 import type { Cents, Entry } from "@/lib/domain/types"
@@ -26,6 +27,10 @@ export interface InvoiceGuess {
   invoiceNumber: string | null
   /** The descriptions of the invoice's rows, in order. */
   items: string[]
+  /** The payee's IBAN, compact (§8.30). */
+  iban: string | null
+  /** The payment reference, compact: Finnish or RF (§8.30). */
+  reference: string | null
 }
 
 /* -------------------------------------------------------------------------
@@ -103,16 +108,29 @@ export function layoutTextRuns(runs: readonly TextRun[]): string {
  * Virtual barcode (virtuaaliviivakoodi)
  * ---------------------------------------------------------------------- */
 
+/** What a virtual barcode carries. */
+export interface VirtualBarcode {
+  amount: Cents
+  dueDate: string | null
+  /** The payee's Finnish IBAN, compact. */
+  iban: string
+  /** The reference, compact: Finnish (version 4) or RF (version 5). */
+  reference: string
+}
+
 /**
- * Amount and due date from a Finnish virtual barcode, versions 4 and 5.
+ * Everything in a Finnish virtual barcode, versions 4 and 5.
  *
- * Both are 54 digits with the euros at 17–22, the cents at 23–24 and the
- * due date as YYMMDD at 48–53; a due date of 000000 means none. The format
- * is fixed by the banks, so when one is printed it beats every label below.
+ * Both are 54 digits: the version, the 16 digits of a Finnish IBAN after
+ * `FI` at 1–16, the euros at 17–22, the cents at 23–24 and the due date as
+ * YYMMDD at 48–53; a due date of 000000 means none. Version 4 has three zeros
+ * and the Finnish reference padded to 20 digits at 25–47; version 5 has the RF
+ * reference's check digits at 25–26 and its digits padded to 21 at 27–47. The
+ * format is fixed by the banks, so when one is printed it beats every label
+ * below. Spaces are ignored, as the code is printed in groups.
  */
-export function parseVirtualBarcode(
-  code: string
-): { amount: Cents; dueDate: string | null } | null {
+export function parseVirtualBarcode(input: string): VirtualBarcode | null {
+  const code = input.replace(/\s+/g, "")
   if (!/^[45]\d{53}$/.test(code)) return null
   const amount = Number(code.slice(17, 23)) * 100 + Number(code.slice(23, 25))
   const due = code.slice(48, 54)
@@ -120,7 +138,12 @@ export function parseVirtualBarcode(
     due === "000000"
       ? null
       : isoDate(2000 + Number(due.slice(0, 2)), +due.slice(2, 4), +due.slice(4))
-  return { amount, dueDate }
+  const iban = `FI${code.slice(1, 17)}`
+  const reference =
+    code[0] === "4"
+      ? code.slice(28, 48).replace(/^0+/, "")
+      : `RF${code.slice(25, 27)}${code.slice(27, 48).replace(/^0+/, "")}`
+  return { amount, dueDate, iban, reference }
 }
 
 function findBarcode(lines: readonly string[]) {
@@ -558,6 +581,48 @@ function findInvoiceNumber(lines: readonly string[]): string | null {
 }
 
 /* -------------------------------------------------------------------------
+ * Payment details
+ * ---------------------------------------------------------------------- */
+
+/** An IBAN as printed: two letters, two check digits, then groups. */
+const IBAN_RE =
+  /(?<![A-Z0-9])[A-Z]{2}\d{2}(?:\s?[A-Z0-9]{4}){2,7}(?:\s?[A-Z0-9]{1,4})?(?![A-Z0-9])/g
+
+/** The first IBAN in the text whose check digits are right. */
+function findIban(lines: readonly string[]): string | null {
+  for (const line of lines) {
+    for (const match of line.toUpperCase().matchAll(IBAN_RE)) {
+      const iban = billIban(match[0])
+      if (iban) return iban
+    }
+  }
+  return null
+}
+
+const REFERENCE_LABEL =
+  /(?<!\p{L})(viitenumero|viitenro|viite|referensnummer|referens|reference(?: number)?|ref\.?)(?!\p{L})/iu
+
+/**
+ * The reference beside its label, or on the next line, where a table puts it.
+ * Only one whose check digits are right is taken.
+ */
+function findReference(lines: readonly string[]): string | null {
+  for (const [i, line] of lines.entries()) {
+    const label = REFERENCE_LABEL.exec(line)
+    if (!label) continue
+    for (const text of [
+      line.slice(label.index + label[0].length),
+      lines[i + 1] ?? "",
+    ]) {
+      const match = /(RF\s?\d{2}(?:\s?\d){1,21}|\d(?:\s?\d){3,19})/i.exec(text)
+      const reference = match && billReference(match[0])
+      if (reference) return reference
+    }
+  }
+  return null
+}
+
+/* -------------------------------------------------------------------------
  * Parse
  * ---------------------------------------------------------------------- */
 
@@ -576,6 +641,8 @@ export function parseInvoiceText(text: string): InvoiceGuess {
     vendor: findVendor(lines),
     invoiceNumber: findInvoiceNumber(lines),
     items: findItems(lines),
+    iban: billIban(barcode?.iban) ?? findIban(lines),
+    reference: billReference(barcode?.reference) ?? findReference(lines),
   }
 }
 

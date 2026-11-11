@@ -168,6 +168,13 @@ export interface Entry {
    */
   due?: string
   /**
+   * The payee's IBAN on a bill received (§8.30), compact. Kept on the same
+   * entries as `due`, and like it reports nothing.
+   */
+  iban?: string
+  /** The payment reference on a bill received (§8.30), Finnish or RF, compact. */
+  reference?: string
+  /**
    * The `id` of the purchase this sale of machinery or equipment disposes of
    * (§8.8). A reference for the asset list only: the pool is still one balance
    * and no figure reads it. An id no longer in the book means no link.

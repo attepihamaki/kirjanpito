@@ -40,6 +40,14 @@ const salesByRate: HelpTopic = {
 }
 
 /** Fields of the VAT return (§8.7), by code. */
+const VAT_CASH: HelpSource = {
+  url: "https://www.vero.fi/yritykset-ja-yhteisot/verot-ja-maksut/arvonlisaverotus/vahainen-liiketoiminta-on-arvonlisaverotonta/pienyrityksen-maksuperusteinen-alv/",
+  title: {
+    fi: "vero.fi: Pienyrityksen maksuperusteinen ALV",
+    en: "vero.fi: Cash-basis VAT for small businesses (in Finnish)",
+  },
+}
+
 const VAT_FIELDS: Record<string, HelpTopic> = {
   "301": salesByRate,
   "302": salesByRate,
@@ -367,6 +375,13 @@ const VIEW_TOPICS: Record<string, HelpTopic> = {
       en: "The tax period is a month, a quarter or a year, depending on turnover. A return is filed for every period, even one with no activity.",
     },
     source: VAT_RETURN,
+  },
+  "settings.vatCash": {
+    text: {
+      fi: "Yritys, jonka liikevaihto on enintään 500 000 euroa kalenterivuodessa, voi tilittää arvonlisäveron maksuperusteisesti: myynnin vero ilmoitetaan sillä kaudella, jolla asiakas maksaa, ja oston vero vähennetään sillä kaudella, jolla yritys itse maksaa. Maksamattoman myynnin vero ilmoitetaan viimeistään sinä kuukautena, jona toimituksesta on kulunut 12 kuukautta. Maksuperuste koskee vain Suomessa tapahtuvia myyntejä ja ostoja; EU-kauppa, maahantuonti, vienti ja käännetty verovelvollisuus ilmoitetaan tavalliseen tapaan. Kun maksuperuste päättyy, maksamattomat myynnit ja ostot ilmoitetaan seuraavalla kaudella.",
+      en: "A business whose turnover is at most 500,000 euros a calendar year may report VAT on a cash basis: the tax on a sale goes on the return for the period the customer pays in, and the tax on a purchase is deducted in the period the business pays it. The tax on an unpaid sale is reported at the latest in the month 12 months after the delivery. The cash basis covers only sales and purchases in Finland; EU trade, imports, exports and reverse charge are reported as usual. When the cash basis ends, unpaid sales and purchases go on the next period's return.",
+    },
+    source: VAT_CASH,
   },
   "settings.bookStart": {
     text: {

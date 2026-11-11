@@ -6,6 +6,7 @@ import {
   type Entry,
 } from "@/lib/domain/types"
 import { countsOnVatReturn, vatReport } from "@/lib/domain/vat"
+import { vatBasisEntries, type VatCashBasis } from "@/lib/domain/vat-basis"
 import {
   asPeriod,
   bookStartDate,
@@ -39,6 +40,8 @@ export interface VatYearInput {
   vatPeriod: VatPeriodKind
   bookStart: string | null
   vatFiled: Readonly<Record<string, string>>
+  /** The months VAT is reported on payment (§6.16). */
+  vatCash?: VatCashBasis | null
 }
 
 /**
@@ -57,11 +60,12 @@ export function vatYear(input: VatYearInput): VatYear {
   )
   const total = { tax: 0, deductible: 0, due: 0 }
   if (!start) return { rows: [], total }
+  const onVat = vatBasisEntries(input.entries, cats, input.vatCash)
 
   const rows: VatYearRow[] = []
   for (const period of vatPeriods(input.vatPeriod, input.year)) {
     if (period.to < start) continue
-    const inPeriod = filterPeriod(input.entries, asPeriod(period))
+    const inPeriod = filterPeriod(onVat, asPeriod(period))
     const filed = filedOn(period, input.vatFiled)
     if (!filed && !inPeriod.some((e) => countsOnVatReturn(e, cats))) continue
     const report = vatReport(inPeriod, cats)

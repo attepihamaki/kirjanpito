@@ -45,6 +45,36 @@ const dates = (kind: string, over?: Partial<CalendarInput>) =>
     .map((e) => [e.ref, e.date])
 
 describe("taxCalendar", () => {
+  it("lists bills received by their due date, done once paid", () => {
+    const bill = (id: string, due: string, paidOn: string | null): Entry => ({
+      id,
+      date: "2026-10-01",
+      description: `Lasku ${id}`,
+      type: "expense",
+      catId: "333",
+      amount: 2_000,
+      vatRate: 0,
+      amountMode: "gross",
+      paidOn,
+      due,
+    })
+    const bills = taxCalendar(
+      input({
+        entries: [
+          bill("a", "2026-11-14", null),
+          bill("b", "2026-10-20", "2026-10-19"),
+          bill("c", "2027-01-05", null),
+        ],
+      })
+    ).filter((e) => e.kind === "bill")
+    expect(
+      bills.map((e) => [e.ref, e.date, e.done, e.amount, e.label])
+    ).toEqual([
+      ["b", "2026-10-20", true, 2_000, "Lasku b"],
+      ["a", "2026-11-14", false, 2_000, "Lasku a"],
+    ])
+  })
+
   it("lists the VAT returns that fall due in the year, last year's first", () => {
     const vat = dates("vat")
     expect(vat).toHaveLength(12)

@@ -57,6 +57,42 @@ describe("OVERVIEW_RULES", () => {
     for (const rule of OVERVIEW_RULES.rules) expect(rule.source).not.toBe("")
   })
 
+  it("reminds of bills overdue and bills due within a week", () => {
+    const bill = (id: string, due: string): Entry => ({
+      id,
+      date: "2026-05-01",
+      description: id,
+      type: "expense",
+      catId: "333",
+      amount: 5_000,
+      vatRate: 0,
+      amountMode: "gross",
+      paidOn: null,
+      due,
+    })
+    const found = overviewFindings(
+      context(
+        [
+          bill("late", "2026-06-01"),
+          bill("soon", "2026-06-18"),
+          bill("later", "2026-07-30"),
+          { ...bill("paid", "2026-06-02"), paidOn: "2026-06-01" },
+        ],
+        "2026-06-15"
+      )
+    )
+    const overdue = found.find((f) => f.ruleId === "billsOverdue")
+    const soon = found.find((f) => f.ruleId === "billsDueSoon")
+    expect(overdue?.severity).toBe("warn")
+    expect(overdue?.data).toEqual({
+      count: 1,
+      total: 5_000,
+      first: "2026-06-01",
+    })
+    expect(soon?.severity).toBe("info")
+    expect(soon?.data).toEqual({ count: 1, total: 5_000, first: "2026-06-18" })
+  })
+
   it("finds nothing in an empty book", () => {
     expect(ids(context([], "2026-06-15"))).toEqual([])
   })

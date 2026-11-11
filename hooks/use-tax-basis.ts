@@ -5,6 +5,7 @@ import { yearOf } from "@/lib/domain/dates"
 import { indexCategories } from "@/lib/domain/types"
 import type { StatementOptions } from "@/lib/domain/income-statement"
 import { taxBasisEntries } from "@/lib/domain/open-items"
+import { vatBasisEntries } from "@/lib/domain/vat-basis"
 import { useBookStore } from "@/stores/book-store"
 
 /** The entries as the income statement and Form 5 read them (§6.3). */
@@ -41,4 +42,15 @@ export function useStatementOptions(): StatementOptions {
       ),
     }
   }, [entries, cats, year, assetOpening])
+}
+
+/** The entries as the VAT return reads them, on cash basis where it applies (§6.16). */
+export function useVatBasisEntries() {
+  const entries = useBookStore((s) => s.entries)
+  const cats = useBookStore((s) => s.cats)
+  const vatCash = useBookStore((s) => s.vatCash)
+  return React.useMemo(
+    () => vatBasisEntries(entries, indexCategories(cats), vatCash),
+    [entries, cats, vatCash]
+  )
 }

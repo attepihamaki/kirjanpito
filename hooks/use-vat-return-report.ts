@@ -21,6 +21,7 @@ export function useVatReturnReport(): () => ReportDoc {
   const businessId = useBookStore((s) => s.businessId)
   const vatFiled = useBookStore((s) => s.vatFiled)
   const vatFiledFigures = useBookStore((s) => s.vatFiledFigures)
+  const vatCash = useBookStore((s) => s.vatCash)
 
   return React.useCallback(
     () =>
@@ -33,6 +34,7 @@ export function useVatReturnReport(): () => ReportDoc {
           businessId: businessId ?? "",
           vatFiled,
           vatFiledFigures,
+          vatCash,
         },
         current
       ),
@@ -44,6 +46,7 @@ export function useVatReturnReport(): () => ReportDoc {
       businessId,
       vatFiled,
       vatFiledFigures,
+      vatCash,
       current,
     ]
   )

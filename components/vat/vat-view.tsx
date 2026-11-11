@@ -25,11 +25,13 @@ import { useVatPeriod } from "@/hooks/use-vat-period"
 import { viewHelp, type HelpTopic } from "@/lib/domain/field-help"
 import type { Cents } from "@/lib/domain/types"
 import type { VatReport, VatSide } from "@/lib/domain/vat"
+import { cashBasisCovers } from "@/lib/domain/vat-basis"
 import { useBookStore } from "@/stores/book-store"
 
 export function VatView() {
   const f = useFormatters()
-  const { report } = useVatPeriod()
+  const { report, current } = useVatPeriod()
+  const vatCash = useBookStore((s) => s.vatCash)
   const yearEmpty = useYearIsEmpty()
   const { drill } = useVatDrill()
   const refund = report.due < 0
@@ -245,6 +247,9 @@ export function VatView() {
         </Panel>
       ) : null}
 
+      {cashBasisCovers(vatCash, current) ? (
+        <p className="text-xs text-muted-foreground">{f.t("vat.cashNote")}</p>
+      ) : null}
       <p className="text-xs text-muted-foreground">{f.t("vat.note")}</p>
     </div>
   )

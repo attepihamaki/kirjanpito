@@ -4,6 +4,7 @@ import { yearOf } from "@/lib/domain/dates"
 import { filterPeriod } from "@/lib/domain/period"
 import type { Cents, CategoryMap, Entry } from "@/lib/domain/types"
 import { vatReport } from "@/lib/domain/vat"
+import { vatBasisEntries, type VatCashBasis } from "@/lib/domain/vat-basis"
 import {
   asPeriod,
   periodContaining,
@@ -114,15 +115,17 @@ export function unsettledDues(
   entries: readonly Entry[],
   cats: CategoryMap,
   kind: VatPeriodKind,
-  today: string
+  today: string,
+  vatCash: VatCashBasis | null = null
 ): UnsettledDue[] {
   if (entries.length === 0) return []
+  const onVat = vatBasisEntries(entries, cats, vatCash)
   const years = entries.map((e) => yearOf(e.date))
   const out: UnsettledDue[] = []
   for (let y = Math.min(...years); y <= Math.max(...years); y++) {
     for (const p of vatPeriods(kind, y)) {
       if (p.to >= today) continue
-      const { due } = vatReport(filterPeriod(entries, asPeriod(p)), cats)
+      const { due } = vatReport(filterPeriod(onVat, asPeriod(p)), cats)
       if (due === 0) continue
       if (settlementSummary(p, entries, cats, kind, due).rows.length) continue
       out.push({ key: p.key, due })

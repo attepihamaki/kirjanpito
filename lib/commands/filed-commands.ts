@@ -39,13 +39,15 @@ function describe(f: Formatters, c: FiledPeriodChange): string {
  * none of them.
  */
 function filedChangeNotice(after: readonly Entry[]): string | null {
-  const { entries, cats, vatPeriod, vatFiled } = useBookStore.getState()
+  const { entries, cats, vatPeriod, vatFiled, vatCash } =
+    useBookStore.getState()
   const changes = filedPeriodChanges(
     entries,
     after,
     indexCategories(cats),
     vatPeriod,
-    vatFiled
+    vatFiled,
+    vatCash
   )
   if (changes.length === 0) return null
   const f = createFormatters(useLangStore.getState().lang)

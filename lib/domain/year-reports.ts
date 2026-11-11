@@ -39,6 +39,7 @@ import {
   type Lang,
 } from "@/lib/domain/types"
 import { countsOnVatReturn, vatReport } from "@/lib/domain/vat"
+import { vatBasisEntries, type VatCashBasis } from "@/lib/domain/vat-basis"
 import {
   asPeriod,
   bookStartDate,
@@ -716,6 +717,8 @@ function form5Doc(f: ReportText, input: YearReportInput): ReportDoc {
 export interface VatReturnBook {
   entries: readonly Entry[]
   cats: readonly Category[]
+  /** The months VAT is reported on payment (§6.16). */
+  vatCash?: VatCashBasis | null
   businessName: string
   businessId: string
   vatFiled: Readonly<Record<string, string>>
@@ -741,7 +744,10 @@ export function vatReturnReport(
   period: VatPeriod
 ): ReportDoc {
   const cats = indexCategories(input.cats)
-  const inPeriodEntries = filterPeriod(input.entries, asPeriod(period))
+  const inPeriodEntries = filterPeriod(
+    vatBasisEntries(input.entries, cats, input.vatCash),
+    asPeriod(period)
+  )
   const byId = new Map(inPeriodEntries.map((e) => [e.id, e]))
   const sections = vatReturnSections(vatReport(inPeriodEntries, cats))
 
@@ -866,14 +872,13 @@ function reportsForPeriods(
     )
   )
   if (!start) return []
+  const onVat = vatBasisEntries(input.entries, cats, input.vatCash)
   return periods
     .filter((p) => p.to >= start)
     .filter(
       (p) =>
         filedOn(p, input.vatFiled) !== null ||
-        filterPeriod(input.entries, asPeriod(p)).some((e) =>
-          countsOnVatReturn(e, cats)
-        )
+        filterPeriod(onVat, asPeriod(p)).some((e) => countsOnVatReturn(e, cats))
     )
     .map((p) => vatReturnReport(f, input, p))
 }

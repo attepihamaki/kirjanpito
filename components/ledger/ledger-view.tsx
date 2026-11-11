@@ -31,6 +31,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { useFormatters } from "@/components/lang-provider"
+import { useVatBasisEntries } from "@/hooks/use-tax-basis"
 import { categoryName } from "@/lib/domain/accounts"
 import { todayIso } from "@/lib/domain/dates"
 import {
@@ -189,9 +190,15 @@ export function LedgerView() {
     setMonth(0)
   }
 
+  const vatEntries = useVatBasisEntries()
   const totals = React.useMemo(
-    () => ledgerTotals(periodEntries, catMap),
-    [periodEntries, catMap]
+    () =>
+      ledgerTotals(
+        periodEntries,
+        catMap,
+        entriesInPeriod(vatEntries, year, month)
+      ),
+    [periodEntries, catMap, vatEntries, year, month]
   )
 
   // Only categories actually used in this period (§8.4).

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { CheckIcon } from "lucide-react"
+import { CheckIcon, CopyIcon } from "lucide-react"
 
 import { DateInput } from "@/components/common/date-input"
 import { Money } from "@/components/common/money"
@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Empty, EmptyDescription } from "@/components/ui/empty"
+import { toast } from "@/components/ui/toast"
 import {
   Table,
   TableBody,
@@ -30,6 +31,8 @@ import {
 import { useCommandCtx } from "@/hooks/use-commands"
 import { payBill } from "@/lib/commands/bulk-commands"
 import { todayIso } from "@/lib/domain/dates"
+import { formatIban } from "@/lib/domain/iban"
+import { formatReference } from "@/lib/domain/invoice-reference"
 import {
   PAYABLE_GROUPS,
   payablesReport,
@@ -89,6 +92,72 @@ function PayDialog({ bill, onClose }: { bill: Payable; onClose: () => void }) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/**
+ * How to pay a bill (§8.30): the payee's IBAN and the reference, each with a
+ * copy button, and the virtual barcode when the details make one, which most
+ * Finnish banks take in a single paste.
+ */
+function BillPaymentLine({ bill }: { bill: Payable }) {
+  const f = useFormatters()
+  if (!bill.iban && !bill.reference) return null
+
+  const copy = async (text: string, what: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.add({ title: f.t("payables.copied", { x: what }) })
+    } catch {
+      toast.add({ title: f.t("common.formCopyFailed") })
+    }
+  }
+
+  const parts: { label: string; shown: string; value: string }[] = []
+  if (bill.iban) {
+    parts.push({
+      label: f.t("payables.iban"),
+      shown: formatIban(bill.iban),
+      value: bill.iban,
+    })
+  }
+  if (bill.reference) {
+    parts.push({
+      label: f.t("payables.reference"),
+      shown: formatReference(bill.reference),
+      value: bill.reference,
+    })
+  }
+
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+      {parts.map((p) => (
+        <span key={p.label} className="inline-flex items-center gap-1">
+          <span>{p.label}</span>
+          <span className="font-mono text-foreground tabular-nums">
+            {p.shown}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label={f.t("payables.copy", { x: p.label })}
+            onClick={() => copy(p.value, p.label)}
+          >
+            <CopyIcon />
+          </Button>
+        </span>
+      ))}
+      {bill.barcode ? (
+        <Button
+          variant="ghost"
+          size="xs"
+          onClick={() => copy(bill.barcode!, f.t("payables.barcode"))}
+        >
+          <CopyIcon data-icon="inline-start" />
+          {f.t("payables.copyBarcode")}
+        </Button>
+      ) : null}
+    </div>
   )
 }
 
@@ -193,6 +262,7 @@ export function PayablesList() {
                     >
                       {bill.lead.description || "–"}
                     </Button>
+                    <BillPaymentLine bill={bill} />
                   </TableCell>
                   <TableCell className="text-right font-medium">
                     <Money cents={bill.open} />

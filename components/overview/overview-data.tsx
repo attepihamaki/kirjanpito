@@ -31,7 +31,11 @@ import {
   type TimelinePeriod,
   type VatPeriod,
 } from "@/lib/domain/vat-deadline"
-import { useStatementOptions, useTaxBasisEntries } from "@/hooks/use-tax-basis"
+import {
+  useStatementOptions,
+  useTaxBasisEntries,
+  useVatBasisEntries,
+} from "@/hooks/use-tax-basis"
 import { useToday } from "@/hooks/use-today"
 import { useBookStore } from "@/stores/book-store"
 
@@ -43,6 +47,8 @@ import { useBookStore } from "@/stores/book-store"
  */
 export interface OverviewData {
   entries: readonly Entry[]
+  /** The entries as the VAT return reads them (§6.16). */
+  vatEntries: readonly Entry[]
   catMap: CategoryMap
   year: number
   today: string
@@ -77,6 +83,7 @@ export function OverviewDataProvider({
   const bookEnd = useBookStore((s) => s.bookEnd)
   const vatFiled = useBookStore((s) => s.vatFiled)
   const basis = useTaxBasisEntries()
+  const vatEntries = useVatBasisEntries()
   const options = useStatementOptions()
   const today = useToday()
 
@@ -93,6 +100,7 @@ export function OverviewDataProvider({
     const through = year === thisYear ? today : `${year}-12-31`
     return {
       entries,
+      vatEntries,
       catMap,
       year,
       today,
@@ -101,7 +109,7 @@ export function OverviewDataProvider({
       yearEntries,
       summary: summary(basis, catMap, year),
       statement: incomeStatement(basis, catMap, year, options),
-      months: monthFigures(entries, catMap, year, basis, options),
+      months: monthFigures(vatEntries, catMap, year, basis, options),
       lastYear: sameTimeLastYear(basis, catMap, year, through, options),
       bookStart,
       timeline: vatTimeline(
@@ -114,6 +122,7 @@ export function OverviewDataProvider({
     }
   }, [
     entries,
+    vatEntries,
     basis,
     options,
     cats,
@@ -142,6 +151,6 @@ export { periodLabel } from "@/lib/i18n/period-label"
 
 /** The VAT return for one period, and how many entries it was built from. */
 export function periodVat(data: OverviewData, p: VatPeriod) {
-  const inPeriod = filterPeriod(data.entries, asPeriod(p))
+  const inPeriod = filterPeriod(data.vatEntries, asPeriod(p))
   return { report: vatReport(inPeriod, data.catMap), count: inPeriod.length }
 }

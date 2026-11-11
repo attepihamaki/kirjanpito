@@ -15,6 +15,7 @@ import {
   type Finding,
 } from "@/lib/domain/rules/engine"
 import type { CategoryMap, Entry } from "@/lib/domain/types"
+import { vatDate, type VatCashBasis } from "@/lib/domain/vat-basis"
 import {
   asPeriod,
   bookStartDate,
@@ -44,6 +45,8 @@ export interface VatCheckInput {
   changeLog: readonly ChangeRecord[]
   /** The content hashes of the stored receipts read so far (§8.4). */
   receiptHashes?: ReceiptHashes
+  /** The months VAT is reported on payment (§6.16). */
+  vatCash?: VatCashBasis | null
 }
 
 /** What each rule's breach carries, by rule id. */
@@ -63,12 +66,20 @@ export type VatCheckFinding = {
   [K in keyof VatCheckData]: Finding<VatCheckData[K]> & { ruleId: K }
 }[keyof VatCheckData]
 
-/** The year's entries, and the part of them that falls in the period. */
+/**
+ * The year's entries, and the part of them the period's return reads, which
+ * on cash basis (§6.16) goes by the VAT date rather than the voucher's.
+ */
 function scope(input: VatCheckInput) {
+  const period = asPeriod(input.period)
+  const own = input.entries.filter((e) => {
+    const on = vatDate(e, input.cats, input.vatCash)
+    return on !== null && inPeriod({ date: on }, period)
+  })
+  const ownIds = new Set(own.map((e) => e.id))
   const yearEntries = input.entries.filter(
-    (e) => yearOf(e.date) === input.period.year
+    (e) => yearOf(e.date) === input.period.year || ownIds.has(e.id)
   )
-  const own = yearEntries.filter((e) => inPeriod(e, asPeriod(input.period)))
   return { yearEntries, own }
 }
 

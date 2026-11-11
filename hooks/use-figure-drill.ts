@@ -1,7 +1,7 @@
 import * as React from "react"
 
 import { useFormatters } from "@/components/lang-provider"
-import { useTaxBasisEntries } from "@/hooks/use-tax-basis"
+import { useTaxBasisEntries, useVatBasisEntries } from "@/hooks/use-tax-basis"
 import { useVatPeriod } from "@/hooks/use-vat-period"
 import {
   balanceContribution,
@@ -145,7 +145,7 @@ export function form5Figure(
 export function useVatDrill() {
   const f = useFormatters()
   const { period, label } = useVatPeriod()
-  const entries = useBookStore((s) => s.entries)
+  const entries = useVatBasisEntries()
   const cats = useBookStore((s) => s.cats)
   const openFigure = useBookStore((s) => s.openFigure)
   const catMap = React.useMemo(() => indexCategories(cats), [cats])

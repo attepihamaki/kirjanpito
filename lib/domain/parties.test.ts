@@ -254,8 +254,8 @@ describe("CSV party column", () => {
 
   it("reads a cell that is not an id as no party", () => {
     const text = serializeCsv([entry({ party: "abc123" })], cats).replace(
-      ";abc123;\r\n",
-      ";not an id!;\r\n"
+      ";abc123;;;\r\n",
+      ";not an id!;;;\r\n"
     )
     const result = parseCsv(text, baseCats)
     expect(result.ok && result.entries[0].party).toBeUndefined()

@@ -7,7 +7,11 @@ import {
   vatFigure,
   type FigureEnv,
 } from "@/hooks/use-figure-drill"
-import { useStatementOptions, useTaxBasisEntries } from "@/hooks/use-tax-basis"
+import {
+  useStatementOptions,
+  useTaxBasisEntries,
+  useVatBasisEntries,
+} from "@/hooks/use-tax-basis"
 import {
   entryFigureRefs,
   vatFieldSelector,
@@ -20,6 +24,7 @@ import { filterPeriod } from "@/lib/domain/period"
 import type { TaxFormSection } from "@/lib/domain/tax-form"
 import { indexCategories, type Cents } from "@/lib/domain/types"
 import { vatReport } from "@/lib/domain/vat"
+import { vatDate } from "@/lib/domain/vat-basis"
 import { periodContaining } from "@/lib/domain/vat-deadline"
 import { vatReturnSections } from "@/lib/domain/vat-return"
 import { periodLabel } from "@/lib/i18n/period-label"
@@ -74,6 +79,8 @@ export function useEntryFigures(entryId: string | undefined) {
   const loanOpening = useBookStore((s) => s.loanOpening)
   const openFigure = useBookStore((s) => s.openFigure)
   const basis = useTaxBasisEntries()
+  const vatEntries = useVatBasisEntries()
+  const vatCash = useBookStore((s) => s.vatCash)
   const options = useStatementOptions()
   const catMap = React.useMemo(() => indexCategories(cats), [cats])
 
@@ -89,6 +96,7 @@ export function useEntryFigures(entryId: string | undefined) {
       vatPeriod,
       trader,
       years: [year],
+      vatCash,
     })
 
     const groups = new Map<string, EntryFigureGroup>()
@@ -101,11 +109,14 @@ export function useEntryFigures(entryId: string | undefined) {
     const form5Fields = new Map<number, Fields>()
 
     const vatItem = (ref: Extract<FigureRef, { kind: "vat" }>) => {
-      const p = periodContaining(vatPeriod, entry.date)
+      const p = periodContaining(
+        vatPeriod,
+        vatDate(entry, catMap, vatCash) ?? entry.date
+      )
       const heading = f.t("entry.figuresVat", { p: periodLabel(f, p) })
       let fields = vatFields.get(p.key)
       if (!fields) {
-        const report = vatReport(filterPeriod(entries, ref.period), catMap)
+        const report = vatReport(filterPeriod(vatEntries, ref.period), catMap)
         fields = fieldsOf(vatReturnSections(report), f.lang)
         vatFields.set(p.key, fields)
       }
@@ -174,6 +185,8 @@ export function useEntryFigures(entryId: string | undefined) {
   }, [
     entry,
     entries,
+    vatEntries,
+    vatCash,
     basis,
     catMap,
     f,

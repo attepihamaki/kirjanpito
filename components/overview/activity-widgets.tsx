@@ -32,7 +32,7 @@ import {
 import { useCanSaveToFile, useSaveBook } from "@/hooks/use-save-book"
 import { calcEntry } from "@/lib/domain/calc"
 import { ENTRY_CHECKS, flaggedEntryIds } from "@/lib/domain/entry-checks"
-import { APP_ROUTES } from "@/lib/site"
+import { APP_ROUTES, INVOICE_ROUTES } from "@/lib/site"
 import { cn } from "@/lib/utils"
 import { toast } from "@/components/ui/toast"
 import { archiveClosedYear } from "@/lib/commands/io-commands"
@@ -386,6 +386,32 @@ export function ChecksWidget() {
       tone: tone(limit.severity),
       ...vatThresholdText(f, limit.data as VatThreshold),
     })
+  }
+
+  for (const id of ["billsOverdue", "billsDueSoon"] as const) {
+    for (const { severity, data: d } of overview(id)) {
+      items.push({
+        key: id,
+        tone: tone(severity),
+        title: f.t(
+          id === "billsOverdue"
+            ? "overview.billsOverdue"
+            : "overview.billsDueSoon",
+          { n: d.count }
+        ),
+        sub: f.t(
+          id === "billsOverdue"
+            ? "overview.billsOverdueSub"
+            : "overview.billsDueSoonSub",
+          { s: f.money(d.total), d: f.date(d.first) }
+        ),
+        action: (
+          <ButtonLink variant="ghost" size="sm" href={INVOICE_ROUTES.payables}>
+            {f.t("overview.showThem")}
+          </ButtonLink>
+        ),
+      })
+    }
   }
 
   for (const { severity, data: d } of overview("openItems")) {

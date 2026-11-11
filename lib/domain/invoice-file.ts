@@ -242,6 +242,9 @@ function parseCustomer(value: unknown): Customer | null {
     incomeCat: catId(value.incomeCat),
     expenseCat: catId(value.expenseCat),
     vatRate: rate(value.vatRate),
+    ...(typeof value.iban === "string" && parseIban(value.iban)
+      ? { iban: parseIban(value.iban)! }
+      : {}),
   }
 }
 

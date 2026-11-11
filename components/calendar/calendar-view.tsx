@@ -185,6 +185,7 @@ function EventRow({ event, today }: { event: CalendarEvent; today: string }) {
   const days = daysBetween(today, event.date)
   const past = days < 0
   const book = useBookInstalment(event, today)
+  const openDialog = useBookStore((s) => s.openDialog)
 
   return (
     <li
@@ -197,7 +198,19 @@ function EventRow({ event, today }: { event: CalendarEvent; today: string }) {
         {f.weekday(event.date)} {f.date(event.date)}
       </span>
       <span className="min-w-0 flex-1 text-sm font-medium">
-        {eventTitle(f, event)}
+        {event.kind === "bill" ? (
+          <button
+            type="button"
+            className="text-left underline-offset-2 hover:underline"
+            onClick={() =>
+              openDialog({ kind: "entry", mode: "edit", entryId: event.ref })
+            }
+          >
+            {eventTitle(f, event)}
+          </button>
+        ) : (
+          eventTitle(f, event)
+        )}
       </span>
       {event.amount === undefined ? null : (
         <span className="tabular text-sm">{f.money(event.amount)}</span>
@@ -205,7 +218,11 @@ function EventRow({ event, today }: { event: CalendarEvent; today: string }) {
       {book}
       {event.done ? (
         <Pill tone="income">
-          {f.t(event.kind === "advanceTax" ? "calendar.paid" : "calendar.done")}
+          {f.t(
+            event.kind === "advanceTax" || event.kind === "bill"
+              ? "calendar.paid"
+              : "calendar.done"
+          )}
         </Pill>
       ) : (
         <Pill>

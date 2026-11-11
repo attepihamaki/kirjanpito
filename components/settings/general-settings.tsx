@@ -48,6 +48,7 @@ export function GeneralSettings() {
         <TraderTypeSetting />
         <FeaturesSetting />
         <VatPeriodSetting />
+        <VatCashSetting />
         <BookStartSetting />
         <BookEndSetting />
         <ExportLanguageSetting />
@@ -400,6 +401,97 @@ function BookStartSetting() {
         note={f.t(
           bookStart ? "settings.bookStartNote" : "settings.bookStartNoteNone"
         )}
+      />
+    </SettingCard>
+  )
+}
+
+/**
+ * Cash-basis VAT (§6.16): the first month on it and, once it ends, the last.
+ * Choosing it starts from the selected year's January, and both months use
+ * the selects of the start month.
+ */
+function VatCashSetting() {
+  const f = useFormatters()
+  const vatCash = useBookStore((s) => s.vatCash)
+  const setVatCash = useBookStore((s) => s.setVatCash)
+  const year = useBookStore((s) => s.year)
+  const monthName = (m: string) =>
+    `${f.month(Number(m.slice(5, 7)) - 1)} ${m.slice(0, 4)}`
+
+  return (
+    <SettingCard
+      label={f.t("settings.vatCash")}
+      help={viewHelp("settings.vatCash")}
+      editor={
+        <>
+          <OptionSelect
+            label={f.t("settings.vatCash")}
+            options={[
+              { value: "off", label: f.t("settings.vatCashOff") },
+              { value: "on", label: f.t("settings.vatCashOn") },
+            ]}
+            value={vatCash ? "on" : "off"}
+            onChange={(v) =>
+              setVatCash(v === "on" ? { from: `${year}-01`, to: null } : null)
+            }
+            className="w-64"
+          />
+          {vatCash ? (
+            <div className="flex flex-wrap gap-2">
+              <BookStartSelects
+                value={vatCash.from}
+                onChange={(from) =>
+                  setVatCash(
+                    from === null
+                      ? null
+                      : {
+                          from,
+                          to:
+                            vatCash.to && vatCash.to >= from
+                              ? vatCash.to
+                              : null,
+                        }
+                  )
+                }
+                labels={{
+                  none: f.t("settings.vatCashOff"),
+                  month: f.t("settings.vatCashFrom"),
+                  year: f.t("settings.vatCashFromYear"),
+                }}
+              />
+              <BookStartSelects
+                value={vatCash.to}
+                onChange={(to) =>
+                  setVatCash({
+                    from: vatCash.from,
+                    to: to !== null && to >= vatCash.from ? to : null,
+                  })
+                }
+                labels={{
+                  none: f.t("settings.vatCashToNone"),
+                  month: f.t("settings.vatCashTo"),
+                  year: f.t("settings.vatCashToYear"),
+                }}
+              />
+            </div>
+          ) : null}
+          <SettingHint>{f.t("settings.vatCashHint")}</SettingHint>
+        </>
+      }
+    >
+      <SettingValue
+        value={
+          !vatCash
+            ? f.t("settings.vatCashOff")
+            : vatCash.to
+              ? f.t("settings.vatCashRangeValue", {
+                  m: monthName(vatCash.from),
+                  n: monthName(vatCash.to),
+                })
+              : f.t("settings.vatCashFromValue", { m: monthName(vatCash.from) })
+        }
+        note={vatCash ? f.t("settings.vatCashNote") : undefined}
       />
     </SettingCard>
   )
