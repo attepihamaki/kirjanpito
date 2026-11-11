@@ -7,13 +7,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { ButtonLink } from "@/components/common/button-link"
 import { Button } from "@/components/ui/button"
+import { useBillsDue } from "@/hooks/use-bills-due"
+import { INVOICE_ROUTES } from "@/lib/site"
 import { useFormatters } from "@/components/lang-provider"
 import { clearToastHistory, useToastHistory } from "@/stores/toast-history"
 
 /**
  * The toasts raised this session, newest first, so a message that timed out
- * unread can be read again. Opened from the top bar's bell.
+ * unread can be read again. Opened from the top bar's bell. Above them, the
+ * bills past their due date or due today (§8.30), with the way to the list.
  */
 export function MessagesDialog({
   open,
@@ -24,6 +28,7 @@ export function MessagesDialog({
 }) {
   const f = useFormatters()
   const records = useToastHistory()
+  const { overdue, dueToday } = useBillsDue()
   const locale = f.lang === "fi" ? "fi-FI" : "en-GB"
   const time = new Intl.DateTimeFormat(locale, {
     hour: "2-digit",
@@ -40,6 +45,37 @@ export function MessagesDialog({
             {f.t("file.messagesDescription")}
           </DialogDescription>
         </DialogHeader>
+
+        {overdue.count || dueToday.count ? (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-3 py-2 text-sm">
+            <div className="flex min-w-0 flex-1 flex-col">
+              {overdue.count ? (
+                <span className="text-expense">
+                  {f.t("file.billsOverdue", {
+                    n: overdue.count,
+                    s: f.money(overdue.total),
+                  })}
+                </span>
+              ) : null}
+              {dueToday.count ? (
+                <span>
+                  {f.t("file.billsToday", {
+                    n: dueToday.count,
+                    s: f.money(dueToday.total),
+                  })}
+                </span>
+              ) : null}
+            </div>
+            <ButtonLink
+              variant="outline"
+              size="sm"
+              href={INVOICE_ROUTES.payables}
+              onClick={() => onOpenChange(false)}
+            >
+              {f.t("file.billsOpen")}
+            </ButtonLink>
+          </div>
+        ) : null}
 
         {records.length === 0 ? (
           <p className="text-sm text-muted-foreground">

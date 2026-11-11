@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/common/page-header"
 import { Surface } from "@/components/common/surface"
 import { Button } from "@/components/ui/button"
 import { useFormatters } from "@/components/lang-provider"
+import { BillsPanel } from "@/components/overview/bills-panel"
 import { OnboardingChecklist } from "@/components/overview/onboarding-checklist"
 import { OverviewBoard } from "@/components/overview/overview-board"
 import { OverviewDataProvider } from "@/components/overview/overview-data"
@@ -62,9 +63,12 @@ export function OverviewView() {
       />
       {onboarding ? <OnboardingChecklist /> : null}
       {hasEntries ? (
-        <OverviewDataProvider>
-          <OverviewBoard editing={editing} />
-        </OverviewDataProvider>
+        <>
+          {editing ? null : <BillsPanel />}
+          <OverviewDataProvider>
+            <OverviewBoard editing={editing} />
+          </OverviewDataProvider>
+        </>
       ) : (
         <EmptyOverview />
       )}

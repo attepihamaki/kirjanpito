@@ -31,8 +31,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useCommandCtx } from "@/hooks/use-commands"
+import { useToday } from "@/hooks/use-today"
 import { payBill } from "@/lib/commands/bulk-commands"
-import { todayIso } from "@/lib/domain/dates"
+import { daysBetween, todayIso } from "@/lib/domain/dates"
 import { formatIban } from "@/lib/domain/iban"
 import { formatReference } from "@/lib/domain/invoice-reference"
 import {
@@ -44,18 +45,41 @@ import {
 import { indexCategories } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
 
-const GROUP_TONE = {
-  overdue: "expense",
-  soon: "neutral",
-  later: "neutral",
-  noDue: "neutral",
-} as const satisfies Record<PayableGroup, "neutral" | "income" | "expense">
+/**
+ * Where a bill stands, as a pill (§8.30): how many days late it is, that it
+ * falls due today or tomorrow, or else the name of its group.
+ */
+export function BillDuePill({ bill, today }: { bill: Payable; today: string }) {
+  const f = useFormatters()
+  if (bill.group === "overdue") {
+    return (
+      <Pill tone="expense">
+        {f.t("payables.daysLate", { n: bill.daysLate })}
+      </Pill>
+    )
+  }
+  const ahead = bill.due ? daysBetween(today, bill.due) : null
+  if (ahead === 0 || ahead === 1) {
+    return (
+      <Pill tone="warning">
+        {f.t(ahead === 0 ? "payables.dueToday" : "payables.dueTomorrow")}
+      </Pill>
+    )
+  }
+  return <Pill>{f.t(`payables.${bill.group}`)}</Pill>
+}
 
 /** Ask on which day a bill was paid, then mark every part of it (§8.30). */
-function PayDialog({ bill, onClose }: { bill: Payable; onClose: () => void }) {
+export function PayDialog({
+  bill,
+  onClose,
+}: {
+  bill: Payable
+  onClose: () => void
+}) {
   const f = useFormatters()
   const ctx = useCommandCtx()
-  const [on, setOn] = React.useState(todayIso)
+  const [on, setOn] = React.useState(() => todayIso())
   const [bad, setBad] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
 
@@ -102,7 +126,7 @@ function PayDialog({ bill, onClose }: { bill: Payable; onClose: () => void }) {
  * copy button, and the virtual barcode when the details make one, which most
  * Finnish banks take in a single paste.
  */
-function BillPaymentLine({ bill }: { bill: Payable }) {
+export function BillPaymentLine({ bill }: { bill: Payable }) {
   const f = useFormatters()
   if (!bill.iban && !bill.reference) return null
 
@@ -177,10 +201,11 @@ export function PayablesList() {
   /* The bills ticked for a payment file, by their lead entry's id. */
   const [picked, setPicked] = React.useState<ReadonlySet<string>>(new Set())
   const [fileOf, setFileOf] = React.useState<Payable[] | null>(null)
+  const today = useToday()
 
   const report = React.useMemo(
-    () => payablesReport(entries, indexCategories(cats), todayIso()),
-    [entries, cats]
+    () => payablesReport(entries, indexCategories(cats), today),
+    [entries, cats, today]
   )
   /* A bill paid or deleted since it was ticked drops out of the choice. */
   const chosen = report.items.filter((b) => picked.has(b.lead.id))
@@ -202,12 +227,7 @@ export function PayablesList() {
     noDue: f.t("payables.noDue"),
   }
 
-  const dueText = (bill: Payable) => {
-    if (!bill.due) return "–"
-    return bill.daysLate > 0
-      ? f.t("payables.dueLate", { d: f.date(bill.due), n: bill.daysLate })
-      : f.date(bill.due)
-  }
+  const dueText = (bill: Payable) => (bill.due ? f.date(bill.due) : "–")
 
   return (
     <div className="flex flex-col gap-4">
@@ -295,9 +315,7 @@ export function PayablesList() {
                   <TableCell className="whitespace-nowrap">
                     <div className="flex flex-col items-start gap-1">
                       <span className="tabular">{dueText(bill)}</span>
-                      <Pill tone={GROUP_TONE[bill.group]}>
-                        {heading[bill.group]}
-                      </Pill>
+                      <BillDuePill bill={bill} today={today} />
                     </div>
                   </TableCell>
                   <TableCell className="tabular whitespace-nowrap">

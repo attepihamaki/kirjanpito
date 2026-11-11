@@ -19,7 +19,7 @@ export function Pill({
   className,
   children,
 }: {
-  tone?: "neutral" | "income" | "expense"
+  tone?: "neutral" | "income" | "expense" | "warning"
   size?: "default" | "sm"
   className?: string
   children: React.ReactNode
@@ -33,6 +33,7 @@ export function Pill({
           : "rounded-full px-2 py-0.5 text-xs",
         tone === "income" && "bg-income-subtle text-income",
         tone === "expense" && "bg-expense-subtle text-expense",
+        tone === "warning" && "bg-warning/10 text-warning",
         tone === "neutral" && "bg-muted",
         className
       )}

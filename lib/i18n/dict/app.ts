@@ -677,6 +677,29 @@ export const APP_DICT = {
     "Yli 1 200 euron laite on yleensä kirjattava käyttöomaisuudeksi ja poistettava. Kerralla sen voi vähentää vain, jos käyttöikä on enintään 3 vuotta.",
     "Equipment over 1,200 euros is usually booked as a fixed asset and depreciated. Deducting it at once works only if its useful life is 3 years or less.",
   ],
+  "overview.billsTitle": ["Laskut maksettavana", "Bills to pay"],
+  "overview.billsTotal": ["Yhteensä {s}", "{s} in all"],
+  "overview.billsMore": [
+    pl("ja 1 muu lasku", "ja {n} muuta laskua"),
+    pl("and 1 more bill", "and {n} more bills"),
+  ],
+  "overview.billsAll": ["Kaikki maksettavat", "All bills to pay"],
+  "file.billsOverdue": [
+    pl("1 lasku on myöhässä: {s}", "{n} laskua on myöhässä: {s}"),
+    pl("1 bill is overdue: {s}", "{n} bills are overdue: {s}"),
+  ],
+  "file.billsToday": [
+    pl("1 lasku erääntyy tänään: {s}", "{n} laskua erääntyy tänään: {s}"),
+    pl("1 bill falls due today: {s}", "{n} bills fall due today: {s}"),
+  ],
+  "file.messagesBills": [
+    pl("Viestit, 1 lasku odottaa maksua", "Viestit, {n} laskua odottaa maksua"),
+    pl(
+      "Messages, 1 bill waiting to be paid",
+      "Messages, {n} bills waiting to be paid"
+    ),
+  ],
+  "file.billsOpen": ["Avaa maksettavat", "Open bills to pay"],
   "overview.billsOverdue": [
     pl("1 lasku on myöhässä", "{n} laskua on myöhässä"),
     pl("1 bill is overdue", "{n} bills are overdue"),
@@ -3974,7 +3997,9 @@ export const APP_DICT = {
     "Copy virtual barcode",
   ],
   "payables.copied": ["Kopioitu: {x}", "Copied: {x}"],
-  "payables.dueLate": ["{d}, {n} pv myöhässä", "{d}, {n} days late"],
+  "payables.daysLate": ["{n} pv myöhässä", pl("1 day late", "{n} days late")],
+  "payables.dueToday": ["Erääntyy tänään", "Due today"],
+  "payables.dueTomorrow": ["Erääntyy huomenna", "Due tomorrow"],
   "payables.pay": ["Maksa", "Pay"],
   "payables.payTitle": ["Merkitse maksetuksi", "Mark as paid"],
   "payables.payDescription": ["{d}, {n}", "{d}, {n}"],
