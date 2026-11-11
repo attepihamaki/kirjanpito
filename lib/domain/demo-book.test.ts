@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { defaultCategories } from "@/lib/domain/accounts"
+import { billIban, billReference } from "@/lib/domain/bill-payment"
 import { demoBook, demoYear } from "@/lib/domain/demo-book"
 import { incomeStatement } from "@/lib/domain/income-statement"
 import { indexCategories } from "@/lib/domain/types"
@@ -40,6 +41,22 @@ describe("demoBook", () => {
     const sales = entries.filter((e) => e.type === "income")
     expect(sales.at(-1)?.paidOn).toBeNull()
     expect(sales.slice(0, -1).every((e) => e.paidOn === undefined)).toBe(true)
+  })
+
+  it("leaves the latest rent and phone bill to pay, with valid payment details", () => {
+    const { entries } = demoBook("2026-11-10")
+    const open = entries.filter(
+      (e) => e.type === "expense" && e.paidOn === null
+    )
+    expect(open.map((e) => e.description).sort()).toEqual([
+      "Puhelinliittymä, 10/2026",
+      "Työtilan vuokra, 10/2026",
+    ])
+    for (const e of open) {
+      expect(billIban(e.iban)).toBe(e.iban)
+      expect(billReference(e.reference)).toBe(e.reference)
+      expect(e.due! > e.date).toBe(true)
+    }
   })
 
   it("ends the year in a profit", () => {

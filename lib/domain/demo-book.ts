@@ -1,3 +1,4 @@
+import { addDays } from "@/lib/domain/dates"
 import { uid } from "@/lib/domain/id"
 import type { Customer } from "@/lib/domain/invoice"
 import type { Cents, Entry, EntryType } from "@/lib/domain/types"
@@ -241,6 +242,31 @@ const PARTIES: Readonly<
   },
 }
 
+/*
+ * The latest rent and phone bill are left to pay (§8.30), with made-up
+ * accounts and references whose check digits are right, so Maksettavat has
+ * bills to show and a payment file can be made of them.
+ */
+const BILLS: readonly {
+  description: RegExp
+  iban: string
+  reference: string
+  dueDays: number
+}[] = [
+  {
+    description: /^Työtilan vuokra/,
+    iban: "FI3550000120253504",
+    reference: "44105",
+    dueDays: 10,
+  },
+  {
+    description: /^Puhelinliittymä/,
+    iban: "FI2112345600000785",
+    reference: "20261007",
+    dueDays: 14,
+  },
+]
+
 const pad = (n: number) => String(n).padStart(2, "0")
 
 /** The last day of `month` in `year`, so day 30 or 31 stays inside February. */
@@ -260,7 +286,8 @@ export function demoYear(today: string): number {
 /**
  * The demo book as of `today`: the year's entries up to today, and the
  * counterparties they name. The latest sale is left unpaid, so the open
- * items and the receivables have one to show.
+ * items and the receivables have one to show, and so are the latest rent and
+ * phone bill.
  */
 export function demoBook(today: string): {
   year: number
@@ -314,6 +341,14 @@ export function demoBook(today: string): {
 
   const lastSale = entries.findLast((e) => e.type === "income")
   if (lastSale) lastSale.paidOn = null
+  for (const bill of BILLS) {
+    const last = entries.findLast((e) => bill.description.test(e.description))
+    if (!last) continue
+    last.paidOn = null
+    last.due = addDays(last.date, bill.dueDays)
+    last.iban = bill.iban
+    last.reference = bill.reference
+  }
 
   const customers: Customer[] = (Object.keys(PARTIES) as Party[]).map((p) => ({
     id: ids[p],

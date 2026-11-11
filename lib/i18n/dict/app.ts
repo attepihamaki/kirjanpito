@@ -1262,6 +1262,19 @@ export const APP_DICT = {
   "entry.partyNoneSupplier": ["Ei toimittajaa", "No supplier"],
   "entry.partySearch": ["Hae nimellä", "Search by name"],
   "entry.partyEmpty": ["Ei osumia", "No matches"],
+  "entry.descriptionSuggestions": ["Aiemmat kuvaukset", "Earlier descriptions"],
+  "entry.suggestedByHistory": [
+    "Ehdotettu: sama kuvaus on kirjattu tähän luokkaan aiemmin.",
+    "Suggested: this description was booked to this category before.",
+  ],
+  "entry.suggestedByRule": [
+    "Ehdotettu luokkasäännöstä.",
+    "Suggested by a category rule.",
+  ],
+  "entry.suggestedByParty": [
+    "Ehdotettu asiakkaan tai toimittajan oletuksista.",
+    "Suggested by the customer's or supplier's defaults.",
+  ],
   "entry.partyMore": [
     "{n} muuta, tarkenna hakua",
     "{n} more, narrow the search",
@@ -1377,6 +1390,15 @@ export const APP_DICT = {
   "entry.barcodeBad": [
     "Tätä virtuaaliviivakoodia ei voitu lukea. Tarkista, että kaikki 54 numeroa ovat mukana.",
     "This virtual barcode could not be read. Check that all 54 digits are there.",
+  ],
+  "entry.codeScan": ["Lue koodi liitteestä", "Read the code from the receipt"],
+  "entry.codeRead": [
+    "Maksutiedot luettiin laskun viivakoodista tai QR-koodista",
+    "Payment details read from the bill’s barcode or QR code",
+  ],
+  "entry.codeNotFound": [
+    "Liitteestä ei löytynyt pankkiviivakoodia eikä QR-koodia",
+    "No bank barcode or QR code found on the receipt",
   ],
   "entry.barcodeRead": [
     "Maksutiedot luettiin virtuaaliviivakoodista",
@@ -3801,6 +3823,69 @@ export const APP_DICT = {
   "payables.payDescription": ["{d}, {n}", "{d}, {n}"],
   "payables.paidOn": ["Maksupäivä", "Payment date"],
   "payables.paid": ["Merkitty maksetuksi.", "Marked as paid."],
+  "payables.paidMany": [
+    pl("1 lasku merkitty maksetuksi.", "{n} laskua merkitty maksetuksi."),
+    pl("1 bill marked as paid.", "{n} bills marked as paid."),
+  ],
+  "payables.fileOpen": ["Maksuaineisto", "Payment file"],
+  "payables.fileChosen": [
+    pl("1 lasku valittu", "{n} laskua valittu"),
+    pl("1 bill chosen", "{n} bills chosen"),
+  ],
+  "payables.fileAllWithIban": [
+    pl("1 lasku, jolla on tilinumero", "{n} laskua, joilla on tilinumero"),
+    pl("1 bill with an account number", "{n} bills with an account number"),
+  ],
+  "payables.filePickAll": ["Valitse kaikki", "Choose all"],
+  "payables.filePick": ["Valitse: {d}", "Choose: {d}"],
+  "payables.fileTitle": ["Maksuaineisto pankkiin", "Payment file for the bank"],
+  "payables.fileDescription": [
+    "SEPA-maksuaineisto (XML), jonka voit lähettää verkkopankin aineistopalveluun. Pankki maksaa laskut, kun hyväksyt aineiston siellä.",
+    "A SEPA payment file (XML) to upload in your online bank's file service. The bank pays the bills once you approve the file there.",
+  ],
+  "payables.filePayer": ["Maksaja", "Payer"],
+  "payables.fileAccount": ["Maksajan tili (IBAN)", "Payer's account (IBAN)"],
+  "payables.fileBadIban": ["Tarkista tilinumero.", "Check the account number."],
+  "payables.fileSameDay": [
+    "Maksa kaikki samana päivänä",
+    "Pay all on the same day",
+  ],
+  "payables.fileOnDueDate": [
+    "Muuten kukin lasku maksetaan eräpäivänään, ja erääntynyt tai eräpäivätön tänään.",
+    "Otherwise each bill is paid on its due date, and one past due or without a due date today.",
+  ],
+  "payables.fileSameDayOn": [
+    "Kaikki laskut maksetaan alla valittuna päivänä.",
+    "Every bill is paid on the day chosen below.",
+  ],
+  "payables.filePayDay": ["Maksupäivä", "Payment day"],
+  "payables.fileVersion": ["Aineiston versio", "File version"],
+  "payables.fileVersion03": [
+    "pain.001.001.03 (useimmat pankit)",
+    "pain.001.001.03 (most banks)",
+  ],
+  "payables.fileVersion09": ["pain.001.001.09", "pain.001.001.09"],
+  "payables.fileVersionHint": [
+    "Jos pankki ei hyväksy aineistoa, kokeile toista versiota.",
+    "If the bank refuses the file, try the other version.",
+  ],
+  "payables.fileMarkPaid": [
+    "Merkitse laskut maksetuiksi maksupäivinään",
+    "Mark the bills paid on their payment days",
+  ],
+  "payables.fileMarkPaidHint": [
+    "Jätä valitsematta, jos haluat merkitä ne vasta tiliotteelta.",
+    "Leave it unticked to mark them from the bank statement instead.",
+  ],
+  "payables.fileSummary": [
+    pl("1 maksu, yhteensä {a}", "{n} maksua, yhteensä {a}"),
+    pl("1 payment, {a} in all", "{n} payments, {a} in all"),
+  ],
+  "payables.fileSkipped": ["Ei mukana: {d} ({r})", "Left out: {d} ({r})"],
+  "payables.fileSkipNoIban": ["ei tilinumeroa", "no account number"],
+  "payables.fileSkipNotOwed": ["ei maksettavaa", "nothing to pay"],
+  "payables.fileDownload": ["Lataa aineisto", "Download file"],
+  "payables.fileFileName": ["maksut", "payments"],
   "invoice.agingEmpty": ["Ei maksamattomia laskuja.", "No unpaid invoices."],
   "invoice.agingNotDue": ["Ei erääntynyt", "Not yet due"],
   "invoice.agingLate14": ["1–14 pv", "1–14 days"],

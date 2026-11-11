@@ -1,15 +1,17 @@
 "use client"
 
 import * as React from "react"
-import { CheckIcon, CopyIcon } from "lucide-react"
+import { CheckIcon, CopyIcon, FileOutputIcon } from "lucide-react"
 
 import { DateInput } from "@/components/common/date-input"
 import { Money } from "@/components/common/money"
 import { Panel } from "@/components/common/panel"
 import { Pill } from "@/components/common/pill"
 import { TotalCard } from "@/components/common/total-card"
+import { PaymentFileDialog } from "@/components/invoices/payment-file-dialog"
 import { useFormatters } from "@/components/lang-provider"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -172,11 +174,26 @@ export function PayablesList() {
   const cats = useBookStore((s) => s.cats)
   const openDialog = useBookStore((s) => s.openDialog)
   const [paying, setPaying] = React.useState<Payable | null>(null)
+  /* The bills ticked for a payment file, by their lead entry's id. */
+  const [picked, setPicked] = React.useState<ReadonlySet<string>>(new Set())
+  const [fileOf, setFileOf] = React.useState<Payable[] | null>(null)
 
   const report = React.useMemo(
     () => payablesReport(entries, indexCategories(cats), todayIso()),
     [entries, cats]
   )
+  /* A bill paid or deleted since it was ticked drops out of the choice. */
+  const chosen = report.items.filter((b) => picked.has(b.lead.id))
+  const transferable = report.items.filter((b) => b.iban && b.open > 0)
+  const allPicked =
+    report.items.length > 0 && chosen.length === report.items.length
+  const toggle = (id: string, on: boolean) =>
+    setPicked((prev) => {
+      const next = new Set(prev)
+      if (on) next.add(id)
+      else next.delete(id)
+      return next
+    })
 
   const heading: Record<PayableGroup, string> = {
     overdue: f.t("payables.overdue"),
@@ -210,6 +227,24 @@ export function PayablesList() {
         </TotalCard>
       </div>
 
+      {transferable.length ? (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <span className="text-sm text-muted-foreground">
+            {chosen.length
+              ? f.t("payables.fileChosen", { n: chosen.length })
+              : f.t("payables.fileAllWithIban", { n: transferable.length })}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setFileOf(chosen.length ? chosen : transferable)}
+          >
+            <FileOutputIcon data-icon="inline-start" />
+            {f.t("payables.fileOpen")}
+          </Button>
+        </div>
+      ) : null}
+
       <Panel>
         {report.items.length === 0 ? (
           <Empty>
@@ -219,6 +254,19 @@ export function PayablesList() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-px">
+                  <Checkbox
+                    aria-label={f.t("payables.filePickAll")}
+                    checked={allPicked}
+                    onCheckedChange={(checked) =>
+                      setPicked(
+                        checked === true
+                          ? new Set(report.items.map((b) => b.lead.id))
+                          : new Set()
+                      )
+                    }
+                  />
+                </TableHead>
                 <TableHead>{f.t("payables.colDue")}</TableHead>
                 <TableHead>{f.t("payables.colVoucher")}</TableHead>
                 <TableHead>{f.t("payables.colDescription")}</TableHead>
@@ -233,6 +281,17 @@ export function PayablesList() {
             <TableBody>
               {report.items.map((bill) => (
                 <TableRow key={bill.lead.id}>
+                  <TableCell>
+                    <Checkbox
+                      aria-label={f.t("payables.filePick", {
+                        d: bill.lead.description || "–",
+                      })}
+                      checked={picked.has(bill.lead.id)}
+                      onCheckedChange={(checked) =>
+                        toggle(bill.lead.id, checked === true)
+                      }
+                    />
+                  </TableCell>
                   <TableCell className="whitespace-nowrap">
                     <div className="flex flex-col items-start gap-1">
                       <span className="tabular">{dueText(bill)}</span>
@@ -284,6 +343,16 @@ export function PayablesList() {
           </Table>
         )}
       </Panel>
+
+      {fileOf ? (
+        <PaymentFileDialog
+          bills={fileOf}
+          onClose={() => {
+            setFileOf(null)
+            setPicked(new Set())
+          }}
+        />
+      ) : null}
 
       {paying ? (
         <PayDialog bill={paying} onClose={() => setPaying(null)} />

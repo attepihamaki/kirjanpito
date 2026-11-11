@@ -6,6 +6,7 @@ import {
   EllipsisIcon,
   LockIcon,
   MergeIcon,
+  ScanBarcodeIcon,
   SplitIcon,
   Trash2Icon,
   Undo2Icon,
@@ -14,6 +15,7 @@ import {
 import { EntryTypeToggle } from "@/components/common/filter-controls"
 import { OptionSelect } from "@/components/common/option-select"
 import { VoucherPicker } from "@/components/entry/voucher-picker"
+import { DescriptionInput } from "@/components/entry/description-input"
 import { HelpHint } from "@/components/common/help-hint"
 import { InfoPopover } from "@/components/common/info-popover"
 import { Keys } from "@/components/common/keys"
@@ -63,6 +65,7 @@ import {
 } from "@/lib/domain/period-lock"
 import { canBeUnpaid, paidDate } from "@/lib/domain/open-items"
 import {
+  getReceipt,
   isReceiptStorageSupported,
   putReceipt,
 } from "@/lib/browser/receipt-store"
@@ -106,6 +109,11 @@ import {
 } from "@/lib/domain/reversal"
 import type { Customer } from "@/lib/domain/invoice"
 import { partyDefaults, partyFitsSide } from "@/lib/domain/parties"
+import {
+  descriptionSuggestions,
+  suggestCategoryFor,
+  type SuggestionSource,
+} from "@/lib/domain/entry-suggest"
 import { rateMismatch, rateOnDate } from "@/lib/domain/vat-rates"
 import { uid } from "@/lib/domain/id"
 import { periodFromKey, vatPeriods } from "@/lib/domain/vat-deadline"
@@ -138,6 +146,11 @@ import { useReceiptHashStore } from "@/stores/receipt-hash-store"
 
 /** A category list this short is scanned whole, so it gets no "most used" group. */
 const MOST_USED_MIN_LIST = 8
+
+/** Whether a file's printed codes can be read: an image or a PDF (§8.30). */
+function isScannable(type: string): boolean {
+  return type === "application/pdf" || type.startsWith("image/")
+}
 
 interface FormState {
   date: string
@@ -340,14 +353,18 @@ function BillPaymentFields({
   form,
   update,
   invalid,
+  scan,
 }: {
   form: FormState
   update: (patch: Partial<FormState>) => void
   invalid: (field: ErrorField) => true | undefined
+  /** Reads the code printed on the attached receipts, when there are any to read. */
+  scan?: () => Promise<void>
 }) {
   const f = useFormatters()
   const [barcode, setBarcode] = React.useState("")
   const [unread, setUnread] = React.useState(false)
+  const [scanning, setScanning] = React.useState(false)
 
   const readBarcode = (text: string) => {
     setBarcode(text)
@@ -395,6 +412,26 @@ function BillPaymentFields({
         <FieldDescription>
           {f.t(unread ? "entry.barcodeBad" : "entry.barcodeHint")}
         </FieldDescription>
+        {scan ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="self-start"
+            disabled={scanning}
+            onClick={async () => {
+              setScanning(true)
+              try {
+                await scan()
+              } finally {
+                setScanning(false)
+              }
+            }}
+          >
+            <ScanBarcodeIcon data-icon="inline-start" />
+            {f.t("entry.codeScan")}
+          </Button>
+        ) : null}
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field data-invalid={invalid("iban")}>
@@ -514,6 +551,7 @@ function EntryDialogForm({
   const removeRecurring = useBookStore((s) => s.removeRecurring)
   const vatPeriodKind = useBookStore((s) => s.vatPeriod)
   const customers = useBookStore((s) => s.customers)
+  const categoryRules = useBookStore((s) => s.categoryRules)
 
   // Captured at mount: the form owns its values from here on.
   const [editing] = React.useState(() =>
@@ -747,6 +785,21 @@ function EntryDialogForm({
         }
         const pdf = accepted.find((file) => isPdf(file))
         if (pdf) await prefillFromPdf(pdf)
+        /*
+         * A bill's printed code fills how it is paid (§8.30) when the PDF's
+         * text gave no account. It is read after the receipt is stored, so
+         * saving never waits for it.
+         */
+        const scannable = accepted.find((file) => isScannable(file.type))
+        const now = formRef.current
+        const untouched = !now.amount && !now.description
+        if (
+          scannable &&
+          !now.iban.trim() &&
+          (now.type === "expense" || untouched)
+        ) {
+          void prefillFromCodeRef.current?.(scannable, false)
+        }
       } finally {
         setBusy(false)
       }
@@ -855,6 +908,140 @@ function EntryDialogForm({
         })),
     [customers, form.party, form.type, f.collator]
   )
+  /*
+   * What the book suggests from the description (§8.5). The category it
+   * filled is remembered with where it came from, so the hint under the
+   * category stays only while that category is still the chosen one.
+   */
+  const suggestCtx = React.useMemo(
+    () => ({ entries, cats: catMap, rules: categoryRules, parties: customers }),
+    [entries, catMap, categoryRules, customers]
+  )
+  const descSuggestions = React.useMemo(
+    () => descriptionSuggestions(form.description, form.type, suggestCtx),
+    [form.description, form.type, suggestCtx]
+  )
+  const [suggested, setSuggested] = React.useState<{
+    catId: string
+    source: SuggestionSource
+  } | null>(null)
+
+  /**
+   * The fields a suggested category fills, as picking it by hand would: its
+   * rate unless one was chosen, its share unless one was typed, and the
+   * counterparty with its bill defaults while none is picked.
+   */
+  const suggestionPatch = (s: {
+    catId: string
+    vatRate: number | null
+    party?: string
+  }): Partial<FormState> | null => {
+    const cat = cats.find((c) => c.id === s.catId)
+    if (!cat || categorySide(cat) !== form.type) return null
+    const party = !form.party
+      ? customers.find((c) => c.id === s.party)
+      : undefined
+    return {
+      catId: cat.id,
+      vatRate:
+        cat.euPurchase || !keepRate.current
+          ? rateOnDate(s.vatRate ?? cat.vatRate, form.date)
+          : form.vatRate,
+      ...(keepShare.current
+        ? {}
+        : { share: cat.share ? String(cat.share) : "" }),
+      ...(party ? { party: party.id, ...billDefaults(party, form) } : {}),
+    }
+  }
+
+  const pickDescription = (s: (typeof descSuggestions)[number]) => {
+    const patch = form.catId ? null : suggestionPatch(s)
+    update({ description: s.description, ...patch })
+    if (patch) setSuggested({ catId: s.catId, source: "history" })
+  }
+
+  /* Leaving the field with no category chosen fills the one the book suggests. */
+  const suggestFromDescription = () => {
+    if (mode === "edit" || form.catId || !form.description.trim()) return
+    const hit = suggestCategoryFor(form.description, form.type, suggestCtx)
+    const patch = hit && suggestionPatch(hit)
+    if (!hit || !patch) return
+    update(patch)
+    setSuggested({ catId: hit.catId, source: hit.source })
+  }
+
+  /**
+   * Fill a bill's payment from the bank barcode or QR code printed on it
+   * (§8.30): the account, the reference and the due date, and the amount and
+   * the description while they are empty. A bill not yet due, or one with no
+   * due date on an untouched form, opens as one to pay. The payee the QR code
+   * names suggests a category as a typed description would (§8.5).
+   */
+  const prefillFromCode = async (file: Blob, announce: boolean) => {
+    let code
+    try {
+      const { readBillCode } = await import("@/lib/browser/barcode")
+      code = await readBillCode(file)
+    } catch {
+      code = null
+    }
+    if (!code) {
+      if (announce) toast.add({ title: f.t("entry.codeNotFound") })
+      return false
+    }
+    const now = formRef.current
+    const untouched = !now.amount && !now.description
+    const due = code.dueDate ?? now.due
+    const toPay = due ? due >= todayIso() : untouched
+    const description = now.description.trim()
+      ? now.description
+      : (code.name ?? code.message ?? "")
+    const hit =
+      !now.catId && description
+        ? suggestCategoryFor(description, "expense", suggestCtx)
+        : null
+    const cat = hit && cats.find((c) => c.id === hit.catId)
+    setForm((prev) => ({
+      ...prev,
+      type: "expense",
+      ...(prev.type !== "expense" ? { catId: "" } : {}),
+      iban: formatIban(code.iban),
+      ...(code.reference ? { reference: formatReference(code.reference) } : {}),
+      ...(code.dueDate ? { due: code.dueDate } : {}),
+      ...(toPay && prev.paid === "" ? { paid: "open" } : {}),
+      ...(!prev.amount.trim() && code.amount
+        ? { amount: formatMoneyPlain(code.amount), amountMode: "gross" }
+        : {}),
+      description: prev.description.trim() ? prev.description : description,
+      ...(hit && cat && !prev.catId
+        ? {
+            catId: cat.id,
+            vatRate: keepRate.current
+              ? prev.vatRate
+              : rateOnDate(hit.vatRate ?? cat.vatRate, prev.date),
+          }
+        : {}),
+    }))
+    if (hit && cat) setSuggested({ catId: cat.id, source: hit.source })
+    toast.add({ title: f.t("entry.codeRead") })
+    return true
+  }
+  /* `addFiles` is memoised; it reaches the current closure through this ref. */
+  const prefillFromCodeRef = React.useRef<typeof prefillFromCode | null>(null)
+  React.useEffect(() => {
+    prefillFromCodeRef.current = prefillFromCode
+  })
+
+  /** Read the code off the attached receipts, the first that has one. */
+  const scanAttachments = async () => {
+    for (const att of form.atts) {
+      if (!att.id || !isScannable(att.type)) continue
+      const blob = await getReceipt(att.id)
+      if (blob && (await prefillFromCode(blob, false))) return
+    }
+    toast.add({ title: f.t("entry.codeNotFound") })
+  }
+
   /** The field is named for the side: a customer on income, else a supplier. */
   const partyLabel = f.t(
     form.type === "income" ? "entry.partyCustomer" : "entry.partySupplier"
@@ -1487,11 +1674,21 @@ function EntryDialogForm({
                     <FieldLabel htmlFor="entry-desc">
                       {f.t("entry.description")}
                     </FieldLabel>
-                    <Input
+                    <DescriptionInput
                       id="entry-desc"
                       value={form.description}
                       placeholder={f.t("entry.descriptionPlaceholder")}
-                      onChange={(e) => update({ description: e.target.value })}
+                      suggestions={descSuggestions}
+                      listLabel={f.t("entry.descriptionSuggestions")}
+                      detail={(s) => {
+                        const cat = catMap.get(s.catId)
+                        return [cat ? f.catLabel(cat) : "", f.money(s.gross)]
+                          .filter(Boolean)
+                          .join(" · ")
+                      }}
+                      onChange={(description) => update({ description })}
+                      onPick={pickDescription}
+                      onBlur={suggestFromDescription}
                     />
                   </Field>
 
@@ -1573,6 +1770,17 @@ function EntryDialogForm({
                       placeholder={f.t("entry.errCategory")}
                       label={f.t("entry.category")}
                     />
+                    {suggested && suggested.catId === form.catId ? (
+                      <FieldDescription>
+                        {f.t(
+                          suggested.source === "rule"
+                            ? "entry.suggestedByRule"
+                            : suggested.source === "party"
+                              ? "entry.suggestedByParty"
+                              : "entry.suggestedByHistory"
+                        )}
+                      </FieldDescription>
+                    ) : null}
                   </Field>
 
                   {settlement ? (
@@ -1841,6 +2049,11 @@ function EntryDialogForm({
                       form={form}
                       update={update}
                       invalid={invalid}
+                      scan={
+                        form.atts.some((a) => a.id && isScannable(a.type))
+                          ? scanAttachments
+                          : undefined
+                      }
                     />
                   ) : null}
 

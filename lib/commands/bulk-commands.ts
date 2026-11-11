@@ -377,6 +377,43 @@ export async function payBill(
 }
 
 /**
+ * Pay several bills, each on its own day (§8.30), as a payment file asks the
+ * bank to. Every open part of each bill is marked, and one toast undoes all
+ * of them. A bill whose day falls in a year with Form 5 filed refuses the
+ * whole change, like `payBill`. False when nothing was open or it was refused.
+ */
+export async function payBills(
+  ctx: Ctx,
+  bills: readonly { parts: readonly Entry[]; on: string }[]
+): Promise<boolean> {
+  const state = useBookStore.getState()
+  const before: Entry[] = []
+  const paid: Entry[] = []
+  for (const { parts, on } of bills) {
+    for (const e of parts) {
+      if (e.paidOn !== null) continue
+      if (paidChangeHitsForm5(null, on, state)) {
+        toast.add({ title: ctx.t("bank.paidInFiledYear") })
+        return false
+      }
+      before.push(e)
+      paid.push({ ...e, paidOn: paidOnFor(e.date, on) })
+    }
+  }
+  if (paid.length === 0) return false
+  const byId = new Map(paid.map((e) => [e.id, e]))
+  const after = state.entries.map((e) => byId.get(e.id) ?? e)
+  if (!(await confirmFiledChange(after))) return false
+  updateWithUndo(
+    ctx,
+    before,
+    paid,
+    ctx.t("payables.paidMany", { n: bills.length })
+  )
+  return true
+}
+
+/**
  * Move the selected entries to another category. Each keeps its own VAT
  * rate: the rate belongs to the receipt, not to the category (§4).
  */
