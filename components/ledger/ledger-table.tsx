@@ -188,8 +188,7 @@ export function LedgerTable({
                 "net",
                 f.t("ledger.colNet"),
                 "right",
-                "hidden min-[560px]:table-cell print:table-cell",
-                "ledger.net"
+                "hidden min-[560px]:table-cell print:table-cell"
               )}
           {hidden.has("vat")
             ? null
@@ -200,13 +199,7 @@ export function LedgerTable({
                 "hidden min-[560px]:table-cell print:table-cell",
                 "ledger.vat"
               )}
-          {header(
-            "gross",
-            f.t("ledger.colGross"),
-            "right",
-            undefined,
-            "ledger.gross"
-          )}
+          {header("gross", f.t("ledger.colGross"), "right")}
           <TableHead className="hidden w-px min-[560px]:table-cell print:hidden">
             <span className="sr-only">{f.t("common.actions")}</span>
           </TableHead>
@@ -575,17 +568,17 @@ function LedgerRow({
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => e.stopPropagation()}
           >
+            {/*
+             * The trigger is dressed as text: no box, no chevron, and the
+             * name whole on up to two lines. It still opens the list (§8.4).
+             */}
             <OptionSelect
               options={categoryOptions}
               value={entry.catId}
               label={f.t("ledger.colCategory")}
-              size="sm"
-              className="w-full border-transparent bg-transparent text-muted-foreground shadow-none hover:border-input print:hidden"
+              className="h-auto! w-full justify-start rounded-sm border-transparent bg-transparent! p-0 text-left whitespace-normal text-muted-foreground hover:text-foreground hover:underline *:data-[slot=select-value]:line-clamp-2 *:data-[slot=select-value]:block print:text-foreground [&>svg]:hidden"
               onChange={onRecategorize}
             />
-            <span className="hidden print:inline">
-              {categoryOptions.find((o) => o.value === entry.catId)?.label}
-            </span>
           </TableCell>
         )}
 

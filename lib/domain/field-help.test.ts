@@ -51,9 +51,7 @@ describe("field help", () => {
     expect(lineHelp(343)).toBeNull()
     expect(viewHelp("overview.bank")?.source).toBeUndefined()
     for (const id of [
-      "ledger.net",
       "ledger.vat",
-      "ledger.gross",
       "ledger.category",
       "entry.vatRate",
       "settings.traderType",

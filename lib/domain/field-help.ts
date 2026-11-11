@@ -329,25 +329,12 @@ const VIEW_TOPICS: Record<string, HelpTopic> = {
       en: "The app cannot see your bank. The estimate is the balance you typed in plus the vouchers paid since. Taxes and other payments that are not booked are missing.",
     },
   },
-  "ledger.net": {
-    text: {
-      fi: "Veroton hinta eli summa ilman arvonlisäveroa. Tuloslaskelma ja lomake 5 lasketaan tästä summasta.",
-      en: "The price without VAT. The income statement and Form 5 are calculated from this amount.",
-    },
-    source: FORM5,
-  },
   "ledger.vat": {
     text: {
       fi: "Tositteen arvonlisävero. Myynnistä se on veroa, jonka tilität Verohallinnolle, ja ostosta veroa, jonka saat yleensä vähentää. Osittain vähennettävässä ostossa vähennys on vain yrityksen osuus.",
       en: "The VAT on the voucher. On a sale it is tax you pay to Verohallinto, and on a purchase it is tax you can usually deduct. On a partly deductible purchase only the business share is deducted.",
     },
     source: VAT_RETURN,
-  },
-  "ledger.gross": {
-    text: {
-      fi: "Verollinen hinta eli summa, jonka tositteella maksetaan tai saadaan. Se on veroton summa plus arvonlisävero.",
-      en: "The price with VAT, which is the amount paid or received on the voucher. It is the net amount plus VAT.",
-    },
   },
   "ledger.category": {
     text: {
