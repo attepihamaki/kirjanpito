@@ -157,10 +157,10 @@ describe("LedgerView with the sample data", () => {
     expect(screen.getByLabelText("Rivejä sivulla")).toBeInTheDocument()
   })
 
-  it("sorts by date ascending, so the first row is 8.1.2026", () => {
+  it("sorts by date ascending, so the first row is 8.1.", () => {
     mount(<LedgerView />)
     const rows = screen.getAllByRole("row")
-    expect(within(rows[1]).getByText("8.1.2026")).toBeInTheDocument()
+    expect(within(rows[1]).getByText("8.1.")).toBeInTheDocument()
     expect(
       within(rows[1]).getByText("Lasku 1001 – Mäkinen Rakennus Oy")
     ).toBeInTheDocument()
@@ -252,23 +252,23 @@ describe("LedgerView with the sample data", () => {
   it("reverses the order on the second click of the date header", async () => {
     const user = userEvent.setup()
     mount(<LedgerView />)
-    const header = () => screen.getByRole("button", { name: /^Päivämäärä/ })
+    const header = () => screen.getByRole("button", { name: /^Päivä/ })
 
     // The first click picks the column, ascending; the second turns it around.
     await user.click(header())
     await user.click(header())
 
     const rows = screen.getAllByRole("row")
-    expect(within(rows[1]).getByText("30.10.2026")).toBeInTheDocument()
+    expect(within(rows[1]).getByText("30.10.")).toBeInTheDocument()
     expect(
-      screen.getByRole("columnheader", { name: /^Päivämäärä/ })
+      screen.getByRole("columnheader", { name: /^Päivä/ })
     ).toHaveAttribute("aria-sort", "descending")
   })
 
   it.each([
     ["Kuvaus", /^Kuvaus/],
     // The default order follows this column, and it still reaches ⇅.
-    ["Päivämäärä", /^Päivämäärä/],
+    ["Päivä", /^Päivä/],
   ])("unsorts %s on a third click", async (_label, pattern) => {
     const user = userEvent.setup()
     mount(<LedgerView />)
@@ -278,14 +278,14 @@ describe("LedgerView with the sample data", () => {
     await user.click(header())
     await user.click(header())
 
-    for (const name of [/^Päivämäärä/, /^Kuvaus/]) {
+    for (const name of [/^Päivä/, /^Kuvaus/]) {
       expect(screen.getByRole("columnheader", { name })).toHaveAttribute(
         "aria-sort",
         "none"
       )
     }
     expect(
-      within(screen.getAllByRole("row")[1]).getByText("8.1.2026")
+      within(screen.getAllByRole("row")[1]).getByText("8.1.")
     ).toBeInTheDocument()
   })
 
@@ -322,7 +322,7 @@ describe("LedgerView in English", () => {
   it("formats dates as en-GB", () => {
     mount(<LedgerView />, "en")
     const rows = screen.getAllByRole("row")
-    expect(within(rows[1]).getByText("8 Jan 2026")).toBeInTheDocument()
+    expect(within(rows[1]).getByText("8 Jan")).toBeInTheDocument()
   })
 })
 

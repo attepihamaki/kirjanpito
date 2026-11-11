@@ -21,7 +21,7 @@ import { useBookStore } from "@/stores/book-store"
 
 const LABEL: Record<OptionalLedgerColumn, MessageKey> = {
   voucher: "ledger.colVoucher",
-  type: "common.type",
+  type: "ledger.colIncomeMark",
   category: "ledger.colCategory",
   net: "ledger.colNet",
   vat: "ledger.colVat",

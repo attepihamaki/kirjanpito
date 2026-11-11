@@ -116,6 +116,22 @@ const dateFormatters: Partial<Record<Lang, Intl.DateTimeFormat>> = {}
  * Built and formatted in UTC: with a local-time Date, "2026-01-01" renders as
  * "31 Dec 2025" anywhere west of Greenwich.
  */
+/**
+ * Day and month without the year, for a list that is all one year: "8.1." in
+ * Finnish, "8 Jan" in English.
+ */
+export function formatDayMonth(iso: string, lang: Lang): string {
+  const m = monthOf(iso)
+  const d = Number(iso.slice(8, 10))
+  if (!Number.isFinite(m) || !Number.isFinite(d)) return iso
+  if (lang === "fi") return `${d}.${m}.`
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(2000, m - 1, d)))
+}
+
 export function formatDate(iso: string, lang: Lang): string {
   const y = yearOf(iso)
   const m = monthOf(iso)

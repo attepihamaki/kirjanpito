@@ -41,7 +41,7 @@ import {
   renameEntry,
 } from "@/lib/commands/bulk-commands"
 import { calcEntry, isShare } from "@/lib/domain/calc"
-import { yearOf } from "@/lib/domain/dates"
+import { formatDayMonth, yearOf } from "@/lib/domain/dates"
 import { viewHelp } from "@/lib/domain/field-help"
 import type { OptionalLedgerColumn } from "@/lib/domain/ledger-columns"
 import { entryLock } from "@/lib/domain/period-lock"
@@ -163,25 +163,18 @@ export function LedgerTable({
                 "right",
                 "hidden w-px min-[560px]:table-cell print:table-cell"
               )}
-          {header("date", f.t("ledger.colDate"))}
-          {hidden.has("type")
-            ? null
-            : header(
-                "type",
-                f.t("common.type"),
-                "left",
-                "hidden min-[560px]:table-cell print:table-cell"
-              )}
-          {header("description", f.t("ledger.colDescription"))}
-          {hidden.has("category")
-            ? null
-            : header(
-                "category",
-                f.t("ledger.colCategory"),
-                "left",
-                "hidden min-[1240px]:table-cell print:table-cell",
-                "ledger.category"
-              )}
+          {header("date", f.t("ledger.colDay"))}
+          {header(
+            "description",
+            f.t(
+              hidden.has("category")
+                ? "ledger.colDescription"
+                : "ledger.colDescriptionCategory"
+            ),
+            "left",
+            undefined,
+            hidden.has("category") ? undefined : "ledger.category"
+          )}
           {hidden.has("net")
             ? null
             : header(
@@ -433,20 +426,14 @@ function LedgerRow({
           </TableCell>
         )}
 
+        {/* The year is the page's, so the day and month say it all. */}
         <TableCell className="tabular whitespace-nowrap">
-          {f.date(entry.date)}
+          <time dateTime={entry.date} title={f.date(entry.date)}>
+            {formatDayMonth(entry.date, f.lang)}
+          </time>
         </TableCell>
 
-        {/* The same badge as the categories table, so the two read alike. */}
-        {hidden.has("type") ? null : (
-          <TableCell className="hidden min-[560px]:table-cell print:table-cell">
-            <Pill tone={income ? "income" : "expense"} className="font-medium">
-              {income ? f.t("common.income") : f.t("common.expense")}
-            </Pill>
-          </TableCell>
-        )}
-
-        <TableCell className="group/desc max-w-[22rem]">
+        <TableCell className="group/desc max-w-[30rem]">
           {editingDescription ? (
             <Input
               autoFocus
@@ -470,6 +457,15 @@ function LedgerRow({
             />
           ) : (
             <div className="flex items-center gap-1.5">
+              {/*
+               * Income is the exception in a ledger of costs, so it alone is
+               * marked; the signed amounts tell the rest (§8.4).
+               */}
+              {income && !hidden.has("type") ? (
+                <Pill tone="income" size="sm" className="shrink-0 font-medium">
+                  {f.t("common.income")}
+                </Pill>
+              ) : null}
               <span
                 className={cn(
                   "truncate",
@@ -559,41 +555,46 @@ function LedgerRow({
               </Button>
             </div>
           )}
+          {/*
+           * The category under the description, as text that opens the list
+           * of categories (§8.4). Its own box for clicks, so picking one does
+           * not open the entry.
+           */}
+          {hidden.has("category") ? null : (
+            <div
+              className="mt-0.5 flex min-w-0 items-center gap-2 text-xs"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              <OptionSelect
+                options={categoryOptions}
+                value={entry.catId}
+                label={f.t("ledger.colCategory")}
+                className="h-auto! w-auto min-w-0 justify-start rounded-sm border-transparent bg-transparent! p-0 text-left text-xs whitespace-normal text-muted-foreground hover:text-foreground hover:underline *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:block print:text-foreground [&>svg]:hidden"
+                onChange={onRecategorize}
+              />
+              {attachments.length === 0 ? (
+                <Pill size="sm" tone="warning" className="shrink-0">
+                  {f.t("ledger.noReceiptPill")}
+                </Pill>
+              ) : null}
+            </div>
+          )}
         </TableCell>
-
-        {/* Its own cell for clicks, so picking a category does not open the entry. */}
-        {hidden.has("category") ? null : (
-          <TableCell
-            className="hidden max-w-[16rem] min-[1240px]:table-cell print:table-cell"
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-          >
-            {/*
-             * The trigger is dressed as text: no box, no chevron, and the
-             * name whole on up to two lines. It still opens the list (§8.4).
-             */}
-            <OptionSelect
-              options={categoryOptions}
-              value={entry.catId}
-              label={f.t("ledger.colCategory")}
-              className="h-auto! w-full justify-start rounded-sm border-transparent bg-transparent! p-0 text-left whitespace-normal text-muted-foreground hover:text-foreground hover:underline *:data-[slot=select-value]:line-clamp-2 *:data-[slot=select-value]:block print:text-foreground [&>svg]:hidden"
-              onChange={onRecategorize}
-            />
-          </TableCell>
-        )}
 
         {hidden.has("net") ? null : (
           <TableCell className="hidden text-right min-[560px]:table-cell print:table-cell">
-            <Money cents={net} />
+            <Money cents={net} signed={!income} />
           </TableCell>
         )}
 
         {hidden.has("vat") ? null : (
           <TableCell className="hidden text-right min-[560px]:table-cell print:table-cell">
+            {/* The rate shows on hover and on paper, so the column stays one figure wide. */}
             {entry.vatRate ? (
-              <span className="flex flex-col items-end leading-tight">
-                <Money cents={vat} />
-                <span className="text-[0.7rem] text-muted-foreground">
+              <span title={f.rate(entry.vatRate)}>
+                <Money cents={vat} signed={!income} />
+                <span className="sr-only print:not-sr-only print:ml-1 print:text-[0.7rem]">
                   {f.rate(entry.vatRate)}
                 </span>
               </span>

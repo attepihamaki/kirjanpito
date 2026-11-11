@@ -17,6 +17,7 @@ import { Surface } from "@/components/common/surface"
 import { TablePagination } from "@/components/common/table-pagination"
 import { BulkBar } from "@/components/ledger/bulk-bar"
 import { ColumnsMenu } from "@/components/ledger/columns-menu"
+import { LedgerList } from "@/components/ledger/ledger-list"
 import { LedgerTable } from "@/components/ledger/ledger-table"
 import { LedgerTabs } from "@/components/ledger/ledger-tabs"
 import { MonthChips } from "@/components/ledger/month-chips"
@@ -428,7 +429,7 @@ export function LedgerView() {
         <PlusIcon />
       </Button>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 max-sm:pb-20">
         <div className="print-hidden flex flex-col gap-4 empty:hidden">
           <MonthChips />
           <RecurringNotice />
@@ -554,12 +555,16 @@ export function LedgerView() {
                   </div>
                 ) : null}
                 <Surface className="overflow-hidden">
-                  <LedgerTable
-                    rows={printAll ? filtered : view.rows}
-                    receiptHits={receiptHits}
-                    selected={picked}
-                    onSelect={select}
-                  />
+                  {phone && !printAll ? (
+                    <LedgerList rows={view.rows} />
+                  ) : (
+                    <LedgerTable
+                      rows={printAll ? filtered : view.rows}
+                      receiptHits={receiptHits}
+                      selected={picked}
+                      onSelect={select}
+                    />
+                  )}
                   {/* Always shown, as in the categories table: the rows-per-page
                     control is how the page length is set, so it cannot appear
                     only once the list has outgrown the current length. */}
