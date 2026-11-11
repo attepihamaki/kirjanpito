@@ -109,6 +109,8 @@ import {
 } from "@/lib/domain/reversal"
 import type { Customer } from "@/lib/domain/invoice"
 import { partyDefaults, partyFitsSide } from "@/lib/domain/parties"
+import { allTags, tagsField } from "@/lib/domain/tags"
+import { TagsInput } from "@/components/common/tags-input"
 import {
   descriptionSuggestions,
   suggestCategoryFor,
@@ -192,6 +194,8 @@ interface FormState {
   /** The payee's IBAN and the reference of a bill received, as typed (§8.30). */
   iban: string
   reference: string
+  /** The voucher's tags (§8.37). */
+  tags: string[]
 }
 
 /** The fields §8.5 validates, named as they are in `FormState`. */
@@ -270,6 +274,7 @@ function initialForm({
       due: prefill?.due ?? "",
       iban: prefill?.iban ? formatIban(prefill.iban) : "",
       reference: prefill?.reference ? formatReference(prefill.reference) : "",
+      tags: [...(prefill?.tags ?? [])],
     }
   }
   const today = todayIso()
@@ -314,6 +319,7 @@ function initialForm({
       mode === "edit" && editing.reference
         ? formatReference(editing.reference)
         : "",
+    tags: [...(editing.tags ?? [])],
   }
 }
 
@@ -909,6 +915,8 @@ function EntryDialogForm({
   const euSale = isEuSaleKind(selectedCat?.kind)
 
   /* The register entries on this side, and the chosen one whatever its side. */
+  const tagSuggestions = React.useMemo(() => allTags(entries), [entries])
+
   const partyOptions = React.useMemo(
     () =>
       customers
@@ -1354,6 +1362,7 @@ function EntryDialogForm({
       ...(form.party && customers.some((c) => c.id === form.party)
         ? { party: form.party }
         : {}),
+      ...tagsField(form.tags),
       // A part stays a part of its receipt; a copy is a new voucher of its own.
       ...(mode === "edit" && editing?.split ? { split: editing.split } : {}),
     }
@@ -1973,6 +1982,25 @@ function EntryDialogForm({
                       </ToggleGroup>
                     </Field>
                   )}
+
+                  <Field>
+                    <div className="flex items-center gap-1">
+                      <FieldLabel htmlFor="entry-tags">
+                        {f.t("entry.tags")}
+                      </FieldLabel>
+                      <InfoPopover label={f.t("entry.tagsInfo")}>
+                        {f.t("entry.tagsHint")}
+                      </InfoPopover>
+                    </div>
+                    <TagsInput
+                      id="entry-tags"
+                      value={form.tags}
+                      suggestions={tagSuggestions}
+                      placeholder={f.t("entry.tagsPlaceholder")}
+                      removeLabel={(tag) => f.t("entry.tagRemove", { tag })}
+                      onChange={(tags) => update({ tags })}
+                    />
+                  </Field>
                 </fieldset>
               </FieldGroup>
             </TabsContent>

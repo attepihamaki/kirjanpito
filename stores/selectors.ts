@@ -1,3 +1,4 @@
+import { hasTag } from "@/lib/domain/tags"
 import { LINE_BY_KEY, categoryName } from "@/lib/domain/accounts"
 import { calcEntry, signedGross } from "@/lib/domain/calc"
 import { monthOf, yearOf } from "@/lib/domain/dates"
@@ -59,6 +60,8 @@ export interface LedgerFilters {
   query: string
   type: TypeFilter
   catId: string
+  /** A tag the entry must carry, "all" or unset for any (§8.37). */
+  tag?: string
   /** The ids a "Tarkistettavat" check flagged, or null for every entry. */
   flagged: ReadonlySet<string> | null
   /** Null while no column is chosen: the rows then take `LEDGER_SORT_DEFAULT`. */
@@ -110,7 +113,8 @@ function matchesFields(
   return (
     (e.voucher !== undefined && String(e.voucher) === needle) ||
     e.description.toLowerCase().includes(needle) ||
-    name.toLowerCase().includes(needle)
+    name.toLowerCase().includes(needle) ||
+    (e.tags ?? []).some((t) => t.toLowerCase().includes(needle))
   )
 }
 
@@ -164,6 +168,8 @@ export function filterAndSortEntries(
   const filtered = entries.filter((e) => {
     if (filters.type !== "all" && e.type !== filters.type) return false
     if (filters.catId !== "all" && e.catId !== filters.catId) return false
+    if (filters.tag && filters.tag !== "all" && !hasTag(e, filters.tag))
+      return false
     if (filters.flagged && !filters.flagged.has(e.id)) return false
     return !needle || matchesQuery(e, needle, cats, lang, filters.receiptText)
   })
@@ -280,4 +286,20 @@ export function paginate<T>(rows: readonly T[], page: number, size: number) {
     total: rows.length,
     rows: rows.slice((current - 1) * size, current * size),
   }
+}
+
+/**
+ * The ids from `anchor` to `target` in the order `ids` lists them, both
+ * included, for a Shift+click in the ledger (§8.4). Null when either is not
+ * among `ids`, so the click picks the one row alone.
+ */
+export function selectionRange(
+  ids: readonly string[],
+  anchor: string,
+  target: string
+): string[] | null {
+  const a = ids.indexOf(anchor)
+  const b = ids.indexOf(target)
+  if (a < 0 || b < 0) return null
+  return ids.slice(Math.min(a, b), Math.max(a, b) + 1)
 }

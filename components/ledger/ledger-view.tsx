@@ -50,6 +50,7 @@ import {
   usedCategoryIds,
 } from "@/stores/selectors"
 import { paidDate } from "@/lib/domain/open-items"
+import { allTags, tagKey } from "@/lib/domain/tags"
 import { useBookStore, type CheckFilter } from "@/stores/book-store"
 import { useReceiptHashStore } from "@/stores/receipt-hash-store"
 import { useReceiptTextStore } from "@/stores/receipt-text-store"
@@ -82,6 +83,7 @@ export function LedgerView() {
   const receiptText = useReceiptTextStore((s) => s.texts)
   const typeFilter = useBookStore((s) => s.ledgerType)
   const catFilter = useBookStore((s) => s.ledgerCat)
+  const tagFilter = useBookStore((s) => s.ledgerTag)
   const checkFilter = useBookStore((s) => s.ledgerCheck)
   const sort = useBookStore((s) => s.ledgerSort)
   const page = useBookStore((s) => s.ledgerPage)
@@ -90,6 +92,7 @@ export function LedgerView() {
   const setQuery = useBookStore((s) => s.setLedgerQuery)
   const setType = useBookStore((s) => s.setLedgerType)
   const setCat = useBookStore((s) => s.setLedgerCat)
+  const setTag = useBookStore((s) => s.setLedgerTag)
   const setCheck = useBookStore((s) => s.setLedgerCheck)
   const setPage = useBookStore((s) => s.setLedgerPage)
   const setSize = useBookStore((s) => s.setLedgerSize)
@@ -142,6 +145,7 @@ export function LedgerView() {
           query,
           type: typeFilter,
           catId: catFilter,
+          tag: tagFilter,
           flagged,
           sort,
           receiptText,
@@ -155,6 +159,7 @@ export function LedgerView() {
       query,
       typeFilter,
       catFilter,
+      tagFilter,
       flagged,
       sort,
       receiptText,
@@ -221,6 +226,18 @@ export function LedgerView() {
     }
   }, [catFilter, usedCats, setCat])
 
+  // Only tags used in this period, like the categories.
+  const usedTags = React.useMemo(() => allTags(periodEntries), [periodEntries])
+
+  React.useEffect(() => {
+    if (
+      tagFilter !== "all" &&
+      !usedTags.some((t) => tagKey(t) === tagKey(tagFilter))
+    ) {
+      setTag("all")
+    }
+  }, [tagFilter, usedTags, setTag])
+
   const catFilterOptions = React.useMemo(
     () => [
       { value: "all", label: f.t("ledger.allCategories") },
@@ -240,6 +257,7 @@ export function LedgerView() {
     query,
     typeFilter,
     catFilter,
+    tagFilter,
     checkFilter,
   ])
   const [pick, setPick] = React.useState<{
@@ -287,6 +305,7 @@ export function LedgerView() {
     query.trim() !== "" ||
     typeFilter !== "all" ||
     catFilter !== "all" ||
+    tagFilter !== "all" ||
     checkFilter !== "all"
 
   /*
@@ -371,6 +390,19 @@ export function LedgerView() {
                 label={f.t("ledger.colCategory")}
                 className="w-[13rem]"
               />
+
+              {usedTags.length ? (
+                <OptionSelect
+                  options={[
+                    { value: "all", label: f.t("ledger.allTags") },
+                    ...usedTags.map((t) => ({ value: t, label: t })),
+                  ]}
+                  value={tagFilter}
+                  onChange={setTag}
+                  label={f.t("ledger.tagFilter")}
+                  className="w-[11rem]"
+                />
+              ) : null}
 
               <OptionSelect
                 options={[

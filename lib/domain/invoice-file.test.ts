@@ -103,6 +103,16 @@ describe("invoices.json", () => {
     expect(read.rows[0]).not.toHaveProperty("discount")
   })
 
+  it("round-trips an invoice's tags and leaves the field out when none can be read", () => {
+    const list = [issued({ tags: ["Projekti A", "messut"] })]
+    expect(parseInvoices(serializeInvoices(list)).invoices).toEqual(list)
+    const broken = JSON.parse(serializeInvoices(list))
+    broken.invoices[0].tags = "Projekti A"
+    expect(
+      parseInvoices(JSON.stringify(broken)).invoices[0]
+    ).not.toHaveProperty("tags")
+  })
+
   it("round-trips the reminders of an issued invoice and drops unreadable ones", () => {
     const reminder = {
       id: "r1",
@@ -278,5 +288,32 @@ describe("parseInvoiceSettings", () => {
     const a = parseInvoiceSettings(null)
     a.terms.fi = "changed"
     expect(parseInvoiceSettings(null).terms.fi).toBe("")
+  })
+
+  it("reads the documents' look and leaves out what cannot be read (§8.27)", () => {
+    const logo = {
+      type: "image/png",
+      data: "iVBORw0KGgo=",
+      width: 40,
+      height: 20,
+    }
+    expect(
+      parseInvoiceSettings({
+        logo,
+        accent: "#1F6FEB",
+        footer: "  www.example.fi ",
+      })
+    ).toMatchObject({ logo, accent: "#1f6feb", footer: "www.example.fi" })
+    const bad = parseInvoiceSettings({
+      logo: { ...logo, type: "image/gif" },
+      accent: "blue",
+      footer: "   ",
+    })
+    expect(bad).not.toHaveProperty("logo")
+    expect(bad).not.toHaveProperty("accent")
+    expect(bad).not.toHaveProperty("footer")
+    expect(
+      parseInvoiceSettings({ logo: { ...logo, data: "not base64!" } })
+    ).not.toHaveProperty("logo")
   })
 })

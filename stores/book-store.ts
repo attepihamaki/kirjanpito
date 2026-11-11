@@ -178,6 +178,7 @@ export type EntryPrefill = Partial<
     | "due"
     | "iban"
     | "reference"
+    | "tags"
   >
 >
 
@@ -463,6 +464,8 @@ export interface BookState {
   ledgerQuery: string
   ledgerType: TypeFilter
   ledgerCat: string
+  /** The tag the ledger is narrowed to, "all" for none (§8.37). */
+  ledgerTag: string
   ledgerCheck: CheckFilter
   /** The column a header click chose, or null for the table's own order. */
   ledgerSort: SortState<LedgerSortKey> | null
@@ -715,6 +718,7 @@ export interface BookActions {
   setLedgerQuery(q: string): void
   setLedgerType(type: TypeFilter): void
   setLedgerCat(id: string): void
+  setLedgerTag(tag: string): void
   setLedgerCheck(filter: CheckFilter): void
   toggleLedgerSort(key: LedgerSortKey): void
   setLedgerPage(page: number): void
@@ -810,6 +814,7 @@ function initialState(): BookState {
     ledgerQuery: "",
     ledgerType: "all",
     ledgerCat: "all",
+    ledgerTag: "all",
     ledgerCheck: "all",
     ledgerSort: null,
     ledgerPage: 1,
@@ -991,6 +996,7 @@ const clearedFilters = {
   ledgerQuery: "",
   ledgerType: "all" as TypeFilter,
   ledgerCat: "all",
+  ledgerTag: "all",
   ledgerCheck: "all" as CheckFilter,
   ledgerPage: 1,
   catQuery: "",
@@ -1734,6 +1740,7 @@ export const useBookStore = create<BookStore>()(
       setLedgerQuery: (ledgerQuery) => set({ ledgerQuery, ledgerPage: 1 }),
       setLedgerType: (ledgerType) => set({ ledgerType, ledgerPage: 1 }),
       setLedgerCat: (ledgerCat) => set({ ledgerCat, ledgerPage: 1 }),
+      setLedgerTag: (ledgerTag) => set({ ledgerTag, ledgerPage: 1 }),
       setLedgerCheck: (ledgerCheck) => set({ ledgerCheck, ledgerPage: 1 }),
       toggleLedgerSort: (key) =>
         set({ ledgerSort: nextSort(get().ledgerSort, key), ledgerPage: 1 }),
@@ -1748,6 +1755,7 @@ export const useBookStore = create<BookStore>()(
           ledgerQuery: "",
           ledgerType: "all",
           ledgerCat: "all",
+          ledgerTag: "all",
           ledgerCheck: "all",
           ledgerPage: 1,
         }),

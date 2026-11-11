@@ -104,6 +104,21 @@ describe("recurring entries", () => {
     expect(dueRecurring([yearly], "2027-02", [])).toEqual([yearly])
   })
 
+  it("carries the entry's tags to the template and back (§8.37)", () => {
+    const made = entryToRecurring(
+      { ...booked("2026-05-14"), tags: ["Toimitila"] },
+      "r2",
+      "2026-05"
+    )
+    expect(made.tags).toEqual(["Toimitila"])
+    expect(recurringToEntry(made, "2026-06", () => "x").tags).toEqual([
+      "Toimitila",
+    ])
+    expect(
+      entryToRecurring(booked("2026-05-14"), "r2", "2026-05")
+    ).not.toHaveProperty("tags")
+  })
+
   it("writes no interval for a monthly template", () => {
     expect(
       entryToRecurring(booked("2026-05-14"), "r2", "2026-05")

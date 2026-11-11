@@ -40,7 +40,8 @@ export async function downloadStatementPdf(
       customer,
       seller,
       customer.language,
-      options
+      options,
+      s.invoiceSettings
     )
     saveBlob(
       new Blob([bytes as BlobPart], { type: "application/pdf" }),

@@ -23,6 +23,7 @@ import { canBeEuPurchase, isEuSaleKind } from "@/lib/domain/accounts"
 import { canBeUnpaid } from "@/lib/domain/open-items"
 import { billIban, billReference } from "@/lib/domain/bill-payment"
 import { uid } from "@/lib/domain/id"
+import { formatTagsCell, parseTagsCell, tagsField } from "@/lib/domain/tags"
 import {
   formatAmountForCsv,
   isVatRate,
@@ -243,6 +244,7 @@ export function serializeCsv(
         e.due ?? "",
         e.iban ?? "",
         e.reference ?? "",
+        defuseFormula(formatTagsCell(e.tags)),
       ]
         .map(quote)
         .join(";")
@@ -618,6 +620,7 @@ export function parseCsv(
       ...partyColumn(get("party")),
       ...dueColumn(get("due"), type, paid, cat),
       ...billColumns(get("pay_iban"), get("pay_reference"), type, paid, cat),
+      ...tagsField(parseTagsCell(restoreFormula(get("tags")))),
     })
 
     const splitRaw = get("split")

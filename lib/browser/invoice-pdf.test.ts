@@ -75,6 +75,10 @@ function issued(
   }).invoice
 }
 
+/** A 1×1 PNG. */
+const PIXEL =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+
 async function pages(bytes: Uint8Array): Promise<number> {
   return (await PDFDocument.load(bytes)).getPageCount()
 }
@@ -130,6 +134,29 @@ describe("renderInvoicePdf", () => {
     const bytes = await renderInvoicePdf(discounted)
     expect(await pages(bytes)).toBe(1)
     expect(bytes.length).toBeGreaterThan(plain.length)
+  })
+
+  it("draws the logo, the accent colour and the footer (§8.27)", async () => {
+    const invoice = issued([row(1)])
+    const plain = await renderInvoicePdf(invoice)
+    const bytes = await renderInvoicePdf(invoice, null, {
+      logo: { type: "image/png", data: PIXEL, width: 1, height: 1 },
+      accent: "#1f6feb",
+      footer: "www.example.fi",
+    })
+    expect(await pages(bytes)).toBe(1)
+    expect(bytes.length).toBeGreaterThan(plain.length)
+    const doc = await PDFDocument.load(bytes)
+    expect(doc.getPage(0).node.Resources()?.toString()).toContain("XObject")
+  })
+
+  it("puts the footer on every page and still draws with a logo it cannot read", async () => {
+    const rows = Array.from({ length: 40 }, (_, i) => row(i))
+    const bytes = await renderInvoicePdf(issued(rows), null, {
+      logo: { type: "image/png", data: "AAAA", width: 1, height: 1 },
+      footer: "Alatunniste",
+    })
+    expect(await pages(bytes)).toBeGreaterThan(1)
   })
 
   it("draws the invoice without a barcode when the account is not Finnish", async () => {

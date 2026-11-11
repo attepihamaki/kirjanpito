@@ -136,6 +136,40 @@ describe("discounts (§8.27)", () => {
   })
 })
 
+describe("tags on invoices (§8.37)", () => {
+  it("puts the invoice's tags on every sale entry, and a credit note keeps them", () => {
+    const tagged = draft({
+      rows: [row({}), row({ vatRate: 14, catId: "300-domestic" })],
+      tags: ["Projekti A"],
+    })
+    const { invoice, entries } = buildIssue({
+      invoice: tagged,
+      settings,
+      business,
+      invoices: [],
+      now: "2026-11-01T09:00:00.000Z",
+      makeId: createIdFactory("t"),
+    })
+    expect(entries.length).toBe(2)
+    expect(entries.every((e) => e.tags?.[0] === "Projekti A")).toBe(true)
+    expect(creditDraft(invoice, "c1", "2026-11-20").tags).toEqual([
+      "Projekti A",
+    ])
+  })
+
+  it("books entries without the field when the invoice has none", () => {
+    const { entries } = buildIssue({
+      invoice: draft({}),
+      settings,
+      business,
+      invoices: [],
+      now: "2026-11-01T09:00:00.000Z",
+      makeId: createIdFactory("u"),
+    })
+    expect("tags" in entries[0]).toBe(false)
+  })
+})
+
 describe("invoiceGroups and invoiceTotals", () => {
   it("groups by category and rate, in first-seen order", () => {
     const groups = invoiceGroups([

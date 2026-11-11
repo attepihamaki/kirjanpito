@@ -150,7 +150,11 @@ export async function issueInvoice(
     ),
     async () => {
       const { renderInvoicePdf } = await import("@/lib/browser/invoice-pdf")
-      return renderInvoicePdf(invoice, original?.number ?? null)
+      return renderInvoicePdf(
+        invoice,
+        original?.number ?? null,
+        useBookStore.getState().invoiceSettings
+      )
     }
   )
   if (!att) toast.add({ title: ctx.t("invoice.pdfFailed") })
@@ -204,7 +208,11 @@ async function renderIssued(
     .invoices.find((i) => i.id === invoice.credits)
   const creditedNumber = credited?.number ?? null
   return {
-    bytes: await renderInvoicePdf(invoice, creditedNumber),
+    bytes: await renderInvoicePdf(
+      invoice,
+      creditedNumber,
+      useBookStore.getState().invoiceSettings
+    ),
     creditedNumber,
     name: invoiceFileName(
       invoice.language,
@@ -292,7 +300,11 @@ export async function makeReminder(
   let bytes: Uint8Array
   try {
     const { renderReminderPdf } = await import("@/lib/browser/invoice-pdf")
-    bytes = await renderReminderPdf(invoice, reminder)
+    bytes = await renderReminderPdf(
+      invoice,
+      reminder,
+      useBookStore.getState().invoiceSettings
+    )
   } catch (error) {
     console.warn("Reminder PDF could not be made", error)
     toast.add({ title: ctx.t("invoice.pdfDownloadFailed") })

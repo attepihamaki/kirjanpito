@@ -39,6 +39,7 @@ const FIELD_LABEL = {
   due: "entry.logFieldDue",
   iban: "entry.logFieldIban",
   reference: "entry.logFieldReference",
+  tags: "entry.logFieldTags",
 } as const satisfies Record<LoggedField, string>
 
 /** A field's value as a person reads it. */
@@ -79,6 +80,8 @@ function formatValue(
       return f.t("entry.logReversesValue")
     case "sells":
       return f.t("entry.logReversesValue")
+    case "tags":
+      return String(value).split("|").join(", ")
     case "euPurchase":
       return f.t(
         value === "goods"

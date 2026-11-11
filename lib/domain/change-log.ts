@@ -1,3 +1,4 @@
+import { formatTagsCell, parseTagsCell } from "@/lib/domain/tags"
 import type { Entry } from "@/lib/domain/types"
 
 /**
@@ -64,6 +65,7 @@ export const LOGGED_FIELDS = [
   "due",
   "iban",
   "reference",
+  "tags",
 ] as const
 export type LoggedField = (typeof LOGGED_FIELDS)[number]
 
@@ -85,6 +87,7 @@ function logged(e: Entry, field: LoggedField): string | number | null {
   // Same for the reversal link: the log records that there is one, not the id.
   if (field === "reverses") return e.reverses ? "reverses" : null
   if (field === "sells") return e.sells ? "sells" : null
+  if (field === "tags") return e.tags?.length ? formatTagsCell(e.tags) : null
   return e[field] ?? null
 }
 
@@ -236,6 +239,8 @@ function putBack(
   } else if (value === null || value === "") {
     if (field === "description") out.description = ""
     else delete out[field]
+  } else if (field === "tags") {
+    out.tags = parseTagsCell(String(value))
   } else if (field === "amount" || field === "vatRate" || field === "share") {
     out[field] = Number(value)
   } else {

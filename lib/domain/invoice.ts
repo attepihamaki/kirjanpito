@@ -6,7 +6,36 @@ export type InvoiceLang = "fi" | "en"
  * It lives in `settings.json`. The business's name, ID and phone are in the
  * book's other settings.
  */
-export interface InvoiceSettings {
+/**
+ * The logo printed at the top of invoices, quotes, reminders and statements
+ * (§8.27), scaled down when it was picked and kept in `settings.json`.
+ */
+export interface InvoiceLogo {
+  type: "image/png" | "image/jpeg"
+  /** The image file in base64, without a `data:` prefix. */
+  data: string
+  /** Its size in pixels, which fixes the aspect ratio it is drawn at. */
+  width: number
+  height: number
+}
+
+/**
+ * How the business's documents look (§8.27). Each field is absent at its
+ * default: no logo, black headings, no footer. It follows the settings when a
+ * PDF is drawn, so a voucher stored at issue keeps the look it had then.
+ */
+export interface InvoiceLook {
+  logo?: InvoiceLogo
+  /** The colour of the heading and the rules, `#rrggbb`. */
+  accent?: string
+  /** A line or two printed at the foot of every page, such as a website. */
+  footer?: string
+}
+
+/** The longest footer kept, in characters. */
+export const FOOTER_MAX = 300
+
+export interface InvoiceSettings extends InvoiceLook {
   street: string
   postcode: string
   city: string
@@ -203,6 +232,14 @@ export interface DocDiscount {
   discount?: number
 }
 
+/**
+ * The tags of an invoice, a quote or a recurring invoice (§8.37), which an
+ * issued invoice copies to the sale entries it books. Absent while none.
+ */
+export interface DocTags {
+  tags?: string[]
+}
+
 /** Whether `value` can be a discount: above 0, at most 100, to two decimals. */
 function isDiscount(value: unknown): value is number {
   return (
@@ -219,7 +256,7 @@ export function discountField(value: unknown): { discount?: number } {
   return isDiscount(value) ? { discount: Math.round(value * 100) / 100 } : {}
 }
 
-export interface Invoice extends BuyerRefs, DocDiscount {
+export interface Invoice extends BuyerRefs, DocDiscount, DocTags {
   id: string
   /** The invoice number, or null while it is a draft. */
   number: number | null
@@ -283,7 +320,7 @@ export const RECURRING_EVERY = [1, 2, 3, 6, 12] as const
  * when the app opens on or after `next`, the template becomes a draft to
  * review, and `next` moves on by `every` months.
  */
-export interface RecurringInvoice extends BuyerRefs, DocDiscount {
+export interface RecurringInvoice extends BuyerRefs, DocDiscount, DocTags {
   id: string
   /** The register customer, whose current details each draft takes, or null for one typed in. */
   customerId: string | null
@@ -345,7 +382,7 @@ export type QuoteOutcome = "accepted" | "declined"
  * until a date. It is not a voucher and books nothing; accepting it makes an
  * invoice draft with the same rows.
  */
-export interface Quote extends DocDiscount {
+export interface Quote extends DocDiscount, DocTags {
   id: string
   /** The quote's own number, from a series of its own starting at 1. */
   number: number

@@ -15,6 +15,7 @@ import { AmountInput } from "@/components/common/amount-input"
 import { DateInput } from "@/components/common/date-input"
 import { Money } from "@/components/common/money"
 import { OptionSelect } from "@/components/common/option-select"
+import { TagsInput } from "@/components/common/tags-input"
 import { PartyFields } from "@/components/invoices/party-fields"
 import { useFormatters } from "@/components/lang-provider"
 import { Button } from "@/components/ui/button"
@@ -82,6 +83,7 @@ import { invoiceLabels } from "@/lib/domain/invoice-labels"
 import { isZeroRated, rowSaleKind, vatNotes } from "@/lib/domain/invoice-vat"
 import { formatMoneyPlain } from "@/lib/domain/money"
 import { defaultValidUntil, nextQuoteNumber } from "@/lib/domain/quote"
+import { allTags, tagsField } from "@/lib/domain/tags"
 import { rateOnDate, validRates } from "@/lib/domain/vat-rates"
 import { useBookStore } from "@/stores/book-store"
 
@@ -265,6 +267,15 @@ function InvoiceForm({
   const [docDiscount, setDocDiscount] = React.useState(
     formatDiscount(start?.discount)
   )
+  const [tags, setTags] = React.useState<string[]>(() => [
+    ...(start?.tags ?? []),
+  ])
+  const bookEntries = useBookStore((s) => s.entries)
+  /* The book's tags with those of other invoices, so a project is offered before its first sale is booked. */
+  const tagSuggestions = React.useMemo(
+    () => allTags([...bookEntries, ...invoices]),
+    [bookEntries, invoices]
+  )
   const [buyerReference, setBuyerReference] = React.useState(
     existing?.buyerReference ?? ""
   )
@@ -281,6 +292,7 @@ function InvoiceForm({
     buyerReference: React.useId(),
     orderNumber: React.useId(),
     discount: React.useId(),
+    tags: React.useId(),
   }
 
   /* A seller outside the VAT register sells domestically only (`vatProblems`). */
@@ -432,6 +444,7 @@ function InvoiceForm({
       language,
       rows: readRows,
       ...discountField(discount),
+      ...tagsField(tags),
       note: note.trim(),
       outcome: existingQuote?.outcome ?? null,
       invoiceId: existingQuote?.invoiceId ?? null,
@@ -459,6 +472,7 @@ function InvoiceForm({
       language,
       rows: readRows,
       ...discountField(discount),
+      ...tagsField(tags),
       note: note.trim(),
       ...buyerRefs({ buyerReference, orderNumber }),
       terms: "",
@@ -925,6 +939,24 @@ function InvoiceForm({
               <FieldError>{f.t("invoice.discountBad")}</FieldError>
             ) : null}
           </Field>
+
+          {issued && tags.length === 0 ? null : (
+            <Field>
+              <FieldLabel htmlFor={ids.tags}>{f.t("entry.tags")}</FieldLabel>
+              <TagsInput
+                id={ids.tags}
+                value={tags}
+                disabled={issued}
+                suggestions={tagSuggestions}
+                placeholder={f.t("entry.tagsPlaceholder")}
+                removeLabel={(tag) => f.t("entry.tagRemove", { tag })}
+                onChange={setTags}
+              />
+              {issued ? null : (
+                <FieldDescription>{f.t("invoice.tagsHint")}</FieldDescription>
+              )}
+            </Field>
+          )}
 
           <Field>
             <FieldLabel htmlFor={ids.note}>{f.t("invoice.note")}</FieldLabel>

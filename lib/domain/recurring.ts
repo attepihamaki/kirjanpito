@@ -1,3 +1,4 @@
+import { tagsField } from "@/lib/domain/tags"
 import { isoDate, monthOf, yearOf } from "@/lib/domain/dates"
 import type {
   AmountMode,
@@ -36,6 +37,8 @@ export interface RecurringEntry {
    * means every month, which is how a template is written when it is monthly.
    */
   every?: number
+  /** The tags each entry made from it carries (§8.37). */
+  tags?: string[]
 }
 
 /** How many months apart a recurring entry can come. */
@@ -142,6 +145,7 @@ export function recurringToEntry(
     vatRate: rateOnDate(r.vatRate, date),
     amountMode: r.amountMode,
     ...(r.euPurchase ? { euPurchase: r.euPurchase } : {}),
+    ...tagsField(r.tags),
   }
 }
 
@@ -168,5 +172,6 @@ export function entryToRecurring(
     day: Number(entry.date.slice(8, 10)),
     from,
     ...(every !== 1 ? { every } : {}),
+    ...tagsField(entry.tags),
   }
 }

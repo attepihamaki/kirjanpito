@@ -180,6 +180,11 @@ export interface Entry {
    * and no figure reads it. An id no longer in the book means no link.
    */
   sells?: string
+  /**
+   * Free labels such as a project or a job (§8.37), each once, in the order
+   * the user gave them. They report nothing; the tag report reads them.
+   */
+  tags?: string[]
 }
 
 /** A category (luokka) the user books entries to. */

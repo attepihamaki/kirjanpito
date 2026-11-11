@@ -10,7 +10,9 @@ import {
   type Invoice,
   type InvoiceLang,
   type InvoiceRow,
+  type InvoiceLook,
   type InvoiceSettings,
+  FOOTER_MAX,
   RECURRING_EVERY,
   type Party,
   type PartyRole,
@@ -20,6 +22,7 @@ import {
   type Reminder,
   type Seller,
 } from "@/lib/domain/invoice"
+import { readTags } from "@/lib/domain/tags"
 
 /*
  * `invoices.json` and `customers.json` (§7.6): two files at the root of the
@@ -132,7 +135,45 @@ export function parseInvoiceSettings(value: unknown): InvoiceSettings {
     recurring: list(value.recurring, parseRecurringInvoice),
     quotes: list(value.quotes, parseQuote),
     vatRegistered: value.vatRegistered !== false,
+    ...parseInvoiceLook(value),
   }
+}
+
+/** The largest logo kept, as base64 characters: about 300 KB of image. */
+const LOGO_MAX = 400_000
+
+const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/
+
+/** The look of the documents (§8.27), each field left out when it cannot be read. */
+function parseInvoiceLook(value: Record<string, unknown>): InvoiceLook {
+  const out: InvoiceLook = {}
+  const logo = value.logo
+  if (
+    isRecord(logo) &&
+    (logo.type === "image/png" || logo.type === "image/jpeg") &&
+    typeof logo.data === "string" &&
+    logo.data.length <= LOGO_MAX &&
+    BASE64.test(logo.data) &&
+    Number.isInteger(logo.width) &&
+    Number.isInteger(logo.height) &&
+    (logo.width as number) > 0 &&
+    (logo.height as number) > 0
+  ) {
+    out.logo = {
+      type: logo.type,
+      data: logo.data,
+      width: logo.width as number,
+      height: logo.height as number,
+    }
+  }
+  if (
+    typeof value.accent === "string" &&
+    /^#[0-9a-fA-F]{6}$/.test(value.accent)
+  )
+    out.accent = value.accent.toLowerCase()
+  const footer = text(value.footer, FOOTER_MAX).trim()
+  if (footer) out.footer = footer
+  return out
 }
 
 /** The readable records of a list, the first of each id kept. */
@@ -188,6 +229,7 @@ function parseRecurringInvoice(value: unknown): RecurringInvoice | null {
     language: lang(value.language),
     rows: rows as InvoiceRow[],
     ...discountField(value.discount),
+    ...readTags(value.tags),
     note: text(value.note, 2000),
     ...parseBuyerRefs(value),
     every: every as number,
@@ -224,6 +266,7 @@ function parseQuote(value: unknown): Quote | null {
     language: lang(value.language),
     rows: rows as InvoiceRow[],
     ...discountField(value.discount),
+    ...readTags(value.tags),
     note: text(value.note, 2000),
     outcome:
       value.outcome === "accepted" || value.outcome === "declined"
@@ -458,6 +501,7 @@ function parseInvoice(value: unknown): Invoice | null {
     language: lang(value.language),
     rows: rows as InvoiceRow[],
     ...discountField(value.discount),
+    ...readTags(value.tags),
     note: text(value.note, 2000),
     ...parseBuyerRefs(value),
     terms: text(value.terms, 2000),

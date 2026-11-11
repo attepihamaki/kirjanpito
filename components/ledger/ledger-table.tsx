@@ -50,7 +50,11 @@ import { canSplitLine } from "@/lib/domain/split"
 import { indexCategories, type Entry } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
 import { useBookStore, type LedgerSortKey } from "@/stores/book-store"
-import { categoriesToMoveTo, compareCategories } from "@/stores/selectors"
+import {
+  categoriesToMoveTo,
+  compareCategories,
+  selectionRange,
+} from "@/stores/selectors"
 
 /**
  * The ledger table (§8.4).
@@ -94,6 +98,24 @@ export function LedgerTable({
     () => reversalLabels(allEntries),
     [allEntries]
   )
+
+  /*
+   * The row last ticked or unticked by hand (§8.4). Shift with a click then
+   * gives every row on the page between the two the same state.
+   */
+  const anchor = React.useRef<string | null>(null)
+  const pick = (id: string, on: boolean, shift: boolean) => {
+    const range =
+      shift && anchor.current
+        ? selectionRange(
+            rows.map((r) => r.id),
+            anchor.current,
+            id
+          )
+        : null
+    onSelect(range ?? [id], on)
+    anchor.current = id
+  }
 
   const header = (
     key: LedgerSortKey,
@@ -205,7 +227,7 @@ export function LedgerTable({
               void recategorizeEntries(ctx, [entry], catId)
             }
             selected={selected.has(entry.id)}
-            onSelect={(on) => onSelect([entry.id], on)}
+            onSelect={(on, shift) => pick(entry.id, on, shift)}
             onEdit={() =>
               openDialog({ kind: "entry", mode: "edit", entryId: entry.id })
             }
@@ -315,7 +337,8 @@ function LedgerRow({
   onRename: (text: string) => void
   onRecategorize: (catId: string) => void
   selected: boolean
-  onSelect: (on: boolean) => void
+  /** `shift` is held when the box is ticked with Shift down, for a range. */
+  onSelect: (on: boolean, shift: boolean) => void
   onEdit: () => void
   onCopy: () => void
   onSplit: () => void
@@ -324,6 +347,8 @@ function LedgerRow({
   onViewReceipt: (index: number) => void
 }) {
   const f = useFormatters()
+  // Whether Shift was down on the press that is about to tick the box.
+  const shift = React.useRef(false)
   const { net, vat, gross } = calcEntry(entry)
   const income = entry.type === "income"
   const attachments = entry.atts ?? []
@@ -390,13 +415,22 @@ function LedgerRow({
           className="hidden min-[560px]:table-cell print:hidden"
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
+          onMouseDownCapture={(e) => {
+            shift.current = e.shiftKey
+            // A Shift-press would otherwise select the text of every row it spans.
+            if (e.shiftKey) e.preventDefault()
+          }}
+          onKeyDownCapture={(e) => (shift.current = e.shiftKey)}
         >
           <Checkbox
             checked={selected}
             aria-label={f.t("ledger.selectRow", {
               x: entry.description || f.t("ledger.noDescription"),
             })}
-            onCheckedChange={(checked) => onSelect(checked === true)}
+            onCheckedChange={(checked) => {
+              onSelect(checked === true, shift.current)
+              shift.current = false
+            }}
           />
         </TableCell>
 
@@ -491,6 +525,11 @@ function LedgerRow({
                     {f.t("ledger.sharePill", { p: `${entry.share} %` })}
                   </Pill>
                 ) : null}
+                {(entry.tags ?? []).map((tag) => (
+                  <Pill key={tag} size="sm" className="ml-2">
+                    #{tag}
+                  </Pill>
+                ))}
               </span>
               {attachments.length ? (
                 <Button

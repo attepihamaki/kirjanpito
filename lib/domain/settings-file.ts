@@ -1,3 +1,4 @@
+import { readTags } from "@/lib/domain/tags"
 import { parseInboxFileItem, type InboxFileItem } from "@/lib/domain/inbox"
 import { type TaxPayment } from "@/lib/domain/vat-filing"
 import {
@@ -209,6 +210,7 @@ function parseRecurring(value: unknown): RecurringEntry | null {
     day,
     from,
     every,
+    tags,
   } = value
   if (typeof id !== "string" || !id) return null
   if (typeof description !== "string" || !description.trim()) return null
@@ -233,6 +235,7 @@ function parseRecurring(value: unknown): RecurringEntry | null {
     day: day as number,
     from,
     ...(isEntryEvery(every) && every !== 1 ? { every } : {}),
+    ...readTags(tags),
   }
 }
 

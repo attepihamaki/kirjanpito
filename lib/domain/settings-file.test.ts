@@ -67,6 +67,7 @@ function settings(): BookSettings {
         amountMode: "gross",
         day: 20,
         from: "2026-02",
+        tags: ["Toimitila"],
       },
       {
         id: "r2",
@@ -106,6 +107,8 @@ function settings(): BookSettings {
     yearEnd: { "2026": { ...EMPTY_YEAR_END, goods: 120_000, cash: 3_500 } },
     invoiceSettings: {
       vatRegistered: true,
+      accent: "#1f6feb",
+      footer: "www.example.fi",
       street: "Esimerkkikatu 1",
       postcode: "00100",
       city: "Helsinki",
@@ -151,6 +154,7 @@ function settings(): BookSettings {
             },
           ],
           note: "",
+          tags: ["Ylläpito"],
           every: 3,
           day: 31,
           next: "2026-12-31",

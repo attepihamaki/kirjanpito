@@ -204,6 +204,20 @@ describe("versionAfter", () => {
     expect(versionAfter(v3, log, 0)?.entry).toEqual({ ...v1, atts: v3.atts })
   })
 
+  it("records tags as one value and puts them back as a list (§8.37)", () => {
+    const tagged = entry({ tags: ["Projekti A", "messut"] })
+    const log2 = history(v1, tagged)
+    expect(log2[1].changes).toEqual([
+      { field: "tags", from: null, to: "Projekti A|messut" },
+    ])
+    const back = history(v1, tagged, v1)
+    expect(versionAfter(v1, back, 1)?.entry.tags).toEqual([
+      "Projekti A",
+      "messut",
+    ])
+    expect(versionAfter(tagged, log2, 0)?.entry).toEqual(v1)
+  })
+
   it("puts an open voucher back as open", () => {
     const paid = entry({ paidOn: "2026-04-02" })
     const log2 = history(v1, entry({ paidOn: null }), paid)

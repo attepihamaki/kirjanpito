@@ -72,7 +72,11 @@ async function renderQuote(
   try {
     const { renderQuotePdf } = await import("@/lib/browser/invoice-pdf")
     return {
-      bytes: await renderQuotePdf(quote, sellerOf(s.invoiceSettings, business)),
+      bytes: await renderQuotePdf(
+        quote,
+        sellerOf(s.invoiceSettings, business),
+        s.invoiceSettings
+      ),
       name: quoteFileName(quote.language, quote.number, quote.customer.name),
     }
   } catch (error) {

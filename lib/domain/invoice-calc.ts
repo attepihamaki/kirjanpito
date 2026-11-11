@@ -1,3 +1,4 @@
+import { tagsField } from "@/lib/domain/tags"
 import { isEuSaleKind, lineOf } from "@/lib/domain/accounts"
 import { calcEntry } from "@/lib/domain/calc"
 import type {
@@ -378,6 +379,7 @@ export function buildIssue(input: IssueInput): IssueResult {
       ...(buyerVatId && isEuSaleKind(rowSaleKind(group.catId))
         ? { buyerVatId }
         : {}),
+      ...tagsField(invoice.tags),
     }
   })
   const issued: Invoice = {
@@ -416,6 +418,7 @@ export function creditDraft(
     language: original.language,
     rows: original.rows.map((r) => ({ ...r, quantityMilli: -r.quantityMilli })),
     ...discountField(original.discount),
+    ...tagsField(original.tags),
     note: "",
     /* The customer's accounts payable matches the credit to its invoice by these. */
     ...buyerRefs(original),

@@ -18,6 +18,7 @@ import type {
   BuyerRefs,
   Invoice,
   InvoiceLang,
+  InvoiceLook,
   InvoiceRow,
   Party,
   Quote,
@@ -72,18 +73,123 @@ interface Fonts {
   bold: PDFFont
 }
 
+type Color = ReturnType<typeof rgb>
+
 interface Cursor {
   doc: PDFDocument
   page: PDFPage
   fonts: Fonts
   /** The top of the free space on the page. */
   y: number
+  /** The look's accent, or null for the plain black and grey. */
+  accent: Color | null
+}
+
+/** `#rrggbb` as a colour, or null when there is none. */
+function accentColor(look: InvoiceLook): Color | null {
+  const hex = look.accent
+  if (!hex || !/^#[0-9a-fA-F]{6}$/.test(hex)) return null
+  const n = parseInt(hex.slice(1), 16)
+  return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255)
+}
+
+/** A new document's first page, with the fonts embedded. */
+async function startDocument(
+  title: string,
+  look: InvoiceLook
+): Promise<Cursor> {
+  const doc = await PDFDocument.create()
+  doc.setTitle(toWinAnsi(title))
+  doc.setCreator("Kirjanpito")
+  const fonts: Fonts = {
+    regular: await doc.embedFont(StandardFonts.Helvetica),
+    bold: await doc.embedFont(StandardFonts.HelveticaBold),
+  }
+  return {
+    doc,
+    page: doc.addPage(A4),
+    fonts,
+    y: A4[1] - MARGIN,
+    accent: accentColor(look),
+  }
+}
+
+/** The logo's box: no wider or taller than this, in points. */
+const LOGO_BOX: [number, number] = [160, 50]
+
+/**
+ * The top left of the first page: the logo, if there is one, and under it the
+ * seller's name and details. Returns where the block ends. A logo that cannot
+ * be read is left out rather than failing the document.
+ */
+async function sellerHead(
+  c: Cursor,
+  seller: Seller,
+  labels: InvoiceLabels,
+  look: InvoiceLook
+): Promise<number> {
+  if (look.logo) {
+    try {
+      const image =
+        look.logo.type === "image/png"
+          ? await c.doc.embedPng(look.logo.data)
+          : await c.doc.embedJpg(look.logo.data)
+      const scale = Math.min(
+        LOGO_BOX[0] / image.width,
+        LOGO_BOX[1] / image.height,
+        1
+      )
+      const width = image.width * scale
+      const height = image.height * scale
+      c.page.drawImage(image, { x: MARGIN, y: c.y - height, width, height })
+      c.y -= height + 10
+    } catch {
+      // The rest of the document is still worth drawing.
+    }
+  }
+  paragraph(c, seller.name, MARGIN, 260, { size: 14, bold: true })
+  for (const line of partyLines(seller, seller.businessId, labels).slice(1)) {
+    paragraph(c, line, MARGIN, 260, { size: 9, color: MUTED })
+  }
+  return c.y
+}
+
+/** The document's heading at the top right, in the accent colour when there is one. */
+function heading(c: Cursor, text: string): void {
+  put(c.page, c.fonts, text, RIGHT, c.y - 14, {
+    size: 16,
+    bold: true,
+    align: "right",
+    color: c.accent ?? INK,
+  })
+  c.y -= 26
+}
+
+/** The footer on every page, at most two lines under the bottom margin, and the bytes. */
+async function finish(c: Cursor, look: InvoiceLook): Promise<Uint8Array> {
+  const footer = look.footer?.trim()
+  if (footer) {
+    const lines = wrap(footer, c.fonts.regular, 7.5, RIGHT - MARGIN).slice(0, 2)
+    for (const page of c.doc.getPages()) {
+      lines.forEach((line, i) => {
+        const width = c.fonts.regular.widthOfTextAtSize(line, 7.5)
+        page.drawText(line, {
+          x: (A4[0] - width) / 2,
+          y: 24 - i * 9,
+          size: 7.5,
+          font: c.fonts.regular,
+          color: MUTED,
+        })
+      })
+    }
+  }
+  return c.doc.save()
 }
 
 interface TextOptions {
   size?: number
   bold?: boolean
-  color?: ReturnType<typeof rgb>
+  color?: Color
   align?: "left" | "right"
 }
 
@@ -176,8 +282,8 @@ function rule(c: Cursor): void {
   c.page.drawLine({
     start: { x: MARGIN, y: c.y - 2 },
     end: { x: RIGHT, y: c.y - 2 },
-    thickness: 0.5,
-    color: RULE,
+    thickness: c.accent ? 0.75 : 0.5,
+    color: c.accent ?? RULE,
   })
   c.y -= 8
 }
@@ -352,7 +458,8 @@ function drawSlip(
  */
 export async function renderInvoicePdf(
   invoice: Invoice,
-  creditedNumber: number | null = null
+  creditedNumber: number | null = null,
+  look: InvoiceLook = {}
 ): Promise<Uint8Array> {
   if (!invoice.seller || invoice.number === null || !invoice.reference) {
     throw new Error("only an issued invoice can be drawn")
@@ -361,7 +468,8 @@ export async function renderInvoicePdf(
     { ...invoice, seller: invoice.seller, number: invoice.number },
     invoice.credits !== null
       ? { kind: "credit", creditedNumber }
-      : { kind: "invoice", reference: invoice.reference }
+      : { kind: "invoice", reference: invoice.reference },
+    look
   )
 }
 
@@ -371,7 +479,8 @@ export async function renderInvoicePdf(
  */
 export async function renderQuotePdf(
   quote: Quote,
-  seller: Seller
+  seller: Seller,
+  look: InvoiceLook = {}
 ): Promise<Uint8Array> {
   return drawSale(
     {
@@ -383,7 +492,8 @@ export async function renderQuotePdf(
       terms: "",
       issuedAt: null,
     },
-    { kind: "quote" }
+    { kind: "quote" },
+    look
   )
 }
 
@@ -413,32 +523,21 @@ type SaleDocument = Pick<
 
 async function drawSale(
   invoice: SaleDocument,
-  sale: SaleKind
+  sale: SaleKind,
+  look: InvoiceLook
 ): Promise<Uint8Array> {
   const labels = invoiceLabels(invoice.language)
   const lang = invoice.language
   const credit = sale.kind === "credit"
   const quote = sale.kind === "quote"
-  const doc = await PDFDocument.create()
-  doc.setTitle(
-    toWinAnsi(
-      quote
-        ? labels.quoteTitle(invoice.number)
-        : labels.title(invoice.number, credit)
-    )
+  const c = await startDocument(
+    quote
+      ? labels.quoteTitle(invoice.number)
+      : labels.title(invoice.number, credit),
+    look
   )
-  doc.setCreator("Kirjanpito")
+  const { doc, fonts } = c
   doc.setCreationDate(new Date(invoice.issuedAt ?? Date.now()))
-  const fonts: Fonts = {
-    regular: await doc.embedFont(StandardFonts.Helvetica),
-    bold: await doc.embedFont(StandardFonts.HelveticaBold),
-  }
-  const c: Cursor = {
-    doc,
-    page: doc.addPage(A4),
-    fonts,
-    y: A4[1] - MARGIN,
-  }
   const { seller } = invoice
   const registered = seller.vatRegistered
   // On reverse charge the buyer reports the VAT: neither rate nor amount is shown.
@@ -446,11 +545,7 @@ async function drawSale(
 
   /* Header: the seller on the left, the invoice's facts on the right. */
   const top = c.y
-  paragraph(c, seller.name, MARGIN, 260, { size: 14, bold: true })
-  for (const line of partyLines(seller, seller.businessId, labels).slice(1)) {
-    paragraph(c, line, MARGIN, 260, { size: 9, color: MUTED })
-  }
-  const sellerBottom = c.y
+  const sellerBottom = await sellerHead(c, seller, labels, look)
   c.y = top
   const facts: [string, string][] = quote
     ? [
@@ -477,19 +572,7 @@ async function drawSale(
     facts.push([labels.supply, to && to !== from ? `${from} - ${to}` : from])
   }
   facts.push(...buyerRefFacts(invoice, labels))
-  put(
-    c.page,
-    fonts,
-    quote ? labels.quote : credit ? labels.creditNote : labels.invoice,
-    RIGHT,
-    c.y - 14,
-    {
-      size: 16,
-      bold: true,
-      align: "right",
-    }
-  )
-  c.y -= 26
+  heading(c, quote ? labels.quote : credit ? labels.creditNote : labels.invoice)
   for (const [label, value] of facts) {
     put(c.page, fonts, label, 330, c.y - 9, { size: 8, color: MUTED })
     putFact(c.page, fonts, value, c.y - 9)
@@ -736,7 +819,7 @@ async function drawSale(
     }
     drawSlip(c, { ...invoice, reference: sale.reference }, labels)
   }
-  return doc.save()
+  return finish(c, look)
 }
 
 /**
@@ -746,7 +829,8 @@ async function drawSale(
  */
 export async function renderReminderPdf(
   invoice: Invoice,
-  reminder: Reminder
+  reminder: Reminder,
+  look: InvoiceLook = {}
 ): Promise<Uint8Array> {
   if (!invoice.seller || invoice.number === null || !invoice.reference) {
     throw new Error("only an issued invoice can be reminded")
@@ -754,29 +838,14 @@ export async function renderReminderPdf(
   const labels = invoiceLabels(invoice.language)
   const words = reminderLabels(invoice.language)
   const lang = invoice.language
-  const doc = await PDFDocument.create()
-  doc.setTitle(toWinAnsi(words.title))
-  doc.setCreator("Kirjanpito")
-  const fonts: Fonts = {
-    regular: await doc.embedFont(StandardFonts.Helvetica),
-    bold: await doc.embedFont(StandardFonts.HelveticaBold),
-  }
-  const c: Cursor = { doc, page: doc.addPage(A4), fonts, y: A4[1] - MARGIN }
+  const c = await startDocument(words.title, look)
+  const { fonts } = c
   const { seller } = invoice
 
   const top = c.y
-  paragraph(c, seller.name, MARGIN, 260, { size: 14, bold: true })
-  for (const line of partyLines(seller, seller.businessId, labels).slice(1)) {
-    paragraph(c, line, MARGIN, 260, { size: 9, color: MUTED })
-  }
-  const sellerBottom = c.y
+  const sellerBottom = await sellerHead(c, seller, labels, look)
   c.y = top
-  put(c.page, fonts, words.title, RIGHT, c.y - 14, {
-    size: 16,
-    bold: true,
-    align: "right",
-  })
-  c.y -= 26
+  heading(c, words.title)
   const facts: [string, string][] = [
     [labels.number, String(invoice.number)],
     [labels.date, formatDate(reminder.date, lang)],
@@ -842,7 +911,7 @@ export async function renderReminderPdf(
   })
 
   drawSlip(c, invoice, labels, { cents: total, dueDate: reminder.newDueDate })
-  return doc.save()
+  return finish(c, look)
 }
 
 /**
@@ -856,32 +925,18 @@ export async function renderStatementPdf(
   customer: Party,
   seller: Seller,
   lang: InvoiceLang,
-  options: StatementOptions
+  options: StatementOptions,
+  look: InvoiceLook = {}
 ): Promise<Uint8Array> {
   const labels = invoiceLabels(lang)
   const words = statementLabels(lang)
-  const doc = await PDFDocument.create()
-  doc.setTitle(toWinAnsi(words.title))
-  doc.setCreator("Kirjanpito")
-  const fonts: Fonts = {
-    regular: await doc.embedFont(StandardFonts.Helvetica),
-    bold: await doc.embedFont(StandardFonts.HelveticaBold),
-  }
-  const c: Cursor = { doc, page: doc.addPage(A4), fonts, y: A4[1] - MARGIN }
+  const c = await startDocument(words.title, look)
+  const { doc, fonts } = c
 
   const top = c.y
-  paragraph(c, seller.name, MARGIN, 260, { size: 14, bold: true })
-  for (const line of partyLines(seller, seller.businessId, labels).slice(1)) {
-    paragraph(c, line, MARGIN, 260, { size: 9, color: MUTED })
-  }
-  const sellerBottom = c.y
+  const sellerBottom = await sellerHead(c, seller, labels, look)
   c.y = top
-  put(c.page, fonts, words.title, RIGHT, c.y - 14, {
-    size: 16,
-    bold: true,
-    align: "right",
-  })
-  c.y -= 26
+  heading(c, words.title)
   put(c.page, fonts, words.date, 330, c.y - 9, { size: 8, color: MUTED })
   putFact(c.page, fonts, formatDate(options.today, lang), c.y - 9)
   c.y -= 14
@@ -994,5 +1049,5 @@ export async function renderStatementPdf(
       { size: 9, color: MUTED }
     )
   }
-  return doc.save()
+  return finish(c, look)
 }

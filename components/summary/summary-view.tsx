@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table"
 import { useFormatters } from "@/components/lang-provider"
 import { PartyTotalsPanel } from "@/components/summary/party-totals-panel"
+import { TagTotalsPanel } from "@/components/summary/tag-totals-panel"
 import { BUCKETS } from "@/lib/domain/accounts"
 import {
   monthFigures,
@@ -186,6 +187,8 @@ export function SummaryView() {
         ) : null}
 
         <PartyTotalsPanel basis={basis} />
+
+        <TagTotalsPanel basis={basis} />
       </div>
     </>
   )

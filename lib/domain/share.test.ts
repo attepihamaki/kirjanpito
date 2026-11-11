@@ -79,7 +79,7 @@ describe("the business share of a cost", () => {
   it("reads a share with a percent sign, and drops one that does not fit", () => {
     const text = serializeCsv([phone({ share: 50 })], cats)
     const row = (cell: string) =>
-      text.replace(/;50;;;;;;;;\r\n/, `;${cell};;;;;;;;\r\n`)
+      text.replace(/;50;;;;;;;;;\r\n/, `;${cell};;;;;;;;;\r\n`)
     expect(read(row("75 %")).entries[0].share).toBe(75)
     for (const bad of ["100", "0", "abc", "5,5"]) {
       expect(read(row(bad)).entries[0].share).toBeUndefined()

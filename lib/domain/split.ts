@@ -227,6 +227,7 @@ export function carveSplit(
     split,
   }
   if (entry.atts) next.atts = entry.atts.map((a) => ({ ...a }))
+  if (entry.tags) next.tags = [...entry.tags]
   if (canBeUnpaid(line)) {
     if (entry.paidOn !== undefined) next.paidOn = entry.paidOn
     if (entry.cash) next.cash = true
