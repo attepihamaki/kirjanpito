@@ -3,10 +3,12 @@
 import { PrinterIcon } from "lucide-react"
 
 import { PageHeader } from "@/components/common/page-header"
-import { SubPageTabs } from "@/components/common/sub-page-tabs"
+import {
+  SectionTabs,
+  useSectionHeading,
+} from "@/components/common/sub-page-tabs"
 import { Button } from "@/components/ui/button"
 import { useT } from "@/components/lang-provider"
-import { STATEMENT_GROUPS } from "@/lib/ui/sub-pages"
 
 /**
  * The title, the print button and the sub-page tabs shared by the income
@@ -15,12 +17,13 @@ import { STATEMENT_GROUPS } from "@/lib/ui/sub-pages"
  */
 export function StatementShell({ children }: { children: React.ReactNode }) {
   const t = useT()
+  const heading = useSectionHeading("statement")
 
   return (
     <>
       <div className="print-hidden">
         <PageHeader
-          title={t("nav.statement")}
+          {...heading}
           subtitle={t("statement.subtitle")}
           actions={
             <Button variant="outline" onClick={() => window.print()}>
@@ -29,10 +32,7 @@ export function StatementShell({ children }: { children: React.ReactNode }) {
             </Button>
           }
         />
-        <SubPageTabs
-          label={t("statement.sections")}
-          groups={STATEMENT_GROUPS}
-        />
+        <SectionTabs section="statement" />
       </div>
       {children}
     </>

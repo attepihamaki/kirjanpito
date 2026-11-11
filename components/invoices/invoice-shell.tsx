@@ -4,16 +4,20 @@ import { PlusIcon } from "lucide-react"
 import { usePathname } from "next/navigation"
 
 import { PageHeader } from "@/components/common/page-header"
-import { SubPageTabs } from "@/components/common/sub-page-tabs"
+import { NewEntryButton } from "@/components/common/new-entry-button"
+import {
+  SectionTabs,
+  useSectionHeading,
+} from "@/components/common/sub-page-tabs"
 import { useT } from "@/components/lang-provider"
 import { Button } from "@/components/ui/button"
 import { INVOICE_ROUTES } from "@/lib/site"
-import { INVOICE_GROUPS } from "@/lib/ui/sub-pages"
 import { useBookStore } from "@/stores/book-store"
 
 /**
- * The title and sub-page tabs shared by the invoice pages (§8.27). It is the
- * invoices layout, so switching tabs keeps the header in place.
+ * The header shared by the invoice pages (§8.27) and the bills to pay
+ * (§8.30), which are two sections of the sidebar under one layout: the
+ * invoices the business sends, and the bills it receives.
  */
 export function InvoiceShell({ children }: { children: React.ReactNode }) {
   const t = useT()
@@ -21,14 +25,18 @@ export function InvoiceShell({ children }: { children: React.ReactNode }) {
   const path = usePathname().replace(/\/$/, "")
   const parties = path === INVOICE_ROUTES.parties
   const quotes = path === INVOICE_ROUTES.quotes
+  const payables = path === INVOICE_ROUTES.payables
+  const heading = useSectionHeading(payables ? "purchases" : "sales")
 
   return (
     <>
       <PageHeader
-        title={t("invoice.title")}
-        subtitle={t("invoice.subtitle")}
+        {...heading}
+        subtitle={t(payables ? "payables.subtitle" : "invoice.subtitle")}
         actions={
-          parties ? (
+          payables ? (
+            <NewEntryButton />
+          ) : parties ? (
             <Button
               onClick={() =>
                 openDialog({ kind: "customer", customerId: null, role: "both" })
@@ -54,7 +62,7 @@ export function InvoiceShell({ children }: { children: React.ReactNode }) {
           )
         }
       />
-      <SubPageTabs label={t("invoice.sections")} groups={INVOICE_GROUPS} />
+      <SectionTabs section={payables ? "purchases" : "sales"} />
       {children}
     </>
   )

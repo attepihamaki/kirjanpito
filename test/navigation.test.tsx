@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AppSidebar } from "@/components/app/app-sidebar"
 import { AppTopbar } from "@/components/app/app-topbar"
 import { InboxDropBox } from "@/components/app/inbox-drop-box"
 import { LangProvider } from "@/components/lang-provider"
@@ -24,7 +25,7 @@ import { clearToastHistory, markToastsSeen } from "@/stores/toast-history"
 /*
  * The chrome around the views: the inbox's drop box at the foot of the
  * sidebar (§8.31), the top bar's bell and the book tools on Asetukset (§8.2,
- * §8.10), and tabs that group several pages behind one switch (§8.2).
+ * §8.10), and the pages of a section, in the sidebar or as one row (§8.2).
  */
 
 const path = vi.hoisted(() => ({ current: "/app/ledger/journal" }))
@@ -170,30 +171,30 @@ describe("the settings menu", () => {
   })
 })
 
-describe("grouped tabs", () => {
-  it("lights the group and switches between its pages", () => {
-    mount(<LedgerTabs />)
-    const tabs = screen.getByRole("navigation", { name: "Kirjanpidon osiot" })
-    expect(within(tabs).getAllByRole("link")).toHaveLength(3)
-    expect(within(tabs).getByRole("link", { name: "Kirjat" })).toHaveAttribute(
+describe("a section's pages", () => {
+  it("are listed in the sidebar under the section that is open", () => {
+    mount(<AppSidebar />)
+    expect(screen.getByRole("link", { name: "Kirjanpito" })).toHaveAttribute(
       "aria-current",
       "true"
     )
-
-    const books = screen.getByRole("navigation", { name: "Kirjat" })
-    const journal = within(books).getByRole("link", { name: "Päiväkirja" })
-    expect(journal).toHaveAttribute("aria-current", "page")
-    expect(
-      within(books).getByRole("link", { name: "Pääkirja" })
-    ).toHaveAttribute("href", "/app/ledger/accounts")
-    expect(
-      within(books).getByRole("link", { name: "Tililuettelo" })
-    ).toBeTruthy()
+    expect(screen.getByRole("link", { name: "Päiväkirja" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    )
+    expect(screen.getByRole("link", { name: "Pääkirja" })).toHaveAttribute(
+      "href",
+      "/app/ledger/accounts"
+    )
+    expect(screen.getByRole("link", { name: "Tililuettelo" })).toBeTruthy()
+    // The view itself draws no second row of the same links.
+    mount(<LedgerTabs />)
+    expect(screen.queryByRole("navigation", { name: "Kirjanpito" })).toBeNull()
   })
 
-  it("shows no switch for a tab of one page, and counts the inbox", () => {
-    path.current = "/app/ledger"
+  it("become one row of links in the view while the sidebar is a rail", () => {
     useBookStore.setState({
+      sidebarOpen: false,
       inbox: [
         {
           id: "a-1",
@@ -205,7 +206,25 @@ describe("grouped tabs", () => {
       ],
     })
     mount(<LedgerTabs />)
-    expect(screen.getAllByRole("navigation")).toHaveLength(1)
-    expect(screen.getByRole("link", { name: /^Saapuneet\s*1$/ })).toBeTruthy()
+    const tabs = screen.getByRole("navigation", { name: "Kirjanpito" })
+    expect(within(tabs).getAllByRole("link")).toHaveLength(5)
+    expect(
+      within(tabs).getByRole("link", { name: "Päiväkirja" })
+    ).toHaveAttribute("aria-current", "page")
+    expect(
+      within(tabs).getByRole("link", { name: /^Saapuneet\s*1$/ })
+    ).toBeTruthy()
+  })
+
+  it("split invoices into the ones sent and the bills to pay", () => {
+    path.current = "/app/invoices/payables"
+    mount(<AppSidebar />)
+    expect(screen.getByRole("link", { name: "Ostolaskut" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    )
+    expect(
+      screen.getByRole("link", { name: "Myyntilaskut" })
+    ).not.toHaveAttribute("aria-current")
   })
 })

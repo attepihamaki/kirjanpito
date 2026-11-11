@@ -4,10 +4,11 @@ import { usePathname } from "next/navigation"
 
 import { PageHeader } from "@/components/common/page-header"
 import { PrintButton } from "@/components/common/print-button"
-import { SubPageTabs } from "@/components/common/sub-page-tabs"
-import { useFormatters } from "@/components/lang-provider"
+import {
+  SectionTabs,
+  useSectionHeading,
+} from "@/components/common/sub-page-tabs"
 import { VatPeriodStrip } from "@/components/vat/vat-period-strip"
-import { useShownFeatures } from "@/hooks/use-shown-features"
 import { useVatPeriod } from "@/hooks/use-vat-period"
 import { VAT_ROUTES } from "@/lib/site"
 import { useBookStore } from "@/stores/book-store"
@@ -17,41 +18,22 @@ import { useBookStore } from "@/stores/book-store"
  * and the return dialog follow the one selected period.
  */
 export function VatShell({ children }: { children: React.ReactNode }) {
-  const f = useFormatters()
   const setIndex = useBookStore((s) => s.setVatIndex)
   const { mode, label, periods, statuses, current } = useVatPeriod()
   const year = useBookStore((s) => s.year)
-  const showEc = useShownFeatures().has("euSales")
+  const heading = useSectionHeading("vat")
   // The EC Sales List is monthly whatever the VAT period is (§8.7).
   const monthlyList = usePathname().replace(/\/$/, "") === VAT_ROUTES.ec
 
   return (
     <>
       <PageHeader
-        title={f.t("nav.vat")}
+        {...heading}
         subtitle={monthlyList ? String(year) : label}
         actions={<PrintButton />}
       />
       <div className="print-hidden">
-        <SubPageTabs
-          label={f.t("vat.sections")}
-          groups={[
-            {
-              label: "vat.sheetTab",
-              pages: [{ href: VAT_ROUTES.sheet, label: "vat.sheetTab" }],
-            },
-            ...(showEc || monthlyList
-              ? [
-                  {
-                    label: "vat.ecTab" as const,
-                    pages: [
-                      { href: VAT_ROUTES.ec, label: "vat.ecTab" as const },
-                    ],
-                  },
-                ]
-              : []),
-          ]}
-        />
+        <SectionTabs section="vat" />
         {mode !== "year" && !monthlyList ? (
           <div className="mb-5">
             <VatPeriodStrip

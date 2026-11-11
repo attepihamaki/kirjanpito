@@ -1047,11 +1047,9 @@ export const APP_DICT = {
   ],
   "ledger.bulkClear": ["Poista valinta", "Clear selection"],
   "ledger.colAccount": ["Tili", "Account"],
-  "ledger.sections": ["Kirjanpidon osiot", "Bookkeeping sections"],
   "ledger.entriesTab": ["Tositteet", "Vouchers"],
   "ledger.journalTab": ["Päiväkirja", "Journal"],
   "ledger.accountsTab": ["Pääkirja", "General ledger"],
-  "ledger.booksTab": ["Kirjat", "Books"],
   "entry.logAdd": ["Tosite lisätty", "Voucher added"],
   "entry.logDelete": ["Tosite poistettu", "Voucher deleted"],
   "entry.logRestore": ["Tosite palautettu", "Voucher restored"],
@@ -1920,7 +1918,6 @@ export const APP_DICT = {
     "Ostojen 0 %:n tositteet (esim. palkat, YEL, pankkikulut) eivät vaikuta arvonlisäveroon, joten niitä ei näytetä vähennyksissä. Tarkista luvut ennen ilmoittamista OmaVerossa.",
     "Purchases at 0% (e.g. wages, YEL, bank fees) don’t affect VAT, so they aren’t shown as deductions. Check the figures before filing in MyTax.",
   ],
-  "vat.sections": ["ALV-laskelman osiot", "VAT return sections"],
   "vat.sheetTab": ["Laskelma", "Calculation"],
   "vat.returnTitle": ["Arvonlisäveroilmoitus", "VAT return"],
   "vat.returnKicker": ["{p}, eräpäivä {d}", "{p}, due {d}"],
@@ -2038,7 +2035,6 @@ export const APP_DICT = {
     "For the business tax return (form 5)",
   ],
   "statement.print": ["Tulosta", "Print"],
-  "statement.sections": ["Tuloslaskelman osiot", "Income statement sections"],
   "statement.sheetTab": ["Laskelma", "Statement"],
   "summary.compareTitle": ["Vertailu vuoteen {y}", "Compared with {y}"],
   "summary.compareIncome": ["Tulot {y}", "Income {y}"],
@@ -2459,7 +2455,6 @@ export const APP_DICT = {
   // --- Fixed assets ---
 
   "balance.tab": ["Varat ja velat", "Assets and liabilities"],
-  "balance.summaryTab": ["Yhteenveto", "Summary"],
   "balance.intro": [
     "Varat ja velat ratkaisevat, kuinka suuri osa tuloksesta on pääomatuloa. Ilmoita ne OmaVerossa tilikauden lopun tilanteen mukaan.",
     "Assets and liabilities decide how much of the profit counts as capital income. Enter them in MyTax as they stood at the end of the financial year.",
@@ -2970,7 +2965,6 @@ export const APP_DICT = {
     "Keep the stocktake list alongside this voucher. It can be attached to this voucher.",
   ],
 
-  "settings.sections": ["Asetusten osiot", "Settings sections"],
   "settings.general": ["Yleiset", "General"],
   /* The dialog a new bookkeeping opens with (§8.3). */
   "settings.setupTitle": ["Uusi kirjanpito", "New books"],
@@ -3578,13 +3572,20 @@ export const APP_DICT = {
     "Laskun PDF:ää ei voitu tallentaa, joten tositteet kirjattiin ilman liitettä.",
     "The invoice PDF could not be stored, so the vouchers were booked without an attachment.",
   ],
-  "nav.invoices": ["Laskut", "Invoices"],
-  "invoice.title": ["Laskut", "Invoices"],
+  "nav.sales": ["Myyntilaskut", "Sales invoices"],
+  "nav.purchases": ["Ostolaskut", "Bills to pay"],
+  "nav.overdueBills": [
+    pl("1 lasku myöhässä", "{n} laskua myöhässä"),
+    pl("1 bill overdue", "{n} bills overdue"),
+  ],
+  "payables.subtitle": [
+    "Saadut laskut, joita ei ole vielä maksettu, eräpäivän mukaan.",
+    "Bills received and not yet paid, by due date.",
+  ],
   "invoice.subtitle": [
     "Tee myyntilaskuja. Annettu lasku kirjautuu avoimena tulona ja merkitään maksetuksi, kun maksu tulee.",
     "Make sales invoices. An issued invoice books as open income and closes when it is paid.",
   ],
-  "invoice.sections": ["Laskujen osiot", "Invoice sections"],
   "invoice.tabInvoices": ["Laskut", "Invoices"],
   "invoice.new": ["Uusi lasku", "New invoice"],
   "invoice.empty": ["Ei vielä laskuja.", "No invoices yet."],
@@ -3836,8 +3837,6 @@ export const APP_DICT = {
   "invoice.tabPayables": ["Maksettavat", "To pay"],
   "invoice.tabRecurring": ["Toistuvat", "Recurring"],
   "invoice.tabProducts": ["Tuotteet", "Products"],
-  "invoice.tabOpen": ["Avoimet", "Outstanding"],
-  "invoice.tabRegisters": ["Rekisterit", "Registers"],
   "quote.tab": ["Tarjoukset", "Quotes"],
   "quote.title": ["Tarjoukset", "Quotes"],
   "quote.listHint": [

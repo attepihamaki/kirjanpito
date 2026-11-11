@@ -1,122 +1,130 @@
+import type { Feature } from "@/lib/domain/features"
 import type { MessageKey } from "@/lib/i18n/messages"
 import {
+  APP_ROUTES,
   INVOICE_ROUTES,
   LEDGER_ROUTES,
   SETTINGS_ROUTES,
   STATEMENT_ROUTES,
+  VAT_ROUTES,
 } from "@/lib/site"
 
-/** One sub-page of a view, as a link in its group's switch. */
-export type SubPage = { href: string; label: MessageKey }
+/**
+ * One page of a section, as a link in the sidebar's list under it. `feature`
+ * is the part of the app the page belongs to (§8.26): the link is left out
+ * while that part is not in use.
+ */
+export type SubPage = { href: string; label: MessageKey; feature?: Feature }
+
+export type NavSectionId =
+  | "overview"
+  | "ledger"
+  | "sales"
+  | "purchases"
+  | "vat"
+  | "statement"
+  | "summary"
+  | "calendar"
+  | "settings"
 
 /**
- * A tab of a view (§8.2). A tab with more than one page shows a switch
- * between them under the tab row; its own link goes to the first.
+ * A row of the sidebar (§8.2). A section with `pages` lists them under its
+ * row while one of them is open, and its own link goes to the first. A
+ * section with none is a single page.
  */
-export type SubPageGroup = { label: MessageKey; pages: readonly SubPage[] }
+export interface NavSection {
+  id: NavSectionId
+  label: MessageKey
+  href: string
+  pages: readonly SubPage[]
+}
 
 /*
- * Every route of a view's `*_ROUTES` belongs to exactly one group, which
- * `sub-pages.test.ts` checks. Pages are grouped by what the user is doing:
- * the two books and the account list are one printable reading of the
- * entries, money owed is one question asked both ways, and so on.
+ * The whole navigation: one level of sections, and under a section one flat
+ * list of its pages. Every route of a view's `*_ROUTES` is in exactly one
+ * section, which `sub-pages.test.ts` checks. Invoices are two sections, one
+ * for each direction money is owed in, so the bills to pay are not filed
+ * under the invoices the business sends.
  */
-
-/** Kirjanpito (§8.4, §8.31). */
-export const LEDGER_GROUPS: readonly SubPageGroup[] = [
+export const NAV_SECTIONS: readonly NavSection[] = [
   {
-    label: "ledger.entriesTab",
-    pages: [{ href: LEDGER_ROUTES.entries, label: "ledger.entriesTab" }],
+    id: "overview",
+    label: "nav.overview",
+    href: APP_ROUTES.overview,
+    pages: [],
   },
   {
-    label: "ledger.booksTab",
+    id: "ledger",
+    label: "nav.ledger",
+    href: APP_ROUTES.ledger,
     pages: [
+      { href: LEDGER_ROUTES.entries, label: "ledger.entriesTab" },
+      { href: LEDGER_ROUTES.inbox, label: "inbox.tab" },
       { href: LEDGER_ROUTES.journal, label: "ledger.journalTab" },
       { href: LEDGER_ROUTES.accounts, label: "ledger.accountsTab" },
       { href: LEDGER_ROUTES.chart, label: "ledger.chartTab" },
     ],
   },
   {
-    label: "inbox.tab",
-    pages: [{ href: LEDGER_ROUTES.inbox, label: "inbox.tab" }],
-  },
-]
-
-/** Laskutus (§8.27, §8.29, §8.30, §8.34). */
-export const INVOICE_GROUPS: readonly SubPageGroup[] = [
-  {
-    label: "invoice.tabInvoices",
+    id: "sales",
+    label: "nav.sales",
+    href: INVOICE_ROUTES.list,
     pages: [
       { href: INVOICE_ROUTES.list, label: "invoice.tabInvoices" },
       { href: INVOICE_ROUTES.recurring, label: "invoice.tabRecurring" },
-    ],
-  },
-  {
-    label: "quote.tab",
-    pages: [{ href: INVOICE_ROUTES.quotes, label: "quote.tab" }],
-  },
-  {
-    label: "invoice.tabOpen",
-    pages: [
+      { href: INVOICE_ROUTES.quotes, label: "quote.tab" },
       { href: INVOICE_ROUTES.aging, label: "invoice.tabAging" },
-      { href: INVOICE_ROUTES.payables, label: "invoice.tabPayables" },
-    ],
-  },
-  {
-    label: "invoice.tabRegisters",
-    pages: [
       { href: INVOICE_ROUTES.parties, label: "party.tab" },
       { href: INVOICE_ROUTES.products, label: "invoice.tabProducts" },
     ],
   },
-]
-
-/** Tuloslaskelma (§8.8, §8.28). */
-export const STATEMENT_GROUPS: readonly SubPageGroup[] = [
   {
-    label: "statement.sheetTab",
-    pages: [{ href: STATEMENT_ROUTES.sheet, label: "statement.sheetTab" }],
+    id: "purchases",
+    label: "nav.purchases",
+    href: INVOICE_ROUTES.payables,
+    pages: [],
   },
   {
-    label: "balance.tab",
+    id: "vat",
+    label: "nav.vat",
+    href: APP_ROUTES.vat,
     pages: [
-      { href: STATEMENT_ROUTES.balance, label: "balance.summaryTab" },
-      { href: STATEMENT_ROUTES.inventory, label: "inventory.tab" },
-      { href: STATEMENT_ROUTES.assets, label: "assets.tab" },
+      { href: VAT_ROUTES.sheet, label: "vat.sheetTab" },
+      { href: VAT_ROUTES.ec, label: "vat.ecTab", feature: "euSales" },
     ],
   },
   {
-    label: "deductions.tab",
+    id: "statement",
+    label: "nav.statement",
+    href: APP_ROUTES.statement,
     pages: [
+      { href: STATEMENT_ROUTES.sheet, label: "statement.sheetTab" },
+      { href: STATEMENT_ROUTES.balance, label: "balance.tab" },
+      { href: STATEMENT_ROUTES.inventory, label: "inventory.tab" },
+      { href: STATEMENT_ROUTES.assets, label: "assets.tab" },
       { href: STATEMENT_ROUTES.deductions, label: "deductions.tab" },
       { href: STATEMENT_ROUTES.losses, label: "losses.tab" },
     ],
   },
-]
-
-/** Asetukset (§8.10). */
-export const SETTINGS_GROUPS: readonly SubPageGroup[] = [
+  { id: "summary", label: "nav.summary", href: APP_ROUTES.summary, pages: [] },
   {
-    label: "settings.general",
+    id: "calendar",
+    label: "nav.calendar",
+    href: APP_ROUTES.calendar,
+    pages: [],
+  },
+  {
+    id: "settings",
+    label: "nav.settings",
+    href: APP_ROUTES.settings,
     pages: [
       { href: SETTINGS_ROUTES.general, label: "settings.general" },
       { href: SETTINGS_ROUTES.calendar, label: "settings.calendarTab" },
-    ],
-  },
-  {
-    label: "settings.categories",
-    pages: [
       { href: SETTINGS_ROUTES.categories, label: "settings.categories" },
       { href: SETTINGS_ROUTES.rules, label: "settings.rulesTab" },
+      { href: SETTINGS_ROUTES.recurring, label: "recurring.tab" },
+      { href: SETTINGS_ROUTES.invoicing, label: "invoice.settingsTab" },
     ],
-  },
-  {
-    label: "recurring.tab",
-    pages: [{ href: SETTINGS_ROUTES.recurring, label: "recurring.tab" }],
-  },
-  {
-    label: "invoice.settingsTab",
-    pages: [{ href: SETTINGS_ROUTES.invoicing, label: "invoice.settingsTab" }],
   },
 ]
 
@@ -125,11 +133,46 @@ function trimPath(path: string): string {
   return path.length > 1 ? path.replace(/\/$/, "") : path
 }
 
-/** The index of the group holding `path`, or -1 when none does. */
-export function activeGroupIndex(
-  groups: readonly SubPageGroup[],
-  path: string
-): number {
+/** The section with the given id. */
+export function navSection(id: NavSectionId): NavSection {
+  return NAV_SECTIONS.find((s) => s.id === id) as NavSection
+}
+
+/**
+ * The section `path` belongs to, or undefined outside the app's views. A
+ * page listed in a section decides it. A deeper path goes to the section
+ * whose own link is its longest prefix, so `/app/invoices/payables` is the
+ * purchases section although `/app/invoices` is the sales one.
+ */
+export function sectionOf(path: string): NavSection | undefined {
   const at = trimPath(path)
-  return groups.findIndex((g) => g.pages.some((p) => p.href === at))
+  const exact = NAV_SECTIONS.find(
+    (s) => s.href === at || s.pages.some((p) => p.href === at)
+  )
+  if (exact) return exact
+  return NAV_SECTIONS.filter((s) => at.startsWith(`${s.href}/`)).sort(
+    (a, b) => b.href.length - a.href.length
+  )[0]
+}
+
+/** The page of `section` that `path` is, or undefined when it is none of them. */
+export function pageOf(section: NavSection, path: string): SubPage | undefined {
+  const at = trimPath(path)
+  return section.pages.find((p) => p.href === at)
+}
+
+/**
+ * The pages of `section` to list: those whose part of the app is in use, and
+ * the page that is open whatever its part, so a view never lacks its own
+ * link.
+ */
+export function shownPages(
+  section: NavSection,
+  features: ReadonlySet<Feature>,
+  path: string
+): readonly SubPage[] {
+  const at = trimPath(path)
+  return section.pages.filter(
+    (p) => !p.feature || features.has(p.feature) || p.href === at
+  )
 }

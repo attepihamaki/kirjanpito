@@ -4,12 +4,14 @@ import { PlusIcon } from "lucide-react"
 import { usePathname } from "next/navigation"
 
 import { PageHeader } from "@/components/common/page-header"
-import { SubPageTabs } from "@/components/common/sub-page-tabs"
+import {
+  SectionTabs,
+  useSectionHeading,
+} from "@/components/common/sub-page-tabs"
 import { useT } from "@/components/lang-provider"
 import { GeneralActions } from "@/components/settings/general-actions"
 import { Button } from "@/components/ui/button"
 import { SETTINGS_ROUTES } from "@/lib/site"
-import { SETTINGS_GROUPS } from "@/lib/ui/sub-pages"
 import { useBookStore } from "@/stores/book-store"
 
 /** "Lisää luokka", the categories page's counterpart of "Uusi tosite" (§8.10). */
@@ -36,11 +38,12 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
   const path = trim(usePathname())
   const general = path === trim(SETTINGS_ROUTES.general)
   const categories = path === trim(SETTINGS_ROUTES.categories)
+  const heading = useSectionHeading("settings")
 
   return (
     <>
       <PageHeader
-        title={t("nav.settings")}
+        {...heading}
         subtitle={t("settings.subtitle")}
         actions={
           general ? (
@@ -50,7 +53,7 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
           ) : undefined
         }
       />
-      <SubPageTabs label={t("settings.sections")} groups={SETTINGS_GROUPS} />
+      <SectionTabs section="settings" />
       {children}
     </>
   )

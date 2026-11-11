@@ -204,12 +204,19 @@ describe("app chrome", () => {
   it("marks the current view in the sidebar navigation", () => {
     mount(<AppSidebar />)
 
+    // The section is lit, and the list under it marks the page itself.
     expect(screen.getByRole("link", { name: "ALV-laskelma" })).toHaveAttribute(
+      "aria-current",
+      "true"
+    )
+    expect(screen.getByRole("link", { name: "Laskelma" })).toHaveAttribute(
       "aria-current",
       "page"
     )
     expect(
       screen.getByRole("link", { name: "Kirjanpito" })
     ).not.toHaveAttribute("aria-current")
+    // A section that is not open keeps its pages folded away.
+    expect(screen.queryByRole("link", { name: "Päiväkirja" })).toBeNull()
   })
 })

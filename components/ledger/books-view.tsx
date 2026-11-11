@@ -7,6 +7,7 @@ import { PrinterIcon } from "lucide-react"
 import { BusinessLine } from "@/components/common/business-line"
 import { Money } from "@/components/common/money"
 import { PageHeader } from "@/components/common/page-header"
+import { useSectionHeading } from "@/components/common/sub-page-tabs"
 import { LedgerTabs } from "@/components/ledger/ledger-tabs"
 import { Button } from "@/components/ui/button"
 import { useFormatters } from "@/components/lang-provider"
@@ -52,12 +53,13 @@ function ReportPage({
   const f = useFormatters()
   const year = useBookStore((s) => s.year)
   const retention = retentionDates(year)
+  const heading = useSectionHeading("ledger")
 
   return (
     <>
       <div className="print-hidden">
         <PageHeader
-          title={f.t("nav.ledger")}
+          {...heading}
           subtitle={`${f.t("ledger.wholeYear")} ${year}`}
           actions={
             <Button variant="outline" onClick={() => window.print()}>

@@ -6,6 +6,7 @@ import { CameraIcon, InboxIcon, Trash2Icon, UploadIcon } from "lucide-react"
 import { BusyIcon } from "@/components/common/busy-button"
 import { DropTile } from "@/components/common/drop-tile"
 import { PageHeader } from "@/components/common/page-header"
+import { useSectionHeading } from "@/components/common/sub-page-tabs"
 import { Panel } from "@/components/common/panel"
 import { Thumb } from "@/components/entry/attachment-grid"
 import { useFormatters } from "@/components/lang-provider"
@@ -50,6 +51,7 @@ const notTouch = () => false
  */
 export function InboxView() {
   const f = useFormatters()
+  const heading = useSectionHeading("ledger")
   const ctx = useCommandCtx()
   const inbox = useBookStore((s) => s.inbox)
   const readOnly = useBookStore((s) => s.archiveYear !== null)
@@ -77,7 +79,7 @@ export function InboxView() {
   return (
     <>
       <PageHeader
-        title={f.t("nav.ledger")}
+        {...heading}
         subtitle={f.t("inbox.subtitle")}
         actions={
           readOnly ? null : (
