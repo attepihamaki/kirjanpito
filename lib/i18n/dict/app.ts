@@ -3622,7 +3622,15 @@ export const APP_DICT = {
   "invoice.viewTitle": ["Lasku {n}", "Invoice {n}"],
   "invoice.customer": ["Asiakas", "Customer"],
   "invoice.customerPick": ["Asiakasrekisteristä", "From the register"],
-  "invoice.customerTyped": ["Kirjoita itse", "Type in"],
+  "invoice.customerSearch": [
+    "Hae asiakasrekisteristä tai täytä tiedot alle",
+    "Search the customer register or fill in the details below",
+  ],
+  "invoice.customerNone": [
+    "Yksikään asiakas ei vastaa hakua.",
+    "No customer matches.",
+  ],
+  "invoice.customerClear": ["Tyhjennä asiakkaan valinta", "Clear the customer"],
   "invoice.customerName": ["Nimi", "Name"],
   "invoice.customerStreet": ["Katuosoite", "Street address"],
   "invoice.customerPostcode": ["Postinumero", "Postcode"],
@@ -4167,8 +4175,19 @@ export const APP_DICT = {
   "invoice.editCustomer": ["Muokkaa asiakasta", "Edit customer"],
   "invoice.editOnInvoice": ["Muokkaa tällä laskulla", "Edit on this invoice"],
   "invoice.more": ["Lisätiedot", "More details"],
-  "invoice.details": ["Laskun tiedot", "Invoice details"],
-  "quote.details": ["Tarjouksen tiedot", "Quote details"],
+  "invoice.unsaved": ["Tallentamaton", "Unsaved"],
+  "invoice.term": ["Maksuehto", "Payment terms"],
+  "invoice.termNet": [
+    pl("1 päivä netto", "{n} päivää netto"),
+    pl("1 day net", "{n} days net"),
+  ],
+  "invoice.termNow": ["Heti", "Due on receipt"],
+  "invoice.termOther": ["Muu eräpäivä", "Other due date"],
+  "invoice.docDiscountShort": [
+    "Alennus koko laskusta",
+    "Discount on the whole invoice",
+  ],
+  "invoice.supply": ["Toimitusaika", "Delivery period"],
   "invoice.moreHint": [
     "Ennakkolasku, toimitusaika, asiakkaan viitteet, liitteet ja tunnisteet",
     "Advance invoice, delivery period, customer references, attachments and tags",
@@ -4226,7 +4245,8 @@ export const APP_DICT = {
   ],
   "invoice.advanceBadge": ["Ennakko", "Advance"],
   "invoice.files": ["Liitteet", "Attachments"],
-  "invoice.filesAdd": ["Liitä tiedosto…", "Attach a file…"],
+  "invoice.filesDrop": ["Raahaa tiedostot tähän tai", "Drop files here or"],
+  "invoice.filesPick": ["valitse", "choose"],
   "invoice.filesHint": [
     "PDF, PNG tai JPEG, enintään {n} tiedostoa ja 10 Mt kukin. Ne tulostuvat laskun PDF:n perään.",
     "PDF, PNG or JPEG, at most {n} files of 10 MB each. They are printed after the invoice in its PDF.",

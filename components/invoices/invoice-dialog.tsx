@@ -7,6 +7,7 @@ import {
   CopyIcon,
   DownloadIcon,
   FileTextIcon,
+  InfoIcon,
   MinusIcon,
   PlusIcon,
   ReceiptIcon,
@@ -18,7 +19,9 @@ import { AmountInput } from "@/components/common/amount-input"
 import { DateInput } from "@/components/common/date-input"
 import { Money } from "@/components/common/money"
 import { OptionSelect } from "@/components/common/option-select"
+import { Pill } from "@/components/common/pill"
 import { TagsInput } from "@/components/common/tags-input"
+import { CustomerPicker } from "@/components/invoices/customer-picker"
 import { InvoiceFiles } from "@/components/invoices/invoice-files"
 import { PartyCard, PartyFields } from "@/components/invoices/party-fields"
 import { RebillPicker } from "@/components/invoices/rebill-picker"
@@ -39,6 +42,8 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/toast"
 import { useCommandCtx } from "@/hooks/use-commands"
 import {
@@ -61,7 +66,6 @@ import {
   buyerRefs,
   CUSTOMER_DEFAULTS,
   discountField,
-  isCustomer,
   emptyParty,
   type Customer,
   type Invoice,
@@ -72,7 +76,7 @@ import {
 } from "@/lib/domain/invoice"
 import { deductionRows, openAdvances } from "@/lib/domain/invoice-advance"
 import { rebillCost } from "@/lib/domain/invoice-rebill"
-import { addDays } from "@/lib/domain/dates"
+import { addDays, daysBetween } from "@/lib/domain/dates"
 import { canCopy, productFromRow, productRow } from "@/lib/domain/invoice-draft"
 import { duplicateInvoice } from "@/lib/domain/invoice-duplicate"
 import {
@@ -93,10 +97,23 @@ import { formatMoneyPlain } from "@/lib/domain/money"
 import { defaultValidUntil, nextQuoteNumber } from "@/lib/domain/quote"
 import { allTags, tagsField } from "@/lib/domain/tags"
 import { rateOnDate, validRates } from "@/lib/domain/vat-rates"
+import { cn } from "@/lib/utils"
 import { useBookStore } from "@/stores/book-store"
 
 /** The default income category of a new row. */
 const DEFAULT_CAT = "300-domestic"
+
+/** The payment terms offered besides the customer's and the book's own, in days. */
+const TERM_DAYS = [0, 7, 14, 21, 30, 45, 60]
+
+/*
+ * The columns of the row table from `sm` up: description, quantity, unit,
+ * price, discount, VAT (for a seller in the VAT register), total and actions.
+ */
+const ROW_COLS_VAT =
+  "sm:grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_7.5rem_4.5rem_6rem_6.5rem_4.25rem]"
+const ROW_COLS =
+  "sm:grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_7.5rem_4.5rem_6.5rem_4.25rem]"
 
 /** An invoice row as it is typed, before it is read into numbers. */
 interface RowDraft {
@@ -319,6 +336,7 @@ function InvoiceForm({
     buyerReference: React.useId(),
     orderNumber: React.useId(),
     discount: React.useId(),
+    advance: React.useId(),
     tags: React.useId(),
   }
 
@@ -626,6 +644,39 @@ function InvoiceForm({
     }
   }
 
+  /* The term the due date gives, picked from the usual ones and the customer's or the book's own. */
+  const customerTerm = customers.find((c) => c.id === customerId)?.termDays
+  const termChoices = [
+    ...new Set([
+      ...TERM_DAYS,
+      settings.termDays,
+      ...(customerTerm != null ? [customerTerm] : []),
+    ]),
+  ].sort((a, b) => a - b)
+  const termDays = date && dueDate ? daysBetween(date, dueDate) : null
+  const termValue =
+    termDays !== null && termChoices.includes(termDays)
+      ? String(termDays)
+      : "other"
+  const termOptions = [
+    ...termChoices.map((n) => ({
+      value: String(n),
+      label: n === 0 ? f.t("invoice.termNow") : f.t("invoice.termNet", { n }),
+    })),
+    ...(termValue === "other"
+      ? [{ value: "other", label: f.t("invoice.termOther") }]
+      : []),
+  ]
+  const pickTerm = (value: string) => {
+    if (value === "other" || !date) return
+    dueTouched.current = true
+    setDueDate(addDays(date, Number(value)))
+  }
+  const rowCols = registered ? ROW_COLS_VAT : ROW_COLS
+  const priceLabel = f.t(
+    registered ? "invoice.rowPrice" : "invoice.rowPricePlain"
+  )
+
   const title = quote
     ? existingQuote
       ? f.t("quote.viewTitle", { n: existingQuote.number })
@@ -640,54 +691,119 @@ function InvoiceForm({
 
   return (
     <Dialog open onOpenChange={(open) => !open && closeDialog()}>
-      <DialogContent className="flex max-h-[92svh] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
-        <DialogHeader className="px-5 pt-4 pb-3">
-          <DialogTitle>{title}</DialogTitle>
+      <DialogContent className="flex max-h-[92svh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[60rem]">
+        <DialogHeader className="flex-row items-center gap-3 border-b px-5 py-4 pr-12 sm:px-7">
+          <DialogTitle className="text-lg">{title}</DialogTitle>
+          {start === undefined ? (
+            <Pill className="text-muted-foreground">
+              {f.t("invoice.unsaved")}
+            </Pill>
+          ) : null}
         </DialogHeader>
-        <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 pb-4">
-          {issued ? (
-            <p className="text-sm text-muted-foreground">
-              {f.t("invoice.issuedLocked")}
-            </p>
-          ) : null}
-          {credit ? (
-            <div className="flex flex-col gap-1 text-sm">
-              {credited?.number != null ? (
-                <p className="font-medium">
-                  {f.t("invoice.credits", { n: credited.number })}
-                </p>
-              ) : null}
-              {!issued ? (
-                <p className="text-muted-foreground">
-                  {f.t("invoice.creditHint")}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
+        <div className="flex flex-1 flex-col overflow-y-auto">
+          <div className="grid grid-cols-2 gap-4 border-b bg-muted/40 px-5 py-4 sm:grid-cols-4 sm:px-7">
+            <Field>
+              <FieldLabel>
+                {f.t(quote ? "quote.date" : "invoice.date")}
+              </FieldLabel>
+              <DateInput
+                value={date}
+                onValueChange={changeDate}
+                disabled={issued}
+              />
+            </Field>
+            {quote || credit ? null : (
+              <Field>
+                <FieldLabel>{f.t("invoice.term")}</FieldLabel>
+                <OptionSelect
+                  className="w-full"
+                  label={f.t("invoice.term")}
+                  value={termValue}
+                  disabled={issued || !date}
+                  onChange={pickTerm}
+                  options={termOptions}
+                />
+              </Field>
+            )}
+            {credit ? null : (
+              <Field>
+                <FieldLabel>
+                  {f.t(quote ? "quote.validUntil" : "invoice.dueDate")}
+                </FieldLabel>
+                <DateInput
+                  value={dueDate}
+                  onValueChange={(iso) => {
+                    dueTouched.current = true
+                    setDueDate(iso)
+                  }}
+                  disabled={issued}
+                />
+              </Field>
+            )}
+            <Field>
+              <FieldLabel htmlFor={ids.language}>
+                {f.t(quote ? "quote.language" : "invoice.language")}
+              </FieldLabel>
+              <OptionSelect
+                className="w-full"
+                label={f.t(quote ? "quote.language" : "invoice.language")}
+                value={language}
+                disabled={issued}
+                onChange={(v) => setLanguage(v as InvoiceLang)}
+                options={[
+                  { value: "fi", label: "Suomi" },
+                  { value: "en", label: "English" },
+                ]}
+              />
+            </Field>
+          </div>
 
-          <div className="grid gap-5 sm:grid-cols-[1fr_11rem]">
-            <section className="flex min-w-0 flex-col gap-3">
-              <h3 className="text-sm font-semibold">
-                {f.t("invoice.customer")}
-              </h3>
+          <div className="flex flex-col gap-8 px-5 py-6 sm:px-7">
+            {issued ? (
+              <p className="text-sm text-muted-foreground">
+                {f.t("invoice.issuedLocked")}
+              </p>
+            ) : null}
+            {credit ? (
+              <div className="flex flex-col gap-1 text-sm">
+                {credited?.number != null ? (
+                  <p className="font-medium">
+                    {f.t("invoice.credits", { n: credited.number })}
+                  </p>
+                ) : null}
+                {!issued ? (
+                  <p className="text-muted-foreground">
+                    {f.t("invoice.creditHint")}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            <section className="flex flex-col gap-4">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                <h3 className="text-base font-semibold">
+                  {f.t("invoice.customer")}
+                </h3>
+                {!issued && customerId === null ? (
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Checkbox
+                      checked={saveCustomer}
+                      onCheckedChange={(v) => setSaveCustomer(v === true)}
+                    />
+                    {f.t("invoice.saveCustomer")}
+                  </label>
+                ) : null}
+              </div>
               {!issued ? (
-                <Field className="max-w-xs">
-                  <OptionSelect
-                    label={f.t("invoice.customer")}
-                    value={customerId ?? ""}
-                    onChange={pickCustomer}
-                    options={[
-                      { value: "", label: f.t("invoice.customerTyped") },
-                      ...customers
-                        .filter((c) => isCustomer(c) || c.id === customerId)
-                        .sort((a, b) => f.collator.compare(a.name, b.name))
-                        .map((c) => ({ value: c.id, label: c.name })),
-                    ]}
-                  />
-                </Field>
+                <CustomerPicker
+                  customers={customers}
+                  value={customerId}
+                  onChange={pickCustomer}
+                />
               ) : null}
               {partyOpen ? (
                 <PartyFields
+                  wide
                   value={party}
                   onChange={setParty}
                   nameError={
@@ -702,531 +818,542 @@ function InvoiceForm({
                   onEdit={issued ? undefined : () => setEditParty(true)}
                 />
               )}
-              {!issued && customerId === null ? (
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={saveCustomer}
-                    onCheckedChange={(v) => setSaveCustomer(v === true)}
-                  />
-                  {f.t("invoice.saveCustomer")}
-                </label>
-              ) : null}
             </section>
 
             <section className="flex flex-col gap-3">
-              <h3 className="text-sm font-semibold">
-                {f.t(quote ? "quote.details" : "invoice.details")}
-              </h3>
-              <Field>
-                <FieldLabel>
-                  {f.t(quote ? "quote.date" : "invoice.date")}
-                </FieldLabel>
-                <DateInput
-                  value={date}
-                  onValueChange={changeDate}
-                  disabled={issued}
-                />
-              </Field>
-              {credit ? null : (
-                <Field>
-                  <FieldLabel>
-                    {f.t(quote ? "quote.validUntil" : "invoice.dueDate")}
-                  </FieldLabel>
-                  <DateInput
-                    value={dueDate}
-                    onValueChange={(iso) => {
-                      dueTouched.current = true
-                      setDueDate(iso)
-                    }}
-                    disabled={issued}
-                  />
-                </Field>
-              )}
-              <Field>
-                <FieldLabel htmlFor={ids.language}>
-                  {f.t(quote ? "quote.language" : "invoice.language")}
-                </FieldLabel>
-                <OptionSelect
-                  label={f.t(quote ? "quote.language" : "invoice.language")}
-                  value={language}
-                  disabled={issued}
-                  onChange={(v) => setLanguage(v as InvoiceLang)}
-                  options={[
-                    { value: "fi", label: "Suomi" },
-                    { value: "en", label: "English" },
-                  ]}
-                />
-              </Field>
-            </section>
-          </div>
-
-          <section className="flex flex-col gap-2">
-            <h3 className="text-sm font-semibold">{f.t("invoice.rows")}</h3>
-            {rows.map((row, index) => {
-              const parsed = toRow(row, credit)
-              const bad = showErrors && rowErrors[index]
-              /* A deducted advance's figures come from what was paid. */
-              const fixed = issued || !!row.advance
-              const rebilled = row.rebills
-                ? entryById.get(row.rebills)
-                : undefined
-              const deducted = row.advance
-                ? invoiceById.get(row.advance)
-                : undefined
-              return (
+              <h3 className="text-base font-semibold">{f.t("invoice.rows")}</h3>
+              <div className="overflow-hidden rounded-lg border">
                 <div
-                  key={row.key}
-                  className="flex flex-col gap-2 rounded-lg border p-3"
+                  aria-hidden
+                  className={cn(
+                    "hidden items-center gap-2.5 border-b bg-muted/40 px-3.5 py-2.5 text-xs font-medium text-muted-foreground sm:grid",
+                    rowCols
+                  )}
                 >
-                  <div className="flex items-center gap-2">
-                    <Input
-                      aria-label={`${f.t("invoice.rowDescription")} ${index + 1}`}
-                      placeholder={f.t("invoice.rowDescription")}
-                      disabled={issued}
-                      aria-invalid={bad || undefined}
-                      value={row.description}
-                      onChange={(e) =>
-                        patchRow(row.key, { description: e.target.value })
-                      }
-                    />
-                    {!issued &&
-                    !credit &&
-                    !row.advance &&
-                    !row.rebills &&
-                    parsed &&
-                    parsed.description !== "" &&
-                    !known.has(parsed.description.toLocaleLowerCase("fi")) ? (
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={f.t("product.keepRow", { n: index + 1 })}
-                        title={f.t("product.keepRow", { n: index + 1 })}
-                        onClick={() => keepAsProduct(parsed)}
-                      >
-                        <BookmarkPlusIcon />
-                      </Button>
-                    ) : null}
-                    {!issued ? (
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={f.t("invoice.removeRow", { n: index + 1 })}
-                        disabled={rows.length === 1}
-                        onClick={() =>
-                          setRows((list) =>
-                            list.filter((r) => r.key !== row.key)
-                          )
-                        }
-                      >
-                        <Trash2Icon />
-                      </Button>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-wrap items-end gap-2">
-                    <Field className="w-20">
-                      <FieldLabel className="text-xs">
-                        {f.t("invoice.rowQuantity")}
-                      </FieldLabel>
-                      <Input
-                        inputMode="decimal"
-                        className="tabular text-right"
-                        disabled={fixed}
-                        aria-invalid={bad || undefined}
-                        value={row.quantity}
-                        onChange={(e) =>
-                          patchRow(row.key, { quantity: e.target.value })
-                        }
-                      />
-                    </Field>
-                    <Field className="w-16">
-                      <FieldLabel className="text-xs">
-                        {f.t("invoice.rowUnit")}
-                      </FieldLabel>
-                      <Input
-                        disabled={issued}
-                        value={row.unit}
-                        onChange={(e) =>
-                          patchRow(row.key, { unit: e.target.value })
-                        }
-                      />
-                    </Field>
-                    <Field className="w-28">
-                      <FieldLabel className="text-xs">
-                        {f.t(
-                          registered
-                            ? "invoice.rowPrice"
-                            : "invoice.rowPricePlain"
-                        )}
-                      </FieldLabel>
-                      <AmountInput
-                        className="text-right"
-                        disabled={fixed}
-                        aria-invalid={bad || undefined}
-                        value={row.price}
-                        onChange={(e) =>
-                          patchRow(row.key, { price: e.target.value })
-                        }
-                      />
-                    </Field>
-                    <Field className="w-16">
-                      <FieldLabel className="text-xs">
-                        {f.t("invoice.rowDiscount")}
-                      </FieldLabel>
-                      <Input
-                        aria-label={`${f.t("invoice.rowDiscount")} ${index + 1}`}
-                        inputMode="decimal"
-                        className="tabular text-right"
-                        disabled={fixed}
-                        aria-invalid={bad || undefined}
-                        value={row.discount}
-                        onChange={(e) =>
-                          patchRow(row.key, { discount: e.target.value })
-                        }
-                      />
-                    </Field>
-                    {registered ? (
-                      <Field className="w-24">
-                        <FieldLabel className="text-xs">
-                          {f.t("invoice.rowVat")}
-                        </FieldLabel>
-                        <OptionSelect
-                          label={f.t("invoice.rowVat")}
-                          disabled={
-                            fixed || isZeroRated(rowSaleKind(row.catId))
-                          }
-                          value={String(row.vatRate)}
-                          onChange={(v) =>
-                            patchRow(row.key, { vatRate: Number(v) })
-                          }
-                          options={(rateOptions.includes(row.vatRate)
-                            ? rateOptions
-                            : [...rateOptions, row.vatRate]
-                          ).map((r) => ({
-                            value: String(r),
-                            label: f.rate(r),
-                          }))}
-                        />
-                      </Field>
-                    ) : null}
-                    <Field className="min-w-36 flex-1">
-                      <FieldLabel className="text-xs">
-                        {f.t("invoice.rowCategory")}
-                      </FieldLabel>
-                      <OptionSelect
-                        label={f.t("invoice.rowCategory")}
-                        disabled={fixed}
-                        value={row.catId}
-                        onChange={(v) => patchRow(row.key, { catId: v })}
-                        options={(incomeCats.some((c) => c.id === row.catId)
-                          ? incomeCats
-                          : [
-                              ...incomeCats,
-                              ...cats.filter((c) => c.id === row.catId),
-                            ]
-                        ).map((c) => ({
-                          value: c.id,
-                          label: f.catLabel(c),
-                        }))}
-                      />
-                    </Field>
-                    <div className="tabular flex h-9 min-w-24 items-center justify-end text-sm">
-                      {parsed ? <Money cents={rowNet(parsed)} /> : null}
-                    </div>
-                  </div>
-                  {row.rebills ? (
-                    <p className="text-xs text-muted-foreground">
-                      {rebilled
-                        ? f.t("invoice.rebillRowFrom", {
-                            d: f.date(rebilled.date),
-                            x: rebilled.description,
-                            m: f.money(rebillCost(rebilled)),
-                          })
-                        : f.t("invoice.rebillRowGone")}
-                    </p>
-                  ) : null}
-                  {row.advance ? (
-                    <p className="text-xs text-muted-foreground">
-                      {f.t("invoice.advanceRow", {
-                        n: deducted?.number ?? "",
-                      })}
-                    </p>
-                  ) : null}
-                  {bad ? (
-                    <FieldError>{f.t("invoice.problemBadRow")}</FieldError>
-                  ) : null}
+                  <span>{f.t("invoice.rowDescription")}</span>
+                  <span className="text-right">
+                    {f.t("invoice.rowQuantity")}
+                  </span>
+                  <span>{f.t("invoice.rowUnit")}</span>
+                  <span className="text-right">{priceLabel}</span>
+                  <span className="text-right">
+                    {f.t("invoice.rowDiscount")}
+                  </span>
+                  {registered ? <span>{f.t("invoice.rowVat")}</span> : null}
+                  <span className="text-right">{f.t("invoice.rowTotal")}</span>
+                  <span />
                 </div>
-              )
-            })}
-            {!issued ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setRows((list) => [
-                      ...list,
-                      fitRate(
-                        blankRow(
-                          date,
-                          list.at(-1)?.catId,
-                          list.at(-1)?.vatRate,
-                          credit
-                        )
-                      ),
-                    ])
-                  }
-                >
-                  <PlusIcon data-icon="inline-start" />
-                  {f.t("invoice.addRow")}
-                </Button>
-                {!credit && products.length > 0 ? (
-                  <OptionSelect
-                    size="sm"
-                    className="w-56"
-                    label={f.t("product.pick")}
-                    placeholder={f.t("product.pick")}
-                    value=""
-                    onChange={addProduct}
-                    options={[...products]
-                      .sort((a, b) => f.collator.compare(a.name, b.name))
-                      .map((p) => ({ value: p.id, label: p.name }))}
-                  />
-                ) : null}
-                {!credit && !rebilling ? (
+                <div className="divide-y">
+                  {rows.map((row, index) => {
+                    const parsed = toRow(row, credit)
+                    const bad = showErrors && rowErrors[index]
+                    /* A deducted advance's figures come from what was paid. */
+                    const fixed = issued || !!row.advance
+                    const rebilled = row.rebills
+                      ? entryById.get(row.rebills)
+                      : undefined
+                    const deducted = row.advance
+                      ? invoiceById.get(row.advance)
+                      : undefined
+                    const n = index + 1
+                    return (
+                      <div
+                        key={row.key}
+                        className="flex flex-col gap-2.5 px-3.5 py-3"
+                      >
+                        <div
+                          className={cn(
+                            "grid grid-cols-3 gap-2.5 sm:items-center",
+                            rowCols
+                          )}
+                        >
+                          <Input
+                            className="col-span-3 sm:col-span-1"
+                            aria-label={`${f.t("invoice.rowDescription")} ${n}`}
+                            placeholder={f.t("invoice.rowDescription")}
+                            disabled={issued}
+                            aria-invalid={bad || undefined}
+                            value={row.description}
+                            onChange={(e) =>
+                              patchRow(row.key, {
+                                description: e.target.value,
+                              })
+                            }
+                          />
+                          <Cell label={f.t("invoice.rowQuantity")}>
+                            <Input
+                              aria-label={`${f.t("invoice.rowQuantity")} ${n}`}
+                              inputMode="decimal"
+                              className="tabular text-right"
+                              disabled={fixed}
+                              aria-invalid={bad || undefined}
+                              value={row.quantity}
+                              onChange={(e) =>
+                                patchRow(row.key, { quantity: e.target.value })
+                              }
+                            />
+                          </Cell>
+                          <Cell label={f.t("invoice.rowUnit")}>
+                            <Input
+                              aria-label={`${f.t("invoice.rowUnit")} ${n}`}
+                              disabled={issued}
+                              value={row.unit}
+                              onChange={(e) =>
+                                patchRow(row.key, { unit: e.target.value })
+                              }
+                            />
+                          </Cell>
+                          <Cell label={priceLabel}>
+                            <AmountInput
+                              aria-label={`${priceLabel} ${n}`}
+                              className="text-right"
+                              placeholder="0,00"
+                              disabled={fixed}
+                              aria-invalid={bad || undefined}
+                              value={row.price}
+                              onChange={(e) =>
+                                patchRow(row.key, { price: e.target.value })
+                              }
+                            />
+                          </Cell>
+                          <Cell label={f.t("invoice.rowDiscount")}>
+                            <Input
+                              aria-label={`${f.t("invoice.rowDiscount")} ${n}`}
+                              inputMode="decimal"
+                              className="tabular text-right"
+                              placeholder="–"
+                              disabled={fixed}
+                              aria-invalid={bad || undefined}
+                              value={row.discount}
+                              onChange={(e) =>
+                                patchRow(row.key, { discount: e.target.value })
+                              }
+                            />
+                          </Cell>
+                          {registered ? (
+                            <Cell label={f.t("invoice.rowVat")}>
+                              <OptionSelect
+                                className="w-full"
+                                label={`${f.t("invoice.rowVat")} ${n}`}
+                                disabled={
+                                  fixed || isZeroRated(rowSaleKind(row.catId))
+                                }
+                                value={String(row.vatRate)}
+                                onChange={(v) =>
+                                  patchRow(row.key, { vatRate: Number(v) })
+                                }
+                                options={(rateOptions.includes(row.vatRate)
+                                  ? rateOptions
+                                  : [...rateOptions, row.vatRate]
+                                ).map((r) => ({
+                                  value: String(r),
+                                  label: f.rate(r),
+                                }))}
+                              />
+                            </Cell>
+                          ) : null}
+                          <Cell label={f.t("invoice.rowTotal")}>
+                            <span className="tabular flex h-9 items-center justify-end text-sm font-medium">
+                              {parsed ? <Money cents={rowNet(parsed)} /> : null}
+                            </span>
+                          </Cell>
+                          <div className="col-span-3 flex justify-end gap-0.5 sm:col-span-1">
+                            {!issued &&
+                            !credit &&
+                            !row.advance &&
+                            !row.rebills &&
+                            parsed &&
+                            parsed.description !== "" &&
+                            !known.has(
+                              parsed.description.toLocaleLowerCase("fi")
+                            ) ? (
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={f.t("product.keepRow", { n })}
+                                title={f.t("product.keepRow", { n })}
+                                onClick={() => keepAsProduct(parsed)}
+                              >
+                                <BookmarkPlusIcon />
+                              </Button>
+                            ) : null}
+                            {!issued ? (
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={f.t("invoice.removeRow", { n })}
+                                disabled={rows.length === 1}
+                                onClick={() =>
+                                  setRows((list) =>
+                                    list.filter((r) => r.key !== row.key)
+                                  )
+                                }
+                              >
+                                <Trash2Icon />
+                              </Button>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            {f.t("invoice.rowCategory")}
+                          </span>
+                          <OptionSelect
+                            size="sm"
+                            className="max-w-full"
+                            label={`${f.t("invoice.rowCategory")} ${n}`}
+                            disabled={fixed}
+                            value={row.catId}
+                            onChange={(v) => patchRow(row.key, { catId: v })}
+                            options={(incomeCats.some((c) => c.id === row.catId)
+                              ? incomeCats
+                              : [
+                                  ...incomeCats,
+                                  ...cats.filter((c) => c.id === row.catId),
+                                ]
+                            ).map((c) => ({
+                              value: c.id,
+                              label: f.catLabel(c),
+                            }))}
+                          />
+                        </div>
+                        {row.rebills ? (
+                          <p className="text-xs text-muted-foreground">
+                            {rebilled
+                              ? f.t("invoice.rebillRowFrom", {
+                                  d: f.date(rebilled.date),
+                                  x: rebilled.description,
+                                  m: f.money(rebillCost(rebilled)),
+                                })
+                              : f.t("invoice.rebillRowGone")}
+                          </p>
+                        ) : null}
+                        {row.advance ? (
+                          <p className="text-xs text-muted-foreground">
+                            {f.t("invoice.advanceRow", {
+                              n: deducted?.number ?? "",
+                            })}
+                          </p>
+                        ) : null}
+                        {bad ? (
+                          <FieldError>
+                            {f.t("invoice.problemBadRow")}
+                          </FieldError>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+              {!issued ? (
+                <div className="flex flex-wrap items-center gap-2">
                   <Button
                     variant="outline"
-                    size="sm"
-                    onClick={() => setRebilling(true)}
-                  >
-                    <ReceiptIcon data-icon="inline-start" />
-                    {f.t("invoice.rebillOpen")}
-                  </Button>
-                ) : null}
-                {advances.map(({ advance, left }) => (
-                  <Button
-                    key={advance.id}
-                    variant="outline"
-                    size="sm"
                     onClick={() =>
-                      addRows(deductionRows(advance, left, language))
+                      setRows((list) => [
+                        ...list,
+                        fitRate(
+                          blankRow(
+                            date,
+                            list.at(-1)?.catId,
+                            list.at(-1)?.vatRate,
+                            credit
+                          )
+                        ),
+                      ])
                     }
                   >
-                    <MinusIcon data-icon="inline-start" />
-                    {f.t("invoice.advanceDeduct", {
-                      n: advance.number ?? "",
-                      m: f.money(left.reduce((sum, p) => sum + p.net, 0)),
-                    })}
+                    <PlusIcon data-icon="inline-start" />
+                    {f.t("invoice.addRow")}
                   </Button>
-                ))}
-              </div>
-            ) : null}
-            {rebilling && !issued ? (
-              <RebillPicker
-                invoiceId={draftId}
-                taken={taken}
-                sale={sale}
-                language={language}
-                onAdd={(added) => {
-                  addRows(added)
-                  setRebilling(false)
-                }}
-                onClose={() => setRebilling(false)}
-              />
-            ) : null}
-          </section>
-
-          <section className="grid gap-4 border-t pt-4 sm:grid-cols-[1fr_auto]">
-            <div className="flex flex-col gap-3">
-              <Field className="max-w-48">
-                <FieldLabel htmlFor={ids.discount}>
-                  {f.t("invoice.docDiscount")}
-                </FieldLabel>
-                <Input
-                  id={ids.discount}
-                  inputMode="decimal"
-                  className="tabular text-right"
-                  disabled={issued}
-                  aria-invalid={(showErrors && discountBad) || undefined}
-                  value={docDiscount}
-                  onChange={(e) => setDocDiscount(e.target.value)}
-                />
-                {showErrors && discountBad ? (
-                  <FieldError>{f.t("invoice.discountBad")}</FieldError>
-                ) : null}
-              </Field>
-              {notes.length > 0 ? (
-                <div className="flex flex-col gap-0.5 text-sm text-muted-foreground">
-                  <p className="text-xs font-medium">
-                    {f.t("invoice.vatNotes")}
-                  </p>
-                  {notes.map((note) => (
-                    <p key={note}>{note}</p>
+                  {!credit && products.length > 0 ? (
+                    <OptionSelect
+                      className="w-56"
+                      label={f.t("product.pick")}
+                      placeholder={f.t("product.pick")}
+                      value=""
+                      onChange={addProduct}
+                      options={[...products]
+                        .sort((a, b) => f.collator.compare(a.name, b.name))
+                        .map((p) => ({ value: p.id, label: p.name }))}
+                    />
+                  ) : null}
+                  {!credit && !rebilling ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => setRebilling(true)}
+                    >
+                      <ReceiptIcon data-icon="inline-start" />
+                      {f.t("invoice.rebillOpen")}
+                    </Button>
+                  ) : null}
+                  {advances.map(({ advance, left }) => (
+                    <Button
+                      key={advance.id}
+                      variant="outline"
+                      onClick={() =>
+                        addRows(deductionRows(advance, left, language))
+                      }
+                    >
+                      <MinusIcon data-icon="inline-start" />
+                      {f.t("invoice.advanceDeduct", {
+                        n: advance.number ?? "",
+                        m: f.money(left.reduce((sum, p) => sum + p.net, 0)),
+                      })}
+                    </Button>
                   ))}
                 </div>
               ) : null}
-            </div>
-            <dl className="grid min-w-64 grid-cols-[1fr_auto] content-start gap-x-6 gap-y-1 text-sm">
-              {discount !== undefined ? (
-                <>
-                  <dt className="text-muted-foreground">
-                    {f.t("invoice.totalDiscount", { p: f.rate(discount) })}
-                  </dt>
-                  <dd className="text-right">
-                    <Money cents={-docDiscountCents(readRows, discount)} />
-                  </dd>
-                </>
-              ) : null}
-              {registered ? (
-                <>
-                  <dt className="text-muted-foreground">
-                    {f.t("invoice.totalNet")}
-                  </dt>
-                  <dd className="text-right">
-                    <Money cents={totals.net} />
-                  </dd>
-                </>
-              ) : null}
-              {(registered ? totals.rates : []).map((line) => (
-                <React.Fragment key={line.vatRate}>
-                  <dt className="text-muted-foreground">
-                    {f.t("invoice.totalVat")} {f.rate(line.vatRate)}
-                  </dt>
-                  <dd className="text-right">
-                    <Money cents={line.vat} />
-                  </dd>
-                </React.Fragment>
-              ))}
-              <dt className="font-semibold">{f.t("invoice.totalGross")}</dt>
-              <dd className="text-right font-semibold">
-                <Money cents={totals.gross} />
-              </dd>
-            </dl>
-          </section>
-
-          <Field>
-            <FieldLabel htmlFor={ids.note}>{f.t("invoice.note")}</FieldLabel>
-            <Input
-              id={ids.note}
-              disabled={issued}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
-          </Field>
-
-          {quote ? (
-            tagsInput
-          ) : issued && extrasFilled === 0 ? null : (
-            <details
-              className="group border-t pt-1"
-              open={moreOpen}
-              onToggle={(e) => setMoreOpen(e.currentTarget.open)}
-            >
-              <summary className="focus-ring flex min-h-11 cursor-pointer list-none items-center gap-3 rounded-md text-sm [&::-webkit-details-marker]:hidden">
-                <span className="font-semibold">{f.t("invoice.more")}</span>
-                <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                  {extrasFilled > 0
-                    ? f.t("invoice.moreFilled", { n: extrasFilled })
-                    : f.t(
-                        credit ? "invoice.moreHintCredit" : "invoice.moreHint"
-                      )}
-                </span>
-                <ChevronDownIcon
-                  aria-hidden
-                  className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+              {rebilling && !issued ? (
+                <RebillPicker
+                  invoiceId={draftId}
+                  taken={taken}
+                  sale={sale}
+                  language={language}
+                  onAdd={(added) => {
+                    addRows(added)
+                    setRebilling(false)
+                  }}
+                  onClose={() => setRebilling(false)}
                 />
-              </summary>
-              <div className="flex flex-col gap-5 pt-2 pb-1">
-                {credit ? null : (
-                  <section className="flex flex-col gap-1">
-                    <label className="flex items-center gap-2 text-sm">
-                      <Checkbox
-                        checked={advanceKind}
-                        disabled={issued || deducting}
-                        onCheckedChange={(v) => setAdvanceKind(v === true)}
-                      />
-                      {f.t("invoice.advanceKind")}
-                    </label>
-                    {issued ? null : (
-                      <FieldDescription>
-                        {f.t(
-                          deducting
-                            ? "invoice.advanceKindDeducting"
-                            : "invoice.advanceKindHint"
-                        )}
-                      </FieldDescription>
-                    )}
-                  </section>
-                )}
+              ) : null}
+            </section>
 
-                <section className="flex flex-wrap gap-3">
-                  <Field className="w-44">
-                    <FieldLabel>{f.t("invoice.supplyFrom")}</FieldLabel>
-                    <DateInput
-                      value={supplyFrom}
-                      onValueChange={setSupplyFrom}
+            <section className="grid items-start gap-6 sm:grid-cols-[minmax(0,1fr)_21rem]">
+              <div className="flex flex-col gap-3">
+                <Field>
+                  <FieldLabel htmlFor={ids.note}>
+                    {f.t("invoice.note")}
+                  </FieldLabel>
+                  <Textarea
+                    id={ids.note}
+                    className="min-h-28 resize-y"
+                    disabled={issued}
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                  />
+                </Field>
+                {notes.length > 0 ? (
+                  <div className="flex flex-col gap-0.5 text-sm text-muted-foreground">
+                    <p className="text-xs font-medium">
+                      {f.t("invoice.vatNotes")}
+                    </p>
+                    {notes.map((note) => (
+                      <p key={note}>{note}</p>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="tabular flex flex-col gap-2.5 rounded-lg border bg-muted/40 p-4 text-sm">
+                  {issued && discount === undefined ? null : (
+                    <div className="flex items-center justify-between gap-3 text-muted-foreground">
+                      <label
+                        htmlFor={ids.discount}
+                        className="flex items-center gap-2"
+                      >
+                        {f.t("invoice.docDiscountShort")}
+                        <span className="relative">
+                          <Input
+                            id={ids.discount}
+                            aria-label={f.t("invoice.docDiscount")}
+                            inputMode="decimal"
+                            className="h-8 w-16 bg-background pr-6 text-right"
+                            placeholder="0"
+                            disabled={issued}
+                            aria-invalid={
+                              (showErrors && discountBad) || undefined
+                            }
+                            value={docDiscount}
+                            onChange={(e) => setDocDiscount(e.target.value)}
+                          />
+                          <span
+                            aria-hidden
+                            className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs"
+                          >
+                            %
+                          </span>
+                        </span>
+                      </label>
+                      {discount !== undefined ? (
+                        <Money cents={-docDiscountCents(readRows, discount)} />
+                      ) : null}
+                    </div>
+                  )}
+                  {registered ? (
+                    <div className="flex justify-between gap-3 text-muted-foreground">
+                      <span>{f.t("invoice.totalNet")}</span>
+                      <Money cents={totals.net} />
+                    </div>
+                  ) : null}
+                  {(registered ? totals.rates : []).map((line) => (
+                    <div
+                      key={line.vatRate}
+                      className="flex justify-between gap-3 text-muted-foreground"
+                    >
+                      <span>
+                        {f.t("invoice.totalVat")} {f.rate(line.vatRate)}
+                      </span>
+                      <Money cents={line.vat} />
+                    </div>
+                  ))}
+                  <div className="my-1 h-px bg-border" />
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="font-semibold">
+                      {f.t("invoice.totalGross")}
+                    </span>
+                    <span className="text-xl font-bold tracking-tight">
+                      <Money cents={totals.gross} />
+                    </span>
+                  </div>
+                </div>
+                {showErrors && discountBad ? (
+                  <FieldError>{f.t("invoice.discountBad")}</FieldError>
+                ) : null}
+              </div>
+            </section>
+
+            {quote ? (
+              tagsInput
+            ) : issued && extrasFilled === 0 ? null : (
+              <details
+                className="group rounded-lg border"
+                open={moreOpen}
+                onToggle={(e) => setMoreOpen(e.currentTarget.open)}
+              >
+                <summary className="focus-ring flex min-h-11 cursor-pointer list-none items-center gap-4 rounded-lg px-4 py-3.5 [&::-webkit-details-marker]:hidden">
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="text-base font-semibold">
+                      {f.t("invoice.more")}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {extrasFilled > 0
+                        ? f.t("invoice.moreFilled", { n: extrasFilled })
+                        : f.t(
+                            credit
+                              ? "invoice.moreHintCredit"
+                              : "invoice.moreHint"
+                          )}
+                    </span>
+                  </span>
+                  <ChevronDownIcon
+                    aria-hidden
+                    className="size-4.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+                  />
+                </summary>
+                <div className="flex flex-col gap-6 border-t px-4 py-5">
+                  {credit ? null : (
+                    <>
+                      <section className="flex items-start justify-between gap-6">
+                        <div className="flex flex-col gap-0.5">
+                          <label
+                            htmlFor={ids.advance}
+                            className="text-sm font-medium"
+                          >
+                            {f.t("invoice.advanceKind")}
+                          </label>
+                          {issued ? null : (
+                            <FieldDescription>
+                              {f.t(
+                                deducting
+                                  ? "invoice.advanceKindDeducting"
+                                  : "invoice.advanceKindHint"
+                              )}
+                            </FieldDescription>
+                          )}
+                        </div>
+                        <Switch
+                          id={ids.advance}
+                          checked={advanceKind}
+                          disabled={issued || deducting}
+                          onCheckedChange={setAdvanceKind}
+                        />
+                      </section>
+                      <div className="h-px bg-border" />
+                    </>
+                  )}
+
+                  <section className="flex flex-col gap-2">
+                    <span className="text-sm font-medium">
+                      {f.t("invoice.supply")}
+                    </span>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <div className="w-44">
+                        <DateInput
+                          aria-label={f.t("invoice.supplyFrom")}
+                          value={supplyFrom}
+                          onValueChange={setSupplyFrom}
+                          disabled={issued}
+                        />
+                      </div>
+                      <span aria-hidden className="text-muted-foreground">
+                        –
+                      </span>
+                      <div className="w-44">
+                        <DateInput
+                          aria-label={f.t("invoice.supplyTo")}
+                          value={supplyTo}
+                          onValueChange={setSupplyTo}
+                          disabled={issued || supplyFrom === ""}
+                          min={supplyFrom || undefined}
+                        />
+                      </div>
+                    </div>
+                    <FieldDescription>
+                      {f.t("invoice.supplyHint")}
+                    </FieldDescription>
+                  </section>
+
+                  <section className="flex flex-col gap-2">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field>
+                        <FieldLabel htmlFor={ids.buyerReference}>
+                          {f.t("invoice.buyerReference")}
+                        </FieldLabel>
+                        <Input
+                          id={ids.buyerReference}
+                          value={buyerReference}
+                          maxLength={BUYER_REF_MAX}
+                          disabled={issued}
+                          onChange={(event) => {
+                            buyerRefTouched.current = true
+                            setBuyerReference(event.target.value)
+                          }}
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel htmlFor={ids.orderNumber}>
+                          {f.t("invoice.orderNumber")}
+                        </FieldLabel>
+                        <Input
+                          id={ids.orderNumber}
+                          value={orderNumber}
+                          maxLength={BUYER_REF_MAX}
+                          disabled={issued}
+                          onChange={(event) =>
+                            setOrderNumber(event.target.value)
+                          }
+                        />
+                      </Field>
+                    </div>
+                    <FieldDescription>
+                      {f.t("invoice.buyerRefHint")}
+                    </FieldDescription>
+                  </section>
+                  {credit ? null : (
+                    <InvoiceFiles
+                      files={files}
+                      onChange={setFiles}
                       disabled={issued}
                     />
-                  </Field>
-                  <Field className="w-44">
-                    <FieldLabel>{f.t("invoice.supplyTo")}</FieldLabel>
-                    <DateInput
-                      value={supplyTo}
-                      onValueChange={setSupplyTo}
-                      disabled={issued || supplyFrom === ""}
-                      min={supplyFrom || undefined}
-                    />
-                  </Field>
-                  <FieldDescription className="self-end pb-2">
-                    {f.t("invoice.supplyHint")}
-                  </FieldDescription>
-                </section>
-                <section className="flex flex-col gap-2">
-                  <div className="flex flex-wrap gap-3">
-                    <Field className="w-60">
-                      <FieldLabel htmlFor={ids.buyerReference}>
-                        {f.t("invoice.buyerReference")}
-                      </FieldLabel>
-                      <Input
-                        id={ids.buyerReference}
-                        value={buyerReference}
-                        maxLength={BUYER_REF_MAX}
-                        disabled={issued}
-                        onChange={(event) => {
-                          buyerRefTouched.current = true
-                          setBuyerReference(event.target.value)
-                        }}
-                      />
-                    </Field>
-                    <Field className="w-60">
-                      <FieldLabel htmlFor={ids.orderNumber}>
-                        {f.t("invoice.orderNumber")}
-                      </FieldLabel>
-                      <Input
-                        id={ids.orderNumber}
-                        value={orderNumber}
-                        maxLength={BUYER_REF_MAX}
-                        disabled={issued}
-                        onChange={(event) => setOrderNumber(event.target.value)}
-                      />
-                    </Field>
-                  </div>
-                  <FieldDescription>
-                    {f.t("invoice.buyerRefHint")}
-                  </FieldDescription>
-                </section>
-                {credit ? null : (
-                  <InvoiceFiles
-                    files={files}
-                    onChange={setFiles}
-                    disabled={issued}
-                  />
-                )}
-                {tagsInput}
-              </div>
-            </details>
-          )}
+                  )}
+                  {tagsInput}
+                </div>
+              </details>
+            )}
+          </div>
         </div>
-        <DialogFooter className="m-0 flex-row flex-wrap items-center gap-2 bg-popover px-5 py-3">
+        <DialogFooter className="m-0 flex-row flex-wrap items-center gap-2 border-t bg-popover px-5 py-3.5 sm:px-7">
           {quote ? (
             <>
               <p className="mr-auto self-center text-xs text-muted-foreground">
@@ -1306,14 +1433,20 @@ function InvoiceForm({
               ) : credit ? (
                 <span className="mr-auto" />
               ) : (
-                <p className="mr-auto self-center text-xs text-muted-foreground">
+                <p className="mr-auto flex items-center gap-2 self-center text-xs text-muted-foreground">
+                  <InfoIcon aria-hidden className="size-4 shrink-0" />
                   {f.t("invoice.issueHint")}
                 </p>
               )}
-              <Button variant="outline" onClick={save} disabled={busy}>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={save}
+                disabled={busy}
+              >
                 {f.t("invoice.saveDraft")}
               </Button>
-              <Button onClick={issue} disabled={busy}>
+              <Button size="lg" onClick={issue} disabled={busy}>
                 {f.t("invoice.issue")}
               </Button>
             </>
@@ -1321,5 +1454,26 @@ function InvoiceForm({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/**
+ * One figure of an invoice row. Below `sm` the row wraps into a small grid,
+ * so each figure carries its own label; from `sm` up the table head names it.
+ */
+function Cell({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <span aria-hidden className="text-xs text-muted-foreground sm:hidden">
+        {label}
+      </span>
+      {children}
+    </div>
   )
 }

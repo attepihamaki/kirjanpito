@@ -3,6 +3,7 @@
 import * as React from "react"
 import { ExternalLinkIcon, PaperclipIcon, Trash2Icon } from "lucide-react"
 
+import { DropTile } from "@/components/common/drop-tile"
 import { useFormatters } from "@/components/lang-provider"
 import { Button } from "@/components/ui/button"
 import { FieldDescription } from "@/components/ui/field"
@@ -21,12 +22,15 @@ import {
   isInvoiceFileType,
   type InvoiceFile,
 } from "@/lib/domain/invoice"
+import { cn } from "@/lib/utils"
 import { useBookStore } from "@/stores/book-store"
 
 /** The picker's filter: the types an invoice carries, by MIME type and extension. */
 const ACCEPT = [...INVOICE_FILE_TYPES, ".pdf", ".png", ".jpg", ".jpeg"].join(
   ","
 )
+
+const hasFiles = (e: React.DragEvent) => e.dataTransfer.types.includes("Files")
 
 /** A JPEG named `.jpg` may come with an empty type; the name decides then. */
 function typeOf(file: File): string {
@@ -57,6 +61,9 @@ export function InvoiceFiles({
   const f = useFormatters()
   const pickRef = React.useRef<HTMLInputElement>(null)
   const [busy, setBusy] = React.useState(false)
+  /* Enter and leave fire for every child the drag crosses, so the zone counts them. */
+  const [over, setOver] = React.useState(false)
+  const depth = React.useRef(0)
   const held = React.useRef<string[]>([])
 
   React.useEffect(() => {
@@ -131,7 +138,7 @@ export function InvoiceFiles({
   if (disabled && files.length === 0) return null
   return (
     <section className="flex flex-col gap-2">
-      <h3 className="text-sm font-semibold">{f.t("invoice.files")}</h3>
+      <h3 className="text-sm font-medium">{f.t("invoice.files")}</h3>
       {files.length > 0 ? (
         <ul className="flex flex-col gap-1 text-sm">
           {files.map((file, index) => (
@@ -167,17 +174,46 @@ export function InvoiceFiles({
       ) : null}
       {disabled ? null : (
         <>
-          <div>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={busy || files.length >= INVOICE_FILES_MAX}
-              onClick={() => pickRef.current?.click()}
-            >
-              <PaperclipIcon data-icon="inline-start" />
-              {f.t("invoice.filesAdd")}
-            </Button>
-          </div>
+          <DropTile
+            disabled={busy || files.length >= INVOICE_FILES_MAX}
+            onClick={() => pickRef.current?.click()}
+            onDragEnter={(e) => {
+              if (!hasFiles(e)) return
+              depth.current += 1
+              setOver(true)
+            }}
+            onDragOver={(e) => {
+              if (!hasFiles(e)) return
+              e.preventDefault()
+              e.dataTransfer.dropEffect = "copy"
+            }}
+            onDragLeave={() => {
+              depth.current = Math.max(0, depth.current - 1)
+              if (depth.current === 0) setOver(false)
+            }}
+            onDrop={(e) => {
+              if (!hasFiles(e)) return
+              /* Taken here, so the window's own drop handler leaves it (§8.2). */
+              e.preventDefault()
+              depth.current = 0
+              setOver(false)
+              const dropped = [...(e.dataTransfer.files ?? [])]
+              if (dropped.length > 0 && files.length < INVOICE_FILES_MAX)
+                void add(dropped)
+            }}
+            className={cn(
+              "flex min-h-18 w-full items-center justify-center gap-2.5 rounded-lg bg-muted/30 px-4 text-center text-sm text-muted-foreground",
+              over && "border-primary bg-primary/5 text-foreground"
+            )}
+          >
+            <PaperclipIcon aria-hidden className="size-4.5 shrink-0" />
+            <span>
+              {f.t("invoice.filesDrop")}{" "}
+              <span className="font-medium text-primary underline underline-offset-2">
+                {f.t("invoice.filesPick")}
+              </span>
+            </span>
+          </DropTile>
           <FieldDescription>
             {f.t("invoice.filesHint", { n: INVOICE_FILES_MAX })}
           </FieldDescription>
