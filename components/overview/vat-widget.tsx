@@ -79,8 +79,15 @@ export function VatWidget() {
         </p>
         <Money
           cents={Math.abs(report.due)}
+          // Red is for a return that is late; tax that is only due is not an alarm.
           tone={
-            report.due < 0 ? "income" : report.due > 0 ? "expense" : "muted"
+            report.due < 0
+              ? "income"
+              : report.due === 0
+                ? "muted"
+                : late
+                  ? "expense"
+                  : undefined
           }
           className="mt-1 block font-heading text-4xl font-semibold tracking-tight"
         />
@@ -148,9 +155,9 @@ export function VatWidget() {
               tone={
                 afterVat.report.due < 0
                   ? "income"
-                  : afterVat.report.due > 0
-                    ? "expense"
-                    : "muted"
+                  : afterVat.report.due === 0
+                    ? "muted"
+                    : undefined
               }
             />
             {" · "}

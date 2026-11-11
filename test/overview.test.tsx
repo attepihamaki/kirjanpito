@@ -76,6 +76,8 @@ describe("bank widget", () => {
     load()
     mount()
     const user = userEvent.setup()
+    expect(screen.queryByLabelText("Saldo (€)")).not.toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Syötä saldo" }))
     await user.type(screen.getByLabelText("Saldo (€)"), "1 000,50")
     const date = screen.getByLabelText("Päivä")
     await user.clear(date)
@@ -102,6 +104,7 @@ describe("bank widget", () => {
     load()
     mount()
     const user = userEvent.setup()
+    await user.click(screen.getByRole("button", { name: "Syötä saldo" }))
     await user.type(screen.getByLabelText("Saldo (€)"), "paljon")
     await user.click(screen.getByRole("button", { name: "Tallenna saldo" }))
     expect(

@@ -30,6 +30,27 @@ export function BankWidget() {
   const balance = useBookStore((s) => s.bankBalance)
   const [editing, setEditing] = React.useState(false)
 
+  /*
+   * With no balance the widget is one line and a button. The form opens on
+   * request, so an empty form does not take a top slot of the board.
+   */
+  if (!balance && !editing) {
+    return (
+      <Panel
+        className="flex flex-1 flex-col"
+        bodyClassName="flex flex-1 flex-col items-start gap-3 p-5"
+      >
+        <p className="flex items-start gap-2 text-sm text-muted-foreground">
+          <LandmarkIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
+          {f.t("overview.bankEmpty")}
+        </p>
+        <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+          {f.t("overview.bankEnter")}
+        </Button>
+      </Panel>
+    )
+  }
+
   if (editing || !balance) {
     return (
       <Panel
@@ -147,12 +168,6 @@ function BalanceForm({
 
   return (
     <form className="flex flex-1 flex-col gap-4" onSubmit={save} noValidate>
-      {balance ? null : (
-        <p className="flex items-start gap-2 text-sm text-muted-foreground">
-          <LandmarkIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
-          {f.t("overview.bankEmpty")}
-        </p>
-      )}
       <div className="grid gap-4 @sm:grid-cols-2">
         <Field data-invalid={error?.field === "amount"}>
           <FieldLabel htmlFor="bank-amount">
@@ -189,11 +204,11 @@ function BalanceForm({
         <Button type="submit" size="sm">
           {f.t("overview.bankSave")}
         </Button>
+        <Button type="button" variant="ghost" size="sm" onClick={onDone}>
+          {f.t("common.cancel")}
+        </Button>
         {balance ? (
           <>
-            <Button type="button" variant="ghost" size="sm" onClick={onDone}>
-              {f.t("common.cancel")}
-            </Button>
             <Button
               type="button"
               variant="ghost"

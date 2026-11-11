@@ -677,6 +677,8 @@ export const APP_DICT = {
     "Yli 1 200 euron laite on yleensä kirjattava käyttöomaisuudeksi ja poistettava. Kerralla sen voi vähentää vain, jos käyttöikä on enintään 3 vuotta.",
     "Equipment over 1,200 euros is usually booked as a fixed asset and depreciated. Deducting it at once works only if its useful life is 3 years or less.",
   ],
+  "overview.bankEnter": ["Syötä saldo", "Enter the balance"],
+  "overview.noSales": ["Ei myyntiä tänä vuonna.", "No sales this year."],
   "overview.billsTitle": ["Laskut maksettavana", "Bills to pay"],
   "overview.billsTotal": ["Yhteensä {s}", "{s} in all"],
   "overview.billsMore": [

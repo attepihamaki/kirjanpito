@@ -21,6 +21,7 @@ export function SalesWidget() {
   let domestic = 0
   for (const v of t.salesByRate.values()) domestic += v
 
+  /* A kind of sale the business has none of is left out of the list. */
   const kinds = [
     {
       label: f.t("overview.salesDomestic"),
@@ -38,7 +39,7 @@ export function SalesWidget() {
       cents: t.reverse,
       swatch: "bg-chart-1",
     },
-  ]
+  ].filter((k) => k.cents !== 0)
   const pct = (c: number) => (total > 0 ? (c / total) * 100 : 0)
 
   return (
@@ -83,12 +84,17 @@ export function SalesWidget() {
             </dd>
           </div>
         ))}
-        <div className="flex items-baseline justify-between gap-3 text-muted-foreground">
-          <dt>{f.t("overview.otherIncome")}</dt>
-          <dd>
-            <Money cents={t.otherIncome} tone="muted" />
-          </dd>
-        </div>
+        {t.otherIncome !== 0 ? (
+          <div className="flex items-baseline justify-between gap-3 text-muted-foreground">
+            <dt>{f.t("overview.otherIncome")}</dt>
+            <dd>
+              <Money cents={t.otherIncome} tone="muted" />
+            </dd>
+          </div>
+        ) : null}
+        {kinds.length === 0 && t.otherIncome === 0 ? (
+          <p className="text-muted-foreground">{f.t("overview.noSales")}</p>
+        ) : null}
       </dl>
     </Panel>
   )

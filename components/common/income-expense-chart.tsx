@@ -72,6 +72,20 @@ export function IncomeExpenseChart({
   const maxIncome = Math.max(...data.map((d) => d.income))
   const maxExpense = Math.max(...data.map((d) => -d.expense))
 
+  /*
+   * The axis runs 12 % of its span past the tallest bar on each side, so an
+   * amount never lands on the month names under the plot or on the legend
+   * above it. The ticks stay on round steps inside that range.
+   */
+  const span = maxIncome + maxExpense || 1
+  const step = niceStep(span / 4)
+  const top = maxIncome + span * 0.12
+  const bottom = maxExpense ? -(maxExpense + span * 0.12) : 0
+  const ticks: number[] = []
+  for (let t = Math.ceil(bottom / step) * step; t <= top; t += step) {
+    ticks.push(t)
+  }
+
   // Old filters left in place could hide the month's rows.
   const openMonth = (m: number) => {
     clearFilters()
@@ -133,6 +147,8 @@ export function IncomeExpenseChart({
             tickLine={false}
             axisLine={false}
             width={56}
+            domain={[bottom, top]}
+            ticks={ticks}
             fontSize={12}
             stroke="var(--muted-foreground)"
             tickFormatter={(v: number) => wholeEuros.format(v)}
@@ -221,6 +237,13 @@ export function IncomeExpenseChart({
       </ResponsiveContainer>
     </div>
   )
+}
+
+/** The round number at or above `raw`: 1, 2 or 5 times a power of ten. */
+function niceStep(raw: number): number {
+  const power = 10 ** Math.floor(Math.log10(Math.max(raw, 1)))
+  const unit = raw / power
+  return (unit <= 1 ? 1 : unit <= 2 ? 2 : unit <= 5 ? 5 : 10) * power
 }
 
 /** The two series with their year totals, for a panel's heading row. */
