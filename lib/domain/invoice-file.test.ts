@@ -76,6 +76,17 @@ describe("invoices.json", () => {
     expect(parsed.invoices).toEqual(list)
   })
 
+  it("round-trips the customer's references and drops blank ones", () => {
+    const list = [
+      issued({ buyerReference: "Liisa Laine", orderNumber: "PO-2026-7" }),
+    ]
+    expect(parseInvoices(serializeInvoices(list)).invoices).toEqual(list)
+    const blank = draft({ buyerReference: "  ", orderNumber: "" })
+    const read = parseInvoices(serializeInvoices([blank])).invoices[0]
+    expect(read).not.toHaveProperty("buyerReference")
+    expect(read).not.toHaveProperty("orderNumber")
+  })
+
   it("round-trips the reminders of an issued invoice and drops unreadable ones", () => {
     const reminder = {
       id: "r1",
@@ -179,6 +190,15 @@ describe("customers.json", () => {
       "Östman",
     ])
     expect(parsed.customers[0]).toEqual(customer())
+  })
+
+  it("keeps a customer's default reference, and none when it is blank", () => {
+    const list = [customer({ reference: "Ostoreskontra" })]
+    expect(parseCustomers(serializeCustomers(list)).customers).toEqual(list)
+    const blank = parseCustomers(
+      serializeCustomers([customer({ reference: " " })])
+    ).customers[0]
+    expect(blank).not.toHaveProperty("reference")
   })
 
   it("drops a customer with no id or no name, and a repeated id", () => {

@@ -11,6 +11,7 @@ import { code128C } from "@/lib/domain/code128"
 import { daysBetween, formatDate } from "@/lib/domain/dates"
 import { formatIban } from "@/lib/domain/iban"
 import type {
+  BuyerRefs,
   Invoice,
   InvoiceRow,
   Quote,
@@ -45,6 +46,8 @@ import { formatMoneyPlain } from "@/lib/domain/money"
 const A4: [number, number] = [595.28, 841.89]
 const MARGIN = 40
 const RIGHT = A4[0] - MARGIN
+/** The room a header fact's value has right of the widest label. */
+const FACT_WIDTH = 130
 const INK = rgb(0.1, 0.1, 0.1)
 const MUTED = rgb(0.42, 0.42, 0.42)
 const RULE = rgb(0.8, 0.8, 0.8)
@@ -92,6 +95,32 @@ function put(
     font,
     color,
   })
+}
+
+/**
+ * A header fact's value, right-aligned at the margin. The customer's own
+ * references are free text, so a long one steps down a size to clear its
+ * label.
+ */
+function putFact(page: PDFPage, fonts: Fonts, value: string, y: number): void {
+  const wide = fonts.bold.widthOfTextAtSize(toWinAnsi(value), 10) > FACT_WIDTH
+  put(page, fonts, value, RIGHT, y, {
+    size: wide ? 8 : 10,
+    bold: true,
+    align: "right",
+  })
+}
+
+/** The customer's "Your reference" and order number as header facts, those set (§8.27). */
+function buyerRefFacts(
+  refs: BuyerRefs,
+  labels: InvoiceLabels
+): [string, string][] {
+  const out: [string, string][] = []
+  if (refs.buyerReference)
+    out.push([labels.buyerReference, refs.buyerReference])
+  if (refs.orderNumber) out.push([labels.orderNumber, refs.orderNumber])
+  return out
 }
 
 /** Break a text into lines no wider than `width`. */
@@ -364,6 +393,8 @@ type SaleDocument = Pick<
   | "note"
   | "terms"
   | "issuedAt"
+  | "buyerReference"
+  | "orderNumber"
 > & { seller: Seller; number: number }
 
 async function drawSale(
@@ -431,6 +462,7 @@ async function drawSale(
     const to = invoice.supplyTo ? formatDate(invoice.supplyTo, lang) : null
     facts.push([labels.supply, to && to !== from ? `${from} - ${to}` : from])
   }
+  facts.push(...buyerRefFacts(invoice, labels))
   put(
     c.page,
     fonts,
@@ -446,11 +478,7 @@ async function drawSale(
   c.y -= 26
   for (const [label, value] of facts) {
     put(c.page, fonts, label, 330, c.y - 9, { size: 8, color: MUTED })
-    put(c.page, fonts, value, RIGHT, c.y - 9, {
-      size: 10,
-      bold: true,
-      align: "right",
-    })
+    putFact(c.page, fonts, value, c.y - 9)
     c.y -= 14
   }
   c.y = Math.min(c.y, sellerBottom) - 14
@@ -694,14 +722,11 @@ export async function renderReminderPdf(
     [labels.number, String(invoice.number)],
     [labels.date, formatDate(reminder.date, lang)],
     [labels.reference, formatReference(invoice.reference)],
+    ...buyerRefFacts(invoice, labels),
   ]
   for (const [label, value] of facts) {
     put(c.page, fonts, label, 330, c.y - 9, { size: 8, color: MUTED })
-    put(c.page, fonts, value, RIGHT, c.y - 9, {
-      size: 10,
-      bold: true,
-      align: "right",
-    })
+    putFact(c.page, fonts, value, c.y - 9)
     c.y -= 14
   }
   c.y = Math.min(c.y, sellerBottom) - 14

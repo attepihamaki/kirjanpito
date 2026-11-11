@@ -9,9 +9,9 @@ import type {
 import { rateOnDate } from "@/lib/domain/vat-rates"
 
 /**
- * Recurring entries (§8.5): rent, a phone bill, YEL. A template lives in
- * `settings.json`, and nothing books itself: the user adds a month's entries
- * with one click.
+ * Recurring entries (§8.5): rent, a phone bill, YEL, a quarterly insurance
+ * premium. A template lives in `settings.json`, and nothing books itself: the
+ * user adds a month's entries with one click.
  *
  * Whether a month already has its entry is read from the entries rather than
  * stored. An entry on the same side and category with the same description
@@ -31,6 +31,43 @@ export interface RecurringEntry {
   day: number
   /** `"2026-10"`: the first month it is due. */
   from: string
+  /**
+   * Months between entries, one of `ENTRY_EVERY`, counted from `from`. Absent
+   * means every month, which is how a template is written when it is monthly.
+   */
+  every?: number
+}
+
+/** How many months apart a recurring entry can come. */
+export const ENTRY_EVERY = [1, 2, 3, 6, 12] as const
+
+/** Whether `every` is an interval a template can have. */
+export function isEntryEvery(every: unknown): every is number {
+  return (ENTRY_EVERY as readonly unknown[]).includes(every)
+}
+
+/** The template's interval in months, 1 when it sets none. */
+export function everyOf(r: Pick<RecurringEntry, "every">): number {
+  return r.every ?? 1
+}
+
+/** The template on another interval, without `every` when it is monthly. */
+export function withEvery(r: RecurringEntry, every: number): RecurringEntry {
+  const next = { ...r }
+  if (every === 1) delete next.every
+  else next.every = every
+  return next
+}
+
+/** Whether the template falls in `month`: on or after `from`, on its interval. */
+export function fallsIn(
+  r: Pick<RecurringEntry, "from" | "every">,
+  month: string
+): boolean {
+  const index = (key: string) =>
+    Number(key.slice(0, 4)) * 12 + Number(key.slice(5, 7)) - 1
+  const gap = index(month) - index(r.from)
+  return gap >= 0 && gap % everyOf(r) === 0
 }
 
 /** `"2026-10"`, the form a month has in `RecurringEntry.from`. */
@@ -67,7 +104,7 @@ export function recurringDate(day: number, month: string): string {
   return `${month}-01`
 }
 
-/** The templates that have begun by `month` and have no entry in it. */
+/** The templates that fall in `month` and have no entry in it. */
 export function dueRecurring(
   templates: readonly RecurringEntry[],
   month: string,
@@ -80,7 +117,7 @@ export function dueRecurring(
   )
   return templates.filter(
     (r) =>
-      r.from <= month &&
+      fallsIn(r, month) &&
       !inMonth.some((e) => matchRecurring([r], e) !== undefined)
   )
 }
@@ -108,11 +145,16 @@ export function recurringToEntry(
   }
 }
 
-/** A template from an entry. The day comes from its date. */
+/**
+ * A template from an entry. The day comes from its date. A monthly template
+ * carries no `every`, so a book that never uses another interval writes the
+ * same `settings.json` as before intervals existed.
+ */
 export function entryToRecurring(
   entry: Entry,
   id: string,
-  from: string
+  from: string,
+  every = 1
 ): RecurringEntry {
   return {
     id,
@@ -125,5 +167,6 @@ export function entryToRecurring(
     ...(entry.euPurchase ? { euPurchase: entry.euPurchase } : {}),
     day: Number(entry.date.slice(8, 10)),
     from,
+    ...(every !== 1 ? { every } : {}),
   }
 }

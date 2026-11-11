@@ -43,19 +43,13 @@ import {
   recurringEnded,
   templateFromInvoice,
 } from "@/lib/domain/invoice-draft"
-import type { Formatters } from "@/lib/i18n/create-formatters"
+import { everyLabel } from "@/lib/i18n/every-label"
 import { useBookStore } from "@/stores/book-store"
 
 /** Store the templates, keeping the rest of the invoice settings as they are. */
 function setRecurring(recurring: RecurringInvoice[]) {
   const s = useBookStore.getState()
   s.setInvoiceSettings({ ...s.invoiceSettings, recurring })
-}
-
-function everyLabel(f: Formatters, every: number): string {
-  return every === 1
-    ? f.t("invoice.recurringMonthly")
-    : f.t("invoice.recurringEvery", { n: every })
 }
 
 /**

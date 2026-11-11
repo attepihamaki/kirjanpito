@@ -104,7 +104,7 @@ describe("recurring entries", () => {
     expect(await screen.findByText(/Mikään ei kirjaudu/)).toBeInTheDocument()
     expect(
       screen.getByRole("checkbox", {
-        name: "Toista joka kuukausi",
+        name: "Toista säännöllisesti",
         hidden: true,
       })
     ).not.toBeChecked()
@@ -117,7 +117,7 @@ describe("recurring entries", () => {
     })
     mount(<EntryDialog registerDropTarget={() => {}} />)
     fireEvent.click(screen.getByRole("tab", { name: /Maksu/ }))
-    const box = screen.getByRole("checkbox", { name: "Toista joka kuukausi" })
+    const box = screen.getByRole("checkbox", { name: "Toista säännöllisesti" })
     fireEvent.click(box)
     fireEvent.click(screen.getByRole("button", { name: "Tallenna" }))
     await waitFor(() =>
@@ -141,10 +141,32 @@ describe("an entry with a template", () => {
     mount(<EntryDialog registerDropTarget={() => {}} />)
     fireEvent.click(screen.getByRole("tab", { name: /Maksu/ }))
     fireEvent.click(
-      screen.getByRole("checkbox", { name: "Toista joka kuukausi" })
+      screen.getByRole("checkbox", { name: "Toista säännöllisesti" })
     )
     fireEvent.click(screen.getByRole("button", { name: "Tallenna" }))
     await waitFor(() => expect(useBookStore.getState().recurring).toEqual([]))
+  })
+})
+
+describe("a template on another interval", () => {
+  it("shows the interval and keeps it when the entry is saved", async () => {
+    useBookStore.setState({
+      entries: [entry],
+      recurring: [{ ...rent, every: 3 }],
+      dialog: { kind: "entry", mode: "edit", entryId: "a" },
+    })
+    mount(<EntryDialog registerDropTarget={() => {}} />)
+    fireEvent.click(screen.getByRole("tab", { name: /Maksu/ }))
+    expect(screen.getByRole("combobox", { name: "Toistuu" })).toHaveTextContent(
+      "3 kk välein"
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Tallenna" }))
+    await waitFor(() =>
+      expect(useBookStore.getState().dialog).toEqual({ kind: "none" })
+    )
+    expect(useBookStore.getState().recurring).toEqual([
+      expect.objectContaining({ id: rent.id, every: 3 }),
+    ])
   })
 })
 

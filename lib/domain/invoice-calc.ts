@@ -8,6 +8,7 @@ import type {
   InvoiceSettings,
   Seller,
 } from "@/lib/domain/invoice"
+import { buyerRefs } from "@/lib/domain/invoice"
 import { finnishReference } from "@/lib/domain/invoice-reference"
 import {
   isInvoiceSaleKind,
@@ -371,6 +372,8 @@ export function creditDraft(
     language: original.language,
     rows: original.rows.map((r) => ({ ...r, quantityMilli: -r.quantityMilli })),
     note: "",
+    /* The customer's accounts payable matches the credit to its invoice by these. */
+    ...buyerRefs(original),
     terms: "",
     reference: null,
     seller: null,

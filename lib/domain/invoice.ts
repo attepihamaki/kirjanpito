@@ -95,6 +95,37 @@ export interface Customer extends Party {
   vatRate: number | null
   /** A supplier's IBAN, compact, that a bill from it starts with (§8.30). */
   iban?: string
+  /**
+   * The "Your reference" a new invoice to this customer starts with: a
+   * contact person, a cost centre or a purchase reference (§8.27). Absent
+   * while none is set.
+   */
+  reference?: string
+}
+
+/** The longest "Your reference" or order number an invoice carries, so it fits the PDF's facts column. */
+export const BUYER_REF_MAX = 35
+
+/**
+ * The customer's own references on an invoice (§8.27): "Viitteenne" and the
+ * order number. Each is absent while empty, so an invoice without them is
+ * written as it was before they existed.
+ */
+export interface BuyerRefs {
+  /** "Your reference": the customer's contact, cost centre or reference text. */
+  buyerReference?: string
+  /** The customer's order or purchase order number. */
+  orderNumber?: string
+}
+
+/** The references with blanks trimmed and empty ones left out. */
+export function buyerRefs(refs: BuyerRefs): BuyerRefs {
+  const out: BuyerRefs = {}
+  const ref = refs.buyerReference?.trim().slice(0, BUYER_REF_MAX)
+  const order = refs.orderNumber?.trim().slice(0, BUYER_REF_MAX)
+  if (ref) out.buyerReference = ref
+  if (order) out.orderNumber = order
+  return out
 }
 
 /** The register fields an invoicing customer starts with. */
@@ -161,7 +192,7 @@ export interface InvoiceRow {
   catId: string
 }
 
-export interface Invoice {
+export interface Invoice extends BuyerRefs {
   id: string
   /** The invoice number, or null while it is a draft. */
   number: number | null
@@ -225,7 +256,7 @@ export const RECURRING_EVERY = [1, 2, 3, 6, 12] as const
  * when the app opens on or after `next`, the template becomes a draft to
  * review, and `next` moves on by `every` months.
  */
-export interface RecurringInvoice {
+export interface RecurringInvoice extends BuyerRefs {
   id: string
   /** The register customer, whose current details each draft takes, or null for one typed in. */
   customerId: string | null

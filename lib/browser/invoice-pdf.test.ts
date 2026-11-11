@@ -110,6 +110,17 @@ describe("renderInvoicePdf", () => {
     expect(await pages(await renderInvoicePdf(invoice))).toBe(1)
   })
 
+  it("draws the customer's reference and order number, a long one included", async () => {
+    const invoice = issued([row(1)], {
+      buyerReference: "Kustannuspaikka 4410, Liisa Laine",
+      orderNumber: "PO-2026-0007",
+    })
+    const plain = await renderInvoicePdf(issued([row(1)]))
+    const bytes = await renderInvoicePdf(invoice)
+    expect(await pages(bytes)).toBe(1)
+    expect(bytes.length).toBeGreaterThan(plain.length)
+  })
+
   it("draws the invoice without a barcode when the account is not Finnish", async () => {
     const invoice = issued([row(1)])
     invoice.seller = { ...invoice.seller!, iban: "DE89370400440532013000" }

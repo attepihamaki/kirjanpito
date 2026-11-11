@@ -38,7 +38,7 @@ import {
   type CategoryRule,
   type RuleField,
 } from "@/lib/domain/category-rules"
-import type { RecurringEntry } from "@/lib/domain/recurring"
+import { isEntryEvery, type RecurringEntry } from "@/lib/domain/recurring"
 import type { RetentionStage } from "@/lib/domain/retention"
 import {
   EU_PURCHASE_KINDS,
@@ -208,6 +208,7 @@ function parseRecurring(value: unknown): RecurringEntry | null {
     euPurchase,
     day,
     from,
+    every,
   } = value
   if (typeof id !== "string" || !id) return null
   if (typeof description !== "string" || !description.trim()) return null
@@ -231,6 +232,7 @@ function parseRecurring(value: unknown): RecurringEntry | null {
     ...(isEuPurchase(euPurchase) ? { euPurchase } : {}),
     day: day as number,
     from,
+    ...(isEntryEvery(every) && every !== 1 ? { every } : {}),
   }
 }
 

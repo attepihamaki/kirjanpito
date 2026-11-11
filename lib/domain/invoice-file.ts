@@ -1,7 +1,10 @@
 import { parseIban } from "@/lib/domain/iban"
 import {
+  BUYER_REF_MAX,
+  buyerRefs,
   DEFAULT_INVOICE_SETTINGS,
   PARTY_ROLES,
+  type BuyerRefs,
   type Customer,
   type Invoice,
   type InvoiceLang,
@@ -38,6 +41,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function text(value: unknown, max = 500): string {
   return typeof value === "string" ? value.slice(0, max) : ""
+}
+
+/** The customer's references as stored, each dropped when it is not text (§8.27). */
+function parseBuyerRefs(value: Record<string, unknown>): BuyerRefs {
+  return buyerRefs({
+    buyerReference: text(value.buyerReference, BUYER_REF_MAX),
+    orderNumber: text(value.orderNumber, BUYER_REF_MAX),
+  })
 }
 
 function lang(value: unknown): InvoiceLang {
@@ -176,6 +187,7 @@ function parseRecurringInvoice(value: unknown): RecurringInvoice | null {
     language: lang(value.language),
     rows: rows as InvoiceRow[],
     note: text(value.note, 2000),
+    ...parseBuyerRefs(value),
     every: every as number,
     day: day as number,
     next,
@@ -245,7 +257,14 @@ function parseCustomer(value: unknown): Customer | null {
     ...(typeof value.iban === "string" && parseIban(value.iban)
       ? { iban: parseIban(value.iban)! }
       : {}),
+    ...customerReference(value.reference),
   }
+}
+
+/** A customer's default "Your reference", absent when blank. */
+function customerReference(value: unknown): Pick<Customer, "reference"> {
+  const ref = buyerRefs({ buyerReference: text(value, BUYER_REF_MAX) })
+  return ref.buyerReference ? { reference: ref.buyerReference } : {}
 }
 
 function catId(value: unknown): string | null {
@@ -435,6 +454,7 @@ function parseInvoice(value: unknown): Invoice | null {
     language: lang(value.language),
     rows: rows as InvoiceRow[],
     note: text(value.note, 2000),
+    ...parseBuyerRefs(value),
     terms: text(value.terms, 2000),
     reference,
     seller,

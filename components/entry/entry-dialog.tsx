@@ -137,10 +137,13 @@ import type {
 } from "@/lib/domain/types"
 import { indexCategories } from "@/lib/domain/types"
 import {
+  ENTRY_EVERY,
   entryToRecurring,
+  everyOf,
   matchRecurring,
   type RecurringEntry,
 } from "@/lib/domain/recurring"
+import { everyLabel } from "@/lib/i18n/every-label"
 import { useBookStore, type EntryPrefill } from "@/stores/book-store"
 import { useReceiptHashStore } from "@/stores/receipt-hash-store"
 
@@ -161,8 +164,10 @@ interface FormState {
   vatRate: number
   amountMode: AmountMode
   atts: Attachment[]
-  /** Keep this entry as a monthly template (§8.5). */
+  /** Keep this entry as a template (§8.5). */
   repeat: boolean
+  /** Months between the template's entries, one of `ENTRY_EVERY`. */
+  repeatEvery: number
   /** The VAT period a payment or refund settles, "" to go by the date (§6.6). */
   settles: string
   /** "" when paid on the date, "open" while unpaid, else the payment date (§6.3). */
@@ -251,6 +256,7 @@ function initialForm({
       // A memo voucher a calculator made for this entry (§8.8).
       atts: [...(prefill?.atts ?? [])],
       repeat: false,
+      repeatEvery: 1,
       settles: prefill?.settles ?? "",
       paid: "",
       cash: false,
@@ -281,6 +287,8 @@ function initialForm({
     // §8.5: a copy takes every field except the receipts.
     atts: mode === "copy" ? [] : [...(editing.atts ?? [])],
     repeat: mode === "edit" && matchRecurring(recurring, editing) !== undefined,
+    repeatEvery:
+      mode === "edit" ? everyOf(matchRecurring(recurring, editing) ?? {}) : 1,
     settles: editing.settles ?? "",
     paid:
       mode === "edit"
@@ -1424,7 +1432,8 @@ function EntryDialogForm({
         entryToRecurring(
           entry,
           template?.id ?? uid(),
-          template?.from ?? entry.date.slice(0, 7)
+          template?.from ?? entry.date.slice(0, 7),
+          form.repeatEvery
         )
       )
     } else if (mode === "edit" && template) {
@@ -1454,6 +1463,7 @@ function EntryDialogForm({
         vatRate: 0,
         atts: [],
         repeat: false,
+        repeatEvery: 1,
         settles: "",
         paid: "",
         buyerVatId: "",
@@ -2182,6 +2192,21 @@ function EntryDialogForm({
                           <FieldDescription>
                             {f.t("entry.repeatDesc")}
                           </FieldDescription>
+                          {form.repeat ? (
+                            <OptionSelect
+                              size="sm"
+                              className="mt-1 w-44"
+                              label={f.t("recurring.every")}
+                              value={String(form.repeatEvery)}
+                              onChange={(v) =>
+                                update({ repeatEvery: Number(v) })
+                              }
+                              options={ENTRY_EVERY.map((n) => ({
+                                value: String(n),
+                                label: everyLabel(f, n),
+                              }))}
+                            />
+                          ) : null}
                         </div>
                       </Field>
                     </div>

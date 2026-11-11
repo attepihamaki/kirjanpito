@@ -51,6 +51,8 @@ import { evalAmount } from "@/lib/domain/amount-expr"
 import { todayIso } from "@/lib/domain/dates"
 import { uid } from "@/lib/domain/id"
 import {
+  BUYER_REF_MAX,
+  buyerRefs,
   CUSTOMER_DEFAULTS,
   isCustomer,
   emptyParty,
@@ -246,9 +248,22 @@ function InvoiceForm({
         ]
   )
   const [note, setNote] = React.useState(start?.note ?? "")
+  const [buyerReference, setBuyerReference] = React.useState(
+    existing?.buyerReference ?? ""
+  )
+  const [orderNumber, setOrderNumber] = React.useState(
+    existing?.orderNumber ?? ""
+  )
+  /* A reference the user has typed stays put when another customer is picked. */
+  const buyerRefTouched = React.useRef(start !== undefined)
   const [showErrors, setShowErrors] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
-  const ids = { note: React.useId(), language: React.useId() }
+  const ids = {
+    note: React.useId(),
+    language: React.useId(),
+    buyerReference: React.useId(),
+    orderNumber: React.useId(),
+  }
 
   /* A seller outside the VAT register sells domestically only (`vatProblems`). */
   const incomeCats = cats.filter(
@@ -314,6 +329,7 @@ function InvoiceForm({
       email: customer.email,
     })
     setLanguage(customer.language)
+    if (!buyerRefTouched.current) setBuyerReference(customer.reference ?? "")
     if (!quote && !dueTouched.current && date) {
       setDueDate(addDays(date, customer.termDays ?? settings.termDays))
     }
@@ -421,6 +437,7 @@ function InvoiceForm({
       language,
       rows: readRows,
       note: note.trim(),
+      ...buyerRefs({ buyerReference, orderNumber }),
       terms: "",
       reference: null,
       seller: null,
@@ -622,6 +639,41 @@ function InvoiceForm({
               <FieldDescription className="self-end pb-2">
                 {f.t("invoice.supplyHint")}
               </FieldDescription>
+            </section>
+          )}
+
+          {quote ? null : (
+            <section className="flex flex-col gap-2">
+              <div className="flex flex-wrap gap-3">
+                <Field className="w-60">
+                  <FieldLabel htmlFor={ids.buyerReference}>
+                    {f.t("invoice.buyerReference")}
+                  </FieldLabel>
+                  <Input
+                    id={ids.buyerReference}
+                    value={buyerReference}
+                    maxLength={BUYER_REF_MAX}
+                    disabled={issued}
+                    onChange={(event) => {
+                      buyerRefTouched.current = true
+                      setBuyerReference(event.target.value)
+                    }}
+                  />
+                </Field>
+                <Field className="w-60">
+                  <FieldLabel htmlFor={ids.orderNumber}>
+                    {f.t("invoice.orderNumber")}
+                  </FieldLabel>
+                  <Input
+                    id={ids.orderNumber}
+                    value={orderNumber}
+                    maxLength={BUYER_REF_MAX}
+                    disabled={issued}
+                    onChange={(event) => setOrderNumber(event.target.value)}
+                  />
+                </Field>
+              </div>
+              <FieldDescription>{f.t("invoice.buyerRefHint")}</FieldDescription>
             </section>
           )}
 

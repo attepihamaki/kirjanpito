@@ -1,12 +1,14 @@
 import { addDays } from "@/lib/domain/dates"
-import type {
-  Customer,
+import {
+  buyerRefs,
+  type BuyerRefs,
+  type Customer,
   Invoice,
   InvoiceLang,
   InvoiceRow,
-  Party,
-  Product,
-  RecurringInvoice,
+  type Party,
+  type Product,
+  type RecurringInvoice,
 } from "@/lib/domain/invoice"
 import { monthKey, recurringDate } from "@/lib/domain/recurring"
 import { rateOnDate } from "@/lib/domain/vat-rates"
@@ -18,7 +20,7 @@ import { rateOnDate } from "@/lib/domain/vat-rates"
  */
 
 /** What a draft is made from: an invoice, a quote or a recurring template. */
-interface DraftSource {
+interface DraftSource extends BuyerRefs {
   customerId: string | null
   customer: Party
   language: InvoiceLang
@@ -52,7 +54,8 @@ function partyOf(source: DraftSource, customers: readonly Customer[]): Party {
 /**
  * A draft dated `date` from `source`. The due date follows the customer's
  * term, and a VAT rate that changed since the source was written follows the
- * date, as it does in the entry dialog (§5).
+ * date, as it does in the entry dialog (§5). The source's "Your reference"
+ * wins over the register customer's default, and its order number is kept.
  */
 function draftOf(
   source: DraftSource,
@@ -75,6 +78,10 @@ function draftOf(
       vatRate: rateOnDate(r.vatRate, date),
     })),
     note: source.note,
+    ...buyerRefs({
+      buyerReference: source.buyerReference ?? customer?.reference,
+      orderNumber: source.orderNumber,
+    }),
     terms: "",
     reference: null,
     seller: null,
@@ -90,16 +97,16 @@ export function canCopy(invoice: Invoice): boolean {
 }
 
 /**
- * A new draft with an invoice's or a quote's customer, rows and note, dated
- * `today`. The supply period, number and reminders are left behind: they
- * belong to what was copied.
+ * A new draft with an invoice's or a quote's customer, rows, note and "Your
+ * reference", dated `today`. The supply period, number, order number and
+ * reminders are left behind: they belong to what was copied.
  */
 export function copyDraft(
   source: DraftSource,
   today: string,
   ctx: DraftContext
 ): Invoice {
-  return draftOf(source, today, ctx)
+  return draftOf({ ...source, orderNumber: undefined }, today, ctx)
 }
 
 /** The next date after `from` on the template's schedule. */
@@ -146,6 +153,7 @@ export function templateFromInvoice(
     language: source.language,
     rows: source.rows.map((r) => ({ ...r })),
     note: source.note,
+    ...buyerRefs(source),
     every,
     day: Number(first.slice(8, 10)),
     next: first,

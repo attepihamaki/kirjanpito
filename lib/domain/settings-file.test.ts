@@ -68,6 +68,18 @@ function settings(): BookSettings {
         day: 20,
         from: "2026-02",
       },
+      {
+        id: "r2",
+        description: "Vakuutus",
+        type: "expense",
+        catId: "344-other",
+        amount: 30_000,
+        vatRate: 0,
+        amountMode: "gross",
+        day: 1,
+        from: "2026-01",
+        every: 3,
+      },
     ],
     bankSeen: ["id:A1", "fp:2026-03-02|-1250|k-market||0"],
     categoryRules: [

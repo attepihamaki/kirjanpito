@@ -28,6 +28,8 @@ import { billIban } from "@/lib/domain/bill-payment"
 import { formatIban } from "@/lib/domain/iban"
 import { uid } from "@/lib/domain/id"
 import {
+  BUYER_REF_MAX,
+  buyerRefs,
   emptyParty,
   PARTY_ROLES,
   type Customer,
@@ -93,6 +95,8 @@ function CustomerForm({
   const [showErrors, setShowErrors] = React.useState(false)
   const termId = React.useId()
   const ibanId = React.useId()
+  const [reference, setReference] = React.useState(existing?.reference ?? "")
+  const referenceId = React.useId()
 
   const sells = role !== "supplier"
   const buys = role !== "customer"
@@ -103,6 +107,7 @@ function CustomerForm({
     (!Number.isInteger(termValue) || termValue < 0 || termValue > 365)
   const ibanValue = iban.trim() === "" ? null : billIban(iban)
   const ibanBad = buys && iban.trim() !== "" && ibanValue === null
+  const referenceValue = buyerRefs({ buyerReference: reference }).buyerReference
 
   /* Enabled categories on one side, plus the one already chosen. */
   const catOptions = (side: EntryType, chosen: string) => [
@@ -142,6 +147,7 @@ function CustomerForm({
       expenseCat: buys && expenseCat ? expenseCat : null,
       vatRate: rate === "" ? null : Number(rate),
       ...(buys && ibanValue ? { iban: ibanValue } : {}),
+      ...(sells && referenceValue ? { reference: referenceValue } : {}),
     }
     setCustomers(
       existing
@@ -215,6 +221,24 @@ function CustomerForm({
                   { value: "fi", label: "Suomi" },
                   { value: "en", label: "English" },
                 ]}
+              />
+            </Field>
+          ) : null}
+          {sells ? (
+            <Field>
+              <div className="flex min-h-6 items-center gap-1">
+                <FieldLabel htmlFor={referenceId}>
+                  {f.t("invoice.buyerReference")}
+                </FieldLabel>
+                <InfoPopover label={f.t("invoice.buyerReference")}>
+                  {f.t("party.referenceHint")}
+                </InfoPopover>
+              </div>
+              <Input
+                id={referenceId}
+                value={reference}
+                maxLength={BUYER_REF_MAX}
+                onChange={(e) => setReference(e.target.value)}
               />
             </Field>
           ) : null}

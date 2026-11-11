@@ -61,7 +61,7 @@ describe("a locked entry in the dialog", () => {
     fireEvent.click(screen.getByRole("tab", { name: /Maksu/ }))
 
     expect(
-      screen.getByRole("checkbox", { name: "Toista joka kuukausi" })
+      screen.getByRole("checkbox", { name: "Toista säännöllisesti" })
     ).toBeVisible()
   })
 

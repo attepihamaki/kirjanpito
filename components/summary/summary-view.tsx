@@ -24,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useFormatters } from "@/components/lang-provider"
+import { PartyTotalsPanel } from "@/components/summary/party-totals-panel"
 import { BUCKETS } from "@/lib/domain/accounts"
 import {
   monthFigures,
@@ -183,6 +184,8 @@ export function SummaryView() {
             totals={compare.totals}
           />
         ) : null}
+
+        <PartyTotalsPanel basis={basis} />
       </div>
     </>
   )

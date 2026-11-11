@@ -5,6 +5,7 @@ import { AmountInput } from "@/components/common/amount-input"
 import { NewEntryButton } from "@/components/common/new-entry-button"
 import { Trash2Icon } from "lucide-react"
 
+import { OptionSelect } from "@/components/common/option-select"
 import { Panel } from "@/components/common/panel"
 import { useFormatters } from "@/components/lang-provider"
 import { Button } from "@/components/ui/button"
@@ -20,7 +21,13 @@ import {
 import { toast } from "@/components/ui/toast"
 import { formatMoneyPlain } from "@/lib/domain/money"
 import { evalAmount } from "@/lib/domain/amount-expr"
-import type { RecurringEntry } from "@/lib/domain/recurring"
+import {
+  ENTRY_EVERY,
+  everyOf,
+  withEvery,
+  type RecurringEntry,
+} from "@/lib/domain/recurring"
+import { everyLabel } from "@/lib/i18n/every-label"
 import { indexCategories } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
 
@@ -55,8 +62,8 @@ export function RecurringAmountInput({
 }
 
 /**
- * The monthly templates (§8.5). One is made from the entry dialog; here its
- * amount and day can change, for when the rent goes up. Each input commits on
+ * The recurring templates (§8.5). One is made from the entry dialog; here its
+ * amount, day and interval can change, for when the rent goes up. Each input commits on
  * leaving it, and a value that makes no sense puts the old one back.
  */
 export function RecurringSettings() {
@@ -105,6 +112,7 @@ export function RecurringSettings() {
               <TableHead className="text-right">
                 {f.t("recurring.day")}
               </TableHead>
+              <TableHead>{f.t("recurring.every")}</TableHead>
               <TableHead>{f.t("recurring.from")}</TableHead>
               <TableHead />
             </TableRow>
@@ -134,6 +142,19 @@ export function RecurringSettings() {
                         event.target.value = String(r.day)
                       }
                     }}
+                  />
+                </TableCell>
+                <TableCell>
+                  <OptionSelect
+                    size="sm"
+                    className="w-36"
+                    label={`${f.t("recurring.every")}: ${r.description}`}
+                    value={String(everyOf(r))}
+                    onChange={(v) => upsertRecurring(withEvery(r, Number(v)))}
+                    options={ENTRY_EVERY.map((n) => ({
+                      value: String(n),
+                      label: everyLabel(f, n),
+                    }))}
                   />
                 </TableCell>
                 <TableCell className="tabular whitespace-nowrap text-muted-foreground">

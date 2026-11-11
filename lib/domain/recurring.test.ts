@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest"
 import {
   dueRecurring,
   entryToRecurring,
+  fallsIn,
   matchRecurring,
   recurringDate,
   recurringToEntry,
+  withEvery,
   type RecurringEntry,
 } from "@/lib/domain/recurring"
 import type { Entry } from "@/lib/domain/types"
@@ -82,5 +84,34 @@ describe("recurring entries", () => {
     expect(made.day).toBe(14)
     expect(made.from).toBe("2026-05")
     expect(made.amount).toBe(45_000)
+  })
+
+  it("falls on its interval, counted from its first month across years", () => {
+    const quarterly = { from: "2026-11", every: 3 }
+    expect(fallsIn(quarterly, "2026-10")).toBe(false)
+    expect(fallsIn(quarterly, "2026-11")).toBe(true)
+    expect(fallsIn(quarterly, "2026-12")).toBe(false)
+    expect(fallsIn(quarterly, "2027-02")).toBe(true)
+    expect(fallsIn({ from: "2026-03", every: 12 }, "2027-03")).toBe(true)
+    expect(fallsIn({ from: "2026-03", every: 12 }, "2027-04")).toBe(false)
+    expect(fallsIn({ from: "2026-03" }, "2026-07")).toBe(true)
+  })
+
+  it("is not due in a month off its interval", () => {
+    const yearly = { ...rent, every: 12 }
+    expect(dueRecurring([yearly], "2026-02", [])).toEqual([yearly])
+    expect(dueRecurring([yearly], "2026-03", [])).toEqual([])
+    expect(dueRecurring([yearly], "2027-02", [])).toEqual([yearly])
+  })
+
+  it("writes no interval for a monthly template", () => {
+    expect(
+      entryToRecurring(booked("2026-05-14"), "r2", "2026-05")
+    ).not.toHaveProperty("every")
+    expect(
+      entryToRecurring(booked("2026-05-14"), "r2", "2026-05", 3).every
+    ).toBe(3)
+    expect(withEvery({ ...rent, every: 6 }, 1)).toEqual(rent)
+    expect(withEvery(rent, 6).every).toBe(6)
   })
 })

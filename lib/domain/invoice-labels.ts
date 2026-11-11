@@ -14,6 +14,9 @@ export interface InvoiceLabels {
   due: string
   supply: string
   reference: string
+  /** The customer's own reference, "Viitteenne". */
+  buyerReference: string
+  orderNumber: string
   seller: string
   buyer: string
   vatId: string
@@ -62,6 +65,8 @@ const LABELS: Record<InvoiceLang, InvoiceLabels> = {
     due: "Eräpäivä",
     supply: "Toimituspäivä",
     reference: "Viitenumero",
+    buyerReference: "Viitteenne",
+    orderNumber: "Tilausnumero",
     seller: "Myyjä",
     buyer: "Ostaja",
     vatId: "ALV-numero",
@@ -108,6 +113,8 @@ const LABELS: Record<InvoiceLang, InvoiceLabels> = {
     due: "Due date",
     supply: "Delivery date",
     reference: "Reference number",
+    buyerReference: "Your reference",
+    orderNumber: "Order number",
     seller: "Seller",
     buyer: "Buyer",
     vatId: "VAT number",

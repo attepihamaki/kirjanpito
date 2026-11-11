@@ -12,7 +12,11 @@ import { uid } from "@/lib/domain/id"
 import { versionAfter } from "@/lib/domain/change-log"
 import { paidDate, paidOnFor } from "@/lib/domain/open-items"
 import { paidChangeHitsForm5 } from "@/lib/domain/period-lock"
-import { entryToRecurring, matchRecurring } from "@/lib/domain/recurring"
+import {
+  entryToRecurring,
+  everyOf,
+  matchRecurring,
+} from "@/lib/domain/recurring"
 import { carveSplit, mergeSplitPart, type SplitPart } from "@/lib/domain/split"
 import { indexCategories, type Entry } from "@/lib/domain/types"
 import { confirm } from "@/lib/ui/confirm"
@@ -242,7 +246,9 @@ export function renameEntry(
   const renamed = { ...entry, description: text }
   store.updateEntries([renamed])
   if (template && text) {
-    store.upsertRecurring(entryToRecurring(renamed, template.id, template.from))
+    store.upsertRecurring(
+      entryToRecurring(renamed, template.id, template.from, everyOf(template))
+    )
   }
   offerEditUndo(ctx, entry, recurringBefore)
   return true

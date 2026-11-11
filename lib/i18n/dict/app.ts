@@ -256,6 +256,8 @@ export const APP_DICT = {
   // The fill-in forms for OmaVero (§8.7, §8.8).
   "common.businessId": ["Y-tunnus", "Business ID"],
   "common.helpLabel": ["Mikä tämä on?", "What is this?"],
+  "common.everyMonth": ["Joka kuukausi", "Every month"],
+  "common.everyMonths": ["{n} kk välein", "Every {n} months"],
   "common.helpSource": ["Lähde", "Source"],
   "common.formShow": ["Näytettävät kohdat", "Fields to show"],
   "common.formFill": ["Täytettävät", "To fill in"],
@@ -1333,8 +1335,8 @@ export const APP_DICT = {
     "Does not affect the bank estimate.",
   ],
   "entry.repeatDesc": [
-    "Muistuttaa lisäämään samanlaisen tositteen joka kuukausi.",
-    "Reminds you to add a similar voucher every month.",
+    "Muistuttaa lisäämään samanlaisen tositteen valitulla välillä.",
+    "Reminds you to add a similar voucher at the interval you choose.",
   ],
   "entry.paid": ["Maksettu", "Paid"],
   "entry.paidInfo": [
@@ -1961,6 +1963,33 @@ export const APP_DICT = {
   "summary.compareExpense": ["Kulut {y}", "Expenses {y}"],
   "summary.compareResult": ["Tulos {y}", "Result {y}"],
   "summary.compareChange": ["Muutos", "Change"],
+  "summary.partiesTitle": [
+    "Asiakkaat ja toimittajat",
+    "Customers and suppliers",
+  ],
+  "summary.partiesHint": [
+    "Vuoden myynti asiakkaittain ja ostot toimittajittain ilman ALV:tä. Tosite lasketaan osapuolelle, joka on valittu tositteella.",
+    "The year’s sales per customer and purchases per supplier, without VAT. A voucher counts for the party chosen on it.",
+  ],
+  "summary.partiesCustomer": ["Asiakas", "Customer"],
+  "summary.partiesSupplier": ["Toimittaja", "Supplier"],
+  "summary.partiesCount": ["Tositteita", "Vouchers"],
+  "summary.partiesSales": ["Myynti", "Sales"],
+  "summary.partiesCosts": ["Ostot", "Purchases"],
+  "summary.partiesShare": ["Osuus", "Share"],
+  "summary.partiesRest": [
+    pl("1 muu", "{n} muuta"),
+    pl("1 other", "{n} others"),
+  ],
+  "summary.partiesUnlinked": ["Ei osapuolta", "No party"],
+  "summary.partiesNoSales": [
+    "Ei myyntiä, jolla on asiakas.",
+    "No sales with a customer.",
+  ],
+  "summary.partiesNoCosts": [
+    "Ei ostoja, joilla on toimittaja.",
+    "No purchases with a supplier.",
+  ],
   "overview.lastYearToDate": [
     "Tulos {y} samaan aikaan",
     "Result {y} to the same date",
@@ -2252,14 +2281,15 @@ export const APP_DICT = {
   // --- Recurring entries ---
 
   "recurring.tab": ["Toistuvat", "Recurring"],
-  "recurring.repeat": ["Toista joka kuukausi", "Repeat every month"],
+  "recurring.repeat": ["Toista säännöllisesti", "Repeat regularly"],
+  "recurring.every": ["Toistuu", "Repeats"],
   "recurring.repeatInfo": [
     "Mitä toistaminen tekee?",
     "What does repeating do?",
   ],
   "recurring.repeatHint": [
-    "Tosite jää pohjaksi. Mikään ei kirjaudu itsestään: kun kuukaudelta puuttuu tämä tosite, Kirjanpito ja Yleiskatsaus muistuttavat siitä, ja voit lisätä sen sieltä. Pohjia voi muokata kohdassa Asetukset, Toistuvat.",
-    "The voucher is kept as a template. Nothing is booked by itself: when a month lacks this voucher, the ledger and the overview remind you, and you can add it from there. You can edit templates in Settings, Recurring.",
+    "Tosite jää pohjaksi. Valitse, toistuuko se joka kuukausi vai esimerkiksi neljännesvuosittain (3 kk välein) tai kerran vuodessa (12 kk välein). Mikään ei kirjaudu itsestään: kun kuukaudelta, jolle tosite kuuluu, puuttuu se, Kirjanpito ja Yleiskatsaus muistuttavat siitä, ja voit lisätä sen sieltä. Pohjia voi muokata kohdassa Asetukset, Toistuvat.",
+    "The voucher is kept as a template. Choose whether it repeats every month or, say, quarterly (every 3 months) or once a year (every 12 months). Nothing is booked by itself: when a month it belongs to lacks this voucher, the ledger and the overview remind you, and you can add it from there. You can edit templates in Settings, Recurring.",
   ],
   "recurring.dueTitle": [
     pl(
@@ -2304,12 +2334,12 @@ export const APP_DICT = {
   ],
   "recurring.settingsTitle": ["Toistuvat tositteet", "Recurring vouchers"],
   "recurring.settingsHint": [
-    "Pohja syntyy, kun valitset tositteessa ”Toista joka kuukausi”. Mikään ei kirjaudu itsestään: tositteet lisätään kuukausittain Kirjanpito-näkymästä. Pohjan muutos tai poisto ei muuta jo tehtyjä tositteita.",
-    "A template is made when you choose “Repeat every month” on a voucher. Nothing is booked by itself: you add the vouchers month by month in the ledger. Changing or deleting a template leaves existing vouchers as they are.",
+    "Pohja syntyy, kun valitset tositteessa ”Toista säännöllisesti”. Pohja toistuu joka kuukausi tai valitun kuukausimäärän välein alkukuukaudesta lukien. Mikään ei kirjaudu itsestään: tositteet lisätään Kirjanpito-näkymästä. Pohjan muutos tai poisto ei muuta jo tehtyjä tositteita.",
+    "A template is made when you choose “Repeat regularly” on a voucher. It repeats every month, or every so many months counted from its first month. Nothing is booked by itself: you add the vouchers in the ledger. Changing or deleting a template leaves existing vouchers as they are.",
   ],
   "recurring.empty": [
-    "Ei toistuvia tositteita. Tee ensimmäinen tositteen lomakkeella valitsemalla Toista joka kuukausi.",
-    "No recurring vouchers. Make the first one in the voucher form by ticking Repeat every month.",
+    "Ei toistuvia tositteita. Tee ensimmäinen tositteen lomakkeella valitsemalla Toista säännöllisesti.",
+    "No recurring vouchers. Make the first one in the voucher form by ticking Repeat regularly.",
   ],
   "recurring.description": ["Kuvaus", "Description"],
   "recurring.category": ["Luokka", "Category"],
@@ -3542,6 +3572,10 @@ export const APP_DICT = {
   "invoice.customerEmail": ["Sähköposti", "Email"],
   "invoice.customerLanguage": ["Laskun kieli", "Invoice language"],
   "invoice.customerTerm": ["Maksuaika (pv)", "Payment term (days)"],
+  "party.referenceHint": [
+    "Uusi lasku tälle asiakkaalle saa tämän Viitteenne-tekstin, esimerkiksi yhteyshenkilön tai kustannuspaikan. Sitä voi muuttaa laskulla.",
+    "A new invoice to this customer starts with this Your reference text, such as a contact person or cost centre. It can be changed on the invoice.",
+  ],
   "party.supplierTermHint": [
     "Toimittajan laskujen maksuaika. Uuden laskun eräpäivä täytetään tämän verran päiviä laskun päivän jälkeen.",
     "The supplier’s payment term. A new bill’s due date is filled in this many days after the bill’s date.",
@@ -3564,6 +3598,12 @@ export const APP_DICT = {
   "invoice.dueDate": ["Eräpäivä", "Due date"],
   "invoice.supplyFrom": ["Toimitus alkaa", "Delivery from"],
   "invoice.supplyTo": ["Toimitus päättyy", "Delivery to"],
+  "invoice.buyerReference": ["Viitteenne", "Your reference"],
+  "invoice.orderNumber": ["Tilausnumero", "Order number"],
+  "invoice.buyerRefHint": [
+    "Asiakkaan oma viite, kuten yhteyshenkilö, kustannuspaikka tai ostotilauksen numero. Ne tulostuvat laskulle, jos asiakas on niitä pyytänyt.",
+    "The customer’s own reference, such as a contact person, cost centre or purchase order number. They are printed on the invoice when the customer has asked for them.",
+  ],
   "invoice.supplyHint": [
     "Jätä tyhjäksi, jos toimituspäivä on laskun päivämäärä.",
     "Leave empty if the delivery date is the invoice date.",
@@ -3714,8 +3754,6 @@ export const APP_DICT = {
   "invoice.recurringColNext": ["Seuraava lasku", "Next invoice"],
   "invoice.recurringColMade": ["Tehty", "Made"],
   "invoice.recurringUntil": ["Viimeinen päivä", "Last date"],
-  "invoice.recurringMonthly": ["Joka kuukausi", "Every month"],
-  "invoice.recurringEvery": ["{n} kk välein", "Every {n} months"],
   "invoice.recurringPaused": ["Keskeytetty", "Paused"],
   "invoice.recurringEnded": ["Päättynyt", "Ended"],
   "invoice.recurringPause": [
@@ -4469,7 +4507,7 @@ export const APP_DICT = {
     "Change the amounts that move at the new year, such as rent or YEL. Nothing is booked until you add the vouchers.",
   ],
   "newYear.recurringEmpty": [
-    "Toistuvia tositteita ei ole. Voit tehdä sellaisen valitsemalla tositteella Toista joka kuukausi.",
+    "Toistuvia tositteita ei ole. Voit tehdä sellaisen valitsemalla tositteella Toista säännöllisesti.",
     "There are no recurring vouchers. You can make one from the entry dialog.",
   ],
   "newYear.recurringBook": ["Lisää {m}", "Add {m}"],

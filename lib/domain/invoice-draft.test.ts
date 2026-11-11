@@ -113,6 +113,26 @@ describe("copyDraft", () => {
     expect(draft.dueDate).toBe("2026-11-24")
   })
 
+  it("keeps the customer's reference but not the order number", () => {
+    const ordered = { ...issued, buyerReference: "Liisa", orderNumber: "PO-7" }
+    const draft = copyDraft(ordered, "2026-11-10", ctx)
+    expect(draft.buyerReference).toBe("Liisa")
+    expect(draft).not.toHaveProperty("orderNumber")
+  })
+
+  it("starts with the register customer's reference when the source has none", () => {
+    const withRef = {
+      ...ctx,
+      customers: [{ ...customer, reference: "Kustannuspaikka 12" }],
+    }
+    expect(copyDraft(issued, "2026-11-10", withRef).buyerReference).toBe(
+      "Kustannuspaikka 12"
+    )
+    expect(copyDraft(issued, "2026-11-10", ctx)).not.toHaveProperty(
+      "buyerReference"
+    )
+  })
+
   it("does not copy a credit note", () => {
     expect(canCopy(issued)).toBe(true)
     expect(canCopy({ ...issued, credits: "i0" })).toBe(false)
