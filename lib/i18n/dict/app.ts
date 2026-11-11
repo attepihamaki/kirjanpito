@@ -511,18 +511,10 @@ export const APP_DICT = {
     "Earlier periods are filed",
   ],
 
-  "overview.monthsHint": [
-    "Verottomat summat. Valitse kuukausi, niin sen tositteet avautuvat.",
-    "Net amounts. Pick a month to open its vouchers.",
-  ],
   "overview.bestMonth": ["Paras kuukausi", "Best month"],
   "overview.avgIncome": ["Tulot keskimäärin", "Average income"],
   "overview.avgExpenses": ["Kulut keskimäärin", "Average expenses"],
   "overview.perMonth": ["{a} / kk", "{a} / month"],
-  "overview.activeMonths": [
-    "Kuukausia, joilla on tositteita",
-    "Months with vouchers",
-  ],
 
   "overview.salesDomestic": ["Suomi", "Finland"],
   "overview.otherIncome": ["Muut tulot (301–324)", "Other income (301–324)"],
@@ -679,12 +671,28 @@ export const APP_DICT = {
   ],
   "overview.bankEnter": ["Syötä saldo", "Enter the balance"],
   "overview.noSales": ["Ei myyntiä tänä vuonna.", "No sales this year."],
-  "overview.billsTitle": ["Laskut maksettavana", "Bills to pay"],
-  "overview.billsTotal": ["Yhteensä {s}", "{s} in all"],
-  "overview.billsMore": [
-    pl("ja 1 muu lasku", "ja {n} muuta laskua"),
-    pl("and 1 more bill", "and {n} more bills"),
+  "overview.salesHomeOnly": [
+    "Kaikki myynti Suomeen. Ei EU-, ulkomaan- tai käännetyn verovelvollisuuden myyntiä.",
+    "All sales in Finland. No EU, non-EU or reverse-charge sales.",
   ],
+  "overview.todoTitle": ["Hoidettavaa nyt", "To do now"],
+  "overview.todoTotal": ["Yhteensä {s} tällä viikolla", "{s} in all this week"],
+  "overview.todoMore": [
+    pl("ja 1 muu", "ja {n} muuta"),
+    pl("and 1 more", "and {n} more"),
+  ],
+  "overview.todoBill": ["Ostolasku", "Bill"],
+  "overview.todoVat": [
+    "ALV-ilmoitus ja maksu, {p}",
+    "VAT return and payment, {p}",
+  ],
+  "overview.todoVatFormula": [
+    "Myynnin vero {a} − ostojen vero {b}",
+    "Sales VAT {a} − purchase VAT {b}",
+  ],
+  "overview.todoOpenVat": ["Avaa ALV-laskelma", "Open the VAT return"],
+  "overview.dueShort": ["eräp. {d}", "due {d}"],
+  "overview.tomorrow": ["Huomenna", "Tomorrow"],
   "overview.billsAll": ["Kaikki maksettavat", "All bills to pay"],
   "file.billsOverdue": [
     pl("1 lasku on myöhässä: {s}", "{n} laskua on myöhässä: {s}"),

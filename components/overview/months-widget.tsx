@@ -8,22 +8,19 @@ import { Panel } from "@/components/common/panel"
 import { useFormatters } from "@/components/lang-provider"
 import { useOverviewData } from "@/components/overview/overview-data"
 
-/** The year by month on the shared chart, with four plain figures under it. */
+/** The year by month on the shared chart, with three plain figures under it. A click on a month opens it in the ledger. */
 export function MonthsWidget() {
   const f = useFormatters()
   const data = useOverviewData()
 
-  const rows = data.summary.months
   const totals = data.summary.totals
   const elapsed = Math.max(1, data.elapsedMonths)
   const results = data.months.result
   const best = results.reduce((top, r, i) => (r > results[top] ? i : top), 0)
-  const active = rows.filter((r) => r.incomeNet || r.expenseNet).length
 
   return (
     <Panel
       title={f.t("overview.widgetMonths")}
-      description={f.t("overview.monthsHint")}
       actions={
         <IncomeExpenseLegend
           income={totals.incomeNet}
@@ -36,7 +33,7 @@ export function MonthsWidget() {
     >
       <IncomeExpenseChart summary={data.summary} figures={data.months} />
 
-      <dl className="grid grid-cols-2 gap-3 border-t pt-4 text-sm @xl:grid-cols-4">
+      <dl className="grid grid-cols-1 gap-3 border-t pt-4 text-sm @md:grid-cols-3">
         <Stat
           label={f.t("overview.bestMonth")}
           value={
@@ -56,10 +53,6 @@ export function MonthsWidget() {
           value={f.t("overview.perMonth", {
             a: f.money(Math.round(totals.expenseNet / elapsed)),
           })}
-        />
-        <Stat
-          label={f.t("overview.activeMonths")}
-          value={`${active} / ${Math.max(data.elapsedMonths, active)}`}
         />
       </dl>
     </Panel>

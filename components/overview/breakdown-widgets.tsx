@@ -41,6 +41,9 @@ export function SalesWidget() {
     },
   ].filter((k) => k.cents !== 0)
   const pct = (c: number) => (total > 0 ? (c / total) * 100 : 0)
+  /* All of it at home and nothing else: one sentence says it better than a list of zeros. */
+  const homeOnly =
+    kinds.length === 1 && kinds[0].label === f.t("overview.salesDomestic")
 
   return (
     <Panel
@@ -63,39 +66,45 @@ export function SalesWidget() {
             />
           ))}
       </div>
-      <dl className="flex flex-col gap-2 text-sm">
-        {kinds.map((k) => (
-          <div
-            key={k.label}
-            className="flex items-baseline justify-between gap-3"
-          >
-            <dt className="inline-flex items-center gap-2">
-              <span
-                className={cn("size-2.5 rounded-xs", k.swatch)}
-                aria-hidden
-              />
-              {k.label}
-              <span className="tabular text-muted-foreground">
-                {Math.round(pct(k.cents))} %
-              </span>
-            </dt>
-            <dd>
-              <Money cents={k.cents} />
-            </dd>
-          </div>
-        ))}
-        {t.otherIncome !== 0 ? (
-          <div className="flex items-baseline justify-between gap-3 text-muted-foreground">
-            <dt>{f.t("overview.otherIncome")}</dt>
-            <dd>
-              <Money cents={t.otherIncome} tone="muted" />
-            </dd>
-          </div>
-        ) : null}
-        {kinds.length === 0 && t.otherIncome === 0 ? (
-          <p className="text-muted-foreground">{f.t("overview.noSales")}</p>
-        ) : null}
-      </dl>
+      {homeOnly && t.otherIncome === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          {f.t("overview.salesHomeOnly")}
+        </p>
+      ) : (
+        <dl className="flex flex-col gap-2 text-sm">
+          {kinds.map((k) => (
+            <div
+              key={k.label}
+              className="flex items-baseline justify-between gap-3"
+            >
+              <dt className="inline-flex items-center gap-2">
+                <span
+                  className={cn("size-2.5 rounded-xs", k.swatch)}
+                  aria-hidden
+                />
+                {k.label}
+                <span className="tabular text-muted-foreground">
+                  {Math.round(pct(k.cents))} %
+                </span>
+              </dt>
+              <dd>
+                <Money cents={k.cents} />
+              </dd>
+            </div>
+          ))}
+          {t.otherIncome !== 0 ? (
+            <div className="flex items-baseline justify-between gap-3 text-muted-foreground">
+              <dt>{f.t("overview.otherIncome")}</dt>
+              <dd>
+                <Money cents={t.otherIncome} tone="muted" />
+              </dd>
+            </div>
+          ) : null}
+          {kinds.length === 0 && t.otherIncome === 0 ? (
+            <p className="text-muted-foreground">{f.t("overview.noSales")}</p>
+          ) : null}
+        </dl>
+      )}
     </Panel>
   )
 }
@@ -103,7 +112,7 @@ export function SalesWidget() {
 /** The seven summary buckets of §6.4, largest first. Empty ones are counted. */
 export function ExpensesWidget() {
   const f = useFormatters()
-  const { summary, year } = useOverviewData()
+  const { summary } = useOverviewData()
   const byBucket = summary.totals.byBucket
   const rows = BUCKETS.filter((b) => byBucket[b] > 0).sort(
     (a, b) => byBucket[b] - byBucket[a]
@@ -115,7 +124,10 @@ export function ExpensesWidget() {
     <Panel
       title={f.t("overview.widgetExpenses")}
       actions={
-        <span className="ml-auto text-sm text-muted-foreground">{year}</span>
+        <Money
+          cents={BUCKETS.reduce((sum, b) => sum + byBucket[b], 0)}
+          className="ml-auto font-medium"
+        />
       }
       className="flex flex-1 flex-col"
       bodyClassName="flex flex-col gap-3 p-4"

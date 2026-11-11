@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useId } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import {
   Bar,
   BarChart,
@@ -57,6 +57,7 @@ export function IncomeExpenseChart({
   const clearFilters = useBookStore((s) => s.clearLedgerFilters)
 
   const hatchId = `hatch-${useId().replace(/:/g, "")}`
+  const { ref: boxRef, roomy } = useRoomy(560)
 
   const rows = summary.months
   const data: MonthDatum[] = rows.map((r, i) => ({
@@ -66,9 +67,12 @@ export function IncomeExpenseChart({
     expense: -r.expenseNet / 100,
   }))
 
-  // Only the largest bar of each side carries its amount, so twelve months
-  // fit a phone width. A label is matched by value: its index counts only the
-  // bars that were drawn, and a zero month has none.
+  /*
+   * Every income bar carries its amount when the plot has room for twelve of
+   * them, and only the largest of each side when it does not, so a phone
+   * width stays legible. A label is matched by value: its index counts only
+   * the bars that were drawn, and a zero month has none.
+   */
   const maxIncome = Math.max(...data.map((d) => d.income))
   const maxExpense = Math.max(...data.map((d) => -d.expense))
 
@@ -94,21 +98,7 @@ export function IncomeExpenseChart({
   }
 
   return (
-    <div className={cn("flex h-64 w-full flex-col", className)}>
-      {/* Outside the plot, so a tall bar or its amount never runs under it. */}
-      <div
-        className="flex shrink-0 justify-end gap-4 pr-2 text-xs text-muted-foreground"
-        aria-hidden
-      >
-        <span className="inline-flex items-center gap-1.5">
-          <Swatch kind="income" />
-          {f.t("common.incomePlural")}
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <Swatch kind="expense" />
-          {f.t("common.expensePlural")}
-        </span>
-      </div>
+    <div ref={boxRef} className={cn("flex h-64 w-full flex-col", className)}>
       <ResponsiveContainer
         width="100%"
         height="100%"
@@ -199,10 +189,12 @@ export function IncomeExpenseChart({
             <LabelList
               dataKey="income"
               content={(p) =>
-                Number(p.value) === maxIncome ? (
+                (
+                  roomy ? Number(p.value) > 0 : Number(p.value) === maxIncome
+                ) ? (
                   <BarLabel
                     {...p}
-                    text={`+${wholeEuros.format(maxIncome)}`}
+                    text={wholeEuros.format(Number(p.value))}
                     above
                   />
                 ) : null
@@ -237,6 +229,22 @@ export function IncomeExpenseChart({
       </ResponsiveContainer>
     </div>
   )
+}
+
+/** Whether the element is at least `min` px wide, following it as it resizes. */
+function useRoomy(min: number) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [roomy, setRoomy] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || typeof ResizeObserver === "undefined") return
+    const observer = new ResizeObserver(([entry]) =>
+      setRoomy(entry.contentRect.width >= min)
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [min])
+  return { ref, roomy }
 }
 
 /** The round number at or above `raw`: 1, 2 or 5 times a power of ten. */

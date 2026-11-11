@@ -63,12 +63,10 @@ export function OverviewView() {
       />
       {onboarding ? <OnboardingChecklist /> : null}
       {hasEntries ? (
-        <>
+        <OverviewDataProvider>
           {editing ? null : <BillsPanel />}
-          <OverviewDataProvider>
-            <OverviewBoard editing={editing} />
-          </OverviewDataProvider>
-        </>
+          <OverviewBoard editing={editing} />
+        </OverviewDataProvider>
       ) : (
         <EmptyOverview />
       )}
