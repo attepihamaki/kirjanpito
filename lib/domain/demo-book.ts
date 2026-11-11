@@ -11,7 +11,10 @@ import {
   type Quote,
 } from "@/lib/domain/invoice"
 import { sellerOf } from "@/lib/domain/invoice-calc"
-import { finnishReference } from "@/lib/domain/invoice-reference"
+import {
+  finnishReference,
+  formatReference,
+} from "@/lib/domain/invoice-reference"
 import type { Cents, Entry, EntryType } from "@/lib/domain/types"
 
 /**
@@ -326,6 +329,8 @@ const RECEIPTS: readonly DemoReceipt[] = [
       "LASKU 20418",
       `Laskun päivämäärä ${fiDate(addDays(today, -1))}`,
       `Eräpäivä ${fiDate(addDays(today, 13))}`,
+      "Saajan tilinumero FI14 1009 3000 1234 58",
+      `Viitenumero ${formatReference(finnishReference(20418) ?? "")}`,
       "Tulostuspaperi ja kansiot",
       "Veroton 38,41 EUR",
       "ALV 25,5 % 9,79 EUR",

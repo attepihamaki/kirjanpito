@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { usePathname, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 
 import { AppSidebar } from "@/components/app/app-sidebar"
 import { AppSkeleton } from "@/components/app/app-skeleton"
@@ -41,11 +41,7 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty"
-import {
-  SidebarInset,
-  SidebarProvider,
-  useSidebar,
-} from "@/components/ui/sidebar"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { toast } from "@/components/ui/toast"
 import { useBeforeUnload } from "@/hooks/use-before-unload"
@@ -72,8 +68,7 @@ import {
 } from "@/lib/commands/io-commands"
 import { claimTab } from "@/lib/browser/tab-lock"
 import { addToInbox } from "@/lib/commands/inbox-commands"
-import { LANDING, LEDGER_ROUTES } from "@/lib/site"
-import { cn } from "@/lib/utils"
+import { LANDING } from "@/lib/site"
 import { syncBookFromStorage, useBookStore } from "@/stores/book-store"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -155,26 +150,22 @@ function OpenInAnotherTab() {
 
 /**
  * The drag-and-drop hint (§8.2). Not blocking: a blocking scrim would swallow
- * the drop itself. Outside the entry dialog it leaves the desktop sidebar
- * uncovered, so the inbox box at its foot (§8.31) stays in sight to drop on.
+ * the drop itself. Outside the entry dialog it says the receipts go to the
+ * inbox (§8.31).
  */
 function DropHint({ media }: { media: boolean }) {
   const t = useT()
-  const { isMobile, open } = useSidebar()
   return (
-    <Overlay
-      blocking={false}
-      className={cn(
-        media && "bg-background/60",
-        !media &&
-          !isMobile &&
-          (open ? "left-(--sidebar-width)" : "left-(--sidebar-width-icon)")
-      )}
-    >
+    <Overlay blocking={false} className="bg-background/60">
       <div className="rounded-xl border-2 border-dashed border-primary px-8 py-6 text-center">
         <p className="font-heading text-lg font-medium">
-          {media ? t("receipt.drop") : t("io.dropHere")}
+          {media ? t("receipt.drop") : t("inbox.dropAnywhereTitle")}
         </p>
+        {media ? null : (
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t("io.dropHere")}
+          </p>
+        )}
       </div>
     </Overlay>
   )
@@ -192,13 +183,6 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
   const sidebarOpen = useBookStore((s) => s.sidebarOpen)
   const setSidebarOpen = useBookStore((s) => s.setSidebarOpen)
   const pushDropped = React.useRef<((files: File[]) => void) | null>(null)
-  // trailingSlash is on, so the path is compared without it.
-  const pathname = usePathname().replace(/\/$/, "")
-  const onInbox = React.useRef(false)
-  React.useEffect(() => {
-    onInbox.current = pathname === LEDGER_ROUTES.inbox
-  }, [pathname])
-
   const inputRef = React.useRef<HTMLInputElement>(null)
   /*
    * The picker is tried first because it hands back a handle the bookkeeping
@@ -248,16 +232,18 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
         return
       }
       /*
-       * Receipts dropped on their own start a new entry around them, or join
-       * the inbox while it is the page on screen (§8.31).
+       * Receipts dropped anywhere else wait in the inbox to be booked
+       * (§8.31). An archive's inbox is read-only.
        */
       const media = files.filter(isMediaFile)
-      if (media.length && onInbox.current) void addToInbox(ctx, media)
-      else if (media.length) {
-        openDialog({ kind: "entry", mode: "new", files: media })
+      if (!media.length) return
+      if (state.archiveYear !== null) {
+        toast.add({ title: t("io.archiveReadOnly") })
+        return
       }
+      void addToInbox(ctx, media)
     },
-    [ctx, openDialog, t]
+    [ctx, t]
   )
 
   const dragging = useFileDrop({ onDropFiles: handleDrop })

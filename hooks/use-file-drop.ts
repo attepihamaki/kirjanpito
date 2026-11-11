@@ -25,8 +25,7 @@ export function isBookFile(file: File): boolean {
  * a matching leave, which would otherwise leave the overlay stuck open.
  *
  * A drop that an element in the page has already taken, by calling
- * `preventDefault` on it, only resets the overlay: the sidebar's inbox box
- * (§8.31) handles its own drops.
+ * `preventDefault` on it, only resets the overlay.
  */
 export function useFileDrop({
   onDropFiles,

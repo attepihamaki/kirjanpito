@@ -1,18 +1,11 @@
 // @vitest-environment jsdom
 import * as React from "react"
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AppSidebar } from "@/components/app/app-sidebar"
 import { AppTopbar } from "@/components/app/app-topbar"
-import { InboxDropBox } from "@/components/app/inbox-drop-box"
 import { LangProvider } from "@/components/lang-provider"
 import { LedgerTabs } from "@/components/ledger/ledger-tabs"
 import { GeneralActions } from "@/components/settings/general-actions"
@@ -23,8 +16,7 @@ import { useBookStore } from "@/stores/book-store"
 import { clearToastHistory, markToastsSeen } from "@/stores/toast-history"
 
 /*
- * The chrome around the views: the inbox's drop box at the foot of the
- * sidebar (§8.31), the top bar's bell and the book tools on Asetukset (§8.2,
+ * The chrome around the views: the top bar's bell and the book tools on Asetukset (§8.2,
  * §8.10), and the pages of a section, in the sidebar or as one row (§8.2).
  */
 
@@ -62,56 +54,6 @@ beforeEach(() => {
     year: 2026,
     inbox: [],
     dialog: { kind: "none" },
-  })
-})
-
-describe("the inbox drop box", () => {
-  it("adds dropped receipts to the inbox and marks the drop handled", async () => {
-    mount(<InboxDropBox />)
-    const box = screen.getByRole("group", {
-      name: "Saapuneiden pudotuslaatikko",
-    })
-    const file = new File(["x"], "kuitti.jpg", { type: "image/jpeg" })
-    const dataTransfer = { types: ["Files"], files: [file], dropEffect: "" }
-
-    fireEvent.dragEnter(box, { dataTransfer })
-    expect(box).toHaveAttribute("data-drop-over")
-    const drop = fireEvent.drop(box, { dataTransfer })
-
-    // `false` from fireEvent means `preventDefault` was called.
-    expect(drop).toBe(false)
-    expect(box).not.toHaveAttribute("data-drop-over")
-    await waitFor(() => expect(useBookStore.getState().inbox).toHaveLength(1))
-    expect(useBookStore.getState().inbox[0].name).toBe("kuitti.jpg")
-  })
-
-  it("links to the inbox with the number waiting", () => {
-    useBookStore.setState({
-      inbox: [
-        {
-          id: "a-1",
-          name: "a.pdf",
-          type: "application/pdf",
-          size: 1,
-          added: "2026-01-01",
-        },
-      ],
-    })
-    mount(<InboxDropBox />)
-    const link = screen.getByRole("link", { name: /Saapuneet/ })
-    expect(link).toHaveAttribute("href", "/app/ledger/inbox")
-    expect(link.parentElement).toHaveTextContent("1")
-  })
-
-  it("takes no drop in an archived year", () => {
-    useBookStore.setState({ archiveYear: 2024 })
-    mount(<InboxDropBox />)
-    expect(screen.queryByText("Pudota kuitit tähän")).toBeNull()
-    const box = screen.getByRole("group", {
-      name: "Saapuneiden pudotuslaatikko",
-    })
-    const dataTransfer = { types: ["Files"], files: [] }
-    expect(fireEvent.drop(box, { dataTransfer })).toBe(true)
   })
 })
 

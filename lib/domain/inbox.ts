@@ -5,6 +5,7 @@ import {
   receiptStem,
 } from "@/lib/domain/receipt-path"
 import type { Cents, Lang } from "@/lib/domain/types"
+import { billIban, billReference } from "@/lib/domain/bill-payment"
 
 /**
  * The receipt inbox (§8.31): receipts added on their own, kept until each is
@@ -31,6 +32,20 @@ export interface InboxGuess {
   /** The total including VAT. */
   amount: Cents | null
   vendor: string | null
+  /**
+   * What makes it a bill to pay (§8.30): its due date, the payee's IBAN and
+   * the reference, each absent when the text did not give it.
+   */
+  dueDate?: string
+  iban?: string
+  reference?: string
+}
+
+/** Whether what was read makes the item a bill to pay rather than a paid receipt (§8.30). */
+export function isBill(
+  guess: Pick<InboxGuess, "dueDate" | "iban" | "reference"> | undefined
+): boolean {
+  return !!(guess?.dueDate || guess?.iban || guess?.reference)
 }
 
 /** An inbox item as `settings.json` lists it, with where its bytes are in the ZIP. */
@@ -104,9 +119,15 @@ function parseGuess(value: unknown): InboxGuess | undefined {
     typeof value.vendor === "string" && value.vendor.trim()
       ? value.vendor.trim()
       : null
-  return date || amount !== null || vendor
-    ? { date, amount, vendor }
-    : undefined
+  const dueDate =
+    typeof value.dueDate === "string" && ISO_DATE.test(value.dueDate)
+      ? value.dueDate
+      : null
+  const iban = billIban(typeof value.iban === "string" ? value.iban : null)
+  const reference = billReference(
+    typeof value.reference === "string" ? value.reference : null
+  )
+  return inboxGuess({ date, amount, vendor, dueDate, iban, reference })
 }
 
 /** One listed item, or null when it is unusable. Lenient like the rest of §7.6. */
@@ -130,8 +151,19 @@ export function parseInboxFileItem(value: unknown): InboxFileItem | null {
 }
 
 /** The guess worth keeping from an invoice's text, or undefined for none. */
-export function inboxGuess(read: InboxGuess): InboxGuess | undefined {
-  return read.date || read.amount !== null || read.vendor
-    ? { date: read.date, amount: read.amount, vendor: read.vendor }
+export function inboxGuess(
+  read: Pick<InboxGuess, "date" | "amount" | "vendor"> & {
+    dueDate?: string | null
+    iban?: string | null
+    reference?: string | null
+  }
+): InboxGuess | undefined {
+  const bill = {
+    ...(read.dueDate ? { dueDate: read.dueDate } : {}),
+    ...(read.iban ? { iban: read.iban } : {}),
+    ...(read.reference ? { reference: read.reference } : {}),
+  }
+  return read.date || read.amount !== null || read.vendor || isBill(bill)
+    ? { date: read.date, amount: read.amount, vendor: read.vendor, ...bill }
     : undefined
 }

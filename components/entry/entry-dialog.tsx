@@ -262,7 +262,8 @@ function initialForm({
       repeat: false,
       repeatEvery: 1,
       settles: prefill?.settles ?? "",
-      paid: "",
+      // A bill from the inbox opens as one still to pay (§8.30, §8.31).
+      paid: prefill?.paidOn === null ? "open" : "",
       cash: false,
       buyerVatId: prefill?.buyerVatId ?? "",
       share: prefill?.share ? String(prefill.share) : "",

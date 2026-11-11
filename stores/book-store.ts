@@ -179,6 +179,7 @@ export type EntryPrefill = Partial<
     | "iban"
     | "reference"
     | "tags"
+    | "paidOn"
   >
 >
 

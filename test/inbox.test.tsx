@@ -141,3 +141,92 @@ describe("the inbox", () => {
     expect(useBookStore.getState().inbox).toEqual([])
   })
 })
+
+describe("an inbox item's actions", () => {
+  const bill: InboxItem = {
+    id: "a-bill",
+    name: "lasku.pdf",
+    type: "application/pdf",
+    size: 3,
+    added: today,
+    guess: {
+      date: today,
+      amount: 4820,
+      vendor: "Kaari",
+      dueDate: today,
+      iban: "FI1410093000123458",
+      reference: "204181",
+    },
+  }
+
+  it("books a bill as one still to pay, with its due date and details", async () => {
+    stored.set(bill.id, new Blob(["%PDF"], { type: "application/pdf" }))
+    mount([bill])
+    expect(
+      screen.getByText("maksutiedot löytyivät", { exact: false })
+    ).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Kirjaa ostolaskuksi" }))
+    await waitFor(() =>
+      expect(useBookStore.getState().dialog).toMatchObject({
+        kind: "entry",
+        inboxId: bill.id,
+        prefill: {
+          type: "expense",
+          paidOn: null,
+          due: today,
+          iban: "FI1410093000123458",
+          reference: "204181",
+        },
+      })
+    )
+  })
+
+  it("attaches the file to a voucher with the same amount and leaves the inbox", async () => {
+    mount([waiting])
+    useBookStore.setState({
+      entries: [
+        {
+          id: "e-1",
+          voucher: 1,
+          date: `${year}-01-05`,
+          description: "Tarvikkeet",
+          type: "expense",
+          catId: "333",
+          amount: 12_550,
+          vatRate: 25.5,
+          amountMode: "gross",
+        },
+        {
+          id: "e-2",
+          voucher: 2,
+          date: `${year}-01-06`,
+          description: "Muu osto",
+          type: "expense",
+          catId: "333",
+          amount: 999,
+          vatRate: 25.5,
+          amountMode: "gross",
+        },
+      ],
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Liitä tositteeseen" }))
+    const options = await screen.findAllByRole("button", {
+      name: /Tarvikkeet|Muu osto/,
+    })
+    // The voucher with the amount that was read is listed first.
+    expect(options[0]).toHaveTextContent("Tarvikkeet")
+    expect(options[0]).toHaveTextContent("Sama summa")
+    fireEvent.click(options[0])
+
+    const state = useBookStore.getState()
+    expect(state.inbox).toHaveLength(0)
+    expect(state.entries.find((e) => e.id === "e-1")?.atts).toEqual([
+      {
+        id: waiting.id,
+        name: waiting.name,
+        type: waiting.type,
+        size: waiting.size,
+      },
+    ])
+  })
+})

@@ -12,6 +12,7 @@ import {
   LayoutDashboardIcon,
   SettingsIcon,
   WalletIcon,
+  ChevronRightIcon,
 } from "lucide-react"
 
 import {
@@ -28,6 +29,7 @@ import {
 } from "@/components/ui/sidebar"
 import { useT } from "@/components/lang-provider"
 import { useBillsDue } from "@/hooks/use-bills-due"
+import { useVatWaiting } from "@/hooks/use-vat-waiting"
 import { useShownFeatures } from "@/hooks/use-shown-features"
 import { LEDGER_ROUTES } from "@/lib/site"
 import {
@@ -36,6 +38,7 @@ import {
   shownPages,
   type NavSectionId,
 } from "@/lib/ui/sub-pages"
+import { cn } from "@/lib/utils"
 import { useBookStore } from "@/stores/book-store"
 
 const ICONS: Record<
@@ -68,7 +71,27 @@ export function AppNav() {
   const open = sectionOf(current)
   const waiting = useBookStore((s) => s.inbox.length)
   const { overdue } = useBillsDue()
+  const vatWaiting = useVatWaiting()
   const close = () => isMobile && setOpenMobile(false)
+
+  /*
+   * What waits for the user, on the row that leads to it: bills past their
+   * due date (§8.30) and VAT returns that are due or late (§8.7).
+   */
+  const badgeOf = (id: NavSectionId) =>
+    id === "purchases" && overdue.count
+      ? {
+          count: overdue.count,
+          tone: "expense" as const,
+          label: t("nav.overdueBills", { n: overdue.count }),
+        }
+      : id === "vat" && vatWaiting.count
+        ? {
+            count: vatWaiting.count,
+            tone: vatWaiting.late ? ("expense" as const) : ("warning" as const),
+            label: t("nav.vatWaiting", { n: vatWaiting.count }),
+          }
+        : null
 
   return (
     <SidebarGroup>
@@ -102,14 +125,24 @@ export function AppNav() {
                 >
                   <Icon />
                   <span>{label}</span>
+                  {/* A folded section with pages says so, as the list it opens to. */}
+                  {pages.length > 1 && !active && !badgeOf(section.id) ? (
+                    <ChevronRightIcon className="ml-auto text-muted-foreground group-data-[collapsible=icon]:hidden" />
+                  ) : null}
                 </SidebarMenuButton>
-                {/* The bills past their due date, on the row that leads to them (§8.30). */}
-                {section.id === "purchases" && overdue.count ? (
+                {badgeOf(section.id) ? (
                   <SidebarMenuBadge
-                    className="top-1.5 rounded-full bg-expense-subtle text-expense peer-hover/menu-button:text-expense peer-data-active/menu-button:text-expense"
-                    aria-label={t("nav.overdueBills", { n: overdue.count })}
+                    className={cn(
+                      "top-1.5 rounded-full",
+                      badgeOf(section.id)?.tone === "expense"
+                        ? "bg-expense-subtle text-expense peer-hover/menu-button:text-expense peer-data-active/menu-button:text-expense"
+                        : "bg-warning/15 text-warning peer-hover/menu-button:text-warning peer-data-active/menu-button:text-warning"
+                    )}
                   >
-                    {overdue.count}
+                    <span aria-hidden>{badgeOf(section.id)?.count}</span>
+                    <span className="sr-only">
+                      {badgeOf(section.id)?.label}
+                    </span>
                   </SidebarMenuBadge>
                 ) : null}
                 {listed ? (

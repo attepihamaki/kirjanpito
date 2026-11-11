@@ -4,6 +4,7 @@ import {
   inboxFileItems,
   inboxKey,
   inboxPaths,
+  isBill,
   parseInboxFileItem,
   type InboxItem,
 } from "@/lib/domain/inbox"
@@ -59,6 +60,36 @@ describe("parseInboxFileItem", () => {
       added: "2026-11-01",
       guess: { date: "2026-10-30", amount: 12550, vendor: "Nurmi" },
     })
+  })
+
+  it("keeps a bill's due date and payment details, and drops bad ones", () => {
+    const item = parseInboxFileItem({
+      path: "saapuneet/lasku.pdf",
+      name: "lasku.pdf",
+      guess: {
+        date: null,
+        amount: 4820,
+        vendor: "Kaari",
+        dueDate: "2026-11-25",
+        iban: "FI14 1009 3000 1234 58",
+        reference: "204181",
+      },
+    })
+    expect(item?.guess).toEqual({
+      date: null,
+      amount: 4820,
+      vendor: "Kaari",
+      dueDate: "2026-11-25",
+      iban: "FI1410093000123458",
+      reference: "204181",
+    })
+    expect(isBill(item?.guess)).toBe(true)
+    const bad = parseInboxFileItem({
+      path: "saapuneet/lasku.pdf",
+      guess: { amount: 100, iban: "FI00 1234", reference: "12" },
+    })
+    expect(bad?.guess).toEqual({ date: null, amount: 100, vendor: null })
+    expect(isBill(bad?.guess)).toBe(false)
   })
 
   it("refuses a path outside the archive or not a receipt", () => {

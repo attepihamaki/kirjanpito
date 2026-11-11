@@ -6,7 +6,9 @@ import { uid } from "@/lib/domain/id"
 import { inboxGuess, type InboxGuess, type InboxItem } from "@/lib/domain/inbox"
 import { parseInvoiceText } from "@/lib/domain/invoice-text"
 import { isPdf, isReceiptFile } from "@/lib/domain/receipt-path"
+import { refuseLocked, UNDO_TIMEOUT_MS } from "@/lib/commands/book-commands"
 import type { Ctx } from "@/lib/commands/ctx"
+import type { Attachment, Entry } from "@/lib/domain/types"
 import { confirm } from "@/lib/ui/confirm"
 import { useBookStore } from "@/stores/book-store"
 
@@ -96,6 +98,73 @@ export async function bookInboxItem(ctx: Ctx, item: InboxItem): Promise<void> {
     files: [file],
     inboxId: item.id,
   })
+}
+
+/**
+ * Open the entry dialog for the item as a bill still to pay (§8.30): open,
+ * with the due date and the payment details its text gave, and the receipt
+ * attached so the rest of the form fills as for any PDF.
+ */
+export async function bookInboxBill(ctx: Ctx, item: InboxItem): Promise<void> {
+  const blob = await getReceipt(item.id).catch(() => undefined)
+  if (!blob) {
+    toast.add({ title: ctx.t("inbox.missing"), priority: "high" })
+    return
+  }
+  const guess = item.guess
+  useBookStore.getState().openDialog({
+    kind: "entry",
+    mode: "new",
+    files: [new File([blob], item.name, { type: item.type || blob.type })],
+    inboxId: item.id,
+    prefill: {
+      type: "expense",
+      paidOn: null,
+      ...(guess?.dueDate ? { due: guess.dueDate } : {}),
+      ...(guess?.iban ? { iban: guess.iban } : {}),
+      ...(guess?.reference ? { reference: guess.reference } : {}),
+    },
+  })
+}
+
+/**
+ * Add the item's file to a voucher already in the book as one more receipt,
+ * and take it out of the inbox (§8.31). A locked voucher refuses (§8.11). The
+ * toast undoes both.
+ */
+export function attachInboxItem(
+  ctx: Ctx,
+  item: InboxItem,
+  entry: Entry
+): boolean {
+  if (refuseLocked(ctx, [entry])) return false
+  const store = useBookStore.getState()
+  const epoch = store.bookEpoch
+  const att: Attachment = {
+    id: item.id,
+    name: item.name,
+    type: item.type,
+    size: item.size,
+  }
+  store.updateEntries([{ ...entry, atts: [...(entry.atts ?? []), att] }])
+  store.removeInboxItem(item.id)
+  const id = toast.add({
+    title: ctx.t("inbox.attached", {
+      x: entry.description || ctx.t("ledger.noDescription"),
+    }),
+    timeout: UNDO_TIMEOUT_MS,
+    actionProps: {
+      children: ctx.t("common.undo"),
+      onClick: () => {
+        toast.close(id)
+        const now = useBookStore.getState()
+        if (now.bookEpoch !== epoch) return
+        now.updateEntries([entry])
+        now.addInboxItems([item])
+      },
+    },
+  })
+  return true
 }
 
 /** Remove an item after asking; its stored file goes in the next sweep. */

@@ -3578,6 +3578,10 @@ export const APP_DICT = {
   ],
   "nav.sales": ["Myyntilaskut", "Sales invoices"],
   "nav.purchases": ["Ostolaskut", "Bills to pay"],
+  "nav.vatWaiting": [
+    pl("1 ALV-ilmoitus odottaa", "{n} ALV-ilmoitusta odottaa"),
+    pl("1 VAT return waiting", "{n} VAT returns waiting"),
+  ],
   "nav.overdueBills": [
     pl("1 lasku myöhässä", "{n} laskua myöhässä"),
     pl("1 bill overdue", "{n} bills overdue"),
@@ -5637,8 +5641,31 @@ export const APP_DICT = {
     "Tositteet, jotka odottavat kirjaamista",
     "Receipts waiting to be booked",
   ],
-  "inbox.add": ["Lisää tositteita", "Add receipts"],
+  "inbox.add": ["Lisää tiedostoja", "Add files"],
+  "inbox.waiting": [
+    pl("1 kuitti odottaa kirjaamista", "{n} kuittia odottaa kirjaamista"),
+    pl("1 receipt waiting to be booked", "{n} receipts waiting to be booked"),
+  ],
+  "inbox.fieldVendor": ["Myyjä", "Seller"],
+  "inbox.fieldDate": ["Päivä", "Date"],
+  "inbox.fieldDue": ["Eräpäivä", "Due date"],
+  "inbox.fieldAmount": ["Summa", "Amount"],
+  "inbox.readText": ["luettu tiedostosta", "read from the file"],
+  "inbox.readBill": ["maksutiedot löytyivät", "payment details found"],
+  "inbox.bookBill": ["Kirjaa ostolaskuksi", "Book as a bill"],
+  "inbox.attach": ["Liitä tositteeseen", "Attach to a voucher"],
+  "inbox.attachTitle": ["Liitä tositteeseen", "Attach to a voucher"],
+  "inbox.attachDescription": [
+    "Valitse tosite, jonka liitteeksi {x} lisätään. Saman summan tositteet ovat ensin.",
+    "Choose the voucher {x} is added to. Vouchers with the same amount come first.",
+  ],
+  "inbox.sameAmount": ["Sama summa", "Same amount"],
+  "inbox.attached": ["Liitetty tositteeseen {x}.", "Attached to {x}."],
   "inbox.camera": ["Ota kuva", "Take a photo"],
+  "inbox.dropAnywhereTitle": [
+    "Pudota kuitit, niin ne tulevat saapuneisiin",
+    "Drop receipts and they go to the inbox",
+  ],
   "inbox.dropAnywhere": [
     "Voit myös pudottaa kuitit tälle sivulle, tai sivupalkin Saapuneet-laatikkoon mistä tahansa näkymästä. Ne tallentuvat kirjanpidon tiedostoon.",
     "You can also drop receipts on this page, or on the Inbox box in the sidebar from any view. They are saved in the bookkeeping file.",
