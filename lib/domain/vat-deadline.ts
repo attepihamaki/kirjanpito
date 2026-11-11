@@ -304,6 +304,27 @@ export function periodStatus(
   return today > p.due ? "overdue" : "due"
 }
 
+/**
+ * The index of the period the VAT view opens on (§8.7): the oldest of
+ * `periods` whose return is closed and not filed, overdue or still due, since
+ * that is the one the user came to file. With none waiting it is `fallback`,
+ * the period today falls in.
+ */
+export function openingPeriod(
+  periods: readonly VatPeriod[],
+  today: string,
+  filed: Readonly<Record<string, string>>,
+  start: string | null,
+  endMonth: string | null,
+  fallback: number
+): number {
+  const waiting = periods.find((p) => {
+    const s = periodStatus(p, today, filed, start, endMonth)
+    return s === "overdue" || s === "due"
+  })
+  return waiting?.index ?? fallback
+}
+
 /** Whole days from `from` to `to`; negative when `to` is earlier. */
 export function daysBetween(from: string, to: string): number {
   const ms = (iso: string) =>

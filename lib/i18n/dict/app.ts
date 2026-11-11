@@ -1836,6 +1836,11 @@ export const APP_DICT = {
     "Deductible VAT on purchases",
   ],
   "vat.otherRates": ["Muut verokannat", "Other rates"],
+  "vat.showEmptyRates": [
+    "Näytä myös tyhjät verokannat ({x})",
+    "Show the empty rates too ({x})",
+  ],
+  "vat.hideEmptyRates": ["Piilota tyhjät verokannat", "Hide the empty rates"],
   "vat.formulaEu": [
     "Myynnin ja EU-ostojen vero {a} − vähennettävä vero {b}",
     "VAT on sales and EU purchases {a} − deductible VAT {b}",

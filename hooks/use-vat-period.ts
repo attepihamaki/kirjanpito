@@ -8,6 +8,7 @@ import { indexCategories } from "@/lib/domain/types"
 import { vatReport } from "@/lib/domain/vat"
 import {
   bookStartDate,
+  openingPeriod,
   periodContaining,
   periodStatus,
   vatPeriods,
@@ -35,14 +36,42 @@ export function useVatPeriod() {
   const bookEnd = useBookStore((s) => s.bookEnd)
   const vatFiled = useBookStore((s) => s.vatFiled)
   const today = useToday()
+  const start = React.useMemo(
+    () =>
+      bookStartDate(
+        bookStart,
+        entries.reduce<string | null>(
+          (min, e) => (min === null || e.date < min ? e.date : min),
+          null
+        )
+      ),
+    [bookStart, entries]
+  )
+  /* The period trading stopped in ends with that month and is due sooner (§6.5). */
+  const all = React.useMemo(
+    () => vatPeriods(mode, year).map((p) => withEnd(p, bookEnd) ?? p),
+    [mode, year, bookEnd]
+  )
   /*
    * One index for the title, the figures and the filed mark, so they can never
-   * be about different periods.
+   * be about different periods. Until the user picks one it is the return
+   * that is waiting to be filed, else the period today falls in (§8.7).
    */
   const count = mode === "month" ? 12 : mode === "quarter" ? 4 : 1
   const index = Math.min(
     count,
-    Math.max(1, picked ?? periodContaining(mode, today).index)
+    Math.max(
+      1,
+      picked ??
+        openingPeriod(
+          all,
+          today,
+          vatFiled,
+          start,
+          bookEnd,
+          periodContaining(mode, today).index
+        )
+    )
   )
 
   const catMap = React.useMemo(() => indexCategories(cats), [cats])
@@ -60,22 +89,6 @@ export function useVatPeriod() {
     [vatEntries, period, catMap]
   )
 
-  const start = React.useMemo(
-    () =>
-      bookStartDate(
-        bookStart,
-        entries.reduce<string | null>(
-          (min, e) => (min === null || e.date < min ? e.date : min),
-          null
-        )
-      ),
-    [bookStart, entries]
-  )
-  /* The period trading stopped in ends with that month and is due sooner (§6.5). */
-  const all = React.useMemo(
-    () => vatPeriods(mode, year).map((p) => withEnd(p, bookEnd) ?? p),
-    [mode, year, bookEnd]
-  )
   const current = all.find((p) => p.index === index) ?? all[0]
   const status = (p: (typeof all)[number]) =>
     periodStatus(p, today, vatFiled, start, bookEnd)

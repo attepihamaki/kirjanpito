@@ -6,6 +6,7 @@ import {
   bookStartDate,
   daysBetween,
   nextWorkingDay,
+  openingPeriod,
   periodContaining,
   periodStatus,
   vatPeriods,
@@ -320,5 +321,27 @@ describe("a business that stops trading (§6.5)", () => {
       "2027-02",
     ])
     expect(timeline.at(-1)).toMatchObject({ final: true, status: "overdue" })
+  })
+})
+
+describe("openingPeriod (§8.7)", () => {
+  const months = vatPeriods("month", 2026)
+
+  it("is the oldest closed, unfiled period", () => {
+    const filed = Object.fromEntries(
+      months.slice(0, 8).map((p) => [p.key, "2026-10-01"])
+    )
+    expect(openingPeriod(months, "2026-11-11", filed, BEGUN, null, 11)).toBe(9)
+  })
+
+  it("is the period of today when every closed one is filed", () => {
+    const filed = Object.fromEntries(
+      months.slice(0, 10).map((p) => [p.key, "2026-11-01"])
+    )
+    expect(openingPeriod(months, "2026-11-11", filed, BEGUN, null, 11)).toBe(11)
+  })
+
+  it("is the period of today in a book that has not begun", () => {
+    expect(openingPeriod(months, "2026-11-11", {}, null, null, 11)).toBe(11)
   })
 })

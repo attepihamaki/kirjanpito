@@ -1,5 +1,7 @@
 "use client"
 
+import * as React from "react"
+
 import { FigureLink } from "@/components/common/figure-link"
 import {
   NoEntriesState,
@@ -9,6 +11,7 @@ import { Money } from "@/components/common/money"
 import { PANEL_ROWS, Panel } from "@/components/common/panel"
 import { cn } from "@/lib/utils"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
 import {
   Table,
   TableBody,
@@ -337,10 +340,18 @@ function RateTable({
       </FigureLink>
     )
   }
-  const rows = [...side.byRate.entries()].filter(
-    ([rate, bucket]) =>
-      !(skipZero && rate === 0) && (rate !== 0 || bucket.net !== 0 || !skipZero)
+  /*
+   * A rate with nothing on it is left out until the user asks for it (§8.7).
+   * 0 % purchases are never listed, whatever they hold (§6.1).
+   */
+  const [showEmpty, setShowEmpty] = React.useState(false)
+  const listed = [...side.byRate.entries()].filter(
+    ([rate]) => !(skipZero && rate === 0)
   )
+  const empty = listed.filter(([, b]) => b.net === 0 && b.vat === 0)
+  const rows = showEmpty
+    ? listed
+    : listed.filter(([, b]) => b.net !== 0 || b.vat !== 0)
 
   return (
     <Panel
@@ -383,6 +394,25 @@ function RateTable({
               </TableCell>
               <TableCell className="text-right">
                 {cell("other", "gross", side.other)}
+              </TableCell>
+            </TableRow>
+          ) : null}
+          {empty.length ? (
+            <TableRow className="print-hidden border-0 hover:bg-transparent">
+              <TableCell colSpan={4} className="py-1">
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="h-auto px-0"
+                  aria-expanded={showEmpty}
+                  onClick={() => setShowEmpty((v) => !v)}
+                >
+                  {showEmpty
+                    ? f.t("vat.hideEmptyRates")
+                    : f.t("vat.showEmptyRates", {
+                        x: empty.map(([rate]) => f.rate(rate)).join(", "),
+                      })}
+                </Button>
               </TableCell>
             </TableRow>
           ) : null}
