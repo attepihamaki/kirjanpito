@@ -4,6 +4,7 @@ import * as React from "react"
 import {
   BookBookmarkIcon,
   DownloadIcon,
+  HistoryIcon,
   SaveIcon,
   UploadIcon,
   XIcon,
@@ -64,6 +65,8 @@ export function FileMenu({
   const importing = useBookStore((s) => s.importing)
   const saving = useBookStore((s) => s.saving)
   const dirty = useBookStore((s) => s.dirty)
+  const archived = useBookStore((s) => s.archiveYear !== null)
+  const openDialog = useBookStore((s) => s.openDialog)
   const busy = useDelayedFlag(importing)
   const savingNow = useDelayedFlag(saving)
   const status = useFileStatusText()
@@ -183,6 +186,16 @@ export function FileMenu({
             <DownloadIcon data-icon="inline-start" />
             <span className="flex-1 text-left">{f.t("file.download")}</span>
             <Keys>{downloadKeys.label}</Keys>
+          </Button>
+
+          <Button
+            variant="ghost"
+            className="justify-start"
+            disabled={busy || savingNow || archived}
+            onClick={act(() => openDialog({ kind: "saves" }))}
+          >
+            <HistoryIcon data-icon="inline-start" />
+            {f.t("file.saves")}
           </Button>
 
           <Button

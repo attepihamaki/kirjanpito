@@ -27,6 +27,7 @@ import { YearEndFiguresDialog } from "@/components/statement/year-end-figures-di
 import { NewYearDialog } from "@/components/new-year/new-year-dialog"
 import { YearEndDialog } from "@/components/statement/year-end-dialog"
 import { BookCheckDialog } from "@/components/check/book-check-dialog"
+import { SavesDialog } from "@/components/app/saves-dialog"
 import { AuditDialog } from "@/components/export/audit-dialog"
 import { VatReturnDialog } from "@/components/vat/vat-return-dialog"
 import { EntryDialog } from "@/components/entry/entry-dialog"
@@ -310,6 +311,7 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
         <SetupDialog />
         <YearEndDialog />
         <BookCheckDialog />
+        <SavesDialog />
         <AuditDialog />
         <YearEndFiguresDialog />
         <Form5DetailsDialog />

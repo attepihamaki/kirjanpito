@@ -5,6 +5,7 @@ import type { BankRow } from "@/lib/domain/bank-csv"
 import { proposeForRows } from "@/lib/domain/bank-match"
 import {
   findCategoryRule,
+  ruleForBankRow,
   ruleMatches,
   type CategoryRule,
 } from "@/lib/domain/category-rules"
@@ -127,6 +128,135 @@ describe("settings file", () => {
     expect(parsed.categoryRules).toEqual([
       { id: "a", contains: "Elisa", catId: "344-other", vatRate: 25.5 },
       { id: "b", contains: "Neste", catId: "344-vehicle", vatRate: null },
+    ])
+  })
+})
+
+describe("rules on the account and the reference", () => {
+  const ibanRule = rule({ contains: "FI2112345600000785", field: "iban" })
+  const refRule = rule({ contains: "1234", field: "reference" })
+
+  it("matches the other party's IBAN, in any spacing", () => {
+    expect(
+      ruleMatches(ibanRule, { text: "", iban: "fi21 1234 5600 0007 85" })
+    ).toBe(true)
+    expect(ruleMatches(ibanRule, { text: "FI2112345600000785" })).toBe(false)
+    expect(ruleMatches(ibanRule, "FI2112345600000785")).toBe(false)
+  })
+
+  it("matches the start of the reference", () => {
+    expect(ruleMatches(refRule, { text: "", reference: "1234 5674" })).toBe(
+      true
+    )
+    expect(ruleMatches(refRule, { text: "", reference: "9123 4" })).toBe(false)
+  })
+
+  it("never matches an invalid IBAN or a one-character reference", () => {
+    expect(
+      ruleMatches(rule({ contains: "FI0012345600000785", field: "iban" }), {
+        text: "",
+        iban: "FI0012345600000785",
+      })
+    ).toBe(false)
+    expect(
+      ruleMatches(rule({ contains: "1", field: "reference" }), {
+        text: "",
+        reference: "1234",
+      })
+    ).toBe(false)
+  })
+
+  it("lets the bank import pick a category by account when the name differs", () => {
+    const [p] = proposeForRows(
+      [
+        row({
+          counterparty: "ELISA OYJ / LASKUTUS",
+          iban: "FI2112345600000785",
+        }),
+      ],
+      {
+        entries: [],
+        cats,
+        rules: [rule({ id: "t", contains: "telia" }), ibanRule],
+      }
+    )
+    if (p.kind !== "new") throw new Error(p.kind)
+    expect(p.draft.catId).toBe("344-other")
+  })
+
+  it("lets the bank import pick a category by reference", () => {
+    const [p] = proposeForRows([row({ reference: "12345674" })], {
+      entries: [],
+      cats,
+      rules: [refRule],
+    })
+    if (p.kind !== "new") throw new Error(p.kind)
+    expect(p.draft.catId).toBe("344-other")
+  })
+})
+
+describe("ruleForBankRow", () => {
+  it("prefers the account and falls back to the name", () => {
+    expect(
+      ruleForBankRow(
+        { counterparty: "Elisa", iban: "FI2112345600000785" },
+        "344-other"
+      )
+    ).toEqual({
+      contains: "FI2112345600000785",
+      field: "iban",
+      catId: "344-other",
+      vatRate: null,
+    })
+    expect(ruleForBankRow({ counterparty: " Elisa " }, "344-other")).toEqual({
+      contains: "Elisa",
+      catId: "344-other",
+      vatRate: null,
+    })
+    expect(ruleForBankRow({ counterparty: "" }, "344-other")).toBeNull()
+  })
+})
+
+describe("settings file, rule fields", () => {
+  it("keeps the field, stores the value compact and drops unusable ones", () => {
+    const parsed = parseSettings(
+      JSON.stringify({
+        version: 1,
+        categoryRules: [
+          {
+            id: "a",
+            contains: "FI21 1234 5600 0007 85",
+            field: "iban",
+            catId: "344-other",
+          },
+          {
+            id: "b",
+            contains: "rf18 5390",
+            field: "reference",
+            catId: "344-other",
+          },
+          { id: "c", contains: "FI00 1234", field: "iban", catId: "344-other" },
+          { id: "d", contains: "Elisa", field: "name", catId: "344-other" },
+          { id: "e", contains: "Elisa", field: "text", catId: "344-other" },
+        ],
+      })
+    )
+    expect(parsed.categoryRules).toEqual([
+      {
+        id: "a",
+        contains: "FI2112345600000785",
+        field: "iban",
+        catId: "344-other",
+        vatRate: null,
+      },
+      {
+        id: "b",
+        contains: "RF185390",
+        field: "reference",
+        catId: "344-other",
+        vatRate: null,
+      },
+      { id: "e", contains: "Elisa", catId: "344-other", vatRate: null },
     ])
   })
 })

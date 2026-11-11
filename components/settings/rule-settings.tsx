@@ -21,10 +21,13 @@ import {
 import { toast } from "@/components/ui/toast"
 import { LINE_BY_KEY } from "@/lib/domain/accounts"
 import {
-  foldText,
   MIN_RULE_TEXT,
+  normalizeRuleValue,
+  RULE_FIELDS,
   type CategoryRule,
+  type RuleField,
 } from "@/lib/domain/category-rules"
+import { formatIban } from "@/lib/domain/iban"
 import { todayIso } from "@/lib/domain/dates"
 import { indexCategories } from "@/lib/domain/types"
 import { validRates } from "@/lib/domain/vat-rates"
@@ -34,9 +37,32 @@ import { useBookStore } from "@/stores/book-store"
 /** The option that leaves the rate to the category. */
 const CATEGORY_DEFAULT = "default"
 
+const FIELD_LABEL = {
+  text: "settings.rulesFieldText",
+  iban: "settings.rulesFieldIban",
+  reference: "settings.rulesFieldReference",
+} as const
+
+const FIELD_PLACEHOLDER = {
+  text: "settings.rulesPlaceholder",
+  iban: "settings.rulesPlaceholderIban",
+  reference: "settings.rulesPlaceholderReference",
+} as const
+
+const FIELD_ERROR = {
+  text: "settings.rulesTextError",
+  iban: "settings.rulesIbanError",
+  reference: "settings.rulesTextError",
+} as const
+
+/** The rule's value as the user reads it: an IBAN in groups of four. */
+const shown = (rule: CategoryRule) =>
+  rule.field === "iban" ? formatIban(rule.contains) : rule.contains
+
 /**
- * The rules for picking a category (§8.17). The first rule whose text appears
- * in a bank row or an invoice wins, so the order is the user's to set.
+ * The rules for picking a category (§8.17). The first rule that fits a bank
+ * row or an invoice, by its text, the other party's IBAN or the reference,
+ * wins, so the order is the user's to set.
  */
 export function RuleSettings() {
   const f = useFormatters()
@@ -47,6 +73,7 @@ export function RuleSettings() {
   const move = useBookStore((s) => s.moveCategoryRule)
   const catMap = React.useMemo(() => indexCategories(cats), [cats])
 
+  const [field, setField] = React.useState<RuleField>("text")
   const [contains, setContains] = React.useState("")
   const [catId, setCatId] = React.useState("")
   const [rate, setRate] = React.useState(CATEGORY_DEFAULT)
@@ -76,9 +103,16 @@ export function RuleSettings() {
   const toRate = (value: string) =>
     value === CATEGORY_DEFAULT ? null : Number(value)
 
+  const fieldOptions = RULE_FIELDS.map((value) => ({
+    value,
+    label: f.t(FIELD_LABEL[value]),
+  }))
+  const containsInvalid = normalizeRuleValue(field, contains) == null
+
   const add = () => {
-    if (foldText(contains).length < MIN_RULE_TEXT) {
-      setError(f.t("settings.rulesTextError", { n: MIN_RULE_TEXT }))
+    const value = normalizeRuleValue(field, contains)
+    if (!value) {
+      setError(f.t(FIELD_ERROR[field], { n: MIN_RULE_TEXT }))
       return
     }
     if (!catId) {
@@ -87,7 +121,8 @@ export function RuleSettings() {
     }
     upsert({
       id: `rule-${uid()}`,
-      contains: contains.trim(),
+      contains: value,
+      ...(field === "text" ? {} : { field }),
       catId,
       vatRate: toRate(rate),
     })
@@ -121,12 +156,20 @@ export function RuleSettings() {
           add()
         }}
       >
+        <OptionSelect
+          options={fieldOptions}
+          value={field}
+          onChange={(next) => {
+            setField(next as RuleField)
+            setError(null)
+          }}
+          label={f.t("settings.rulesField")}
+          className="w-44"
+        />
         <Input
           aria-label={f.t("settings.rulesContains")}
-          aria-invalid={
-            error != null && foldText(contains).length < MIN_RULE_TEXT
-          }
-          placeholder={f.t("settings.rulesPlaceholder")}
+          aria-invalid={error != null && containsInvalid}
+          placeholder={f.t(FIELD_PLACEHOLDER[field])}
           className="w-56"
           value={contains}
           onChange={(event) => {
@@ -165,6 +208,7 @@ export function RuleSettings() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>{f.t("settings.rulesField")}</TableHead>
               <TableHead>{f.t("settings.rulesContains")}</TableHead>
               <TableHead>{f.t("settings.rulesCategory")}</TableHead>
               <TableHead>{f.t("settings.defaultVat")}</TableHead>
@@ -175,18 +219,48 @@ export function RuleSettings() {
             {rules.map((rule, i) => {
               const cat = catMap.get(rule.catId)
               const usable = !!cat?.enabled
+              const ruleField = rule.field ?? "text"
               return (
                 <TableRow key={rule.id}>
                   <TableCell>
+                    <OptionSelect
+                      options={fieldOptions}
+                      value={ruleField}
+                      onChange={(next) => {
+                        const kind = next as RuleField
+                        const value = normalizeRuleValue(kind, rule.contains)
+                        /* A value that does not fit the new field keeps the rule as it was. */
+                        if (!value) {
+                          toast.add({
+                            title: f.t(FIELD_ERROR[kind], { n: MIN_RULE_TEXT }),
+                          })
+                          return
+                        }
+                        upsert({
+                          id: rule.id,
+                          contains: value,
+                          ...(kind === "text" ? {} : { field: kind }),
+                          catId: rule.catId,
+                          vatRate: rule.vatRate,
+                        })
+                      }}
+                      label={f.t("settings.rulesField")}
+                      className="w-44"
+                    />
+                  </TableCell>
+                  <TableCell>
                     <Input
-                      key={rule.contains}
+                      key={`${ruleField}:${rule.contains}`}
                       aria-label={f.t("settings.rulesContains")}
                       className="w-56"
-                      defaultValue={rule.contains}
+                      defaultValue={shown(rule)}
                       onBlur={(event) => {
-                        const next = event.target.value.trim()
-                        if (foldText(next).length < MIN_RULE_TEXT) {
-                          event.target.value = rule.contains
+                        const next = normalizeRuleValue(
+                          ruleField,
+                          event.target.value
+                        )
+                        if (!next) {
+                          event.target.value = shown(rule)
                         } else if (next !== rule.contains) {
                           upsert({ ...rule, contains: next })
                         }
@@ -227,7 +301,7 @@ export function RuleSettings() {
                       variant="ghost"
                       size="icon-sm"
                       disabled={i === 0}
-                      aria-label={f.t("settings.rulesUp", { x: rule.contains })}
+                      aria-label={f.t("settings.rulesUp", { x: shown(rule) })}
                       onClick={() => move(rule.id, -1)}
                     >
                       <ArrowUpIcon />
@@ -237,7 +311,7 @@ export function RuleSettings() {
                       size="icon-sm"
                       disabled={i === rules.length - 1}
                       aria-label={f.t("settings.rulesDown", {
-                        x: rule.contains,
+                        x: shown(rule),
                       })}
                       onClick={() => move(rule.id, 1)}
                     >
@@ -246,7 +320,7 @@ export function RuleSettings() {
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      aria-label={f.t("recurring.remove", { x: rule.contains })}
+                      aria-label={f.t("recurring.remove", { x: shown(rule) })}
                       onClick={() => removeRule(rule)}
                     >
                       <Trash2Icon />

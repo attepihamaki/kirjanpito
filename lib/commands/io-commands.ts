@@ -99,6 +99,7 @@ import { askPassword } from "@/lib/ui/password-prompt"
 import { heldPassword, holdPassword } from "@/lib/commands/book-password"
 import { askNewPassword } from "@/lib/commands/encryption-commands"
 import type { Ctx } from "@/lib/commands/ctx"
+import { takeSnapshot } from "@/lib/commands/snapshot-commands"
 import { guardDirty, refuseIfOpenElsewhere } from "@/lib/commands/book-commands"
 import { useBookStore } from "@/stores/book-store"
 import { useLangStore } from "@/stores/lang-store"
@@ -211,7 +212,10 @@ export async function openFile(
      * Only a file that actually became the open bookkeeping is remembered;
      * a rejected CSV must not leave the previous book pointing at it.
      */
-    if (opened) await rememberHandle(handle)
+    if (opened) {
+      await rememberHandle(handle)
+      void takeSnapshot("open")
+    }
   } catch (error) {
     console.error(error)
     toast.add({ title: ctx.t("io.readFailed"), priority: "high" })
@@ -1022,6 +1026,7 @@ export async function exportBook(ctx: Ctx, baseName: string): Promise<void> {
       })
     }
     toast.add({ title: ctx.t("io.exported", { f: file.name }) })
+    void takeSnapshot("save")
   } catch (error) {
     console.error(error)
     toast.add({ title: ctx.t("io.exportFailed"), priority: "high" })
@@ -1106,6 +1111,7 @@ export async function saveBook(ctx: Ctx, suggestedBase: string): Promise<void> {
     // A save that could ask is what autosave was waiting for.
     useBookStore.getState().setAutosavePaused(false)
     toast.add({ title: ctx.t("io.saved", { f: handle.name }) })
+    void takeSnapshot("save")
   } catch (error) {
     console.error(error)
     toast.add({ title: ctx.t("io.saveFailed"), priority: "high" })
@@ -1213,6 +1219,7 @@ export async function autosaveBook(ctx: Ctx): Promise<boolean> {
       dirty: changedSince(file.version),
     })
     announce(ctx.t("io.autosaved"))
+    void takeSnapshot("autosave")
     return true
   } catch (error) {
     console.error(error)

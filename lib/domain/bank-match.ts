@@ -343,7 +343,12 @@ function draftFor(
     }
   }
   const party = registerParty(row.counterparty, type, ctx)
-  const hit = findCategoryRule(ctx.rules ?? [], parts.join(" "), ctx.cats, type)
+  const hit = findCategoryRule(
+    ctx.rules ?? [],
+    { text: parts.join(" "), iban: row.iban, reference: row.reference },
+    ctx.cats,
+    type
+  )
   const known = hit
     ? { catId: hit.catId, vatRate: hit.vatRate }
     : ((party && partyDefaults(party, type, ctx.cats)) ??

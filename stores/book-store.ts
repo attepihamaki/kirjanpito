@@ -241,6 +241,8 @@ export type DialogState =
   | { kind: "vat-return" }
   /** Every rule over the whole book (§8.23). */
   | { kind: "check-book" }
+  /** The earlier saves kept in this browser (§8.36). */
+  | { kind: "saves" }
   /** The audit package of a range of days (§8.25). */
   | { kind: "audit-package" }
   /** The year-end figures typed in on Varat ja velat (§8.8). */

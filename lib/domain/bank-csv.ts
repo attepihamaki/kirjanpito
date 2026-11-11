@@ -1,6 +1,7 @@
 import Papa from "papaparse"
 
 import { parseCsvDate } from "@/lib/domain/dates"
+import { parseIban } from "@/lib/domain/iban"
 import { parseAmount } from "@/lib/domain/money"
 import type { Cents } from "@/lib/domain/types"
 
@@ -21,6 +22,8 @@ export interface BankRow {
   message: string
   /** Creditor reference, digits and spaces removed. Empty when there is none. */
   reference: string
+  /** The other party's account as a compact IBAN, when the file has a valid one. */
+  iban?: string
   /** The bank's own transaction id, when the file has one. */
   bankId?: string
   /** The bank's name for the kind of transaction, such as "TILISIIRTO". */
@@ -36,6 +39,7 @@ export type BankField =
   | "counterparty"
   | "message"
   | "reference"
+  | "iban"
   | "bankId"
   | "kind"
 
@@ -150,6 +154,15 @@ const GUESSES: Record<BankField, readonly string[]> = {
   ],
   message: ["viesti", "message", "selite", "kuvaus", "description"],
   reference: ["viite", "viitenumero", "reference"],
+  iban: [
+    "saajan tilinumero",
+    "maksajan tilinumero",
+    "saajan/maksajan tilinumero",
+    "vastapuolen tilinumero",
+    "vastatili",
+    "counterparty account",
+    "counterparty iban",
+  ],
   bankId: ["arkistointitunnus", "arkistotunnus", "tapahtumatunnus", "id"],
   kind: ["laji", "tapahtumalaji", "selitys", "type"],
 }
@@ -196,6 +209,28 @@ function detectBankDelimiter(text: string): string {
   return best
 }
 
+/**
+ * The IBAN in a statement's account cell, compact, or undefined. Banks write
+ * the BIC in the same cell or the account in groups, so the first run that
+ * passes the IBAN check is taken.
+ */
+export function ibanIn(raw: string): string | undefined {
+  const compact = raw.toUpperCase().replace(/\s+/g, "")
+  for (const m of compact.matchAll(/[A-Z]{2}\d{2}[A-Z0-9]{11,30}/g)) {
+    /* A Finnish IBAN has a fixed length, so a BIC run after it is never read as part of it. */
+    if (m[0].startsWith("FI")) {
+      const iban = parseIban(m[0].slice(0, 18))
+      if (iban) return iban
+      continue
+    }
+    for (let end = m[0].length; end >= 15; end--) {
+      const iban = parseIban(m[0].slice(0, end))
+      if (iban) return iban
+    }
+  }
+  return undefined
+}
+
 /** `ref=` is how OP writes an empty reference; a reference may follow it. */
 export function cleanReference(raw: string): string {
   return raw.replace(/^ref=/i, "").replace(/\s+/g, "")
@@ -228,7 +263,9 @@ export function parseBankCsv(
   if (!map) {
     if (matchesPreset(headers, OP_MAPPING)) {
       preset = "op"
-      map = OP_MAPPING
+      /* The account column is optional, so the preset is recognised without it. */
+      const iban = guessMapping(headers).iban
+      map = iban ? { ...OP_MAPPING, iban } : OP_MAPPING
     } else {
       const suggested = guessMapping(headers)
       if (!mappingComplete(suggested)) {
@@ -261,6 +298,7 @@ export function parseBankCsv(
     counterparty: index("counterparty"),
     message: index("message"),
     reference: index("reference"),
+    iban: index("iban"),
     bankId: index("bankId"),
     kind: index("kind"),
   }
@@ -298,6 +336,7 @@ export function parseBankCsv(
 
     const valueDate = parseCsvDate(cell(row, col.valueDate)) ?? undefined
     const bankId = cell(row, col.bankId)
+    const iban = ibanIn(cell(row, col.iban))
     rows.push({
       date,
       ...(valueDate ? { valueDate } : {}),
@@ -305,6 +344,7 @@ export function parseBankCsv(
       counterparty: cell(row, col.counterparty),
       message: cell(row, col.message),
       reference: cleanReference(cell(row, col.reference)),
+      ...(iban ? { iban } : {}),
       ...(bankId ? { bankId } : {}),
       kind: cell(row, col.kind),
     })

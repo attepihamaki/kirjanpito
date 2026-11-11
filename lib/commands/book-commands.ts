@@ -2,6 +2,7 @@ import { toast } from "@/components/ui/toast"
 
 import { releaseAllObjectUrls } from "@/lib/browser/object-urls"
 import { rememberHandle } from "@/lib/browser/file-handle"
+import { loadSnapshotIndex } from "@/lib/browser/snapshot-store"
 import {
   gcReceipts,
   isReceiptStorageSupported,
@@ -12,6 +13,7 @@ import { heldByAnotherTab } from "@/lib/browser/tab-lock"
 import { todayIso, yearOf } from "@/lib/domain/dates"
 import { collectLiveIds } from "@/lib/domain/gc"
 import { historyAttachmentIds } from "@/lib/domain/history"
+import { snapshotAttachmentIds } from "@/lib/domain/save-snapshots"
 import { lockedEntries } from "@/lib/domain/period-lock"
 import type { RecurringEntry } from "@/lib/domain/recurring"
 import { indexCategories, type Entry } from "@/lib/domain/types"
@@ -26,6 +28,7 @@ import { useHistoryStore } from "@/stores/history-store"
 import { useLangStore } from "@/stores/lang-store"
 import { useReceiptHashStore } from "@/stores/receipt-hash-store"
 import { useReceiptTextStore } from "@/stores/receipt-text-store"
+import { useSnapshotStore } from "@/stores/snapshot-store"
 
 /**
  * Commands that never touch a file format.
@@ -53,12 +56,16 @@ async function unlinkFile(): Promise<void> {
 export async function sweepReceipts(): Promise<void> {
   if (!isReceiptStorageSupported()) return
   try {
+    /* A receipt an earlier save still needs is live too (§8.36). */
+    const snapshots = await loadSnapshotIndex()
+    if (!snapshots) return
     const swept: { live?: ReadonlySet<string> } = {}
     await gcReceipts(() => {
       const state = useBookStore.getState()
       if (state.importing) return null
       swept.live = collectLiveIds(state.entries, [
         ...state.inbox.map((i) => i.id),
+        ...snapshotAttachmentIds(useSnapshotStore.getState().metas),
         ...state.draftAttachmentIds,
         ...state.undoAttachmentIds,
         ...historyAttachmentIds(useHistoryStore.getState()),

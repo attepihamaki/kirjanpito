@@ -1,5 +1,6 @@
 import {
   cleanReference,
+  ibanIn,
   parseBankCsv,
   type BankMapping,
   type BankParseResult,
@@ -169,6 +170,15 @@ function partyName(details: XmlNode | undefined, credit: boolean): string {
   )
 }
 
+/** The other party's account, read from the same side as its name. */
+function partyIban(
+  details: XmlNode | undefined,
+  credit: boolean
+): string | undefined {
+  const role = credit ? "DbtrAcct" : "CdtrAcct"
+  return ibanIn(textOf(details, "RltdPties", role, "Id", "IBAN"))
+}
+
 function balanceOf(stmt: XmlNode, codes: readonly string[]) {
   for (const code of codes) {
     const bal = all(stmt, "Bal").find(
@@ -264,6 +274,7 @@ export function parseCamt053(text: string): BankParseResult {
         const ownRef = textOf(d, "Refs", "AcctSvcrRef")
         const bankId =
           ownRef || (entryRef && splitUp ? `${entryRef}/${i + 1}` : entryRef)
+        const iban = partyIban(d, credit)
         rows.push({
           date,
           ...(valueDate ? { valueDate } : {}),
@@ -271,6 +282,7 @@ export function parseCamt053(text: string): BankParseResult {
           counterparty: partyName(d, credit),
           message,
           reference,
+          ...(iban ? { iban } : {}),
           ...(bankId ? { bankId } : {}),
           kind,
         })

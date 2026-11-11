@@ -178,6 +178,7 @@ export function CommandPalette({
         : []),
       action("export", "palette.export", onExport, shortcut("S", true).label),
       action("check", "palette.checkBook", dialog({ kind: "check-book" })),
+      action("saves", "palette.saves", dialog({ kind: "saves" })),
       action("audit", "file.audit", dialog({ kind: "audit-package" })),
       {
         ...action("xlsx", "file.xlsx", () => void downloadWorkbook(ctx)),

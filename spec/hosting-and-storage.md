@@ -247,6 +247,9 @@ before any file is open, and must not read or write `bookkeeping` to get it.
 - IndexedDB `bookkeeping-receipt-hash`, store `hash`: the SHA-256 of each
   receipt, keyed by attachment id (§8.4). A cache derived from the blobs and
   never written to the file; it is rebuilt by reading the receipts again.
+- IndexedDB `bookkeeping-snapshots`, store `snapshots`: the earlier saves
+  (§8.36), `index` holding the list and `book:<id>` each persisted book.
+  Never written to the file.
 - IndexedDB `bookkeeping-file`, store `handle`, key `book`: the
   `FileSystemFileHandle` of the opened file (§7.5). Its own database, because
   adding a second object store to the one above would mean a version upgrade.

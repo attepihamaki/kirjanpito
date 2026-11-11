@@ -33,9 +33,10 @@ import {
   type OverviewWidget,
 } from "@/lib/domain/overview-layout"
 import {
-  foldText,
-  MIN_RULE_TEXT,
+  normalizeRuleValue,
+  RULE_FIELDS,
   type CategoryRule,
+  type RuleField,
 } from "@/lib/domain/category-rules"
 import type { RecurringEntry } from "@/lib/domain/recurring"
 import type { RetentionStage } from "@/lib/domain/retention"
@@ -235,19 +236,24 @@ function parseRecurring(value: unknown): RecurringEntry | null {
 
 function parseCategoryRule(value: unknown): CategoryRule | null {
   if (!isRecord(value)) return null
-  const { id, contains, catId, vatRate } = value
+  const { id, contains, catId, vatRate, field } = value
   if (typeof id !== "string" || !id) return null
-  if (
-    typeof contains !== "string" ||
-    foldText(contains).length < MIN_RULE_TEXT
-  ) {
-    return null
-  }
+  if (field != null && !RULE_FIELDS.includes(field as RuleField)) return null
+  const kind = (field ?? "text") as RuleField
+  const usable =
+    typeof contains === "string" ? normalizeRuleValue(kind, contains) : null
+  if (!usable) return null
   if (typeof catId !== "string" || !catId) return null
   if (vatRate != null && (typeof vatRate !== "number" || !isVatRate(vatRate))) {
     return null
   }
-  return { id, contains: contains.trim(), catId, vatRate: vatRate ?? null }
+  return {
+    id,
+    contains: usable,
+    ...(kind === "text" ? {} : { field: kind }),
+    catId,
+    vatRate: vatRate ?? null,
+  }
 }
 
 function isEuPurchase(value: unknown): value is EuPurchase {

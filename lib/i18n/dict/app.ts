@@ -3073,10 +3073,23 @@ export const APP_DICT = {
   "settings.calendarTab": ["Kalenteri", "Calendar"],
   "settings.rulesTitle": ["Luokkasäännöt", "Category rules"],
   "settings.rulesHint": [
-    "Sääntö valitsee luokan ja verokannan, kun teksti esiintyy tiliotteen rivillä tai laskussa. Ensimmäinen osuva sääntö voittaa, joten järjestyksellä on väliä. Säännöt ohittavat tositehistorian ja arvauksen. Ne eivät muuta jo kirjattuja tositteita.",
-    "A rule picks the category and VAT rate when its text appears in a bank statement row or an invoice. The first matching rule wins, so the order matters. Rules come before the voucher history and the guesses. They do not change vouchers already booked.",
+    "Sääntö valitsee luokan ja verokannan, kun teksti esiintyy tiliotteen rivillä tai laskussa, kun vastapuolen tilinumero on sama tai kun viite alkaa annetuilla merkeillä. Ensimmäinen osuva sääntö voittaa, joten järjestyksellä on väliä. Säännöt ohittavat tositehistorian ja arvauksen. Ne eivät muuta jo kirjattuja tositteita.",
+    "A rule picks the category and VAT rate when its text appears in a bank statement row or an invoice, when the other party's account is the same, or when the reference starts with the given characters. The first matching rule wins, so the order matters. Rules come before the voucher history and the guesses. They do not change vouchers already booked.",
   ],
-  "settings.rulesContains": ["Teksti sisältää", "Text contains"],
+  "settings.rulesContains": ["Etsittävä", "Look for"],
+  "settings.rulesField": ["Mistä etsitään", "Match on"],
+  "settings.rulesFieldText": ["Teksti sisältää", "Text contains"],
+  "settings.rulesFieldIban": ["Tilinumero on", "Account (IBAN) is"],
+  "settings.rulesFieldReference": ["Viite alkaa", "Reference starts with"],
+  "settings.rulesPlaceholderIban": [
+    "FI00 1234 5600 0007 85",
+    "FI00 1234 5600 0007 85",
+  ],
+  "settings.rulesPlaceholderReference": ["Esim. 1234", "E.g. 1234"],
+  "settings.rulesIbanError": [
+    "Tilinumero ei ole kelvollinen IBAN.",
+    "The account is not a valid IBAN.",
+  ],
   "settings.rulesPlaceholder": ["Esim. Elisa", "E.g. Elisa"],
   "settings.rulesCategory": ["Luokka", "Category"],
   "settings.rulesRateDefault": ["Luokan oletus", "Category default"],
@@ -4512,6 +4525,16 @@ export const APP_DICT = {
   "bank.fieldCounterparty": ["Saaja tai maksaja", "Payee or payer"],
   "bank.fieldMessage": ["Viesti", "Message"],
   "bank.fieldReference": ["Viite", "Reference"],
+  "bank.fieldIban": ["Vastapuolen tilinumero", "Other party's account"],
+  "bank.makeRuleIban": [
+    "Tee sääntö tilinumerolle {x}",
+    "Make a rule for account {x}",
+  ],
+  "bank.makeRuleText": ["Tee sääntö: ”{x}”", "Make a rule: “{x}”"],
+  "bank.ruleMade": [
+    "Sääntö tehty: {x}. Muokkaa sitä kohdassa Asetukset → Säännöt.",
+    "Rule made: {x}. Edit it at Settings → Rules.",
+  ],
   "bank.noColumn": ["Ei saraketta", "No column"],
   "bank.useMapping": ["Käytä näitä sarakkeita", "Use these columns"],
   "bank.skippedRows": [
@@ -5320,4 +5343,53 @@ export const APP_DICT = {
     "Download {y} as a spreadsheet",
   ],
   "file.backupLater": ["Muistuta huomenna", "Remind me tomorrow"],
+  "file.saves": ["Aiemmat tallennukset", "Earlier saves"],
+  "snapshots.title": ["Aiemmat tallennukset", "Earlier saves"],
+  "snapshots.hint": [
+    "Selain pitää kirjanpidosta kopion aina, kun tiedosto avataan tai tallennetaan: {n} uusinta ja lisäksi kunkin päivän viimeisen {d} päivän ajalta. Palautettu kirjanpito on tallentamaton, kunnes tallennat sen. Kopiot ovat vain tässä selaimessa eivätkä korvaa tiedostoa.",
+    "The browser keeps a copy of the books each time a file is opened or saved: the newest {n}, and the last of each day for {d} days. A restored book is unsaved until you save it. The copies live only in this browser and do not replace the file.",
+  ],
+  "snapshots.empty": [
+    "Ei vielä aiempia tallennuksia. Ensimmäinen syntyy, kun avaat tai tallennat tiedoston.",
+    "No earlier saves yet. The first is kept when you open or save a file.",
+  ],
+  "snapshots.colWhen": ["Aika", "When"],
+  "snapshots.colWhat": ["Tapahtuma", "Event"],
+  "snapshots.colBook": ["Kirjanpito", "Books"],
+  "snapshots.colEntries": ["Tositteita", "Vouchers"],
+  "snapshots.reasonOpen": ["Avattu", "Opened"],
+  "snapshots.reasonSave": ["Tallennettu", "Saved"],
+  "snapshots.reasonAutosave": ["Automaattitallennus", "Autosaved"],
+  "snapshots.reasonRestore": ["Ennen palautusta", "Before a restore"],
+  "snapshots.restore": ["Palauta", "Restore"],
+  "snapshots.delete": ["Poista tallennus {d}", "Delete the save of {d}"],
+  "snapshots.restoreTitle": [
+    "Palautetaanko aiempi tallennus?",
+    "Restore an earlier save?",
+  ],
+  "snapshots.restoreMessage": [
+    "Kirjanpito palautetaan tilaan {d}. Nykyinen tila jää listaan, joten palautuksen voi perua.",
+    "The books go back to how they were on {d}. The current state stays in the list, so the restore can be undone.",
+  ],
+  "snapshots.restoreMessageDirty": [
+    "Kirjanpito palautetaan tilaan {d}. Tallentamattomat muutokset jäävät listaan nykyisenä tilana, joten palautuksen voi perua.",
+    "The books go back to how they were on {d}. Your unsaved changes stay in the list as the current state, so the restore can be undone.",
+  ],
+  "snapshots.restored": [
+    "Aiempi tallennus palautettu. Tallenna, niin se korvaa tiedoston.",
+    "Earlier save restored. Save to write it over the file.",
+  ],
+  "snapshots.missing": [
+    "Tallennusta ei löytynyt selaimesta.",
+    "The save was not found in this browser.",
+  ],
+  "snapshots.keepFailed": [
+    "Nykyistä kirjanpitoa ei voitu tallentaa selaimeen, joten palautusta ei tehty. Tallenna tai lataa kopio ensin.",
+    "The current books could not be kept in the browser, so nothing was restored. Save or download a copy first.",
+  ],
+  "snapshots.deleteFailed": [
+    "Tallennusta ei voitu poistaa.",
+    "The save could not be deleted.",
+  ],
+  "palette.saves": ["Aiemmat tallennukset", "Earlier saves"],
 } as const satisfies Dict

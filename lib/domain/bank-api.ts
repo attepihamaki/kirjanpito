@@ -1,6 +1,6 @@
 import Papa from "papaparse"
 
-import type { BankRow } from "@/lib/domain/bank-csv"
+import { ibanIn, type BankRow } from "@/lib/domain/bank-csv"
 import { formatAmountForCsv, parseAmount } from "@/lib/domain/money"
 
 /**
@@ -16,6 +16,8 @@ export interface ApiTransaction {
   credit_debit_indicator?: "CRDT" | "DBIT"
   creditor?: { name?: string | null } | null
   debtor?: { name?: string | null } | null
+  creditor_account?: { iban?: string | null } | null
+  debtor_account?: { iban?: string | null } | null
   booking_date?: string | null
   value_date?: string | null
   remittance_information?: string[] | null
@@ -38,6 +40,9 @@ export function apiRows(txs: readonly ApiTransaction[]): BankRow[] {
     const money =
       t.credit_debit_indicator === "DBIT" ? -Math.abs(abs) : Math.abs(abs)
     const party = money < 0 ? t.creditor : t.debtor
+    const iban = ibanIn(
+      (money < 0 ? t.creditor_account : t.debtor_account)?.iban ?? ""
+    )
     rows.push({
       date,
       valueDate: t.value_date ?? undefined,
@@ -45,6 +50,7 @@ export function apiRows(txs: readonly ApiTransaction[]): BankRow[] {
       counterparty: party?.name?.trim() ?? "",
       message: (t.remittance_information ?? []).join(" ").trim(),
       reference: (t.reference_number ?? "").replace(/\s+/g, ""),
+      ...(iban ? { iban } : {}),
       bankId: t.entry_reference ?? t.transaction_id ?? undefined,
       kind: t.bank_transaction_code?.description ?? "",
     })
@@ -68,6 +74,7 @@ export function rowsToOpCsv(rows: readonly BankRow[]): string {
         "Viite",
         "Viesti",
         "Arkistointitunnus",
+        "Saajan tilinumero",
       ],
       data: rows.map((r) => [
         r.date,
@@ -78,6 +85,7 @@ export function rowsToOpCsv(rows: readonly BankRow[]): string {
         `ref=${r.reference}`,
         r.message,
         r.bankId ?? "",
+        r.iban ?? "",
       ]),
     },
     { delimiter: ";", newline: "\n" }

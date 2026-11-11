@@ -265,6 +265,13 @@ format of §7.1. Everything else that belongs to a bookkeeping is here.
       "contains": "Elisa",
       "catId": "344-other",
       "vatRate": 25.5
+    },
+    {
+      "id": "rule-2",
+      "contains": "FI2112345600000785",
+      "field": "iban",
+      "catId": "344-other",
+      "vatRate": null
     }
   ],
   "bankSeen": ["id:2026102801234", "fp:2026-10-28|-12450|k market||0"],

@@ -49,7 +49,7 @@ const CAMT = `<?xml version="1.0" encoding="UTF-8"?>
         <AcctSvcrRef>20261007ABC002</AcctSvcrRef>
         <AddtlNtryInf>KORTTIOSTO</AddtlNtryInf>
         <NtryDtls><TxDtls>
-          <RltdPties><Cdtr><Nm>Kahvila &amp; Leipomo</Nm></Cdtr></RltdPties>
+          <RltdPties><Cdtr><Nm>Kahvila &amp; Leipomo</Nm></Cdtr><CdtrAcct><Id><IBAN>FI21 1234 5600 0007 85</IBAN></Id></CdtrAcct></RltdPties>
           <RmtInf><Ustrd>Kortti 1234</Ustrd><Ustrd>Osto</Ustrd></RmtInf>
         </TxDtls></NtryDtls>
       </Ntry>
@@ -128,6 +128,7 @@ describe("parseCamt053", () => {
       date: "2026-10-07",
       amount: -2_490,
       counterparty: "Kahvila & Leipomo",
+      iban: "FI2112345600000785",
       message: "Kortti 1234 Osto",
       kind: "KORTTIOSTO",
     })

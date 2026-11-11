@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { toast } from "@/components/ui/toast"
 import {
   Table,
   TableBody,
@@ -42,7 +43,9 @@ import {
   withInvoiceEntries,
   type BankProposal,
 } from "@/lib/domain/bank-match"
+import { findCategoryRule, ruleForBankRow } from "@/lib/domain/category-rules"
 import { todayIso } from "@/lib/domain/dates"
+import { formatIban } from "@/lib/domain/iban"
 import { uid } from "@/lib/domain/id"
 import { periodFromKey } from "@/lib/domain/vat-deadline"
 import { unsettledDues } from "@/lib/domain/vat-settlement"
@@ -71,6 +74,7 @@ const MAPPING_FIELDS: readonly {
     | "bank.fieldCounterparty"
     | "bank.fieldMessage"
     | "bank.fieldReference"
+    | "bank.fieldIban"
 }[] = [
   { field: "date", label: "bank.fieldDate" },
   { field: "amount", label: "bank.fieldAmount" },
@@ -79,6 +83,7 @@ const MAPPING_FIELDS: readonly {
   { field: "counterparty", label: "bank.fieldCounterparty" },
   { field: "message", label: "bank.fieldMessage" },
   { field: "reference", label: "bank.fieldReference" },
+  { field: "iban", label: "bank.fieldIban" },
 ]
 
 function BankImportForm({
@@ -520,14 +525,17 @@ function Review({
                   </TableCell>
                   <TableCell className="min-w-48 align-top">
                     {plan.action === "new" ? (
-                      <OptionSelect
-                        options={categoryOptions(type, plan.catId)}
-                        value={plan.catId}
-                        placeholder={f.t("bank.pickCategory")}
-                        label={f.t("bank.colCategory")}
-                        invalid={!plan.catId}
-                        onChange={(v) => patch(i, { catId: v })}
-                      />
+                      <>
+                        <OptionSelect
+                          options={categoryOptions(type, plan.catId)}
+                          value={plan.catId}
+                          placeholder={f.t("bank.pickCategory")}
+                          label={f.t("bank.colCategory")}
+                          invalid={!plan.catId}
+                          onChange={(v) => patch(i, { catId: v })}
+                        />
+                        <MakeRule row={row} catId={plan.catId} type={type} />
+                      </>
                     ) : null}{" "}
                   </TableCell>
                 </TableRow>
@@ -567,6 +575,68 @@ function Review({
         </Button>
       </DialogFooter>
     </>
+  )
+}
+
+/**
+ * "Tee sääntö" under a new row's category (§8.17): a rule from the row's
+ * account or name, so the next statement picks the category by itself. It is
+ * offered only while no rule already sends the row to that category.
+ */
+function MakeRule({
+  row,
+  catId,
+  type,
+}: {
+  row: BankRow
+  catId: string
+  type: "income" | "expense"
+}) {
+  const f = useFormatters()
+  const rules = useBookStore((s) => s.categoryRules)
+  const cats = useBookStore((s) => s.cats)
+  const upsert = useBookStore((s) => s.upsertCategoryRule)
+  const remove = useBookStore((s) => s.removeCategoryRule)
+  if (!catId) return null
+  const draft = ruleForBankRow(row, catId)
+  if (!draft) return null
+  const hit = findCategoryRule(
+    rules,
+    {
+      text: [row.counterparty, row.message].join(" "),
+      iban: row.iban,
+      reference: row.reference,
+    },
+    indexCategories(cats),
+    type
+  )
+  if (hit?.catId === catId) return null
+  const what =
+    draft.field === "iban" ? formatIban(draft.contains) : draft.contains
+  return (
+    <Button
+      variant="link"
+      size="sm"
+      className="mt-1 h-auto px-0 text-xs"
+      onClick={() => {
+        const rule = { id: `rule-${uid()}`, ...draft }
+        upsert(rule)
+        const id = toast.add({
+          title: f.t("bank.ruleMade", { x: what }),
+          actionProps: {
+            children: f.t("common.undo"),
+            onClick: () => {
+              toast.close(id)
+              remove(rule.id)
+            },
+          },
+        })
+      }}
+    >
+      {draft.field === "iban"
+        ? f.t("bank.makeRuleIban", { x: what })
+        : f.t("bank.makeRuleText", { x: what })}
+    </Button>
   )
 }
 

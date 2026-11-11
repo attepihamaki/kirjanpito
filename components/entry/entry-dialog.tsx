@@ -635,11 +635,16 @@ function EntryDialogForm({
       const state = useBookStore.getState()
       /*
        * The user's own rules come first (§8.17), over the seller's earlier
-       * entry. The rule reads the seller and the rows, like the hints below.
+       * entry. The rule reads the seller and the rows, like the hints below,
+       * and the account and reference the invoice gives for paying it.
        */
       const ruleHit = findCategoryRule(
         state.categoryRules,
-        [guess.vendor ?? "", ...guess.items].join(" "),
+        {
+          text: [guess.vendor ?? "", ...guess.items].join(" "),
+          iban: guess.iban,
+          reference: guess.reference,
+        },
         indexCategories(cats)
       )
       const previous = previousEntryFrom(state.entries, guess.vendor)

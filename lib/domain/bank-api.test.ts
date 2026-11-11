@@ -13,6 +13,7 @@ const txs: ApiTransaction[] = [
     transaction_amount: { amount: "124.00", currency: "EUR" },
     credit_debit_indicator: "CRDT",
     debtor: { name: "Asiakas Oy" },
+    debtor_account: { iban: "FI21 1234 5600 0007 85" },
     creditor: { name: "Minä" },
     booking_date: "2026-03-04",
     value_date: "2026-03-03",
@@ -42,6 +43,7 @@ describe("apiRows", () => {
       amount: 12400,
       counterparty: "Asiakas Oy",
       reference: "10015",
+      iban: "FI2112345600000785",
     })
     expect(rows[1]).toMatchObject({
       amount: -990,
@@ -58,10 +60,16 @@ describe("rowsToOpCsv", () => {
     if (!parsed.ok) return
     expect(parsed.preset).toBe("op")
     expect(
-      parsed.rows.map((r) => [r.date, r.amount, r.counterparty, r.reference])
+      parsed.rows.map((r) => [
+        r.date,
+        r.amount,
+        r.counterparty,
+        r.reference,
+        r.iban,
+      ])
     ).toEqual([
-      ["2026-03-04", 12400, "Asiakas Oy", "10015"],
-      ["2026-03-05", -990, "Teleoperaattori", ""],
+      ["2026-03-04", 12400, "Asiakas Oy", "10015", "FI2112345600000785"],
+      ["2026-03-05", -990, "Teleoperaattori", "", undefined],
     ])
   })
 })

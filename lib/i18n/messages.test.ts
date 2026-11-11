@@ -73,6 +73,7 @@ describe("dictionary integrity", () => {
       "receipt",
       "recurring",
       "settings",
+      "snapshots",
       "statement",
       "summary",
       "table",

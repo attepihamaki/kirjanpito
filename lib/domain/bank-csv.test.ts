@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { guessMapping, parseBankCsv } from "@/lib/domain/bank-csv"
+import { guessMapping, ibanIn, parseBankCsv } from "@/lib/domain/bank-csv"
 
 const OP_HEADER =
   '"Kirjauspäivä";"Arvopäivä";"Määrä EUROA";"Laji";"Selitys";"Saaja/Maksaja";"Saajan tilinumero";"Saajan pankin BIC";"Viite";"Viesti";"Arkistointitunnus"'
@@ -111,5 +111,23 @@ describe("parseBankCsv, other banks", () => {
   it("reports an empty file", () => {
     const r = parseBankCsv("")
     expect(r.ok).toBe(false)
+  })
+})
+
+describe("the other party's account", () => {
+  it("is read from OP's account column", () => {
+    const result = parseBankCsv(OP_FILE)
+    if (!result.ok) throw new Error("not ok")
+    expect(result.rows.map((r) => r.iban)).toEqual([
+      undefined,
+      "SE1312000000012410148301",
+      undefined,
+    ])
+  })
+
+  it("is found in a cell that also holds the BIC", () => {
+    expect(ibanIn("FI21 1234 5600 0007 85 NDEAFIHH")).toBe("FI2112345600000785")
+    expect(ibanIn("FI2112345600000785NDEAFIHH")).toBe("FI2112345600000785")
+    expect(ibanIn("123-456")).toBeUndefined()
   })
 })
