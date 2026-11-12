@@ -1,20 +1,7 @@
 "use client"
 
 import * as React from "react"
-import {
-  CheckIcon,
-  CopyIcon,
-  DownloadIcon,
-  BellIcon,
-  BellOffIcon,
-  FilePenLineIcon,
-  PencilIcon,
-  PlusIcon,
-  Repeat2Icon,
-  SendIcon,
-  Trash2Icon,
-  Undo2Icon,
-} from "lucide-react"
+import { EllipsisIcon, PlusIcon } from "lucide-react"
 
 import { ButtonLink } from "@/components/common/button-link"
 import { SETTINGS_ROUTES } from "@/lib/site"
@@ -36,6 +23,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
   Empty,
   EmptyContent,
   EmptyDescription,
@@ -51,6 +46,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "@/components/ui/toast"
 import { useCommandCtx } from "@/hooks/use-commands"
 import {
@@ -65,7 +61,8 @@ import {
   startCreditNote,
 } from "@/lib/commands/invoice-commands"
 import { evalAmount } from "@/lib/domain/amount-expr"
-import { todayIso } from "@/lib/domain/dates"
+import { calcEntry } from "@/lib/domain/calc"
+import { daysBetween, todayIso, yearOf } from "@/lib/domain/dates"
 import type { Invoice } from "@/lib/domain/invoice"
 import { invoiceTotals } from "@/lib/domain/invoice-calc"
 import { canCopy } from "@/lib/domain/invoice-draft"
@@ -82,6 +79,7 @@ import {
   type InvoiceStatus,
 } from "@/lib/domain/invoice-status"
 import { formatMoneyPlain } from "@/lib/domain/money"
+import { cn } from "@/lib/utils"
 import { useBookStore } from "@/stores/book-store"
 
 const STATUS_TONE = {
@@ -297,12 +295,32 @@ function ReminderDialog({
   )
 }
 
+type Filter = "all" | "open" | "paid" | "draft"
+
+/** Which filter tab an invoice of a status falls under, besides "all". */
+const FILTER_OF: Record<InvoiceStatus, Filter | null> = {
+  draft: "draft",
+  open: "open",
+  overdue: "open",
+  paid: "paid",
+  credit: null,
+  credited: null,
+}
+
+/** A click that lands on a control of its own, or comes from a portalled menu, is not a row click. */
+function ownClick(e: React.MouseEvent<HTMLElement>): boolean {
+  const target = e.target as HTMLElement
+  if (!e.currentTarget.contains(target)) return true
+  return target.closest("button, a, input, label, [role=menuitem]") !== null
+}
+
 /** The invoices, newest first, with what can be done to each (§8.27). */
 export function InvoiceList() {
   const f = useFormatters()
   const ctx = useCommandCtx()
   const invoices = useBookStore((s) => s.invoices)
   const entries = useBookStore((s) => s.entries)
+  const year = useBookStore((s) => s.year)
   const setInvoices = useBookStore((s) => s.setInvoices)
   const openDialog = useBookStore((s) => s.openDialog)
   /* An invoice cannot be issued without the seller's address and account (§8.27). */
@@ -312,13 +330,46 @@ export function InvoiceList() {
   const [paying, setPaying] = React.useState<Invoice | null>(null)
   const [reminding, setReminding] = React.useState<Invoice | null>(null)
   const [repeating, setRepeating] = React.useState<Invoice | null>(null)
+  const [picked, setFilter] = React.useState<Filter>("all")
 
   const today = todayIso()
   const byId = React.useMemo(
     () => new Map(entries.map((e) => [e.id, e])),
     [entries]
   )
-  const sorted = React.useMemo(() => [...invoices].sort(byNewest), [invoices])
+  const rows = React.useMemo(
+    () =>
+      [...invoices].sort(byNewest).map((invoice) => ({
+        invoice,
+        status: invoiceStatus(invoice, byId, today, invoices),
+      })),
+    [invoices, byId, today]
+  )
+  const counts = { all: rows.length, open: 0, paid: 0, draft: 0 }
+  for (const { status } of rows) {
+    const kind = FILTER_OF[status]
+    if (kind) counts[kind] += 1
+  }
+  /* The drafts tab shows only while there are drafts, so its filter falls back to all. */
+  const filter = picked === "draft" && counts.draft === 0 ? "all" : picked
+  const shown =
+    filter === "all" ? rows : rows.filter((r) => FILTER_OF[r.status] === filter)
+
+  let owed = 0
+  let late = false
+  let paidInYear = 0
+  for (const { invoice, status } of rows) {
+    if (status === "open" || status === "overdue") {
+      owed += owedOn(invoice, byId)
+      late ||= status === "overdue"
+    }
+    if (invoice.number === null) continue
+    for (const id of invoice.entryIds) {
+      const e = byId.get(id)
+      if (!e || e.paidOn === null) continue
+      if (yearOf(e.paidOn ?? e.date) === year) paidInYear += calcEntry(e).gross
+    }
+  }
 
   const deleteDraft = (draft: Invoice) => {
     setInvoices(invoices.filter((i) => i.id !== draft.id))
@@ -344,9 +395,12 @@ export function InvoiceList() {
     credited: f.t("invoice.statusCredited"),
   }
 
-  return (
-    <Panel>
-      {sorted.length === 0 ? (
+  const open = (invoice: Invoice) =>
+    openDialog({ kind: "invoice", invoiceId: invoice.id })
+
+  if (rows.length === 0)
+    return (
+      <Panel>
         <Empty>
           <EmptyHeader>
             <EmptyTitle>{f.t("invoice.empty")}</EmptyTitle>
@@ -388,7 +442,48 @@ export function InvoiceList() {
             )}
           </EmptyContent>
         </Empty>
-      ) : (
+      </Panel>
+    )
+
+  const tabs: { id: Filter; label: string }[] = [
+    { id: "all", label: f.t("invoice.filterAll") },
+    { id: "open", label: f.t("invoice.filterOpen") },
+    { id: "paid", label: f.t("invoice.filterPaid") },
+    ...(counts.draft > 0
+      ? [{ id: "draft" as const, label: f.t("invoice.filterDraft") }]
+      : []),
+  ]
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)}>
+          <TabsList aria-label={f.t("invoice.colStatus")}>
+            {tabs.map((tab) => (
+              <TabsTrigger key={tab.id} value={tab.id}>
+                {tab.label}
+                <span className="tabular text-xs font-normal text-muted-foreground">
+                  {counts[tab.id]}
+                </span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+        <p className="text-sm text-muted-foreground">
+          {f.t("invoice.sumOpen")}{" "}
+          <Money
+            cents={owed}
+            className={cn(
+              "font-semibold",
+              late ? "text-expense" : "text-foreground"
+            )}
+          />
+          <span aria-hidden="true"> · </span>
+          {f.t("invoice.sumPaid", { y: year })}{" "}
+          <Money cents={paidInYear} className="font-semibold text-foreground" />
+        </p>
+      </div>
+      <Panel>
         <Table>
           <TableHeader>
             <TableRow>
@@ -400,30 +495,84 @@ export function InvoiceList() {
                 {f.t("invoice.colAmount")}
               </TableHead>
               <TableHead>{f.t("invoice.colStatus")}</TableHead>
-              <TableHead />
+              <TableHead>
+                <span className="sr-only">{f.t("invoice.colActions")}</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sorted.map((invoice) => {
-              const status = invoiceStatus(invoice, byId, today, invoices)
+            {shown.map(({ invoice, status }) => {
               const draft = status === "draft"
+              const overdue = status === "overdue"
+              const name = String(invoice.number ?? invoice.customer.name)
+              const unpaid = !draft && openEntries(invoice, byId).length > 0
+              const live = invoice.credits === null && status !== "credited"
+              const remind = overdue && invoice.credits === null
+              const charges = openCharges(invoice, byId).length > 0
               return (
-                <TableRow key={invoice.id}>
+                <TableRow
+                  key={invoice.id}
+                  className={cn(
+                    "cursor-pointer",
+                    overdue && "bg-muted/50 hover:bg-muted"
+                  )}
+                  onClick={(e) => {
+                    if (!ownClick(e)) open(invoice)
+                  }}
+                >
                   <TableCell className="tabular font-medium">
-                    {invoice.number ?? invoice.reservedNumber ?? "–"}
+                    <button
+                      type="button"
+                      className="rounded-sm hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                      aria-label={`${f.t("invoice.openInvoice")}: ${name}`}
+                      onClick={() => open(invoice)}
+                    >
+                      {invoice.number ?? invoice.reservedNumber ?? "–"}
+                    </button>
                   </TableCell>
-                  <TableCell>{invoice.customer.name || "–"}</TableCell>
+                  <TableCell>
+                    {invoice.customerId ? (
+                      <button
+                        type="button"
+                        className="rounded-sm text-left font-medium hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                        onClick={() =>
+                          openDialog({
+                            kind: "party",
+                            partyId: invoice.customerId!,
+                          })
+                        }
+                      >
+                        {invoice.customer.name || "–"}
+                      </button>
+                    ) : (
+                      invoice.customer.name || "–"
+                    )}
+                  </TableCell>
                   <TableCell className="tabular whitespace-nowrap">
                     {f.date(invoice.date)}
                   </TableCell>
-                  <TableCell className="tabular whitespace-nowrap">
+                  <TableCell
+                    className={cn(
+                      "tabular whitespace-nowrap",
+                      status === "paid" && "text-muted-foreground"
+                    )}
+                  >
                     {f.date(invoice.dueDate)}
+                    {overdue ? (
+                      <span className="text-xs text-expense">
+                        {" · "}
+                        {f.t("payables.daysLate", {
+                          n: daysBetween(invoice.dueDate, today),
+                        })}
+                      </span>
+                    ) : null}
                   </TableCell>
                   <TableCell className="text-right">
                     <Money
                       cents={
                         invoiceTotals(invoice.rows, invoice.discount).gross
                       }
+                      className={overdue ? "font-semibold" : undefined}
                     />
                     {partlyPaid(invoice, byId) ? (
                       <div className="text-xs text-muted-foreground">
@@ -454,153 +603,188 @@ export function InvoiceList() {
                       </div>
                     ) : null}
                   </TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={`${draft ? f.t("invoice.open") : f.t("invoice.view")}: ${invoice.number ?? invoice.customer.name}`}
-                      onClick={() =>
-                        openDialog({ kind: "invoice", invoiceId: invoice.id })
-                      }
-                    >
-                      <PencilIcon />
-                    </Button>
-                    {canCopy(invoice) ? (
-                      <>
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                      {draft ? (
                         <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={`${f.t("invoice.copy")}: ${invoice.number ?? invoice.customer.name}`}
-                          onClick={() => {
-                            const id = copyInvoice(invoice.id)
-                            if (id)
-                              openDialog({ kind: "invoice", invoiceId: id })
-                          }}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => open(invoice)}
                         >
-                          <CopyIcon />
+                          {f.t("invoice.continueDraft")}
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={`${f.t("invoice.repeat")}: ${invoice.number ?? invoice.customer.name}`}
-                          onClick={() => setRepeating(invoice)}
-                        >
-                          <Repeat2Icon />
-                        </Button>
-                      </>
-                    ) : null}
-                    {draft ? (
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={f.t("invoice.deleteDraft")}
-                        onClick={() => deleteDraft(invoice)}
-                      >
-                        <Trash2Icon />
-                      </Button>
-                    ) : (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={`${f.t("invoice.send")}: ${invoice.number}`}
-                          onClick={() => void sendInvoice(ctx, invoice)}
-                        >
-                          <SendIcon />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={`${f.t("invoice.download")}: ${invoice.number}`}
-                          onClick={() => void downloadInvoicePdf(ctx, invoice)}
-                        >
-                          <DownloadIcon />
-                        </Button>
-                        {invoice.credits === null && status !== "credited" ? (
+                      ) : unpaid ? (
+                        <>
+                          {remind ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              aria-label={`${f.t("invoice.reminder")}: ${name}`}
+                              onClick={() => setReminding(invoice)}
+                            >
+                              {f.t("invoice.reminder")}
+                            </Button>
+                          ) : null}
                           <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label={`${f.t("invoice.credit")}: ${invoice.number}`}
-                            onClick={() => {
-                              const id = startCreditNote(ctx, invoice.id)
-                              if (id)
-                                openDialog({ kind: "invoice", invoiceId: id })
-                            }}
-                          >
-                            <Undo2Icon />
-                          </Button>
-                        ) : null}
-                        {invoice.credits === null && status !== "credited" ? (
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label={`${f.t("invoice.reopenIssued")}: ${invoice.number}`}
-                            onClick={async () => {
-                              const id = await reopenIssuedInvoice(
-                                ctx,
-                                invoice.id
-                              )
-                              if (id)
-                                openDialog({ kind: "invoice", invoiceId: id })
-                            }}
-                          >
-                            <FilePenLineIcon />
-                          </Button>
-                        ) : null}
-                        {invoice.credits === null && status !== "credited" ? (
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label={`${f.t("invoice.deleteIssued")}: ${invoice.number}`}
-                            onClick={() =>
-                              void deleteIssuedInvoice(ctx, invoice.id)
-                            }
-                          >
-                            <Trash2Icon />
-                          </Button>
-                        ) : null}
-                        {status === "overdue" && invoice.credits === null ? (
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label={`${f.t("invoice.reminder")}: ${invoice.number}`}
-                            onClick={() => setReminding(invoice)}
-                          >
-                            <BellIcon />
-                          </Button>
-                        ) : null}
-                        {openCharges(invoice, byId).length > 0 ? (
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label={`${f.t("invoice.waive")}: ${invoice.number}`}
-                            title={f.t("invoice.waive")}
-                            onClick={() =>
-                              void waiveReminderCharges(ctx, invoice.id)
-                            }
-                          >
-                            <BellOffIcon />
-                          </Button>
-                        ) : null}
-                        {openEntries(invoice, byId).length > 0 ? (
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label={`${f.t("invoice.markPaid")}: ${invoice.number}`}
+                            size="sm"
+                            aria-label={`${f.t("invoice.markPaid")}: ${name}`}
                             onClick={() => setPaying(invoice)}
                           >
-                            <CheckIcon />
+                            {f.t("invoice.markPaid")}
                           </Button>
-                        ) : null}
-                      </>
-                    )}
+                        </>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`${f.t("invoice.download")}: ${name}`}
+                          onClick={() => void downloadInvoicePdf(ctx, invoice)}
+                        >
+                          {f.t("invoice.download")}
+                        </Button>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label={`${f.t("invoice.moreActions")}: ${name}`}
+                            />
+                          }
+                        >
+                          <EllipsisIcon />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuGroup>
+                            <DropdownMenuItem onClick={() => open(invoice)}>
+                              {f.t("invoice.openInvoice")}
+                            </DropdownMenuItem>
+                            {draft ? null : (
+                              <DropdownMenuItem
+                                onClick={() => void sendInvoice(ctx, invoice)}
+                              >
+                                {f.t("invoice.send")}
+                              </DropdownMenuItem>
+                            )}
+                            {!draft && unpaid ? (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  void downloadInvoicePdf(ctx, invoice)
+                                }
+                              >
+                                {f.t("invoice.download")}
+                              </DropdownMenuItem>
+                            ) : null}
+                          </DropdownMenuGroup>
+                          {canCopy(invoice) ? (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuGroup>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    const id = copyInvoice(invoice.id)
+                                    if (id)
+                                      openDialog({
+                                        kind: "invoice",
+                                        invoiceId: id,
+                                      })
+                                  }}
+                                >
+                                  {f.t("invoice.copy")}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => setRepeating(invoice)}
+                                >
+                                  {f.t("invoice.repeat")}
+                                </DropdownMenuItem>
+                              </DropdownMenuGroup>
+                            </>
+                          ) : null}
+                          {!draft && (live || charges) ? (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuGroup>
+                                {live ? (
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      const id = startCreditNote(
+                                        ctx,
+                                        invoice.id
+                                      )
+                                      if (id)
+                                        openDialog({
+                                          kind: "invoice",
+                                          invoiceId: id,
+                                        })
+                                    }}
+                                  >
+                                    {f.t("invoice.credit")}
+                                  </DropdownMenuItem>
+                                ) : null}
+                                {live ? (
+                                  <DropdownMenuItem
+                                    onClick={async () => {
+                                      const id = await reopenIssuedInvoice(
+                                        ctx,
+                                        invoice.id
+                                      )
+                                      if (id)
+                                        openDialog({
+                                          kind: "invoice",
+                                          invoiceId: id,
+                                        })
+                                    }}
+                                  >
+                                    {f.t("invoice.reopenIssued")}
+                                  </DropdownMenuItem>
+                                ) : null}
+                                {charges ? (
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      void waiveReminderCharges(ctx, invoice.id)
+                                    }
+                                  >
+                                    {f.t("invoice.waive")}
+                                  </DropdownMenuItem>
+                                ) : null}
+                              </DropdownMenuGroup>
+                            </>
+                          ) : null}
+                          {draft || live ? (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                variant="destructive"
+                                onClick={() =>
+                                  draft
+                                    ? deleteDraft(invoice)
+                                    : void deleteIssuedInvoice(ctx, invoice.id)
+                                }
+                              >
+                                {f.t(
+                                  draft
+                                    ? "invoice.deleteDraft"
+                                    : "invoice.deleteIssued"
+                                )}
+                              </DropdownMenuItem>
+                            </>
+                          ) : null}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               )
             })}
           </TableBody>
         </Table>
-      )}
+        {shown.length === 0 ? (
+          <p className="p-6 text-center text-sm text-muted-foreground">
+            {f.t("invoice.filterEmpty")}
+          </p>
+        ) : null}
+      </Panel>
       {paying ? (
         <MarkPaidDialog invoice={paying} onClose={() => setPaying(null)} />
       ) : null}
@@ -616,6 +800,6 @@ export function InvoiceList() {
           onClose={() => setReminding(null)}
         />
       ) : null}
-    </Panel>
+    </div>
   )
 }

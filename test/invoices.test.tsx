@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import * as React from "react"
 import { fireEvent, render, screen, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CustomerDialog } from "@/components/invoices/customer-dialog"
@@ -66,6 +67,21 @@ const invoice = (over: Partial<Invoice> = {}): Invoice => ({
   credits: null,
   ...over,
 })
+
+/** Open an invoice's ⋯ menu and pick an item from it. */
+async function pick(n: string, item: string) {
+  const user = userEvent.setup()
+  await user.click(screen.getByLabelText(`Lisää toimintoja: ${n}`))
+  await user.click(await screen.findByRole("menuitem", { name: item }))
+}
+
+/** The names of the items in an invoice's ⋯ menu. */
+async function menuOf(n: string) {
+  const user = userEvent.setup()
+  await user.click(screen.getByLabelText(`Lisää toimintoja: ${n}`))
+  const items = await screen.findAllByRole("menuitem")
+  return items.map((i) => i.textContent)
+}
 
 const entry = (id: string, paidOn: Entry["paidOn"]): Entry => ({
   id,
@@ -176,18 +192,19 @@ describe("InvoiceList", () => {
       ],
     })
     mount(<InvoiceList />)
-    expect(screen.queryByLabelText("Lähetä: null")).toBeNull()
-    fireEvent.click(screen.getByLabelText("Lähetä: 1001"))
+    expect(await menuOf("Asiakas Oy")).not.toContain("Lähetä")
+    await userEvent.keyboard("{Escape}")
+    await pick("1001", "Lähetä")
     await vi.waitFor(() => expect(shareFile).toHaveBeenCalledOnce())
   })
 
-  it("starts a credit note from an issued invoice and opens it", () => {
+  it("starts a credit note from an issued invoice and opens it", async () => {
     useBookStore.setState({
       entries: [entry("e1", null)],
       invoices: [invoice({ dueDate: "2999-01-01" })],
     })
     mount(<InvoiceList />)
-    fireEvent.click(screen.getByLabelText("Hyvitä: 1001"))
+    await pick("1001", "Hyvitä")
     const { invoices, dialog } = useBookStore.getState()
     const note = invoices.find((i) => i.credits === "i1")
     expect(note).toBeDefined()
@@ -195,7 +212,7 @@ describe("InvoiceList", () => {
     expect(dialog).toEqual({ kind: "invoice", invoiceId: note?.id })
   })
 
-  it("offers no credit on a credit note, and shows it as a credit", () => {
+  it("offers no credit on a credit note, and shows it as a credit", async () => {
     useBookStore.setState({
       entries: [entry("e1", null)],
       invoices: [
@@ -208,13 +225,13 @@ describe("InvoiceList", () => {
       ],
     })
     mount(<InvoiceList />)
-    expect(screen.queryByLabelText("Hyvitä: 1002")).toBeNull()
+    expect(await menuOf("1002")).not.toContain("Hyvitä")
     const [row] = screen.getAllByRole("row").slice(1)
     expect(row.textContent).toContain("Hyvitys")
     expect(row.textContent).toContain("125,50")
   })
 
-  it("deletes a draft and brings it back with the undo", () => {
+  it("deletes a draft and brings it back with the undo", async () => {
     useBookStore.setState({
       invoices: [
         invoice({
@@ -227,8 +244,44 @@ describe("InvoiceList", () => {
       ],
     })
     mount(<InvoiceList />)
-    fireEvent.click(screen.getByLabelText("Poista luonnos"))
+    await pick("Asiakas Oy", "Poista luonnos")
     expect(useBookStore.getState().invoices).toEqual([])
+  })
+
+  it("opens an invoice from a click on its row, but not from its buttons", async () => {
+    useBookStore.setState({
+      entries: [entry("e1", null)],
+      invoices: [invoice({ dueDate: "2999-01-01" })],
+    })
+    mount(<InvoiceList />)
+    const [row] = screen.getAllByRole("row").slice(1)
+    fireEvent.click(within(row).getByText("1.11.2026"))
+    expect(useBookStore.getState().dialog).toEqual({
+      kind: "invoice",
+      invoiceId: "i1",
+    })
+    useBookStore.setState({ dialog: { kind: "none" } })
+    fireEvent.click(screen.getByLabelText("Merkitse maksetuksi: 1001"))
+    expect(useBookStore.getState().dialog).toEqual({ kind: "none" })
+  })
+
+  it("filters by status and sums what is open and what was paid this year", () => {
+    useBookStore.setState({
+      year: 2026,
+      entries: [entry("e1", null), entry("e2", "2026-11-05")],
+      invoices: [
+        invoice({ id: "late", number: 1001, dueDate: "2020-01-01" }),
+        invoice({ id: "paid", number: 1002, entryIds: ["e2"] }),
+      ],
+    })
+    mount(<InvoiceList />)
+    expect(screen.queryByRole("tab", { name: /Luonnokset/ })).toBeNull()
+    expect(screen.getByText(/Maksettu 2026/).textContent).toContain("125,50")
+    expect(screen.getByText(/pv myöhässä/)).toBeTruthy()
+    fireEvent.click(screen.getByRole("tab", { name: /Maksetut/ }))
+    const rows = screen.getAllByRole("row").slice(1)
+    expect(rows).toHaveLength(1)
+    expect(rows[0].textContent).toContain("1002")
   })
 
   it("marks an invoice paid from the dialog", async () => {
@@ -287,9 +340,7 @@ describe("payment reminders", () => {
     expect(made.entryIds).toEqual(["e1", interest.id, fee.id])
     expect(made.reminders?.[0].entryIds).toEqual([interest.id, fee.id])
 
-    fireEvent.click(
-      await screen.findByLabelText("Luovu muistutuskuluista: 1001")
-    )
+    await pick("1001", "Luovu muistutuskuluista")
     await vi.waitFor(() =>
       expect(useBookStore.getState().entries).toHaveLength(1)
     )
