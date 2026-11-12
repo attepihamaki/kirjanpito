@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -19,6 +20,7 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -58,8 +60,9 @@ const ICONS: Record<
 
 /**
  * The sidebar's navigation (§8.2), and the only nav in the app: one level of
- * sections, and under the section that is open a flat list of its pages.
- * Below 900 px the sidebar becomes a sheet rather than a row of tabs, so one
+ * sections, and under each unfolded section a flat list of its pages. A
+ * section's row is a link to its first page, and the chevron beside it is a
+ * button that unfolds the list without leaving the page. Below 900 px the sidebar becomes a sheet rather than a row of tabs, so one
  * list of links serves every width.
  */
 export function AppNav() {
@@ -73,6 +76,26 @@ export function AppNav() {
   const { overdue } = useBillsDue()
   const vatWaiting = useVatWaiting()
   const close = () => isMobile && setOpenMobile(false)
+
+  /*
+   * The sections whose lists are unfolded. Arriving in a section unfolds it,
+   * so the open page is always in view after a navigation, and the chevron
+   * folds or unfolds any section from then on.
+   */
+  const [unfolded, setUnfolded] = useState<ReadonlySet<NavSectionId>>(
+    () => new Set(open ? [open.id] : [])
+  )
+  const [arrivedIn, setArrivedIn] = useState(open?.id)
+  if (open?.id !== arrivedIn) {
+    setArrivedIn(open?.id)
+    if (open) setUnfolded(new Set(unfolded).add(open.id))
+  }
+  const toggle = (id: NavSectionId) =>
+    setUnfolded((was) => {
+      const next = new Set(was)
+      if (!next.delete(id)) next.add(id)
+      return next
+    })
 
   /*
    * What waits for the user, on the row that leads to it: bills past their
@@ -102,11 +125,14 @@ export function AppNav() {
             const active = open?.id === section.id
             const label = t(section.label)
             const pages = shownPages(section, features, current)
+            const foldable = pages.length > 1
+            const expanded = foldable && unfolded.has(section.id)
+            const listId = `nav-pages-${section.id}`
             /*
              * A section whose list is showing marks the page there, so one
              * page is never announced as current twice.
              */
-            const listed = active && pages.length > 1
+            const listed = active && expanded
             return (
               <SidebarMenuItem key={section.id}>
                 <SidebarMenuButton
@@ -125,15 +151,33 @@ export function AppNav() {
                 >
                   <Icon />
                   <span>{label}</span>
-                  {/* A folded section with pages says so, as the list it opens to. */}
-                  {pages.length > 1 && !active && !badgeOf(section.id) ? (
-                    <ChevronRightIcon className="ml-auto text-muted-foreground group-data-[collapsible=icon]:hidden" />
-                  ) : null}
                 </SidebarMenuButton>
+                {foldable ? (
+                  <SidebarMenuAction
+                    type="button"
+                    aria-expanded={expanded}
+                    aria-controls={listId}
+                    aria-label={t(
+                      expanded ? "nav.hidePages" : "nav.showPages",
+                      { name: label }
+                    )}
+                    className="text-muted-foreground"
+                    onClick={() => toggle(section.id)}
+                  >
+                    <ChevronRightIcon
+                      className={cn(
+                        "transition-transform",
+                        expanded && "rotate-90"
+                      )}
+                    />
+                  </SidebarMenuAction>
+                ) : null}
                 {badgeOf(section.id) ? (
                   <SidebarMenuBadge
                     className={cn(
                       "top-1.5 rounded-full",
+                      // The chevron has the right edge, so the badge sits beside it.
+                      foldable && "right-7",
                       badgeOf(section.id)?.tone === "expense"
                         ? "bg-expense-subtle text-expense peer-hover/menu-button:text-expense peer-data-active/menu-button:text-expense"
                         : "bg-warning/15 text-warning peer-hover/menu-button:text-warning peer-data-active/menu-button:text-warning"
@@ -145,8 +189,8 @@ export function AppNav() {
                     </span>
                   </SidebarMenuBadge>
                 ) : null}
-                {listed ? (
-                  <SidebarMenuSub className="mt-0.5 gap-0.5">
+                {expanded ? (
+                  <SidebarMenuSub id={listId} className="mt-0.5 gap-0.5">
                     {pages.map((page) => {
                       const on = page.href === current
                       const count =

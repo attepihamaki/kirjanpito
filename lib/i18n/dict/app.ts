@@ -3620,6 +3620,8 @@ export const APP_DICT = {
   ],
   "nav.sales": ["Myyntilaskut", "Sales invoices"],
   "nav.purchases": ["Ostolaskut", "Bills to pay"],
+  "nav.showPages": ["Näytä sivut: {name}", "Show the pages of {name}"],
+  "nav.hidePages": ["Piilota sivut: {name}", "Hide the pages of {name}"],
   "nav.vatWaiting": [
     pl("1 ALV-ilmoitus odottaa", "{n} ALV-ilmoitusta odottaa"),
     pl("1 VAT return waiting", "{n} VAT returns waiting"),
