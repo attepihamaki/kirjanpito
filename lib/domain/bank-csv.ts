@@ -104,7 +104,7 @@ export interface SavedBankMapping {
   mapping: BankMapping
 }
 
-export const BANK_FIELDS: readonly BankField[] = [
+const BANK_FIELDS: readonly BankField[] = [
   "date",
   "valueDate",
   "amount",
@@ -209,7 +209,7 @@ export function headerSignature(headers: readonly string[]): string {
 }
 
 /** The saved layout made for files with these headers, if any. */
-export function savedMappingFor(
+function savedMappingFor(
   headers: readonly string[],
   saved: readonly SavedBankMapping[]
 ): SavedBankMapping | undefined {

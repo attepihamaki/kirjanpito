@@ -263,7 +263,7 @@ const isCents = (v: unknown): v is Cents =>
   typeof v === "number" && Number.isSafeInteger(v)
 
 /** One record as `settings.json` holds it, or null when it cannot be read (§7.6). */
-export function parseStatementRecord(value: unknown): StatementRecord | null {
+function parseStatementRecord(value: unknown): StatementRecord | null {
   if (typeof value !== "object" || value === null || Array.isArray(value))
     return null
   const v = value as Record<string, unknown>

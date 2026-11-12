@@ -462,6 +462,6 @@ Two devices work on one file, and the file is one ZIP, so **the app never merges
 
 #### 7.11.10 Tests and order of work
 
-- `lib/commands/cloud-commands.test.ts` against `fake.ts`, mirroring `save-commands.test.ts`: the round trip, creating and linking, carrying receipts over, a conditional write refused, each branch of §7.11.7, an expired sign-in, offline retry and the size hint. Each provider module gets a test of its request shapes against recorded responses.
+- `cloud-commands.test.ts` in `lib/commands/`, against `fake.ts`, mirroring `save-commands.test.ts`: the round trip, creating and linking, carrying receipts over, a conditional write refused, each branch of §7.11.7, an expired sign-in, offline retry and the size hint. Each provider module gets a test of its request shapes against recorded responses.
 - **Order:** the custom domain (the FAQ entry of §7.11.1 is in); the interface, the fake and Dropbox, shipped behind the Pilvitallennus setting; Google Drive after the token spike; the provider history in the earlier saves; OneDrive.
 - **Not handled:** merging two devices' changes, editing at the same time with live updates, sharing a book with an accountant through the provider, and iCloud Drive.
