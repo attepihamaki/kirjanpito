@@ -2315,7 +2315,6 @@ export const APP_DICT = {
   "statement.asideCalc": ["Laske", "Calculate"],
   "statement.asideEnter": ["Syötä", "Enter"],
   "statement.asideStock": ["Varasto {d}", "Stock on {d}"],
-  "statement.printSheet": ["Tulosta laskelma", "Print the statement"],
   "statement.resultFormula": [
     "Tuotot {a} − vähennyskelpoiset kulut {b}",
     "Revenue {a} − deductible expenses {b}",

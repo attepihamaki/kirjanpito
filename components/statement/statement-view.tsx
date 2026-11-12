@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { ArrowRightIcon, PrinterIcon } from "lucide-react"
+import { ArrowRightIcon } from "lucide-react"
 
 import {
   NoEntriesState,
@@ -16,7 +16,6 @@ import { Pill } from "@/components/common/pill"
 import { useFormatters } from "@/components/lang-provider"
 import { CAT_354, CAT_CAR } from "@/components/statement/deduction-dialog"
 import { Panel } from "@/components/common/panel"
-import { Button } from "@/components/ui/button"
 import { useShownFeatures } from "@/hooks/use-shown-features"
 import { yearOf } from "@/lib/domain/dates"
 import { form5Due } from "@/lib/domain/tax-return-deadline"
@@ -622,10 +621,6 @@ function StatementAside({ running }: { running: boolean }) {
           ))}
         </Panel>
       ) : null}
-      <Button variant="outline" onClick={() => window.print()}>
-        <PrinterIcon data-icon="inline-start" />
-        {f.t("statement.printSheet")}
-      </Button>
     </aside>
   )
 }
