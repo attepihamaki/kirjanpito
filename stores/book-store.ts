@@ -11,6 +11,11 @@ import { persist, type PersistStorage } from "zustand/middleware"
 import { defaultCategories } from "@/lib/domain/accounts"
 import type { AssetOpening } from "@/lib/domain/assets"
 import type { BankBalance } from "@/lib/domain/bank-balance"
+import type { SavedBankMapping } from "@/lib/domain/bank-csv"
+import {
+  withStatement,
+  type StatementRecord,
+} from "@/lib/domain/bank-statements"
 import {
   DEFAULT_INVOICE_SETTINGS,
   withPartyFields,
@@ -353,6 +358,10 @@ export interface BookState {
    * Saved in settings.json.
    */
   billsIgnored: string[]
+  /** Bank statement layouts the user mapped and kept (§8.16). Saved in settings.json. */
+  bankMappings: SavedBankMapping[]
+  /** The statements the book was set against (§8.38). Saved in settings.json. */
+  bankStatements: StatementRecord[]
   /**
    * Year (`"2024"`) → the loss the tax assessment confirmed for it, in
    * positive cents (§6.15). Saved in settings.json.
@@ -589,6 +598,8 @@ export interface BookActions {
       yearsArchived?: Record<string, string>
       retentionNoted?: Record<string, RetentionStage>
       billsIgnored?: string[]
+      bankMappings?: SavedBankMapping[]
+      bankStatements?: StatementRecord[]
       taxLosses?: Record<string, Cents>
       form5Filed?: Record<string, string>
       archives?: Record<string, ArchiveStub>
@@ -713,6 +724,15 @@ export interface BookActions {
   addBankSeen(fingerprints: readonly string[]): void
   /** Forget rows, as an undone booking does. */
   removeBankSeen(fingerprints: readonly string[]): void
+  /** Keep a layout, replacing one saved for the same headers (§8.16). */
+  saveBankMapping(mapping: SavedBankMapping): void
+  removeBankMapping(id: string): void
+  /**
+   * Keep the record of a statement, replacing one for the same account and
+   * days (§8.38). Returns the record it replaced, for an undo.
+   */
+  addBankStatement(record: StatementRecord): StatementRecord | null
+  removeBankStatement(id: string): void
   /** Move a rule one place earlier (-1) or later (1). The first match wins. */
   moveCategoryRule(id: string, step: -1 | 1): void
   setLoanOpening(loanOpening: LoanOpening | null): void
@@ -793,6 +813,8 @@ function initialState(): BookState {
     yearsArchived: {},
     retentionNoted: {},
     billsIgnored: [],
+    bankMappings: [],
+    bankStatements: [],
     taxLosses: {},
     form5Filed: {},
     archives: {},
@@ -882,6 +904,8 @@ type PersistedBook = Pick<
   | "yearsArchived"
   | "retentionNoted"
   | "billsIgnored"
+  | "bankMappings"
+  | "bankStatements"
   | "taxLosses"
   | "form5Filed"
   | "archives"
@@ -1071,6 +1095,8 @@ const BOOK_DATA_KEYS: readonly (keyof BookState)[] = [
   "yearsArchived",
   "retentionNoted",
   "billsIgnored",
+  "bankMappings",
+  "bankStatements",
   "taxLosses",
   "form5Filed",
   "archives",
@@ -1176,6 +1202,8 @@ export const useBookStore = create<BookStore>()(
           yearsArchived: {},
           retentionNoted: {},
           billsIgnored: [],
+          bankMappings: [],
+          bankStatements: [],
           taxLosses: {},
           form5Filed: {},
           archives: {},
@@ -1291,6 +1319,8 @@ export const useBookStore = create<BookStore>()(
           yearsArchived: {},
           retentionNoted: {},
           billsIgnored: [],
+          bankMappings: [],
+          bankStatements: [],
           taxLosses: {},
           form5Filed: {},
           archives: {},
@@ -1363,6 +1393,8 @@ export const useBookStore = create<BookStore>()(
           yearsArchived: s.yearsArchived ?? {},
           retentionNoted: s.retentionNoted ?? {},
           billsIgnored: s.billsIgnored ?? [],
+          bankMappings: s.bankMappings ?? [],
+          bankStatements: s.bankStatements ?? [],
           taxLosses: s.taxLosses ?? {},
           form5Filed: s.form5Filed ?? {},
           archives: s.archives ?? {},
@@ -1688,6 +1720,27 @@ export const useBookStore = create<BookStore>()(
         if (kept.length !== get().bankSeen.length)
           set({ bankSeen: kept, dirty: true })
       },
+      saveBankMapping: (mapping) => {
+        const kept = get().bankMappings.filter(
+          (m) => m.id !== mapping.id && m.signature !== mapping.signature
+        )
+        set({ bankMappings: [...kept, mapping], dirty: true })
+      },
+      removeBankMapping: (id) => {
+        const kept = get().bankMappings.filter((m) => m.id !== id)
+        if (kept.length !== get().bankMappings.length)
+          set({ bankMappings: kept, dirty: true })
+      },
+      addBankStatement: (record) => {
+        const { list, replaced } = withStatement(get().bankStatements, record)
+        set({ bankStatements: list, dirty: true })
+        return replaced
+      },
+      removeBankStatement: (id) => {
+        const kept = get().bankStatements.filter((r) => r.id !== id)
+        if (kept.length !== get().bankStatements.length)
+          set({ bankStatements: kept, dirty: true })
+      },
       removeCategoryRule: (id) =>
         set({
           categoryRules: get().categoryRules.filter((r) => r.id !== id),
@@ -1863,6 +1916,8 @@ export const useBookStore = create<BookStore>()(
         yearsArchived: s.yearsArchived,
         retentionNoted: s.retentionNoted,
         billsIgnored: s.billsIgnored,
+        bankMappings: s.bankMappings,
+        bankStatements: s.bankStatements,
         taxLosses: s.taxLosses,
         form5Filed: s.form5Filed,
         archives: s.archives,

@@ -149,7 +149,7 @@ describe("a section's pages", () => {
     })
     mount(<LedgerTabs />)
     const tabs = screen.getByRole("navigation", { name: "Kirjanpito" })
-    expect(within(tabs).getAllByRole("link")).toHaveLength(5)
+    expect(within(tabs).getAllByRole("link")).toHaveLength(6)
     expect(
       within(tabs).getByRole("link", { name: "Päiväkirja" })
     ).toHaveAttribute("aria-current", "page")

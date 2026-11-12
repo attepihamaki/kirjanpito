@@ -60,6 +60,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     pages: [
       { href: LEDGER_ROUTES.entries, label: "ledger.entriesTab" },
       { href: LEDGER_ROUTES.inbox, label: "inbox.tab" },
+      { href: LEDGER_ROUTES.reconcile, label: "reconcile.tab" },
       { href: LEDGER_ROUTES.journal, label: "ledger.journalTab" },
       { href: LEDGER_ROUTES.accounts, label: "ledger.accountsTab" },
       { href: LEDGER_ROUTES.chart, label: "ledger.chartTab" },

@@ -77,6 +77,7 @@ const PAGES: readonly [string, MessageKey, MessageKey][] = [
   [APP_ROUTES.overview, "nav.overview", "nav.overview"],
   [LEDGER_ROUTES.entries, "ledger.entriesTab", "nav.ledger"],
   [LEDGER_ROUTES.inbox, "inbox.tab", "nav.ledger"],
+  [LEDGER_ROUTES.reconcile, "reconcile.tab", "nav.ledger"],
   [LEDGER_ROUTES.journal, "ledger.journalTab", "nav.ledger"],
   [LEDGER_ROUTES.accounts, "ledger.accountsTab", "nav.ledger"],
   [LEDGER_ROUTES.chart, "ledger.chartTab", "nav.ledger"],

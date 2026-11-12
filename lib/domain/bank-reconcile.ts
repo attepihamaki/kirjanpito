@@ -46,7 +46,7 @@ export interface Reconciliation {
  * The book's payments through the bank on the days from `from` to `to`,
  * a split receipt's parts paid on one day taken as one payment.
  */
-function bookPayments(
+export function bookPayments(
   entries: readonly Entry[],
   cats: CategoryMap,
   from: string,

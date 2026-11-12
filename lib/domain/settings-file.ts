@@ -16,6 +16,14 @@ import type { InvoiceSettings } from "@/lib/domain/invoice"
 import { isVatRate } from "@/lib/domain/money"
 import type { AssetOpening } from "@/lib/domain/assets"
 import type { BankBalance } from "@/lib/domain/bank-balance"
+import {
+  parseSavedMappings,
+  type SavedBankMapping,
+} from "@/lib/domain/bank-csv"
+import {
+  parseStatementRecords,
+  type StatementRecord,
+} from "@/lib/domain/bank-statements"
 import type { PayMonths } from "@/lib/domain/tax-calendar"
 import {
   LOGGED_FIELDS,
@@ -142,6 +150,10 @@ export interface BookSettings {
   categoryRules: CategoryRule[]
   /** Fingerprints of the bank statement rows already reviewed (§8.16). */
   bankSeen: string[]
+  /** Bank statement layouts the user mapped and kept (§8.16). Absent means none. */
+  bankMappings?: SavedBankMapping[]
+  /** The statements the book was set against (§8.38). Absent means none. */
+  bankStatements?: StatementRecord[]
   /** The fixed asset balance the register starts from, or null (§8.8). */
   assetOpening: AssetOpening | null
   /** The bank balance as last read, or null (§8.12). */
@@ -581,6 +593,12 @@ export function parseSettings(text: string): ParsedSettings {
       ),
     ]
   }
+  if (Array.isArray(raw.bankMappings)) {
+    out.bankMappings = parseSavedMappings(raw.bankMappings)
+  }
+  if (Array.isArray(raw.bankStatements)) {
+    out.bankStatements = parseStatementRecords(raw.bankStatements)
+  }
   if (raw.assetOpening === null) out.assetOpening = null
   else if (
     isRecord(raw.assetOpening) &&
@@ -770,6 +788,8 @@ export function serializeSettings(s: BookSettings): string {
     changeLog: s.changeLog,
     ...(s.inbox?.length ? { inbox: s.inbox } : {}),
     ...(s.billsIgnored?.length ? { billsIgnored: s.billsIgnored } : {}),
+    ...(s.bankMappings?.length ? { bankMappings: s.bankMappings } : {}),
+    ...(s.bankStatements?.length ? { bankStatements: s.bankStatements } : {}),
   }
   return `${JSON.stringify(file, null, 2)}\n`
 }

@@ -6,6 +6,7 @@ import {
   type BankParseResult,
   type BankRow,
   type BankSkippedRow,
+  type SavedBankMapping,
   type StatementBalance,
   type StatementInfo,
 } from "@/lib/domain/bank-csv"
@@ -322,7 +323,10 @@ export function parseCamt053(text: string): BankParseResult {
 /** A statement in either form: camt.053 XML, or a CSV export (§8.16). */
 export function parseBankStatement(
   text: string,
-  mapping?: BankMapping
+  mapping?: BankMapping,
+  saved?: readonly SavedBankMapping[]
 ): BankParseResult {
-  return isCamt053(text) ? parseCamt053(text) : parseBankCsv(text, mapping)
+  return isCamt053(text)
+    ? parseCamt053(text)
+    : parseBankCsv(text, mapping, saved)
 }

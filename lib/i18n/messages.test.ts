@@ -71,6 +71,7 @@ describe("dictionary integrity", () => {
       "product",
       "privacy",
       "receipt",
+      "reconcile",
       "recurring",
       "settings",
       "snapshots",

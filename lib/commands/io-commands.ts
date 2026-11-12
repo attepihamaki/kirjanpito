@@ -583,7 +583,8 @@ function refuseFile(ctx: Ctx, title: string): Promise<void> {
 
 /**
  * A file that is a bank statement and no bookkeeping (§8.16): a camt.053 XML,
- * or a CSV the ledger reader does not take. With a book open
+ * or a CSV the ledger reader does not take whose layout is known, guessed or
+ * saved by the user. With a book open
  * it goes to the review list on the ledger; with none there is nothing to
  * match it against, so the user is told what to do. True when the file was
  * dealt with, so the caller opens nothing.
@@ -591,8 +592,13 @@ function refuseFile(ctx: Ctx, title: string): Promise<void> {
 async function claimBankStatement(ctx: Ctx, file: File): Promise<boolean> {
   const text = decodeCsv(await fileToUint8Array(file))
   if (!isCamt053(text)) {
-    const own = parseCsv(text, useBookStore.getState().cats, uid)
-    if (own.ok || own.code !== "not-a-book" || !parseBankCsv(text).ok) {
+    const { cats, bankMappings } = useBookStore.getState()
+    const own = parseCsv(text, cats, uid)
+    if (
+      own.ok ||
+      own.code !== "not-a-book" ||
+      !parseBankCsv(text, undefined, bankMappings).ok
+    ) {
       return false
     }
   }
@@ -693,6 +699,8 @@ function applyImport(
           recurring: settings.recurring,
           categoryRules: settings.categoryRules,
           bankSeen: settings.bankSeen,
+          bankMappings: settings.bankMappings,
+          bankStatements: settings.bankStatements,
           assetOpening: settings.assetOpening,
           bankBalance: settings.bankBalance,
           payMonths: settings.payMonths,
@@ -769,6 +777,8 @@ function bookVersion() {
     s.recurring,
     s.categoryRules,
     s.bankSeen,
+    s.bankMappings,
+    s.bankStatements,
     s.assetOpening,
     s.bankBalance,
     s.payMonths,
@@ -829,6 +839,8 @@ function currentSettingsText(over: Partial<BookSettings> = {}): string {
     recurring: s.recurring,
     categoryRules: s.categoryRules,
     bankSeen: s.bankSeen,
+    bankMappings: s.bankMappings,
+    bankStatements: s.bankStatements,
     assetOpening: s.assetOpening,
     bankBalance: s.bankBalance,
     payMonths: s.payMonths,
@@ -1353,6 +1365,10 @@ export function archiveSettings(
     recurring: [],
     categoryRules: [],
     bankSeen: [],
+    bankMappings: [],
+    bankStatements: state.bankStatements.filter(
+      (r) => r.from <= `${key}-12-31` && r.to >= `${key}-01-01`
+    ),
     bankBalance: null,
     payMonths: NO_PAY_MONTHS,
     yearEnd: Object.fromEntries(
@@ -1396,6 +1412,10 @@ export function auditSettings(
     recurring: [],
     categoryRules: [],
     bankSeen: [],
+    bankMappings: [],
+    bankStatements: state.bankStatements.filter(
+      (r) => r.from <= range.to && r.to >= range.from
+    ),
     bankBalance: null,
     payMonths: NO_PAY_MONTHS,
     yearEnd: {},

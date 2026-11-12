@@ -53,6 +53,8 @@ export function useAutosave() {
   const recurring = useBookStore((s) => s.recurring)
   const categoryRules = useBookStore((s) => s.categoryRules)
   const bankSeen = useBookStore((s) => s.bankSeen)
+  const bankMappings = useBookStore((s) => s.bankMappings)
+  const bankStatements = useBookStore((s) => s.bankStatements)
   const assetOpening = useBookStore((s) => s.assetOpening)
   const bankBalance = useBookStore((s) => s.bankBalance)
   const loanOpening = useBookStore((s) => s.loanOpening)
@@ -93,6 +95,8 @@ export function useAutosave() {
     recurring,
     categoryRules,
     bankSeen,
+    bankMappings,
+    bankStatements,
     assetOpening,
     bankBalance,
     loanOpening,

@@ -191,6 +191,8 @@ export async function restoreEarlierSave(
       recurring: book.recurring,
       categoryRules: book.categoryRules,
       bankSeen: book.bankSeen,
+      bankMappings: book.bankMappings,
+      bankStatements: book.bankStatements,
       assetOpening: book.assetOpening,
       bankBalance: book.bankBalance,
       payMonths: book.payMonths,

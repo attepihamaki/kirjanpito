@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest"
 
-import { guessMapping, ibanIn, parseBankCsv } from "@/lib/domain/bank-csv"
+import {
+  guessMapping,
+  headerSignature,
+  ibanIn,
+  parseBankCsv,
+  type SavedBankMapping,
+} from "@/lib/domain/bank-csv"
 
 const OP_HEADER =
   '"Kirjauspäivä";"Arvopäivä";"Määrä EUROA";"Laji";"Selitys";"Saaja/Maksaja";"Saajan tilinumero";"Saajan pankin BIC";"Viite";"Viesti";"Arkistointitunnus"'
@@ -129,5 +135,70 @@ describe("the other party's account", () => {
     expect(ibanIn("FI21 1234 5600 0007 85 NDEAFIHH")).toBe("FI2112345600000785")
     expect(ibanIn("FI2112345600000785NDEAFIHH")).toBe("FI2112345600000785")
     expect(ibanIn("123-456")).toBeUndefined()
+  })
+})
+
+describe("saved layouts", () => {
+  const text = [
+    "Päivämäärä;Saaja;Viesti;Summa",
+    "3.11.2026;Kauppa Oy;Kuitti;-12,90",
+  ].join("\n")
+  const saved: SavedBankMapping = {
+    id: "m1",
+    name: "Pankki X",
+    signature: headerSignature(["Päivämäärä", "Saaja", "Viesti", "Summa"]),
+    mapping: { date: "Päivämäärä", amount: "Summa", counterparty: "Saaja" },
+  }
+
+  it("names a layout by its headers, whatever their order or case", () => {
+    expect(headerSignature(["Summa", "PÄIVÄMÄÄRÄ", " saaja ", ""])).toBe(
+      headerSignature(["päivämäärä", "Saaja", "summa"])
+    )
+    expect(headerSignature(["a", "b"])).not.toBe(headerSignature(["a", "c"]))
+  })
+
+  it("reads a file with the layout saved for its headers", () => {
+    const r = parseBankCsv(text, undefined, [saved])
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.saved?.id).toBe("m1")
+      expect(r.preset).toBeNull()
+      expect(r.rows[0]).toMatchObject({ amount: -1290, message: "" })
+    }
+  })
+
+  it("lets a mapping given by hand win over a saved one", () => {
+    const r = parseBankCsv(
+      text,
+      { date: "Päivämäärä", amount: "Summa", message: "Viesti" },
+      [saved]
+    )
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.saved).toBeUndefined()
+      expect(r.rows[0].message).toBe("Kuitti")
+    }
+  })
+
+  it("comes before a known bank's layout", () => {
+    const own: SavedBankMapping = {
+      id: "op",
+      name: "OP",
+      signature: headerSignature(
+        OP_HEADER.split(";").map((h) => h.replace(/"/g, ""))
+      ),
+      mapping: { date: "Arvopäivä", amount: "Määrä EUROA" },
+    }
+    const r = parseBankCsv(OP_FILE, undefined, [own])
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.saved?.id).toBe("op")
+      expect(r.preset).toBeNull()
+    }
+  })
+
+  it("is passed over for a file with other headers", () => {
+    const r = parseBankCsv("foo;bar\n1;2", undefined, [saved])
+    expect(r.ok).toBe(false)
   })
 })

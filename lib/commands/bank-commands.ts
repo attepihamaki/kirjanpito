@@ -7,7 +7,12 @@ import { applyInvoicePayment } from "@/lib/domain/invoice-payment"
 import { uid } from "@/lib/domain/id"
 import { paidChangeHitsForm5 } from "@/lib/domain/period-lock"
 import { paidDate, paidOnFor } from "@/lib/domain/open-items"
-import type { Entry } from "@/lib/domain/types"
+import {
+  bookMovement,
+  type StatementDraft,
+  type StatementRecord,
+} from "@/lib/domain/bank-statements"
+import { indexCategories, type Entry } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -24,6 +29,58 @@ export interface BankBooking {
   partial?: readonly { invoiceId: string; amount: number; on: string }[]
   /** Fingerprints of every row the review covered, to recognise them in a later import (§8.16). */
   seen?: readonly string[]
+  /**
+   * The statement's record for the reconciliation page (§8.38). Its book
+   * figure is taken once the booking is in, so it is the book as booked.
+   */
+  statement?: StatementDraft
+}
+
+/** Complete a draft from the book as it stands now. */
+function withBookMovement(draft: StatementDraft): StatementRecord {
+  const s = useBookStore.getState()
+  return {
+    ...draft,
+    bookMovement: bookMovement(
+      s.entries,
+      indexCategories(s.cats),
+      draft.from,
+      draft.to
+    ),
+  }
+}
+
+/** Put back the record a statement replaced, or drop the one it added. */
+function undoStatement(
+  added: StatementRecord,
+  replaced: StatementRecord | null
+) {
+  const store = useBookStore.getState()
+  store.removeBankStatement(added.id)
+  if (replaced) store.addBankStatement(replaced)
+}
+
+/**
+ * Keep a statement on the reconciliation page without booking anything from
+ * it (§8.38), for a statement the book already holds every row of.
+ */
+export function keepStatement(ctx: Ctx, draft: StatementDraft): void {
+  const record = withBookMovement(draft)
+  const store = useBookStore.getState()
+  const epoch = store.bookEpoch
+  const replaced = store.addBankStatement(record)
+  const id = toast.add({
+    title: ctx.t("bank.statementKept"),
+    timeout: UNDO_TIMEOUT_MS,
+    actionProps: {
+      children: ctx.t("common.undo"),
+      onClick: () => {
+        toast.close(id)
+        if (useBookStore.getState().bookEpoch !== epoch) return
+        undoStatement(record, replaced)
+      },
+    },
+  })
 }
 
 /**
@@ -127,6 +184,10 @@ export async function bookBankRows(
     (s) => !known.has(s)
   )
   if (newlySeen.length > 0) store.addBankSeen(newlySeen)
+  const statement = booking.statement
+    ? withBookMovement(booking.statement)
+    : null
+  const replaced = statement ? store.addBankStatement(statement) : null
 
   const addedIds = addedAll.map((e) => e.id)
   const id = toast.add({
@@ -151,6 +212,7 @@ export async function bookBankRows(
             })
           )
         if (newlySeen.length > 0) now.removeBankSeen(newlySeen)
+        if (statement) undoStatement(statement, replaced)
         toast.add({ title: ctx.t("bank.undone") })
       },
     },

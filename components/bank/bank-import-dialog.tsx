@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/toast"
 import {
@@ -26,17 +27,21 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useCommandCtx } from "@/hooks/use-commands"
-import { bookBankRows } from "@/lib/commands/bank-commands"
+import { bookBankRows, keepStatement } from "@/lib/commands/bank-commands"
 import { storeReport } from "@/lib/commands/memo-commands"
 import { LINE_BY_KEY } from "@/lib/domain/accounts"
 import { parseBankStatement } from "@/lib/domain/bank-camt"
 import {
+  headerSignature,
   mappingComplete,
+  MAX_MAPPING_NAME,
   type BankField,
   type BankMapping,
   type BankParseResult,
   type BankRow,
 } from "@/lib/domain/bank-csv"
+import { reconcile } from "@/lib/domain/bank-reconcile"
+import { statementDraft } from "@/lib/domain/bank-statements"
 import {
   proposeForRows,
   rowFingerprints,
@@ -95,11 +100,40 @@ function BankImportForm({
 }) {
   const f = useFormatters()
   const closeDialog = useBookStore((s) => s.closeDialog)
+  const saved = useBookStore((s) => s.bankMappings)
+  const saveMapping = useBookStore((s) => s.saveBankMapping)
   const [mapping, setMapping] = React.useState<BankMapping | undefined>()
-  const result = React.useMemo(
-    () => parseBankStatement(text, mapping),
-    [text, mapping]
+  /* The layout the review was read with, kept while the user changes it. */
+  const [editing, setEditing] = React.useState<BankMapping | null>(null)
+  /* Set once the user mapped the columns here: the name they kept it under, if any. */
+  const [manual, setManual] = React.useState<{ name: string | null } | null>(
+    null
   )
+  /* Read once with the saved layouts, so saving one here does not re-read the file. */
+  const [savedAtOpen] = React.useState(saved)
+  const result = React.useMemo(
+    () => parseBankStatement(text, mapping, savedAtOpen),
+    [text, mapping, savedAtOpen]
+  )
+  const own = result.ok ? result.saved : undefined
+  const mapStep = !result.ok && result.reason === "needs-mapping"
+
+  const apply = (next: BankMapping, keep: { name: string } | null) => {
+    if (keep) {
+      const signature = headerSignature(result.headers)
+      const before = saved.find((m) => m.signature === signature)
+      saveMapping({
+        id: before?.id ?? `bankmap-${uid()}`,
+        name: keep.name,
+        signature,
+        mapping: next,
+      })
+      toast.add({ title: f.t("bank.mappingSaved", { x: keep.name }) })
+    }
+    setMapping(next)
+    setManual({ name: keep?.name ?? null })
+    setEditing(null)
+  }
 
   return (
     <Dialog open onOpenChange={(open) => !open && closeDialog()}>
@@ -107,22 +141,42 @@ function BankImportForm({
         <DialogHeader>
           <DialogTitle>{f.t("bank.title")}</DialogTitle>
           <DialogDescription>
-            {result.ok
-              ? f.t("bank.fileHint", { file: fileName, n: result.rows.length })
-              : result.reason === "empty"
-                ? f.t("bank.fileEmpty")
-                : f.t("bank.mapHint")}
+            {editing
+              ? f.t("bank.remapHint")
+              : result.ok
+                ? f.t("bank.fileHint", {
+                    file: fileName,
+                    n: result.rows.length,
+                  })
+                : result.reason === "empty"
+                  ? f.t("bank.fileEmpty")
+                  : f.t("bank.mapHint")}
           </DialogDescription>
         </DialogHeader>
 
-        {result.ok ? (
-          <Review result={result} />
-        ) : result.reason === "needs-mapping" ? (
+        {editing || mapStep ? (
           <MappingStep
             headers={result.headers}
-            initial={result.suggested}
-            onApply={setMapping}
+            initial={editing ?? (result.ok ? result.mapping : result.suggested)}
+            name={own?.name ?? fileStem(fileName)}
+            onApply={apply}
+            onBack={editing ? () => setEditing(null) : undefined}
           />
+        ) : result.ok ? (
+          <>
+            {result.headers.length > 0 ? (
+              <LayoutLine
+                result={result}
+                manual={manual}
+                onChange={() => setEditing(result.mapping)}
+              />
+            ) : null}
+            <Review
+              key={JSON.stringify(result.mapping)}
+              result={result}
+              fileName={fileName}
+            />
+          </>
         ) : (
           <DialogFooter>
             <Button variant="outline" onClick={closeDialog}>
@@ -139,18 +193,74 @@ function BankImportForm({
  * Mapping
  * ---------------------------------------------------------------------- */
 
+/** A layout's default name: the file's name without its extension or digits. */
+function fileStem(fileName: string): string {
+  const stem = fileName
+    .replace(/\.[^.]+$/, "")
+    .replace(/[\d_-]+/g, " ")
+    .trim()
+  return stem.slice(0, MAX_MAPPING_NAME)
+}
+
+/**
+ * Which layout the file was read with, and "Vaihda sarakkeet" to map it by
+ * hand, where a saved layout can be kept for the next file (§8.16).
+ */
+function LayoutLine({
+  result,
+  manual,
+  onChange,
+}: {
+  result: Extract<BankParseResult, { ok: true }>
+  manual: { name: string | null } | null
+  onChange: () => void
+}) {
+  const f = useFormatters()
+  const saved = manual ? manual.name : result.saved?.name
+  const label = saved
+    ? f.t("bank.layoutSaved", { x: saved })
+    : manual
+      ? f.t("bank.layoutManual")
+      : result.preset === "op"
+        ? f.t("bank.layoutOp")
+        : f.t("bank.layoutGuessed")
+  return (
+    <p className="-mt-2 flex flex-wrap items-baseline gap-x-2 text-sm text-muted-foreground">
+      {label}
+      <Button
+        variant="link"
+        size="sm"
+        className="h-auto px-0"
+        onClick={onChange}
+      >
+        {f.t("bank.changeColumns")}
+      </Button>
+    </p>
+  )
+}
+
 function MappingStep({
   headers,
   initial,
+  name: initialName,
   onApply,
+  onBack,
 }: {
   headers: readonly string[]
   initial: BankMapping
-  onApply: (mapping: BankMapping) => void
+  /** The name a kept layout starts with. */
+  name: string
+  onApply: (mapping: BankMapping, keep: { name: string } | null) => void
+  /** Back to the review without changing anything, when there is one. */
+  onBack?: () => void
 }) {
   const f = useFormatters()
   const closeDialog = useBookStore((s) => s.closeDialog)
+  const readOnly = useBookStore((s) => s.archiveYear !== null)
   const [draft, setDraft] = React.useState<BankMapping>(initial)
+  const [keep, setKeep] = React.useState(!readOnly)
+  const [name, setName] = React.useState(initialName)
+  const keptName = name.trim().slice(0, MAX_MAPPING_NAME)
 
   const options: Option[] = [
     { value: NONE, label: f.t("bank.noColumn") },
@@ -179,13 +289,35 @@ function MappingStep({
           </label>
         ))}
       </div>
+      {readOnly ? null : (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+          <label className="flex items-center gap-2">
+            <Checkbox
+              checked={keep}
+              onCheckedChange={(v) => setKeep(v === true)}
+            />
+            {f.t("bank.keepMapping")}
+          </label>
+          {keep ? (
+            <Input
+              value={name}
+              maxLength={MAX_MAPPING_NAME}
+              aria-label={f.t("bank.mappingName")}
+              placeholder={f.t("bank.mappingName")}
+              aria-invalid={!keptName}
+              className="w-56"
+              onChange={(e) => setName(e.target.value)}
+            />
+          ) : null}
+        </div>
+      )}
       <DialogFooter>
-        <Button variant="outline" onClick={closeDialog}>
-          {f.t("common.cancel")}
+        <Button variant="outline" onClick={onBack ?? closeDialog}>
+          {onBack ? f.t("bank.backToReview") : f.t("common.cancel")}
         </Button>
         <Button
-          disabled={!mappingComplete(draft)}
-          onClick={() => onApply(draft)}
+          disabled={!mappingComplete(draft) || (keep && !keptName)}
+          onClick={() => onApply(draft, keep ? { name: keptName } : null)}
         >
           {f.t("bank.useMapping")}
         </Button>
@@ -236,8 +368,10 @@ function candidateIds(p: BankProposal): string[] {
 
 function Review({
   result,
+  fileName,
 }: {
   result: Extract<BankParseResult, { ok: true }>
+  fileName: string
 }) {
   const f = useFormatters()
   const ctx = useCommandCtx()
@@ -308,6 +442,24 @@ function Review({
   )
   const paidCount = plans.filter((p) => p.action === "match").length
   const newCount = plans.filter((p) => p.action === "new").length
+  const reconciliation = React.useMemo(
+    () => reconcile(result.rows, result.statement, entries, catMap, planned),
+    [result, entries, catMap, planned]
+  )
+  /* The statement's record for the reconciliation page (§8.38). */
+  const draft = () =>
+    reconciliation
+      ? statementDraft({
+          id: `stmt-${uid()}`,
+          from: reconciliation.from,
+          to: reconciliation.to,
+          rows: result.rows.length,
+          movement: reconciliation.statementMovement,
+          statement: result.statement,
+          fileName,
+          today: todayIso(),
+        })
+      : undefined
 
   /* What the statement held, said once when the review opens (§11). */
   React.useEffect(() => {
@@ -417,6 +569,7 @@ function Review({
       added,
       partial,
       seen: rowFingerprints(result.rows),
+      statement: draft(),
     })
     if (held.length) {
       const store = useBookStore.getState()
@@ -545,11 +698,7 @@ function Review({
         </Table>
       </div>
 
-      <BankReconcile
-        rows={result.rows}
-        statement={result.statement}
-        planned={planned}
-      />
+      <BankReconcile result={reconciliation} statement={result.statement} />
 
       <DialogFooter className="items-center">
         {/* Mounted while empty, so a hint that appears is read out (§11). */}
@@ -562,17 +711,31 @@ function Review({
         <Button variant="outline" onClick={closeDialog}>
           {f.t("common.cancel")}
         </Button>
-        <Button
-          disabled={
-            busy ||
-            claimedTwice ||
-            missingCategory > 0 ||
-            paidCount + newCount === 0
-          }
-          onClick={() => void book()}
-        >
-          {f.t("bank.confirm", { paid: paidCount, added: newCount })}
-        </Button>
+        {paidCount + newCount === 0 && reconciliation ? (
+          /* Nothing to book: the statement can still go on the reconciliation page. */
+          <Button
+            disabled={busy || claimedTwice}
+            onClick={() => {
+              const statement = draft()
+              if (statement) keepStatement(ctx, statement)
+              closeDialog()
+            }}
+          >
+            {f.t("bank.keepStatement")}
+          </Button>
+        ) : (
+          <Button
+            disabled={
+              busy ||
+              claimedTwice ||
+              missingCategory > 0 ||
+              paidCount + newCount === 0
+            }
+            onClick={() => void book()}
+          >
+            {f.t("bank.confirm", { paid: paidCount, added: newCount })}
+          </Button>
+        )}
       </DialogFooter>
     </>
   )

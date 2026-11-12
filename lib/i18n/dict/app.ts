@@ -3297,6 +3297,22 @@ export const APP_DICT = {
     "Ei sääntöjä. Lisää ensimmäinen yllä olevalla lomakkeella.",
     "No rules. Add the first one with the form above.",
   ],
+  "settings.bankLayoutsTitle": ["Tiliotteiden muodot", "Statement layouts"],
+  "settings.bankLayoutsHint": [
+    "Sarakkeet, jotka valitsit tiliotteen tuonnissa. Saman pankin seuraava tiliote luetaan niillä kysymättä. Muodon voi tallentaa tuonnin kohdasta Vaihda sarakkeet.",
+    "The columns you chose when importing a statement. The next statement from the same bank is read with them without asking. Save a layout from Change columns in the import.",
+  ],
+  "settings.bankLayoutsEmpty": [
+    "Ei tallennettuja muotoja. OP:n tiliote ja camt.053-tiedosto tunnistetaan ilman niitä.",
+    "No saved layouts. An OP statement and a camt.053 file are recognised without one.",
+  ],
+  "settings.bankLayoutName": ["Nimi", "Name"],
+  "settings.bankLayoutColumns": ["Luetut sarakkeet", "Columns read"],
+  "settings.bankLayoutDelete": ["Poista muoto {x}", "Delete layout {x}"],
+  "settings.bankLayoutDeleted": [
+    "Muoto ”{x}” poistettu.",
+    "Layout “{x}” deleted.",
+  ],
   "settings.rulesTextError": [
     "Anna vähintään {n} merkkiä.",
     "Enter at least {n} characters.",
@@ -4990,6 +5006,45 @@ export const APP_DICT = {
   ],
   "bank.noColumn": ["Ei saraketta", "No column"],
   "bank.useMapping": ["Käytä näitä sarakkeita", "Use these columns"],
+  "bank.remapHint": [
+    "Valitse, mistä sarakkeesta kukin tieto löytyy. Päivä ja summa (tai veloitus ja hyvitys) vaaditaan.",
+    "Say which column holds each field. A date and an amount (or a debit and a credit) are required.",
+  ],
+  "bank.keepMapping": [
+    "Muista tämä muoto seuraavalla kerralla nimellä",
+    "Remember this layout next time as",
+  ],
+  "bank.mappingName": [
+    "Muodon nimi, esim. pankin",
+    "Layout name, e.g. the bank",
+  ],
+  "bank.mappingSaved": [
+    "Muoto ”{x}” tallennettu. Saman pankin seuraava tiliote luetaan sillä.",
+    "Layout “{x}” saved. The next statement from the same bank is read with it.",
+  ],
+  "bank.backToReview": ["Takaisin", "Back"],
+  "bank.layoutSaved": [
+    "Luettu tallennetulla muodolla ”{x}”.",
+    "Read with the saved layout “{x}”.",
+  ],
+  "bank.layoutManual": [
+    "Luettu valitsemillasi sarakkeilla.",
+    "Read with the columns you chose.",
+  ],
+  "bank.layoutOp": [
+    "Tunnistettu OP:n tiliotteeksi.",
+    "Recognised as an OP statement.",
+  ],
+  "bank.layoutGuessed": [
+    "Sarakkeet päätelty otsikoista.",
+    "Columns worked out from the headers.",
+  ],
+  "bank.changeColumns": ["Vaihda sarakkeet", "Change columns"],
+  "bank.keepStatement": ["Tallenna täsmäytykseen", "Save to reconciliation"],
+  "bank.statementKept": [
+    "Tiliote tallennettu täsmäytykseen.",
+    "Statement saved to the reconciliation.",
+  ],
   "bank.skippedRows": [
     pl(
       "1 rivi ohitettiin, koska sitä ei voitu lukea.",
@@ -5718,6 +5773,88 @@ export const APP_DICT = {
     "The booked stock change is {a}, but the list now gives {b}.",
   ],
   "inbox.tab": ["Saapuneet", "Inbox"],
+  "reconcile.tab": ["Täsmäytys", "Reconciliation"],
+  "reconcile.subtitle": [
+    "Pankin tiliotteet {y} verrattuna kirjanpitoon",
+    "Bank statements for {y} against the book",
+  ],
+  "reconcile.subtitleCount": [
+    pl(
+      "1 tiliote vuodelta {y} verrattuna kirjanpitoon",
+      "{n} tiliotetta vuodelta {y} verrattuna kirjanpitoon"
+    ),
+    pl(
+      "1 statement for {y} against the book",
+      "{n} statements for {y} against the book"
+    ),
+  ],
+  "reconcile.subtitleChanged": [
+    pl(
+      "1 tiliote ei enää täsmää: kirjanpitoa on muutettu tuonnin jälkeen",
+      "{n} tiliotetta ei enää täsmää: kirjanpitoa on muutettu tuonnin jälkeen"
+    ),
+    pl(
+      "1 statement no longer agrees: the book changed after it was imported",
+      "{n} statements no longer agree: the book changed after they were imported"
+    ),
+  ],
+  "reconcile.emptyTitle": [
+    "Ei täsmäytettyjä tiliotteita vuodelta {y}",
+    "No reconciled statements for {y}",
+  ],
+  "reconcile.emptyHint": [
+    "Kun tuot pankin tiliotteen, se tallentuu tänne. Sivu näyttää kuukausittain, täsmääkö kirjanpito pankin kanssa, ja huomaa, jos tositetta muutetaan myöhemmin.",
+    "A bank statement you import is kept here. The page shows month by month whether the book agrees with the bank, and notices when a voucher is changed later.",
+  ],
+  "reconcile.monthsTitle": ["Kuukaudet {y}", "Months of {y}"],
+  "reconcile.monthsHint": [
+    "Kuukauden tila on sen huonoimman tiliotteen tila. Maksut ilman tiliotetta ovat pankin kautta maksettuja tositteita päiviltä, joita mikään tuotu tiliote ei kata. Avaa kuukauden tositteet napsauttamalla.",
+    "A month takes the status of its worst statement. Payments with no statement are vouchers paid through the bank on days no imported statement covers. Click a month to open its vouchers.",
+  ],
+  "reconcile.monthLabel": ["{m}: {s}", "{m}: {s}"],
+  "reconcile.agrees": ["Täsmää", "Agrees"],
+  "reconcile.changed": ["Muuttunut", "Changed"],
+  "reconcile.differs": ["Ei täsmää", "Differs"],
+  "reconcile.none": ["Ei tiliotetta", "No statement"],
+  "reconcile.uncovered": [
+    pl("1 maksu ilman tiliotetta", "{n} maksua ilman tiliotetta"),
+    pl("1 payment with no statement", "{n} payments with no statement"),
+  ],
+  "reconcile.statementsTitle": ["Tiliotteet", "Statements"],
+  "reconcile.statementsHint": [
+    "Tiliotteen tapahtumien summa verrattuna kirjanpidon pankkitilin kautta maksettuihin tositteisiin samoilta päiviltä, sellaisina kuin ne ovat nyt.",
+    "Each statement’s transactions against the vouchers the book has paid through the bank on the same days, as they stand now.",
+  ],
+  "reconcile.colDays": ["Jakso", "Days"],
+  "reconcile.rows": [
+    pl("1 tapahtuma", "{n} tapahtumaa"),
+    pl("1 transaction", "{n} transactions"),
+  ],
+  "reconcile.colStatement": ["Tiliote", "Statement"],
+  "reconcile.colBook": ["Kirjanpito", "Book"],
+  "reconcile.colDifference": ["Erotus", "Difference"],
+  "reconcile.colStatus": ["Tila", "Status"],
+  "reconcile.imported": ["tuotu {d}", "imported {d}"],
+  "reconcile.changedNote": [
+    "Täsmäsi tuotaessa. Kirjanpito on muuttunut sen jälkeen {n}: tarkista näiden päivien tositteet.",
+    "Agreed when imported. The book has moved {n} since: check the vouchers of these days.",
+  ],
+  "reconcile.gapNote": [
+    "Alkusaldo ja tapahtumat eivät tuota loppusaldoa, erotus {n}. Tiedostosta puuttui tapahtumia.",
+    "The transactions do not take the opening balance to the closing one: {n} apart. The file lacked transactions.",
+  ],
+  "reconcile.chainNote": [
+    "Alkusaldo ei ole edellisen tiliotteen loppusaldo, erotus {n}.",
+    "The opening balance is not the previous statement’s closing balance: {n} apart.",
+  ],
+  "reconcile.delete": [
+    "Poista tiliote {a}–{b} täsmäytyksestä",
+    "Remove statement {a}–{b} from the reconciliation",
+  ],
+  "reconcile.deleted": [
+    "Tiliote poistettu täsmäytyksestä.",
+    "Statement removed from the reconciliation.",
+  ],
   "inbox.tabCount": [
     pl("Saapuneet (1)", "Saapuneet ({n})"),
     pl("Inbox (1)", "Inbox ({n})"),

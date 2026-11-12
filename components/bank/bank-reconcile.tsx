@@ -7,9 +7,8 @@ import { Money } from "@/components/common/money"
 import { useFormatters } from "@/components/lang-provider"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
-import type { BankRow, StatementInfo } from "@/lib/domain/bank-csv"
-import { reconcile } from "@/lib/domain/bank-reconcile"
-import { indexCategories } from "@/lib/domain/types"
+import type { StatementInfo } from "@/lib/domain/bank-csv"
+import type { Reconciliation } from "@/lib/domain/bank-reconcile"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -19,25 +18,18 @@ import { useBookStore } from "@/stores/book-store"
  * the dialog's work, and this is the check after it.
  */
 export function BankReconcile({
-  rows,
+  result,
   statement,
-  planned,
 }: {
-  rows: readonly BankRow[]
+  /** The statement set against the book as it will be once booked. */
+  result: Reconciliation | null
   statement: StatementInfo | undefined
-  planned: ReadonlySet<number>
 }) {
   const f = useFormatters()
-  const entries = useBookStore((s) => s.entries)
-  const cats = useBookStore((s) => s.cats)
   const bankBalance = useBookStore((s) => s.bankBalance)
   const setBankBalance = useBookStore((s) => s.setBankBalance)
   const [open, setOpen] = React.useState(false)
 
-  const result = React.useMemo(
-    () => reconcile(rows, statement, entries, indexCategories(cats), planned),
-    [rows, statement, entries, cats, planned]
-  )
   if (!result) return null
 
   const agrees = result.difference === 0 && !result.statementGap

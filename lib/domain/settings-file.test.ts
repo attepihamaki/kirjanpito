@@ -51,6 +51,33 @@ function settings(): BookSettings {
     yearsArchived: { "2025": "2026-01-20" },
     retentionNoted: { "2019": "vouchers" },
     billsIgnored: ["text:puhelin #/#@2026-11"],
+    bankMappings: [
+      {
+        id: "m1",
+        name: "Nordea",
+        signature: "kirjauspaiva|maara|saaja",
+        mapping: {
+          date: "Kirjauspäivä",
+          amount: "Määrä",
+          counterparty: "Saaja",
+        },
+      },
+    ],
+    bankStatements: [
+      {
+        id: "s1",
+        from: "2026-10-01",
+        to: "2026-10-31",
+        rows: 12,
+        movement: -45_000,
+        bookMovement: -45_000,
+        opening: 100_000,
+        closing: 55_000,
+        iban: "FI2112345600000785",
+        fileName: "loka.xml",
+        importedAt: "2026-11-02",
+      },
+    ],
     taxLosses: { "2024": 120_000 },
     form5Filed: { "2025": "2026-03-20" },
     archives: {
@@ -304,6 +331,55 @@ describe("settings.json", () => {
       ).billsIgnored
     ).toEqual(["party:p1@2026-11", "text:b"])
     expect(parseSettings(JSON.stringify({})).billsIgnored).toBeUndefined()
+  })
+
+  it("keeps saved bank layouts that can read a file, once per signature", () => {
+    const parsed = parseSettings(
+      JSON.stringify({
+        bankMappings: [
+          {
+            id: "a",
+            name: " OP ",
+            signature: "x",
+            mapping: { date: "D", amount: "A", bogus: "B" },
+          },
+          {
+            id: "b",
+            name: "Dup",
+            signature: "x",
+            mapping: { date: "D", amount: "A" },
+          },
+          {
+            id: "c",
+            name: "No amount",
+            signature: "y",
+            mapping: { date: "D" },
+          },
+          {
+            id: "d",
+            name: "",
+            signature: "z",
+            mapping: { date: "D", amount: "A" },
+          },
+        ],
+      })
+    ).bankMappings
+    expect(parsed).toEqual([
+      {
+        id: "a",
+        name: "OP",
+        signature: "x",
+        mapping: { date: "D", amount: "A" },
+      },
+    ])
+  })
+
+  it("leaves the bank layouts and statements out while there are none", () => {
+    const json = JSON.parse(
+      serializeSettings({ ...settings(), bankMappings: [], bankStatements: [] })
+    )
+    expect(json.bankMappings).toBeUndefined()
+    expect(json.bankStatements).toBeUndefined()
   })
 
   it("keeps a cash basis whose last month is not before its first", () => {

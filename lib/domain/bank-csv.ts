@@ -76,6 +76,8 @@ export type BankParseResult =
       mapping: BankMapping
       /** Set when the layout was recognised, not mapped by hand. */
       preset: BankPreset | null
+      /** The saved layout the file was read with, when one fitted its headers. */
+      saved?: SavedBankMapping
       /** What the statement says about itself, when it says anything. */
       statement?: StatementInfo
     }
@@ -88,6 +90,36 @@ export type BankParseResult =
     }
 
 export type BankPreset = "op" | "camt053"
+
+/**
+ * A layout the user mapped by hand and asked to keep (§8.16), found again by
+ * the header names of the next file from the same bank.
+ */
+export interface SavedBankMapping {
+  id: string
+  /** The user's name for it, such as the bank's. */
+  name: string
+  /** `headerSignature` of the file it was made from. */
+  signature: string
+  mapping: BankMapping
+}
+
+export const BANK_FIELDS: readonly BankField[] = [
+  "date",
+  "valueDate",
+  "amount",
+  "debit",
+  "credit",
+  "counterparty",
+  "message",
+  "reference",
+  "iban",
+  "bankId",
+  "kind",
+]
+
+/** The longest name a saved layout keeps. */
+export const MAX_MAPPING_NAME = 40
 
 /** A balance a statement states, in cents, on the day it is for. */
 export interface StatementBalance {
@@ -167,6 +199,59 @@ const GUESSES: Record<BankField, readonly string[]> = {
   kind: ["laji", "tapahtumalaji", "selitys", "type"],
 }
 
+/**
+ * What identifies a layout: its header names, normalised and in order of
+ * name, so a bank that reorders its columns or changes their case is still
+ * the same layout. Empty headers are left out.
+ */
+export function headerSignature(headers: readonly string[]): string {
+  return [...new Set(headers.map(norm).filter(Boolean))].sort().join("|")
+}
+
+/** The saved layout made for files with these headers, if any. */
+export function savedMappingFor(
+  headers: readonly string[],
+  saved: readonly SavedBankMapping[]
+): SavedBankMapping | undefined {
+  const signature = headerSignature(headers)
+  if (!signature) return undefined
+  return saved.find(
+    (s) => s.signature === signature && mappingComplete(s.mapping)
+  )
+}
+
+/**
+ * The saved layouts a file holds (§7.6), one per header signature, the first
+ * kept. A layout with no name, no signature or a mapping that cannot read a
+ * file is dropped, and so is a field the app does not know.
+ */
+export function parseSavedMappings(value: unknown): SavedBankMapping[] {
+  if (!Array.isArray(value)) return []
+  const out: SavedBankMapping[] = []
+  for (const item of value) {
+    if (typeof item !== "object" || item === null) continue
+    const { id, name, signature, mapping } = item as Record<string, unknown>
+    if (typeof id !== "string" || !id) continue
+    if (typeof name !== "string" || !name.trim()) continue
+    if (typeof signature !== "string" || !signature) continue
+    if (typeof mapping !== "object" || mapping === null) continue
+    const map: BankMapping = {}
+    for (const field of BANK_FIELDS) {
+      const header = (mapping as Record<string, unknown>)[field]
+      if (typeof header === "string" && header.trim()) map[field] = header
+    }
+    if (!mappingComplete(map)) continue
+    if (out.some((s) => s.signature === signature)) continue
+    out.push({
+      id,
+      name: name.trim().slice(0, MAX_MAPPING_NAME),
+      signature,
+      mapping: map,
+    })
+  }
+  return out
+}
+
 /** A mapping guessed from header names alone. */
 export function guessMapping(headers: readonly string[]): BankMapping {
   const out: BankMapping = {}
@@ -237,13 +322,15 @@ export function cleanReference(raw: string): string {
 }
 
 /**
- * Parse a statement. With no `mapping`, a known layout is used if the headers
- * fit one and otherwise the result asks for a mapping, carrying a guess. A
- * row with no usable date or amount is skipped and counted, never fatal.
+ * Parse a statement. With no `mapping`, a layout the user saved for these
+ * headers comes first, then a known bank's, and otherwise the result asks for
+ * a mapping, carrying a guess. A row with no usable date or amount is skipped
+ * and counted, never fatal.
  */
 export function parseBankCsv(
   text: string,
-  mapping?: BankMapping
+  mapping?: BankMapping,
+  saved: readonly SavedBankMapping[] = []
 ): BankParseResult {
   const body = text.replace(/^﻿/, "")
   const parsed = Papa.parse<string[]>(body, {
@@ -260,6 +347,8 @@ export function parseBankCsv(
 
   let preset: BankPreset | null = null
   let map = mapping
+  const own = mapping ? undefined : savedMappingFor(headers, saved)
+  if (own) map = own.mapping
   if (!map) {
     if (matchesPreset(headers, OP_MAPPING)) {
       preset = "op"
@@ -350,5 +439,13 @@ export function parseBankCsv(
     })
   }
 
-  return { ok: true, rows, skipped, headers, mapping: map, preset }
+  return {
+    ok: true,
+    rows,
+    skipped,
+    headers,
+    mapping: map,
+    preset,
+    ...(own ? { saved: own } : {}),
+  }
 }

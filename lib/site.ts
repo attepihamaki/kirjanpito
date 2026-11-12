@@ -126,6 +126,7 @@ export const LEDGER_ROUTES = {
   accounts: `${APP_ROUTES.ledger}/accounts`,
   chart: `${APP_ROUTES.ledger}/chart`,
   inbox: `${APP_ROUTES.ledger}/inbox`,
+  reconcile: `${APP_ROUTES.ledger}/reconcile`,
 } as const
 
 /**
