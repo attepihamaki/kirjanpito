@@ -348,6 +348,12 @@ export interface BookState {
    */
   retentionNoted: Record<string, RetentionStage>
   /**
+   * The bills the missing-bill reminder leaves alone (§8.12): a bill's key for
+   * good, or `key@2026-11` for one month (`lib/domain/missing-bills.ts`).
+   * Saved in settings.json.
+   */
+  billsIgnored: string[]
+  /**
    * Year (`"2024"`) → the loss the tax assessment confirmed for it, in
    * positive cents (§6.15). Saved in settings.json.
    */
@@ -582,6 +588,7 @@ export interface BookActions {
       taxPayment?: TaxPayment
       yearsArchived?: Record<string, string>
       retentionNoted?: Record<string, RetentionStage>
+      billsIgnored?: string[]
       taxLosses?: Record<string, Cents>
       form5Filed?: Record<string, string>
       archives?: Record<string, ArchiveStub>
@@ -672,6 +679,10 @@ export interface BookActions {
   setYearArchived(year: number, date: string | null): void
   /** Note that the user has seen a year's retention reach `stage` (§8.12). */
   noteRetention(year: number, stage: RetentionStage): void
+  /** Stop reminding about a bill, for good or for one month (§8.12). */
+  ignoreBill(key: string): void
+  /** Take an ignore back, for undo. */
+  unignoreBill(key: string): void
   /** Set the loss confirmed for a year, or clear it with null (§6.15). */
   setTaxLoss(year: number, amount: Cents | null): void
   setForm5Filed(year: number, date: string | null): void
@@ -781,6 +792,7 @@ function initialState(): BookState {
     taxPayment: NO_TAX_PAYMENT,
     yearsArchived: {},
     retentionNoted: {},
+    billsIgnored: [],
     taxLosses: {},
     form5Filed: {},
     archives: {},
@@ -869,6 +881,7 @@ type PersistedBook = Pick<
   | "taxPayment"
   | "yearsArchived"
   | "retentionNoted"
+  | "billsIgnored"
   | "taxLosses"
   | "form5Filed"
   | "archives"
@@ -1057,6 +1070,7 @@ const BOOK_DATA_KEYS: readonly (keyof BookState)[] = [
   "taxPayment",
   "yearsArchived",
   "retentionNoted",
+  "billsIgnored",
   "taxLosses",
   "form5Filed",
   "archives",
@@ -1161,6 +1175,7 @@ export const useBookStore = create<BookStore>()(
           taxPayment: NO_TAX_PAYMENT,
           yearsArchived: {},
           retentionNoted: {},
+          billsIgnored: [],
           taxLosses: {},
           form5Filed: {},
           archives: {},
@@ -1275,6 +1290,7 @@ export const useBookStore = create<BookStore>()(
           taxPayment: NO_TAX_PAYMENT,
           yearsArchived: {},
           retentionNoted: {},
+          billsIgnored: [],
           taxLosses: {},
           form5Filed: {},
           archives: {},
@@ -1346,6 +1362,7 @@ export const useBookStore = create<BookStore>()(
           taxPayment: { ...NO_TAX_PAYMENT, ...s.taxPayment },
           yearsArchived: s.yearsArchived ?? {},
           retentionNoted: s.retentionNoted ?? {},
+          billsIgnored: s.billsIgnored ?? [],
           taxLosses: s.taxLosses ?? {},
           form5Filed: s.form5Filed ?? {},
           archives: s.archives ?? {},
@@ -1621,6 +1638,17 @@ export const useBookStore = create<BookStore>()(
           retentionNoted: { ...get().retentionNoted, [String(year)]: stage },
           dirty: true,
         }),
+      ignoreBill: (key) => {
+        if (get().billsIgnored.includes(key)) return
+        set({ billsIgnored: [...get().billsIgnored, key].sort(), dirty: true })
+      },
+      unignoreBill: (key) => {
+        if (!get().billsIgnored.includes(key)) return
+        set({
+          billsIgnored: get().billsIgnored.filter((k) => k !== key),
+          dirty: true,
+        })
+      },
       setTaxLoss: (year, amount) => {
         const taxLosses = { ...get().taxLosses }
         if (amount === null) delete taxLosses[String(year)]
@@ -1834,6 +1862,7 @@ export const useBookStore = create<BookStore>()(
         taxPayment: s.taxPayment,
         yearsArchived: s.yearsArchived,
         retentionNoted: s.retentionNoted,
+        billsIgnored: s.billsIgnored,
         taxLosses: s.taxLosses,
         form5Filed: s.form5Filed,
         archives: s.archives,

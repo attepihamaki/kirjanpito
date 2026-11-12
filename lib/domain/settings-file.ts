@@ -114,6 +114,8 @@ export interface BookSettings {
   yearsArchived: Record<string, string>
   /** Year (`"2019"`) → the retention stage the user has noted (§8.12). */
   retentionNoted: Record<string, RetentionStage>
+  /** Bills the missing-bill reminder leaves alone (§8.12). Absent means none. */
+  billsIgnored?: string[]
   /** Year (`"2024"`) → the loss confirmed in the assessment, in cents (§6.15). */
   taxLosses: Record<string, number>
   /** Year (`"2025"`) → ISO date its Form 5 was marked as filed (§8.8). */
@@ -488,6 +490,15 @@ export function parseSettings(text: string): ParsedSettings {
     }
     out.retentionNoted = noted
   }
+  if (Array.isArray(raw.billsIgnored)) {
+    out.billsIgnored = [
+      ...new Set(
+        raw.billsIgnored.filter(
+          (k): k is string => typeof k === "string" && k.length > 0
+        )
+      ),
+    ].sort()
+  }
   if (isRecord(raw.taxLosses)) {
     const losses: Record<string, number> = {}
     for (const [key, amount] of Object.entries(raw.taxLosses)) {
@@ -758,6 +769,7 @@ export function serializeSettings(s: BookSettings): string {
     invoiceSettings: s.invoiceSettings,
     changeLog: s.changeLog,
     ...(s.inbox?.length ? { inbox: s.inbox } : {}),
+    ...(s.billsIgnored?.length ? { billsIgnored: s.billsIgnored } : {}),
   }
   return `${JSON.stringify(file, null, 2)}\n`
 }

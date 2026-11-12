@@ -3,6 +3,7 @@ import type { YearEnd } from "@/lib/domain/form5-balance"
 import type { Invoice } from "@/lib/domain/invoice"
 import { newYearDue, newYearTarget } from "@/lib/domain/new-year"
 import { balancesAt, type OpenBalances } from "@/lib/domain/open-items"
+import { missingBills, type MissingBill } from "@/lib/domain/missing-bills"
 import { dueRecurring, type RecurringEntry } from "@/lib/domain/recurring"
 import {
   heldYears,
@@ -29,8 +30,9 @@ import { daysBetween, type TimelinePeriod } from "@/lib/domain/vat-deadline"
 /**
  * The overview's reminders (§8.12) that are neither entry checks nor limits:
  * deadlines, open items, empty months, missing receipts, the year to open,
- * recurring entries due, drafts made by recurring invoices, closed years to
- * put away, years whose retention has ended and gaps in the rule tables. Each is a rule, so the checklist only turns findings into rows.
+ * recurring entries due, monthly bills not booked yet, drafts made by
+ * recurring invoices, closed years to put away, years whose retention has
+ * ended and gaps in the rule tables. Each is a rule, so the checklist only turns findings into rows.
  */
 
 /** A VAT return falling due within this many days is shown. */
@@ -60,6 +62,8 @@ export interface OverviewContext {
   archives?: Readonly<Record<string, unknown>>
   /** The retention stages the user has noted, by year. */
   retentionNoted?: Readonly<Record<string, RetentionStage>>
+  /** The bills the missing-bill reminder leaves alone. */
+  billsIgnored?: readonly string[]
 }
 
 /** What each overview rule reports, by rule id. */
@@ -75,6 +79,7 @@ export interface OverviewData {
   emptyMonths: { months: number[] }
   newYear: { year: number }
   recurringDue: { month: string; items: RecurringEntry[] }
+  billMissing: MissingBill
   recurringDrafts: { count: number }
   yearToArchive: { year: number; books: string; vouchers: string }
   retentionEnded: {
@@ -200,6 +205,9 @@ export const OVERVIEW_RULES = defineRules<OverviewContext, AnyData>([
     const items = dueRecurring(ctx.recurring, month, ctx.entries)
     return items.length ? [{ month, items }] : []
   }),
+  rule("billMissing", "info", "KPL 2:4", (ctx) =>
+    missingBills(ctx.entries, ctx.today, ctx.recurring, ctx.billsIgnored)
+  ),
   rule("recurringDrafts", "info", "app", (ctx) => {
     const count = ctx.invoices.filter(
       (i) => i.number === null && i.recurring !== undefined

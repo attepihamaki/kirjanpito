@@ -68,15 +68,26 @@ export function formatFileSize(bytes: number, lang: Lang): string {
 }
 
 /**
- * Strip what a pasted amount carries besides the number: spaces of every kind,
- * "€", the words EUR, euro and euroa on either side, and a Unicode minus
- * (turned into a hyphen).
+ * Strip what a pasted amount carries besides the number, so that what a bank,
+ * a web shop or a price tag prints reads as it is meant (§9):
+ *
+ * - spaces of every kind, "€", and the words EUR, euro and euroa on either side;
+ * - a Unicode minus anywhere, and an en dash in front, as a hyphen;
+ * - a sign written after the number, as bank statements do: `12,30-` is −12,30;
+ * - a leading plus, which some banks print on money in;
+ * - the whole-euro mark of a price tag: `45,-` and `45,–` are 45;
+ * - an apostrophe between thousands: `1'234.56`.
  */
 export function cleanAmountText(input: string): string {
   return String(input)
     .replace(/[\s\u00a0\u202f]/g, "")
     .replace(/€|^(?:eur|euroa?)(?=[-+.,\d])|(?<=\d)(?:eur|euroa?)$/gi, "")
     .replace(/−/g, "-")
+    .replace(/^–(?=\d)/, "-")
+    .replace(/(?<=\d)[.,][-–]$/, "")
+    .replace(/^(\d[\d.,]*)-$/, "-$1")
+    .replace(/^\+(?=[\d.,])/, "")
+    .replace(/(?<=\d)['’](?=\d{3}(?:\D|$))/g, "")
 }
 
 /**
@@ -99,8 +110,8 @@ export function ambiguousAmount(
 }
 
 /**
- * Parse a user- or CSV-supplied amount into cents. Lenient per §7.1: tolerates
- * spaces, NBSP, narrow NBSP, "€", "EUR" and a Unicode minus.
+ * Parse a user- or CSV-supplied amount into cents. Lenient per §7.1: whatever
+ * `cleanAmountText` strips is tolerated, such as "1 234,56 €" or "12,30-".
  *
  * When both "," and "." appear, the last one is the decimal separator. A lone
  * comma is always a decimal comma, whatever the UI language, so the same file

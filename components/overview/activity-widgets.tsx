@@ -6,6 +6,7 @@ import {
   AlertCircleIcon,
   ArrowRightIcon,
   CheckIcon,
+  EllipsisIcon,
   InfoIcon,
   SaveIcon,
 } from "lucide-react"
@@ -16,6 +17,13 @@ import { Money } from "@/components/common/money"
 import { Panel } from "@/components/common/panel"
 import { Pill } from "@/components/common/pill"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Table,
   TableBody,
@@ -32,6 +40,7 @@ import {
 import { useCanSaveToFile, useSaveBook } from "@/hooks/use-save-book"
 import { calcEntry } from "@/lib/domain/calc"
 import { ENTRY_CHECKS, flaggedEntryIds } from "@/lib/domain/entry-checks"
+import { billDate, monthIgnore } from "@/lib/domain/missing-bills"
 import { APP_ROUTES, INVOICE_ROUTES } from "@/lib/site"
 import { cn } from "@/lib/utils"
 import { toast } from "@/components/ui/toast"
@@ -224,6 +233,9 @@ export function ChecksWidget() {
   const archives = useBookStore((s) => s.archives)
   const retentionNoted = useBookStore((s) => s.retentionNoted)
   const noteRetention = useBookStore((s) => s.noteRetention)
+  const billsIgnored = useBookStore((s) => s.billsIgnored)
+  const ignoreBill = useBookStore((s) => s.ignoreBill)
+  const unignoreBill = useBookStore((s) => s.unignoreBill)
   const ctx = useCommandCtx()
   const canSave = useCanSaveToFile()
   const save = useSaveBook()
@@ -326,6 +338,7 @@ export function ChecksWidget() {
     yearsArchived,
     archives,
     retentionNoted,
+    billsIgnored,
   })
   const overview = <K extends OverviewRuleId>(id: K) =>
     found.filter(
@@ -538,6 +551,100 @@ export function ChecksWidget() {
         >
           {f.t("common.add")}
         </Button>
+      ),
+    })
+  }
+
+  /*
+   * A bill that came every month and has not this month: the receipt may be
+   * waiting to be booked. Booking starts from the last one, dated today or on
+   * the missing month's last day, whichever is earlier.
+   */
+  const skipBill = (key: string, label: string) => {
+    ignoreBill(key)
+    const id = toast.add({
+      title: label,
+      actionProps: {
+        children: f.t("common.undo"),
+        onClick: () => {
+          toast.close(id)
+          unignoreBill(key)
+        },
+      },
+    })
+  }
+  for (const { severity, data: d } of overview("billMissing")) {
+    const name = d.last.description
+    const monthName = `${f.month(Number(d.month.slice(5, 7)) - 1)} ${d.month.slice(0, 4)}`
+    items.push({
+      key: `bill-${d.key}-${d.month}`,
+      tone: tone(severity),
+      title: f.t("overview.billMissing", { name, m: monthName }),
+      sub: f.t("overview.billMissingSub", {
+        a: f.money(d.expected),
+        d: d.day,
+      }),
+      action: (
+        <div className="flex gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              openDialog({
+                kind: "entry",
+                mode: "new",
+                prefill: {
+                  date: billDate(d.month, data.today),
+                  description: name,
+                  type: "expense",
+                  catId: d.last.catId,
+                  amount: d.last.amount,
+                  vatRate: d.last.vatRate,
+                  amountMode: d.last.amountMode,
+                  ...(d.last.party ? { party: d.last.party } : {}),
+                  ...(d.last.share ? { share: d.last.share } : {}),
+                  ...(d.last.tags ? { tags: d.last.tags } : {}),
+                },
+              })
+            }
+          >
+            {f.t("overview.billBook")}
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`${f.t("overview.billMore")}: ${name}`}
+                />
+              }
+            >
+              <EllipsisIcon />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-60">
+              <DropdownMenuGroup>
+                <DropdownMenuItem
+                  onClick={() =>
+                    skipBill(
+                      monthIgnore(d.key, d.month),
+                      f.t("overview.billSkippedMonth", { name, m: monthName })
+                    )
+                  }
+                >
+                  {f.t("overview.billSkipMonth", { m: monthName })}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    skipBill(d.key, f.t("overview.billIgnored", { name }))
+                  }
+                >
+                  {f.t("overview.billIgnore")}
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       ),
     })
   }

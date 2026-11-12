@@ -4,6 +4,8 @@ import {
   matchesWords,
   queryWords,
   searchItems,
+  searchesReceipts,
+  snippetAround,
 } from "@/lib/domain/palette-search"
 
 describe("palette search", () => {
@@ -21,5 +23,28 @@ describe("palette search", () => {
       "Lasku 2",
     ])
     expect(searchItems(items, queryWords(""), (s) => s, 5)).toEqual([])
+  })
+
+  it("searches receipts only once the query has three letters", () => {
+    expect(searchesReceipts(queryWords("k"))).toBe(false)
+    expect(searchesReceipts(queryWords("a b"))).toBe(false)
+    expect(searchesReceipts(queryWords("abc"))).toBe(true)
+    expect(searchesReceipts(queryWords("ab c"))).toBe(true)
+  })
+
+  it("cuts a snippet around the earliest word and marks the cuts", () => {
+    const text = `${"x ".repeat(40)}kuitti clas ohlson oy porakone ${"y ".repeat(40)}`
+    const s = snippetAround(text, queryWords("porakone clas"), 10)
+    expect(s.startsWith("…")).toBe(true)
+    expect(s.endsWith("…")).toBe(true)
+    expect(s).toContain("clas ohlson")
+    expect(snippetAround("lyhyt", ["lyhyt"])).toBe("lyhyt")
+    expect(snippetAround("lyhyt", ["muu"])).toBe("")
+  })
+
+  it("keeps the Finnish letters in a snippet", () => {
+    expect(snippetAround("päivän kahvit", queryWords("paivan"))).toBe(
+      "päivän kahvit"
+    )
   })
 })

@@ -165,6 +165,57 @@ describe("overview", () => {
     expect(text).toContain("Ei tositteita: heinä, elo")
   })
 
+  it("asks for a monthly bill that has not been booked, and books it from the last one", async () => {
+    const phone = ["2026-07-05", "2026-08-04", "2026-09-05"].map((date, i) => ({
+      id: `phone-${i}`,
+      date,
+      description: `Puhelinliittymä ${date.slice(5, 7)}/2026`,
+      type: "expense" as const,
+      catId: "344-other",
+      amount: 2_990,
+      vatRate: 25.5,
+      amountMode: "gross" as const,
+    }))
+    load({
+      entries: [...sampleEntries(createIdFactory("o")), ...phone],
+    })
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    mount()
+    const checks = widget(/Tarkistettavaa/)
+    expect(flat(checks.textContent)).toContain(
+      "Ei vielä kirjattu: Puhelinliittymä 09/2026 (Lokakuu 2026)"
+    )
+    expect(flat(checks.textContent)).toContain("yleensä 29,90 €")
+    await user.click(within(checks).getByRole("button", { name: "Kirjaa" }))
+    const dialog = useBookStore.getState().dialog
+    expect(dialog).toMatchObject({
+      kind: "entry",
+      mode: "new",
+      prefill: { date: "2026-10-31", catId: "344-other", amount: 2_990 },
+    })
+  })
+
+  it("leaves an ignored bill alone", () => {
+    const phone = ["2026-07-05", "2026-08-04", "2026-09-05"].map((date, i) => ({
+      id: `phone-${i}`,
+      date,
+      description: "Puhelinliittymä",
+      type: "expense" as const,
+      catId: "344-other",
+      amount: 2_990,
+      vatRate: 25.5,
+      amountMode: "gross" as const,
+    }))
+    load({
+      entries: [...sampleEntries(createIdFactory("o")), ...phone],
+      billsIgnored: ["text:puhelinliittymä@2026-10"],
+    })
+    mount()
+    expect(flat(widget(/Tarkistettavaa/).textContent)).not.toContain(
+      "Puhelinliittymä"
+    )
+  })
+
   it("hides a widget in edit mode and keeps it in the layout", async () => {
     load()
     mount()

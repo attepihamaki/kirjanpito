@@ -24,9 +24,12 @@ import { calcEntry } from "@/lib/domain/calc"
 import { yearOf } from "@/lib/domain/dates"
 import { formatMoneyPlain } from "@/lib/domain/money"
 import {
+  fold,
   matchesWords,
   queryWords,
   searchItems,
+  searchesReceipts,
+  snippetAround,
 } from "@/lib/domain/palette-search"
 import type { MessageKey } from "@/lib/i18n/messages"
 import {
@@ -40,16 +43,19 @@ import {
 import { cn } from "@/lib/utils"
 import { useBookStore } from "@/stores/book-store"
 import { usePaletteStore } from "@/stores/palette-store"
+import { useReceiptTextStore } from "@/stores/receipt-text-store"
 
 /** How many entries, invoices and parties a query lists at most. */
 const RESULT_LIMIT = 8
 
-type Group = "actions" | "pages" | "entries" | "invoices" | "parties"
+type Group =
+  "actions" | "pages" | "entries" | "receipts" | "invoices" | "parties"
 
 const GROUP_TITLE: Record<Group, MessageKey> = {
   actions: "palette.actions",
   pages: "palette.pages",
   entries: "palette.entries",
+  receipts: "palette.receipts",
   invoices: "palette.invoices",
   parties: "palette.parties",
 }
@@ -103,7 +109,9 @@ const PAGES: readonly [string, MessageKey, MessageKey][] = [
  * The command palette (§8.35), on Ctrl/⌘+K: one field that finds an action, a
  * page, an entry, an invoice or a customer or supplier, picked with the arrow
  * keys and Enter. With nothing typed it lists the actions and the pages; the
- * book's own records appear once there is something to match.
+ * book's own records appear once there is something to match. Entries whose
+ * fields do not match but whose receipts' text does are listed apart, with
+ * the piece of the receipt that matched.
  */
 export function CommandPalette({
   onOpenFile,
@@ -119,6 +127,12 @@ export function CommandPalette({
   const entries = useBookStore((s) => s.entries)
   const invoices = useBookStore((s) => s.invoices)
   const customers = useBookStore((s) => s.customers)
+  const receiptText = useReceiptTextStore((s) => s.texts)
+  /* Folded once per index change, not per keystroke: a receipt runs to 100 000 characters. */
+  const foldedText = React.useMemo(
+    () => new Map([...receiptText].map(([id, text]) => [id, fold(text)])),
+    [receiptText]
+  )
   const canSave = useCanSaveToFile()
   const save = useSaveBook()
   const shortcut = useShortcut()
@@ -206,6 +220,13 @@ export function CommandPalette({
         ? list
         : list.filter((i) => matchesWords(words, i.text))
 
+    const openEntry = (entryId: string, date: string) => {
+      const s = useBookStore.getState()
+      const y = yearOf(date)
+      if (s.year !== y) s.setYear(y)
+      router.push(LEDGER_ROUTES.entries)
+      s.openDialog({ kind: "entry", mode: "edit", entryId })
+    }
     const newestFirst = [...entries].sort(
       (a, b) =>
         b.date.localeCompare(a.date) || (b.voucher ?? 0) - (a.voucher ?? 0)
@@ -222,14 +243,34 @@ export function CommandPalette({
       label: e.description || f.t("palette.noDescription"),
       hint: `${e.voucher ?? "–"} · ${f.date(e.date)} · ${f.money(calcEntry(e).gross)}`,
       text: "",
-      run: () => {
-        const s = useBookStore.getState()
-        const y = yearOf(e.date)
-        if (s.year !== y) s.setYear(y)
-        router.push(LEDGER_ROUTES.entries)
-        s.openDialog({ kind: "entry", mode: "edit", entryId: e.id })
-      },
+      run: () => openEntry(e.id, e.date),
     }))
+    const found = new Set(entryItems.map((i) => i.id))
+    const receiptItems = !searchesReceipts(words)
+      ? []
+      : searchItems(
+          newestFirst.filter(
+            (e) => e.atts?.length && !found.has(`entry-${e.id}`)
+          ),
+          words,
+          (e) =>
+            (e.atts ?? [])
+              .map((a) => (a.id === null ? "" : (foldedText.get(a.id) ?? "")))
+              .join(" "),
+          RESULT_LIMIT
+        ).map<Item>((e) => {
+          const text = (e.atts ?? [])
+            .map((a) => (a.id === null ? "" : (receiptText.get(a.id) ?? "")))
+            .find((t) => words.some((w) => fold(t).includes(w)))
+          return {
+            id: `receipt-${e.id}`,
+            group: "receipts",
+            label: e.description || f.t("palette.noDescription"),
+            hint: `${e.voucher ?? "–"} · ${f.date(e.date)} · ${snippetAround(text ?? "", words)}`,
+            text: "",
+            run: () => openEntry(e.id, e.date),
+          }
+        })
     const invoiceItems = searchItems(
       [...invoices].sort(
         (a, b) => (b.number ?? Infinity) - (a.number ?? Infinity)
@@ -272,6 +313,7 @@ export function CommandPalette({
       ...shown(actions),
       ...shown(pages),
       ...entryItems,
+      ...receiptItems,
       ...invoiceItems,
       ...partyItems,
     ]
@@ -290,6 +332,8 @@ export function CommandPalette({
     entries,
     invoices,
     customers,
+    receiptText,
+    foldedText,
   ])
 
   const current = Math.min(active, Math.max(0, items.length - 1))

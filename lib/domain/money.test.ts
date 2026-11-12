@@ -99,6 +99,15 @@ describe("parseAmount", () => {
     [".5", 50],
     ["1 234 567,89", 123456789],
     ["0", 0],
+    ["12,30-", -1230],
+    ["1 234,56- €", -123456],
+    ["+45,00", 4500],
+    ["–12,30", -1230],
+    ["45,-", 4500],
+    ["45,–", 4500],
+    ["1'234.56", 123456],
+    ["1’234’567,00", 123456700],
+    ["EUR 1 234,56", 123456],
   ])("parses %j as %i cents", (input, expected) => {
     expect(parseAmount(input)).toBe(expected)
   })
@@ -114,9 +123,12 @@ describe("parseAmount", () => {
     }
   )
 
-  it.each(["", "   ", "abc", "1,2,3", "--5"])("rejects %j", (input) => {
-    expect(parseAmount(input)).toBeNull()
-  })
+  it.each(["", "   ", "abc", "1,2,3", "--5", "-12,30-", "12'34", "45,-,-"])(
+    "rejects %j",
+    (input) => {
+      expect(parseAmount(input)).toBeNull()
+    }
+  )
 
   it("rejects null and undefined", () => {
     expect(parseAmount(null)).toBeNull()

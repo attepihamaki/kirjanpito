@@ -10,6 +10,7 @@ import { defaultCategories } from "@/lib/domain/accounts"
 import type { Entry } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
 import { usePaletteStore } from "@/stores/palette-store"
+import { useReceiptTextStore } from "@/stores/receipt-text-store"
 
 /* The command palette and the shortcut list (§8.35). */
 
@@ -57,6 +58,7 @@ const key = (k: string, mods: Partial<KeyboardEventInit> = {}) =>
 beforeEach(() => {
   vi.clearAllMocks()
   usePaletteStore.setState({ layer: "none" })
+  useReceiptTextStore.setState({ texts: new Map() })
   useBookStore.setState({
     open: true,
     hydrated: true,
@@ -88,6 +90,58 @@ describe("CommandPalette", () => {
     expect(s.year).toBe(2025)
     expect(s.dialog).toEqual({ kind: "entry", mode: "edit", entryId: "e1" })
     expect(usePaletteStore.getState().layer).toBe("none")
+  })
+
+  it("finds an entry by its receipt's text and shows where it matched", async () => {
+    useBookStore.setState({
+      entries: [
+        entry,
+        {
+          ...entry,
+          id: "e2",
+          voucher: 8,
+          description: "Tarvikkeet",
+          atts: [
+            { id: "r1", name: "kuitti.pdf", type: "application/pdf", size: 1 },
+          ],
+        },
+      ],
+    })
+    useReceiptTextStore.setState({
+      texts: new Map([["r1", "kuitti clas ohlson oy porakone 89,90"]]),
+    })
+    key("k", { ctrlKey: true })
+    const input = await screen.findByRole("combobox")
+    fireEvent.change(input, { target: { value: "porakone" } })
+    const group = screen.getByRole("group", { name: "Tositteiden liitteissä" })
+    expect(group.textContent).toContain("Tarvikkeet")
+    expect(group.textContent).toContain("clas ohlson oy porakone")
+    fireEvent.keyDown(input, { key: "Enter" })
+    expect(useBookStore.getState().dialog).toEqual({
+      kind: "entry",
+      mode: "edit",
+      entryId: "e2",
+    })
+  })
+
+  it("leaves receipts out of a query shorter than three letters", async () => {
+    useBookStore.setState({
+      entries: [
+        {
+          ...entry,
+          atts: [
+            { id: "r1", name: "kuitti.pdf", type: "application/pdf", size: 1 },
+          ],
+        },
+      ],
+    })
+    useReceiptTextStore.setState({ texts: new Map([["r1", "ab cd"]]) })
+    key("k", { ctrlKey: true })
+    const input = await screen.findByRole("combobox")
+    fireEvent.change(input, { target: { value: "ab" } })
+    expect(
+      screen.queryByRole("group", { name: "Tositteiden liitteissä" })
+    ).toBeNull()
   })
 
   it("goes to a page with the arrow keys", async () => {

@@ -184,6 +184,7 @@ export async function restoreEarlierSave(
       taxPayment: book.taxPayment,
       yearsArchived: book.yearsArchived,
       retentionNoted: book.retentionNoted,
+      billsIgnored: book.billsIgnored,
       taxLosses: book.taxLosses,
       form5Filed: book.form5Filed,
       archives: book.archives,

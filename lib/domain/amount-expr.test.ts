@@ -57,6 +57,9 @@ describe("isExpression", () => {
     expect(isExpression("-12,50")).toBe(false)
     expect(isExpression("−12,50 €")).toBe(false)
     expect(isExpression("")).toBe(false)
+    expect(isExpression("12,30-")).toBe(false)
+    expect(isExpression("+45,00")).toBe(false)
+    expect(isExpression("45,-")).toBe(false)
   })
 
   it("is true once there is an operator", () => {

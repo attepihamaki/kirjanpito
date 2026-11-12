@@ -50,6 +50,7 @@ function settings(): BookSettings {
     taxPayment: { iban: "FI21 1234 5600 0007 85", reference: "1234567" },
     yearsArchived: { "2025": "2026-01-20" },
     retentionNoted: { "2019": "vouchers" },
+    billsIgnored: ["text:puhelin #/#@2026-11"],
     taxLosses: { "2024": 120_000 },
     form5Filed: { "2025": "2026-03-20" },
     archives: {
@@ -292,6 +293,17 @@ describe("settings.json", () => {
       vatFiled: { "2026-09": "2026-11-10" },
       yearsArchived: { "2025": "2026-01-20" },
     })
+  })
+
+  it("keeps the ignored bills once each, sorted, and leaves them out while empty", () => {
+    expect(
+      parseSettings(
+        JSON.stringify({
+          billsIgnored: ["text:b", "party:p1@2026-11", "text:b", "", 5],
+        })
+      ).billsIgnored
+    ).toEqual(["party:p1@2026-11", "text:b"])
+    expect(parseSettings(JSON.stringify({})).billsIgnored).toBeUndefined()
   })
 
   it("keeps a cash basis whose last month is not before its first", () => {

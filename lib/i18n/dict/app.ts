@@ -820,6 +820,26 @@ export const APP_DICT = {
     "The books had to be kept until {b}, so the year's material may now be destroyed entirely. The app deletes nothing by itself.",
   ],
   "overview.retentionNoted": ["Selvä", "Got it"],
+  "overview.billMissing": [
+    "Ei vielä kirjattu: {name} ({m})",
+    "Not booked yet: {name} ({m})",
+  ],
+  "overview.billMissingSub": [
+    "Kirjattu kolmena edellisenä kuukautena, yleensä {a}, viimeistään {d}. päivänä. Onko kuitti vielä kirjaamatta?",
+    "Booked in each of the last three months, usually {a}, by day {d}. Is the receipt still to be booked?",
+  ],
+  "overview.billBook": ["Kirjaa", "Book"],
+  "overview.billMore": ["Lisää toimintoja", "More actions"],
+  "overview.billSkipMonth": ["Ei tule: {m}", "Not coming: {m}"],
+  "overview.billIgnore": [
+    "Ei toistuva, älä muistuta",
+    "Not recurring, stop reminding",
+  ],
+  "overview.billSkippedMonth": ["{name}: {m} ohitettu", "{name}: {m} skipped"],
+  "overview.billIgnored": [
+    "{name}: ei enää muistutuksia",
+    "{name}: no more reminders",
+  ],
   "overview.yearStoredDone": [
     "Vuosi {y} merkitty tallessa olevaksi.",
     "Year {y} marked as stored.",
@@ -2758,6 +2778,7 @@ export const APP_DICT = {
   "palette.actions": ["Toiminnot", "Actions"],
   "palette.pages": ["Sivut", "Pages"],
   "palette.entries": ["Tositteet", "Entries"],
+  "palette.receipts": ["Tositteiden liitteissä", "In receipts"],
   "palette.invoices": ["Laskut", "Invoices"],
   "palette.parties": ["Asiakkaat ja toimittajat", "Customers and suppliers"],
   "palette.newEntry": ["Uusi tosite", "New entry"],
