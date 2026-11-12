@@ -79,6 +79,7 @@ import {
   type InvoiceStatus,
 } from "@/lib/domain/invoice-status"
 import { formatMoneyPlain } from "@/lib/domain/money"
+import { ownClick } from "@/lib/ui/row-click"
 import { cn } from "@/lib/utils"
 import { useBookStore } from "@/stores/book-store"
 
@@ -305,13 +306,6 @@ const FILTER_OF: Record<InvoiceStatus, Filter | null> = {
   paid: "paid",
   credit: null,
   credited: null,
-}
-
-/** A click that lands on a control of its own, or comes from a portalled menu, is not a row click. */
-function ownClick(e: React.MouseEvent<HTMLElement>): boolean {
-  const target = e.target as HTMLElement
-  if (!e.currentTarget.contains(target)) return true
-  return target.closest("button, a, input, label, [role=menuitem]") !== null
 }
 
 /** The invoices, newest first, with what can be done to each (§8.27). */

@@ -43,6 +43,7 @@ import {
   type PayableGroup,
 } from "@/lib/domain/payables"
 import { indexCategories } from "@/lib/domain/types"
+import { ownClick } from "@/lib/ui/row-click"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -300,8 +301,19 @@ export function PayablesList() {
             </TableHeader>
             <TableBody>
               {report.items.map((bill) => (
-                <TableRow key={bill.lead.id}>
-                  <TableCell>
+                <TableRow
+                  key={bill.lead.id}
+                  className="cursor-pointer"
+                  onClick={(e) => {
+                    if (!ownClick(e))
+                      openDialog({
+                        kind: "entry",
+                        mode: "edit",
+                        entryId: bill.lead.id,
+                      })
+                  }}
+                >
+                  <TableCell data-row-skip>
                     <Checkbox
                       aria-label={f.t("payables.filePick", {
                         d: bill.lead.description || "–",
