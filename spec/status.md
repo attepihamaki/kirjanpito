@@ -39,6 +39,8 @@ Part of the project specification. `CLAUDE.md` is the index and holds the conven
 - Asset classes other than machinery and equipment, and templates repeating less often than monthly.
 - Whether KPL 2:6's duty reaches the Form 5 fields the book does not hold: the year-end figures typed in on Varat ja velat, and the loan's opening balance. The click-through (§8.18) lists the vouchers behind a figure and says what is typed in. Assumed that a figure made from the books is covered and one typed in is not.
 
+- Cloud storage (§7.11), designed and not built. Open before it is: how a browser-only app keeps a Google Drive sign-in alive past the access token's hour without a prompt on every save (a spike before Drive is built); whether the second between Drive's revision check and its upload needs more than the earlier save the overwritten device keeps; whether asking for the password once per session (§7.8) is too much on a phone, and what could stand in for it without storing the password; and whether whole-ZIP uploads stay small enough once a book has a year of receipts, or the cloud copy needs a folder layout after all.
+
 ### Legal gaps
 
 Compared on 3 November 2026 against the Accounting Act as consolidated on Finlex (KPL), Vero's guidance and Verohallinto's 2026 data file specification for Form 5.

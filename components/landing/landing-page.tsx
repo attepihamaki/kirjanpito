@@ -249,7 +249,7 @@ function LandingBody() {
         {/* FAQ. The id is what the app's sidebar links back to. */}
         <Section id={LANDING_FAQ_ID} title={f.t("landing.faqTitle")}>
           <Accordion className="max-w-3xl">
-            {([1, 2, 3, 4, 5] as const).map((i) => (
+            {([1, 2, 3, 4, 5, 6] as const).map((i) => (
               <AccordionItem key={i} value={`q${i}`}>
                 <AccordionTrigger>
                   {f.t(`landing.q${i}` as const)}

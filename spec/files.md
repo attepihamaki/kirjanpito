@@ -382,3 +382,86 @@ The bookkeeping holds a business's figures and its receipts, and the file may si
 - **Kind** is "Tulo", "Meno" or "Muu". "Muu" is an entry off the income statement (`offStatement`: VAT settlements, the owner's transfers, loans, fixed assets), listed but kept out of the summary's income and expenses.
 - **The summary** has a row per month with income and expenses (net), their difference and the VAT on sales and purchases, each a `SUMIFS` over the month sheet's own rows by kind, and a total row of `SUM`s. A note under it says the difference is not the income statement's result, since the statement's own rules (§6.3) are not applied.
 - **Written by hand on zip.js**, which the app already has: inline strings, five cell styles (text, money `#,##0.00`, date as the built-in format 14, rate `0.0`, each also bold), a frozen header row and set column widths. Each formula carries its value as written, and the workbook asks to be recalculated on load. zip.js is imported on demand, so it stays off pages that never download. `lib/domain/xlsx.test.ts` checks that every part is well-formed XML and that the formulas and cached values match.
+
+### 7.11 Cloud storage (Pilvitallennus)
+
+**Planned. Nothing in this section is built yet.** It is the design to build against, and the open points are in §14.
+
+The file stays the database (§1). Cloud storage only changes where the file lives: in the user's own cloud account, written by the browser straight to the provider's API. There is still no server of the app's own, no account with the app, and the app never sees the file on its way. What it adds is the same book on several devices, phones included, and a copy that does not depend on one disk or one browser.
+
+#### 7.11.1 What works without it: a synced folder
+
+A ZIP kept in a folder that a desktop sync client mirrors (Dropbox, OneDrive, Google Drive, iCloud Drive) already works on browsers with the File System Access API. The app writes back to the file (§7.5), the client uploads it, the outside-edit guard catches a file another device changed, and a write blocked by the client is retried. The provider keeps the file's earlier versions.
+
+- **The landing page's FAQ (§8.3) says so**, in a short entry: put the file in a synced folder, open it from there, and save as usual. They also say what it does not cover: Safari, Firefox and phones cannot write back to a file, and two devices editing at once is caught only when the second one saves.
+- The entry is `landing.q5` / `landing.a5`, beside the one on closing the browser.
+
+#### 7.11.2 Providers
+
+- **Dropbox** and **Google Drive** first, in that order: Dropbox's API has a conditional write (below), so it is the simpler one to get right. **OneDrive** (Microsoft Graph) after them, through the same interface.
+- **Not iCloud Drive.** Apple has no web API for it: CloudKit JS reaches an app's own container, not the user's files. An iPhone user keeps the synced-folder route on a Mac, or picks another provider.
+- **Not WebDAV, Nextcloud or S3.** They would need a password or an access key typed into the app, CORS on the user's server is rarely set up, and each server behaves a little differently. Revisit only if users ask.
+- **What each provider may see.** Dropbox: an app folder (`Apps/Kirjanpito`), not the rest of the account. Google Drive: the `drive.file` scope, which reaches only files this app created or the user opened with it, on any device signed in to the same account. OneDrive: the app folder (`Files.ReadWrite.AppFolder`). The app never asks for access to the whole drive.
+
+#### 7.11.3 Before anything is built
+
+- **A custom domain (§11b).** Sign-in tokens are kept in the browser, and on `attepihamaki.github.io` every Pages site on that account can read this site's storage. Cloud storage does not ship on a shared origin. The redirect URIs registered with each provider name the custom domain, so this also has to be settled before the apps are registered.
+- **Registered apps.** One OAuth client per provider, owned by the project. Their client IDs are public and live in `lib/site.ts` beside `SITE_URL`; there is no client secret anywhere. Dropbox caps an app in development at 500 users until production approval, and Google needs its consent screen's branding verified before strangers see the app's name rather than a warning.
+- **The CSP (§11b) gains exactly the provider hosts** in `connect-src`, held in `CLOUD_HOSTS` in `lib/site.ts`, which `CONTENT_SECURITY_POLICY` is built from: `https://api.dropboxapi.com`, `https://content.dropboxapi.com`, `https://www.googleapis.com`, `https://oauth2.googleapis.com` (and `https://graph.microsoft.com`, `https://login.microsoftonline.com` with OneDrive). `scripts/verify-export.mjs` checks that `connect-src` holds `'self'` and those hosts and nothing else. `form-action` stays `'none'`: sign-in leaves the page by navigation, not by a form. No provider SDK is loaded as a script; the calls are plain `fetch`.
+- **The privacy wording changes.** The landing page and §1 say the bookkeeping stays in the browser and in the user's file. With cloud storage on, the file is in the user's cloud account, sent there directly from the browser. The wording says that, and that nothing passes through a server of the app's.
+
+#### 7.11.4 Sign-in
+
+- **OAuth 2.0 authorization code with PKCE**, started from a user gesture by a top-level navigation to the provider, and returning to a static page, `/app/cloud/callback/`, that trades the code for tokens and goes back to where the user was. The `state` and the PKCE verifier are in `sessionStorage` for the round trip only.
+- **Tokens are kept in IndexedDB** (`bookkeeping-cloud`, one record per provider), never in `settings.json`, the file or localStorage. They belong to the browser, not to the book: another device signs in on its own.
+- **Dropbox** gives a short-lived access token and a refresh token (`token_access_type=offline`), so the app stays signed in without asking. **Google** gives a browser-only app no refresh token, so its access token lasts an hour; how it is renewed without a prompt on every save is an open question (§14), settled by a spike before Drive is built.
+- **An expired or revoked sign-in pauses autosave** like any other question (§7.5), and a manual save signs in again.
+- **Signing out** is in Asetukset, Yleiset, Pilvitallennus, per provider. It revokes the token where the provider allows it and deletes the record. A book linked to that provider stays linked, and its next save asks to sign in.
+
+#### 7.11.5 The provider interface
+
+- **`lib/browser/cloud/` is the only code that talks to a provider**, as `lib/browser/file-handle.ts` is for the File System Access API (§7.5). `provider.ts` holds the interface, `dropbox.ts`, `google-drive.ts` and `onedrive.ts` implement it, and `fake.ts` is the in-memory one the tests use.
+- **Operations:** `list()` the bookkeeping ZIPs the app can see, newest first; `read(fileId)` the bytes and the revision; `stat(fileId)` the revision and modification time without the bytes; `create(name, bytes)`; `write(fileId, bytes, expectedRev)`, which returns the new revision or a conflict; and later `revisions(fileId)` and `readRevision(fileId, rev)` (§7.11.9).
+- **The revision is the provider's own** (Dropbox `rev`, Drive `version`, OneDrive `eTag`), an opaque string compared only for equality. It takes the place `savedAt` has for a file on disk (§7.5).
+- **A conditional write is atomic where the provider allows it.** Dropbox uploads with `mode: update` and the expected `rev`, and OneDrive with `If-Match`, so a conflict is refused by the provider. Drive has no conditional upload, so `write` reads the revision just before uploading; the window between the two is accepted and is in §14.
+- **Large files** go up in the provider's resumable or session upload when over its single-request limit (Dropbox 150 MB, Drive 5 MB), so a book of any size can be saved.
+- **Network failures throw a typed error** (`CloudOfflineError`, `CloudAuthError`, `CloudConflictError`, `CloudQuotaError`), and the commands decide what each means; no provider code raises a toast.
+
+#### 7.11.6 Linking, opening and saving
+
+- **A book's link is a handle or a cloud file, never both.** The store's link to a file (§7.5) gains a cloud kind, `CloudLink`: the provider, the file id, the file name and the revision last read or written. It is persisted with the book, like the handle in IndexedDB, so a reload keeps it. Leaving a bookkeeping unlinks it (§7.5).
+- **Opening** is "Avaa pilvestä" on the landing page and in the file menu (§8.2): a dialog of the app's own lists the ZIPs `list()` returns, with name and modification time, signing in first if needed. Opening reads the file and goes through `importZip` as any ZIP does, password included (§7.8).
+- **Moving a book to the cloud** is "Tallenna pilveen" in the file menu: pick the provider, confirm the name (§7.3), and the book is written with `create` and linked. A book already linked to a file on disk is unlinked from it; the file on disk is left as it is.
+- **Saving follows §7.5 rule for rule**, with the revision in place of the file's timestamp: the receipts this browser does not hold are carried over from the cloud file being replaced (`carryFrom`), a save stops if another book takes over (`bookEpoch`), a change made during the upload keeps the book dirty, and a book with no entries can be saved. `Ctrl`/`⌘`+`S` saves to the cloud file, and the file menu's save row shows on every browser, since no file handle is needed.
+- **Downloading a copy** still works and still clears the dirty flag only when no file is linked (§7.5).
+
+#### 7.11.7 Another device changed the file
+
+Two devices work on one file, and the file is one ZIP, so **the app never merges**. The first save wins and the other device is told before it writes.
+
+- **When the app looks.** Before every save, when the app starts with a cloud link, and when the tab comes back to the foreground (`visibilitychange`, at most once a minute). Each look is a `stat`.
+- **The cloud file is newer and this book is clean:** the app reads the newer file in place, keeps the book it replaces as an earlier save (§8.36, reason `cloud`), and says so in a toast ("Kirjanpito päivitetty toiselta laitteelta"). This is the normal case of moving from the phone to the laptop.
+- **The cloud file is newer and this book has unsaved changes:** a dialog (§8.11) says the book was changed on another device, and offers three ways out. "Avaa uudempi" reads the cloud file and keeps this book as an earlier save, so nothing is lost. "Tallenna kopiona" writes this book as a new file beside the other (`{name} (ristiriita {date}).zip`) and links it, leaving the user to choose which to keep. "Peruuta" does nothing. There is no "overwrite" button: a user who wants this version over the other opens the newer one and restores this from the earlier saves, which shows what is lost.
+- **Autosave pauses** on a conflict and never resolves one.
+- **The cloud file is gone** (deleted, moved out of the app's reach): the save asks where to write, as §7.5 does for a moved file.
+
+#### 7.11.8 Autosave, offline and size
+
+- **Autosave runs 30 seconds after the last change** for a cloud link (`CLOUD_AUTOSAVE_DELAY`), not the 3 seconds of a file on disk, since every save uploads the whole ZIP. It also runs when the tab is hidden (`visibilitychange` to `hidden`), which is when a phone user leaves the app. That write may be cut short by the browser; nothing is lost, since the work is in the browser's buffer and the next start finds the book dirty.
+- **Autosave is on by default for a cloud link.** A cloud write needs no permission prompt, and the provider keeps earlier versions, so the reasons §7.5 gives for leaving it off do not hold. The setting still turns it off.
+- **Offline** a save fails with `CloudOfflineError` and is retried with the backoff of §7.5, without counting towards the five failures that pause autosave, and resumes when the browser reports `online`. The save clock in the top bar shows that the book is waiting to upload.
+- **Size.** A book over `CLOUD_SIZE_HINT` (50 MB) gets a hint in the file menu to archive closed years (§8.19), which is what keeps uploads small. The book stays one ZIP: a folder of loose files in the cloud would upload only new receipts, but it would no longer be one file the user can hand on or open elsewhere, and the app would have two formats to keep in step. That choice is revisited only if upload size turns out to be a real problem (§14).
+
+#### 7.11.9 Encryption, history and the rest of the app
+
+- **Encryption is offered when a book is linked.** "Tallenna pilveen" shows the encryption setting (§7.8), checked by default when the book is not yet encrypted. It is not forced: a book the user wants to open in the provider's own preview stays readable. Each device asks for the password once per session, and after a reload autosave stays paused until it is given (§7.8).
+- **The provider keeps the history.** Dropbox, Drive and OneDrive all keep earlier versions of a file for a period set by the user's plan. A later step lists them in "Aiemmat tallennukset" (§8.36) beside the browser's own, read through `revisions` and `readRevision`, and restored the same way.
+- **The backup reminder (§8.33)** counts a cloud link as a file.
+- **Archives (§8.19) and the retention package (§8.21)** are downloaded as before. Writing them to the cloud beside the book is a later step.
+- **Nothing about the cloud is in `settings.json`.** The link and the sign-in belong to the browser, so a file downloaded or moved elsewhere carries no trace of where it was kept.
+
+#### 7.11.10 Tests and order of work
+
+- `lib/commands/cloud-commands.test.ts` against `fake.ts`, mirroring `save-commands.test.ts`: the round trip, creating and linking, carrying receipts over, a conditional write refused, each branch of §7.11.7, an expired sign-in, offline retry and the size hint. Each provider module gets a test of its request shapes against recorded responses.
+- **Order:** the custom domain (the FAQ entry of §7.11.1 is in); the interface, the fake and Dropbox, shipped behind the Pilvitallennus setting; Google Drive after the token spike; the provider history in the earlier saves; OneDrive.
+- **Not handled:** merging two devices' changes, editing at the same time with live updates, sharing a book with an accountant through the provider, and iCloud Drive.
