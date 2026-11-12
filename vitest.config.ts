@@ -21,6 +21,16 @@ export default defineConfig({
     // Pins the clock so date tests behave the same here and on CI.
     env: { TZ: "Europe/Helsinki" },
     restoreMocks: true,
+    /*
+     * Node 25 and later give every process a global localStorage and warn in
+     * each worker when no backing file is set. Tests that need storage get it
+     * from jsdom, so the Node global is switched off. Node 24 has no such
+     * global and gets no flag.
+     */
+    execArgv:
+      Number(process.versions.node.split(".")[0]) >= 25
+        ? ["--no-experimental-webstorage"]
+        : [],
     coverage: {
       provider: "v8",
       include: ["lib/domain/**/*.ts", "lib/i18n/**/*.ts"],

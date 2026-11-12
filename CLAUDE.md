@@ -8,7 +8,9 @@ The user writes in Finnish and English. The app's default language is Finnish.
 
 ## Where to look
 
-**The specification is split by area, and the section numbers are the same everywhere.** Code comments cite them as "CLAUDE.md §8.4", which means section 8.4 of the file below that holds it. Read the file for the area you are about to change before you change it; nothing else needs loading.
+**The specification is split by area, and the section numbers are the same everywhere.** Code comments cite them as "CLAUDE.md §8.4", which means section 8.4 of the file below that holds it. Read the section for the area you are about to change before you change it; nothing else needs loading.
+
+**Read a section, not the whole file.** `spec/features.md` and `spec/views.md` are over 100 KB each. Find the section's heading with a search such as `^#+ 8\.27 ` in the file the table names, then read from that line to the next heading of the same level. Read a whole spec file only when the change spans most of it.
 
 | sections     | file                          | covers                                                                                                                                                                                                                                                                                                                              |
 | ------------ | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
