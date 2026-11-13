@@ -223,6 +223,28 @@ describe("carveSplit", () => {
     expect(result.part.atts?.[0]).not.toBe(result.original.atts?.[0])
   })
 
+  it("keeps the share on the same category and takes the category's default on another", () => {
+    const shared = indexCategories(
+      defaultCategories().map((c) =>
+        c.id === "344-meeting" ? { ...c, share: 70 } : c
+      )
+    )
+    const carve = (catId: string, share?: number) => {
+      const result = carveSplit(
+        { ...base(), share },
+        { amount: 1, catId, vatRate: 0 },
+        shared,
+        ids
+      )
+      if (!result.ok) throw new Error(result.error)
+      return result.part.share
+    }
+    expect(carve("333", 40)).toBe(40)
+    expect(carve("333")).toBeUndefined()
+    expect(carve("344-meeting", 40)).toBe(70)
+    expect(carve("344-other", 40)).toBeUndefined()
+  })
+
   it("keeps an existing split id", () => {
     const result = carveSplit(
       { ...base(), split: "old" },

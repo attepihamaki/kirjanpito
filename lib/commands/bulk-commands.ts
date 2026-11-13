@@ -8,6 +8,8 @@ import {
 } from "@/lib/commands/book-commands"
 import type { Ctx } from "@/lib/commands/ctx"
 import { confirmFiledChange } from "@/lib/commands/filed-commands"
+import { entryTakesShare } from "@/lib/domain/accounts"
+import { isShare } from "@/lib/domain/calc"
 import { uid } from "@/lib/domain/id"
 import { versionAfter } from "@/lib/domain/change-log"
 import { paidDate, paidOnFor } from "@/lib/domain/open-items"
@@ -606,6 +608,43 @@ export async function setEntriesVat(
     before,
     changed,
     ctx.t("ledger.bulkVatDone", { n: changed.length })
+  )
+  return true
+}
+
+/**
+ * Give the selected costs one business share (§6.12), or 100 for the whole
+ * voucher. A selection with an entry that cannot carry a share, such as
+ * income or an EU purchase, is refused. Locked entries refuse and a change a
+ * filed return would see asks first (§8.11). False when nothing changed.
+ */
+export async function setEntriesShare(
+  ctx: Ctx,
+  selected: readonly Entry[],
+  share: number
+): Promise<boolean> {
+  if (!isShare(share) && share !== 100) return false
+  const cats = indexCategories(useBookStore.getState().cats)
+  if (selected.some((e) => !entryTakesShare(e, cats))) {
+    toast.add({ title: ctx.t("ledger.bulkShareRefused") })
+    return false
+  }
+  const before = selected.filter((e) => (e.share ?? 100) !== share)
+  if (before.length === 0) return false
+  if (refuseLocked(ctx, before)) return false
+  const changed = before.map((e): Entry => {
+    const next: Entry = { ...e, share }
+    if (share === 100) delete next.share
+    return next
+  })
+  const byId = new Map(changed.map((e) => [e.id, e]))
+  const after = useBookStore.getState().entries.map((e) => byId.get(e.id) ?? e)
+  if (!(await confirmFiledChange(after))) return false
+  updateWithUndo(
+    ctx,
+    before,
+    changed,
+    ctx.t("ledger.bulkShareDone", { n: changed.length })
   )
   return true
 }

@@ -2,6 +2,8 @@ import { isShare } from "@/lib/domain/calc"
 import type {
   Bucket,
   Category,
+  CategoryMap,
+  Entry,
   EntryType,
   EuPurchase,
   Lang,
@@ -868,6 +870,33 @@ export function categoryShare(cat: Category | undefined): { share?: number } {
   return cat && isShare(cat.share) && canHaveShare(lineOf(cat), cat.euPurchase)
     ? { share: cat.share }
     : {}
+}
+
+/** Whether a booked entry can carry a business share (§6.12): a cost on a line that allows one, not an EU purchase. */
+export function entryTakesShare(
+  e: Pick<Entry, "type" | "catId" | "euPurchase">,
+  cats: CategoryMap
+): boolean {
+  const cat = cats.get(e.catId)
+  return (
+    e.type === "expense" &&
+    !!cat &&
+    canHaveShare(lineOf(cat), e.euPurchase ?? cat.euPurchase)
+  )
+}
+
+/**
+ * The share a voucher on `cat` starts with when something names a share of
+ * its own (§6.12): a recurring template or a category rule. 100 books the
+ * whole voucher whatever the category says, 1 to 99 that share, and anything
+ * else the category's default. Nothing where a share cannot apply.
+ */
+export function voucherShare(
+  cat: Category | undefined,
+  own: number | undefined
+): { share?: number } {
+  if (own === 100) return {}
+  return categoryShare(cat && isShare(own) ? { ...cat, share: own } : cat)
 }
 
 export function lineName(line: AccountLine, lang: Lang): string {

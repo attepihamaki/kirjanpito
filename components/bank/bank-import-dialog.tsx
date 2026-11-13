@@ -29,7 +29,7 @@ import {
 import { useCommandCtx } from "@/hooks/use-commands"
 import { bookBankRows, keepStatement } from "@/lib/commands/bank-commands"
 import { storeReport } from "@/lib/commands/memo-commands"
-import { LINE_BY_KEY, categoryShare } from "@/lib/domain/accounts"
+import { LINE_BY_KEY, voucherShare } from "@/lib/domain/accounts"
 import { parseBankStatement } from "@/lib/domain/bank-camt"
 import {
   headerSignature,
@@ -525,8 +525,13 @@ function Review({
           amountMode: "gross",
           ...(settles ? { settles } : {}),
           ...(draft?.party ? { party: draft.party } : {}),
-          // The category's default business share, as the entry dialog gives it (§6.12).
-          ...(row.amount < 0 ? categoryShare(cat) : {}),
+          // The rule's business share, else the category's default (§6.12, §8.17).
+          ...(row.amount < 0
+            ? voucherShare(
+                cat,
+                draft?.catId === plan.catId ? draft.share : undefined
+              )
+            : {}),
         })
       }
     })

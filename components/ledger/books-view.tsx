@@ -22,7 +22,7 @@ import {
 } from "@/lib/domain/books"
 import { receiptFolder } from "@/lib/domain/receipt-path"
 import { retentionDates } from "@/lib/domain/retention"
-import { indexCategories, type Category } from "@/lib/domain/types"
+import { indexCategories, type Category, type Cents } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
 import { useBookStore } from "@/stores/book-store"
 
@@ -187,6 +187,7 @@ function EntryRow({
       </td>
       <td className={cn(num, "font-medium")}>
         <Money cents={row.gross} signed={minus} />
+        <PrivatePart cents={row.privatePart} signed={minus} />
       </td>
     </tr>
   )
@@ -219,8 +220,25 @@ function TotalRow({
       </td>
       <td className={cn(num, "pt-2")}>
         <Money cents={totals.gross} signed={signed} />
+        <PrivatePart cents={totals.privatePart} signed={signed} />
       </td>
     </tr>
+  )
+}
+
+/**
+ * The private part of a cost used partly privately, under its gross (§6.12),
+ * so net and VAT visibly fall short of the amount paid by that much.
+ */
+function PrivatePart({ cents, signed }: { cents: Cents; signed: boolean }) {
+  const f = useFormatters()
+  if (!cents) return null
+  return (
+    <span className="block text-xs font-normal text-muted-foreground">
+      {f.t("ledger.privatePart", {
+        a: f.money(signed ? -cents : cents),
+      })}
+    </span>
   )
 }
 

@@ -31,12 +31,20 @@ export interface CategoryRule {
   catId: string
   /** The rate to book at, or null for the category's own default. */
   vatRate: number | null
+  /**
+   * The business share to book a cost at (§6.12): 1 to 99, or 100 for the
+   * whole voucher where the category's default is lower. Absent means the
+   * category's default. `voucherShare` reads it.
+   */
+  share?: number
 }
 
 export interface RuleHit {
   rule: CategoryRule
   catId: string
   vatRate: number | null
+  /** The rule's own `share`, absent when it leaves the category's default. */
+  share?: number
   type: EntryType
 }
 
@@ -119,7 +127,13 @@ export function findCategoryRule(
     if (!cat?.enabled) continue
     const side = LINE_BY_KEY.get(cat.line)?.side
     if (!side || (type && side !== type)) continue
-    return { rule, catId: cat.id, vatRate: rule.vatRate, type: side }
+    return {
+      rule,
+      catId: cat.id,
+      vatRate: rule.vatRate,
+      ...(rule.share !== undefined ? { share: rule.share } : {}),
+      type: side,
+    }
   }
   return null
 }

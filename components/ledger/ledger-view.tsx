@@ -42,6 +42,7 @@ import {
 import { useFormatters } from "@/components/lang-provider"
 import { useVatBasisEntries } from "@/hooks/use-tax-basis"
 import { categoryName } from "@/lib/domain/accounts"
+import { isShare } from "@/lib/domain/calc"
 import { todayIso } from "@/lib/domain/dates"
 import {
   ENTRY_CHECKS,
@@ -131,10 +132,14 @@ export function LedgerView() {
     () =>
       checkFilter === "all"
         ? null
-        : checkFilter === "open"
+        : checkFilter === "open" || checkFilter === "shared"
           ? new Set(
               entriesInPeriod(entries, year, 0)
-                .filter((e) => paidDate(e) === null)
+                .filter((e) =>
+                  checkFilter === "open"
+                    ? paidDate(e) === null
+                    : isShare(e.share)
+                )
                 .map((e) => e.id)
             )
           : flaggedEntryIds(
@@ -369,6 +374,7 @@ export function LedgerView() {
         options={[
           { value: "all", label: f.t("ledger.checkAll") },
           { value: "open", label: f.t("ledger.openItems") },
+          { value: "shared", label: f.t("ledger.sharedItems") },
           ...ENTRY_CHECKS.map((check) => ({
             value: check,
             label: f.t(CHECK_LABEL[check]),

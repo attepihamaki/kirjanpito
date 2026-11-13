@@ -74,7 +74,7 @@ import {
   LINE_BY_KEY,
   RATES,
   categoryName,
-  categoryShare,
+  voucherShare,
   isEuSaleKind,
 } from "@/lib/domain/accounts"
 import { isPeriod } from "@/lib/domain/accrual"
@@ -222,6 +222,11 @@ const snapshot = (form: FormState) =>
  * capped at the 28th so February is always valid; otherwise today when the
  * year matches, else 1 January.
  */
+/** The share field's text for a new voucher on `cat` (§6.12). Empty is the whole voucher. */
+function shareText(cat: Category | undefined, own?: number): string {
+  return String(voucherShare(cat, own).share ?? "")
+}
+
 function defaultDate(year: number, month: number): string {
   const today = new Date()
   if (month > 0) {
@@ -719,12 +724,13 @@ function EntryDialogForm({
         keepShare.current || !pickedCat
           ? {}
           : {
-              share: String(
-                (!ruleHit &&
-                previous?.catId === pickedCat.id &&
-                categoryShare({ ...pickedCat, share: previous.share }).share
-                  ? previous.share
-                  : categoryShare(pickedCat).share) ?? ""
+              share: shareText(
+                pickedCat,
+                ruleHit
+                  ? ruleHit.share
+                  : previous?.catId === pickedCat.id
+                    ? previous.share
+                    : undefined
               ),
             }
 
@@ -988,6 +994,7 @@ function EntryDialogForm({
   const suggestionPatch = (s: {
     catId: string
     vatRate: number | null
+    share?: number
     party?: string
   }): Partial<FormState> | null => {
     const cat = cats.find((c) => c.id === s.catId)
@@ -1001,9 +1008,7 @@ function EntryDialogForm({
         cat.euPurchase || !keepRate.current
           ? rateOnDate(s.vatRate ?? cat.vatRate, form.date)
           : form.vatRate,
-      ...(keepShare.current
-        ? {}
-        : { share: cat.share ? String(cat.share) : "" }),
+      ...(keepShare.current ? {} : { share: shareText(cat, s.share) }),
       ...(party ? { party: party.id, ...billDefaults(party, form) } : {}),
     }
   }
@@ -1073,6 +1078,7 @@ function EntryDialogForm({
             vatRate: keepRate.current
               ? prev.vatRate
               : rateOnDate(hit.vatRate ?? cat.vatRate, prev.date),
+            ...(keepShare.current ? {} : { share: shareText(cat, hit.share) }),
           }
         : {}),
     }))
@@ -1824,7 +1830,7 @@ function EntryDialogForm({
                           // A category's default share fills the field (§6.12).
                           ...(keepShare.current
                             ? {}
-                            : { share: cat?.share ? String(cat.share) : "" }),
+                            : { share: shareText(cat) }),
                         })
                       }}
                       placeholder={f.t("entry.errCategory")}

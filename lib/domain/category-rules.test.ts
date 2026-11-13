@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { defaultCategories } from "@/lib/domain/accounts"
+import { defaultCategories, voucherShare } from "@/lib/domain/accounts"
 import type { BankRow } from "@/lib/domain/bank-csv"
 import { proposeForRows } from "@/lib/domain/bank-match"
 import {
@@ -257,6 +257,81 @@ describe("settings file, rule fields", () => {
         vatRate: null,
       },
       { id: "e", contains: "Elisa", catId: "344-other", vatRate: null },
+    ])
+  })
+})
+
+describe("a rule's business share", () => {
+  const phoneCats = indexCategories(
+    defaultCategories().map((c) =>
+      c.id === "344-other" ? { ...c, share: 50 } : c
+    )
+  )
+
+  it("carries the rule's own share into the hit and the bank proposal", () => {
+    const hit = findCategoryRule([rule({ share: 30 })], "Elisa", cats)
+    expect(hit?.share).toBe(30)
+    expect(findCategoryRule([rule({})], "Elisa", cats)?.share).toBeUndefined()
+
+    const [p] = proposeForRows([row({ counterparty: "Elisa" })], {
+      entries: [],
+      cats,
+      rules: [rule({ share: 30 })],
+    })
+    if (p.kind === "new") expect(p.draft.share).toBe(30)
+  })
+
+  it("books the rule's share, the whole voucher at 100, else the category's default", () => {
+    const cat = phoneCats.get("344-other")
+    expect(voucherShare(cat, 30)).toEqual({ share: 30 })
+    expect(voucherShare(cat, 100)).toEqual({})
+    expect(voucherShare(cat, undefined)).toEqual({ share: 50 })
+    expect(voucherShare(cats.get("344-other"), undefined)).toEqual({})
+  })
+
+  it("never puts a share on a category where none can apply", () => {
+    expect(voucherShare(cats.get("300-domestic"), 30)).toEqual({})
+  })
+
+  it("round-trips the share in settings.json and drops one that does not fit", () => {
+    const text = JSON.stringify({
+      version: 1,
+      categoryRules: [
+        {
+          id: "a",
+          contains: "Elisa",
+          catId: "344-other",
+          vatRate: null,
+          share: 40,
+        },
+        {
+          id: "b",
+          contains: "Telia",
+          catId: "344-other",
+          vatRate: null,
+          share: 100,
+        },
+        {
+          id: "c",
+          contains: "Dna",
+          catId: "344-other",
+          vatRate: null,
+          share: 0,
+        },
+        {
+          id: "d",
+          contains: "Moi",
+          catId: "344-other",
+          vatRate: null,
+          share: 12.5,
+        },
+      ],
+    })
+    expect(parseSettings(text).categoryRules?.map((r) => r.share)).toEqual([
+      40,
+      100,
+      undefined,
+      undefined,
     ])
   })
 })

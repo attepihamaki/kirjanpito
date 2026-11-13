@@ -42,6 +42,8 @@ export interface CategorySuggestion {
   catId: string
   /** Null when the rule leaves the rate to the category's default. */
   vatRate: number | null
+  /** A rule's own business share (§6.12), read with `voucherShare`. */
+  share?: number
   party?: string
   source: SuggestionSource
 }
@@ -147,7 +149,14 @@ export function suggestCategoryFor(
   if (!text) return null
 
   const hit = findCategoryRule(ctx.rules ?? [], text, ctx.cats, type)
-  if (hit) return { catId: hit.catId, vatRate: hit.vatRate, source: "rule" }
+  if (hit) {
+    return {
+      catId: hit.catId,
+      vatRate: hit.vatRate,
+      ...(hit.share !== undefined ? { share: hit.share } : {}),
+      source: "rule",
+    }
+  }
 
   const same = descriptionGroups(type, ctx).get(descriptionKey(text))
   if (same) {

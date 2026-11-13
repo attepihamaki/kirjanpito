@@ -4,7 +4,7 @@ import {
   offStatement,
   type AccountLine,
 } from "@/lib/domain/accounts"
-import { calcEntry } from "@/lib/domain/calc"
+import { calcEntry, privatePart } from "@/lib/domain/calc"
 import { monthOf, yearOf } from "@/lib/domain/dates"
 import { paidDate, type TraderType } from "@/lib/domain/open-items"
 import type { Category, Cents, CategoryMap, Entry } from "@/lib/domain/types"
@@ -23,20 +23,27 @@ export interface BookRow {
   net: Cents
   vat: Cents
   gross: Cents
+  /**
+   * The part of `gross` a business share leaves out of `net` and `vat`
+   * (§6.12). Shown so the columns add up; it is booked nowhere.
+   */
+  privatePart: Cents
 }
 
 export interface Totals {
   net: Cents
   vat: Cents
   gross: Cents
+  privatePart: Cents
 }
 
-const zero = (): Totals => ({ net: 0, vat: 0, gross: 0 })
+const zero = (): Totals => ({ net: 0, vat: 0, gross: 0, privatePart: 0 })
 
 function add(t: Totals, r: BookRow): void {
   t.net += r.net
   t.vat += r.vat
   t.gross += r.gross
+  t.privatePart += r.privatePart
 }
 
 /** A stretch of days, both ends included, as ISO dates. */
@@ -77,7 +84,12 @@ function rowsOf(
     .map((entry) => {
       const cat = cats.get(entry.catId)
       const line = (cat && LINE_BY_KEY.get(cat.line)) ?? null
-      return { entry, line, ...calcEntry(entry) }
+      return {
+        entry,
+        line,
+        ...calcEntry(entry),
+        privatePart: privatePart(entry),
+      }
     })
 }
 
@@ -205,7 +217,12 @@ export function ledgerReconciliation(
     const paidHere = paid !== null && yearOf(paid) === year
     if (dated === paidHere) continue
     crossings.push({
-      row: { entry, line, ...calcEntry(entry) },
+      row: {
+        entry,
+        line,
+        ...calcEntry(entry),
+        privatePart: privatePart(entry),
+      },
       paid,
       direction: dated ? "out" : "in",
     })

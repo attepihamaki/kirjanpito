@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { defaultCategories } from "@/lib/domain/accounts"
-import { calcEntry, calcWhole, isShare } from "@/lib/domain/calc"
+import { calcEntry, calcWhole, isShare, privatePart } from "@/lib/domain/calc"
 import { parseCsv, serializeCsv, type ImportSuccess } from "@/lib/domain/csv"
 import { incomeStatement } from "@/lib/domain/income-statement"
 import { parseSettings } from "@/lib/domain/settings-file"
@@ -30,6 +30,14 @@ function read(text: string): ImportSuccess {
   if (!result.ok) throw new Error(result.code)
   return result
 }
+
+describe("the private part", () => {
+  it("is what was paid less the cost and the deductible VAT", () => {
+    expect(privatePart(phone({ share: 50 }))).toBe(6_275)
+    expect(privatePart(phone({ share: 50, amount: -12_550 }))).toBe(-6_275)
+    expect(privatePart(phone())).toBe(0)
+  })
+})
 
 describe("the business share of a cost", () => {
   it("counts that share of the net and the VAT and leaves the gross whole", () => {

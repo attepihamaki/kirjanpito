@@ -1041,6 +1041,26 @@ export const APP_DICT = {
   "ledger.bulkDate": ["Vaihda päivämäärä", "Change date"],
   "ledger.bulkVat": ["Vaihda ALV-kanta", "Change VAT rate"],
   "ledger.bulkPay": ["Merkitse maksetuksi", "Mark as paid"],
+  "ledger.bulkShare": ["Vaihda yrityksen osuus", "Change business share"],
+  "ledger.bulkShareLabel": ["Uusi yrityksen osuus", "New business share"],
+  "ledger.bulkShareHint": [
+    "Osuus vaihtuu jokaiseen valittuun kuluun. 100 % kirjaa koko tositteen yritykselle.",
+    "Every selected cost takes the share. 100 % books the whole voucher to the business.",
+  ],
+  "ledger.bulkShareRefused": [
+    "Yrityksen osuus sopii vain kuluihin, jotka eivät ole EU-ostoja tai rahan siirtoja. Poista muut valinnasta.",
+    "A business share fits only costs that are not EU purchases or money moving. Leave the others out of the selection.",
+  ],
+  "ledger.bulkShareDone": [
+    pl(
+      "Yrityksen osuus vaihdettu 1 tositteeseen.",
+      "Yrityksen osuus vaihdettu {n} tositteeseen."
+    ),
+    pl(
+      "Business share changed on 1 voucher.",
+      "Business share changed on {n} vouchers."
+    ),
+  ],
   "ledger.bulkDateLabel": ["Uusi päivämäärä", "New date"],
   "ledger.bulkVatLabel": ["Uusi ALV-kanta", "New VAT rate"],
   "ledger.bulkPayLabel": ["Maksupäivä", "Payment date"],
@@ -1254,6 +1274,8 @@ export const APP_DICT = {
   ],
   "ledger.allCategories": ["Kaikki luokat", "All categories"],
   "ledger.openItems": ["Avoimet", "Open"],
+  "ledger.sharedItems": ["Osittain yksityiset", "Partly private"],
+  "ledger.privatePart": ["josta yksityistä {a}", "of which private {a}"],
   "ledger.openPill": ["Avoin", "Open"],
   "ledger.euPill": ["EU-osto", "EU purchase"],
   "ledger.importPill": ["Maahantuonti", "Import"],
@@ -2289,6 +2311,20 @@ export const APP_DICT = {
     "OmaVero laskee kohdan 313 itse ajetuista kilometreistä ja autokuluista, eikä lomake mene läpi ilman niitä. Anna ne OmaVerossa (271, 273, 381 ja 396) ja tarkista, että 313 vastaa kirjattua summaa.",
     "MyTax works out field 313 itself from the kilometres and car costs, and the form is not accepted without them. Enter them in MyTax (271, 273, 381 and 396) and check that 313 matches the booked amount.",
   ],
+  "statement.yearEndShared": [
+    pl(
+      "1 kulu on kirjattu yrityksen osuudella",
+      "{n} kulua on kirjattu yrityksen osuudella"
+    ),
+    pl(
+      "1 cost is booked at a business share",
+      "{n} costs are booked at a business share"
+    ),
+  ],
+  "statement.yearEndSharedSub": [
+    "Yksityistä osuutta on yhteensä {a}, eikä sitä vähennetä. Osuus on oma arviosi, joten tarkista, että se vastaa vuoden todellista käyttöä.",
+    "The private part comes to {a} in all and is not deducted. The share is your own estimate, so check that it matches how the cost was used this year.",
+  ],
   "statement.yearEndFigures": [
     "Vuoden lopun varat ja velat puuttuvat",
     "Year-end assets and liabilities are missing",
@@ -3306,8 +3342,8 @@ export const APP_DICT = {
   "settings.calendarTab": ["Kalenteri", "Calendar"],
   "settings.rulesTitle": ["Luokkasäännöt", "Category rules"],
   "settings.rulesHint": [
-    "Sääntö valitsee luokan ja verokannan, kun teksti esiintyy tiliotteen rivillä tai laskussa, kun vastapuolen tilinumero on sama tai kun viite alkaa annetuilla merkeillä. Ensimmäinen osuva sääntö voittaa, joten järjestyksellä on väliä. Säännöt ohittavat tositehistorian ja arvauksen. Ne eivät muuta jo kirjattuja tositteita.",
-    "A rule picks the category and VAT rate when its text appears in a bank statement row or an invoice, when the other party's account is the same, or when the reference starts with the given characters. The first matching rule wins, so the order matters. Rules come before the voucher history and the guesses. They do not change vouchers already booked.",
+    "Sääntö valitsee luokan, verokannan ja kululle yrityksen osuuden, kun teksti esiintyy tiliotteen rivillä tai laskussa, kun vastapuolen tilinumero on sama tai kun viite alkaa annetuilla merkeillä. Ensimmäinen osuva sääntö voittaa, joten järjestyksellä on väliä. Säännöt ohittavat tositehistorian ja arvauksen. Ne eivät muuta jo kirjattuja tositteita.",
+    "A rule picks the category, the VAT rate and, on a cost, the business share when its text appears in a bank statement row or an invoice, when the other party's account is the same, or when the reference starts with the given characters. The first matching rule wins, so the order matters. Rules come before the voucher history and the guesses. They do not change vouchers already booked.",
   ],
   "settings.rulesContains": ["Etsittävä", "Look for"],
   "settings.rulesField": ["Mistä etsitään", "Match on"],

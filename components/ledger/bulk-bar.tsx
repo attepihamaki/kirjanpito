@@ -27,17 +27,21 @@ import {
   recategorizeEntries,
   redateEntries,
   setEntriesPaid,
+  setEntriesShare,
   setEntriesVat,
 } from "@/lib/commands/bulk-commands"
-import { RATES } from "@/lib/domain/accounts"
+import { RATES, entryTakesShare } from "@/lib/domain/accounts"
 import { todayIso } from "@/lib/domain/dates"
 import type { MessageKey } from "@/lib/i18n/messages"
-import type { Entry } from "@/lib/domain/types"
+import { indexCategories, type Entry } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
 import { categoriesToMoveTo, compareCategories } from "@/stores/selectors"
 
 /** A change the bulk bar's edit menu makes to every selected row. */
-type BulkEdit = "date" | "vat" | "paid"
+type BulkEdit = "date" | "vat" | "share" | "paid"
+
+/** The shares the bulk edit offers, as the category settings do (§6.12). */
+const SHARE_CHOICES = [100, 90, 75, 50, 25] as const
 
 const EDIT_TEXT: Record<
   BulkEdit,
@@ -53,6 +57,11 @@ const EDIT_TEXT: Record<
     label: "ledger.bulkVatLabel",
     hint: "ledger.bulkVatHint",
   },
+  share: {
+    title: "ledger.bulkShare",
+    label: "ledger.bulkShareLabel",
+    hint: "ledger.bulkShareHint",
+  },
   paid: {
     title: "ledger.bulkPay",
     label: "ledger.bulkPayLabel",
@@ -62,8 +71,9 @@ const EDIT_TEXT: Record<
 
 /**
  * What can be done to the selected ledger rows (§8.4): move them to another
- * category, give them one date, VAT rate or payment date, or delete them.
- * Shown only while something is selected.
+ * category, give them one date, VAT rate, business share or payment date, or
+ * delete them. The share is offered only while every row is a cost that can
+ * carry one (§6.12). Shown only while something is selected.
  */
 export function BulkBar({
   selected,
@@ -81,6 +91,12 @@ export function BulkBar({
   const type = selected.every((e) => e.type === selected[0]?.type)
     ? selected[0]?.type
     : undefined
+
+  const catMap = React.useMemo(() => indexCategories(cats), [cats])
+  const edits = (Object.keys(EDIT_TEXT) as BulkEdit[]).filter(
+    (kind) =>
+      kind !== "share" || selected.every((e) => entryTakesShare(e, catMap))
+  )
 
   const eu = !!selected[0]?.euPurchase
   const euMixed = selected.some((e) => !!e.euPurchase !== eu)
@@ -142,7 +158,7 @@ export function BulkBar({
           }
         />
         <DropdownMenuContent align="start">
-          {(Object.keys(EDIT_TEXT) as BulkEdit[]).map((kind) => (
+          {edits.map((kind) => (
             <DropdownMenuItem key={kind} onClick={() => setEditing(kind)}>
               {f.t(EDIT_TEXT[kind].title)}
             </DropdownMenuItem>
@@ -200,6 +216,13 @@ function BulkEditDialog({
   )
   const [bad, setBad] = React.useState(false)
   const [rate, setRate] = React.useState(String(first?.vatRate ?? RATES[0]))
+  const firstShare = first?.share ?? 100
+  const [share, setShare] = React.useState(String(firstShare))
+  const shareChoices: number[] = SHARE_CHOICES.includes(
+    firstShare as (typeof SHARE_CHOICES)[number]
+  )
+    ? [...SHARE_CHOICES]
+    : [...SHARE_CHOICES, firstShare].sort((a, b) => b - a)
   const [busy, setBusy] = React.useState(false)
   const text = EDIT_TEXT[kind]
   const year = first?.date.slice(0, 4)
@@ -212,7 +235,9 @@ function BulkEditDialog({
           ? await redateEntries(ctx, selected, date)
           : kind === "vat"
             ? await setEntriesVat(ctx, selected, Number(rate))
-            : await setEntriesPaid(ctx, selected, date)
+            : kind === "share"
+              ? await setEntriesShare(ctx, selected, Number(share))
+              : await setEntriesPaid(ctx, selected, date)
       if (done) onDone()
     } finally {
       setBusy(false)
@@ -240,6 +265,16 @@ function BulkEditDialog({
               onChange={setRate}
               label={f.t(text.label)}
             />
+          ) : kind === "share" ? (
+            <OptionSelect
+              options={shareChoices.map((n) => ({
+                value: String(n),
+                label: `${n} %`,
+              }))}
+              value={share}
+              onChange={setShare}
+              label={f.t(text.label)}
+            />
           ) : (
             <DateInput
               value={date}
@@ -257,7 +292,10 @@ function BulkEditDialog({
             {f.t("common.cancel")}
           </Button>
           <Button
-            disabled={busy || (kind !== "vat" && (bad || date === ""))}
+            disabled={
+              busy ||
+              (kind !== "vat" && kind !== "share" && (bad || date === ""))
+            }
             onClick={() => void apply()}
           >
             {f.t("ledger.bulkApply")}

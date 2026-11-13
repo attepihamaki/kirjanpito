@@ -262,7 +262,7 @@ function parseRecurring(value: unknown): RecurringEntry | null {
 
 function parseCategoryRule(value: unknown): CategoryRule | null {
   if (!isRecord(value)) return null
-  const { id, contains, catId, vatRate, field } = value
+  const { id, contains, catId, vatRate, field, share } = value
   if (typeof id !== "string" || !id) return null
   if (field != null && !RULE_FIELDS.includes(field as RuleField)) return null
   const kind = (field ?? "text") as RuleField
@@ -279,6 +279,8 @@ function parseCategoryRule(value: unknown): CategoryRule | null {
     ...(kind === "text" ? {} : { field: kind }),
     catId,
     vatRate: vatRate ?? null,
+    /* A share that is not 1 to 99 or 100 is dropped, and the rule kept with the category's default. */
+    ...(isShare(share) || share === 100 ? { share } : {}),
   }
 }
 

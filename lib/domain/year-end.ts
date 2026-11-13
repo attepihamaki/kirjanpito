@@ -1,6 +1,6 @@
 import { assetSchedule, type AssetOpening } from "@/lib/domain/assets"
 import type { ChangeRecord } from "@/lib/domain/change-log"
-import { calcEntry } from "@/lib/domain/calc"
+import { calcEntry, isShare, privatePart } from "@/lib/domain/calc"
 import { lastCompleteMonth, monthOf, yearOf } from "@/lib/domain/dates"
 import {
   ENTRY_CHECKS,
@@ -83,6 +83,12 @@ export interface YearEndData {
   stockTooHigh: { closing: Cents; available: Cents }
   /** Rows of the stocktake that need attention. */
   stockRows: { n: number }
+  /**
+   * Costs booked at a business share (§6.12), and their private part. The
+   * share is the user's own estimate, so the year's end is when to look at it
+   * again.
+   */
+  sharedCosts: { n: number; privatePart: Cents }
   openItems: { n: number; receivables: Cents; payables: Cents }
   emptyMonths: { months: readonly number[] }
 }
@@ -253,6 +259,22 @@ export const YEAR_END_RULES = defineRules<
     },
   },
   {
+    id: "sharedCosts",
+    severity: "info",
+    source: "app",
+    check: (i) => {
+      const shared = yearEntriesOf(i).filter((e) => isShare(e.share))
+      return shared.length
+        ? [
+            {
+              n: shared.length,
+              privatePart: shared.reduce((sum, e) => sum + privatePart(e), 0),
+            },
+          ]
+        : []
+    },
+  },
+  {
     id: "openItems",
     severity: "info",
     source: "KPL 1:1a",
@@ -333,6 +355,7 @@ const TOPIC_OF: Record<keyof YearEndData, YearEndTopic | null> = {
   entryCheck: "entries",
   missingFiles: "entries",
   emptyMonths: "entries",
+  sharedCosts: "entries",
   vatUnfiled: "vat",
   openItems: "open",
   depreciation: "assets",

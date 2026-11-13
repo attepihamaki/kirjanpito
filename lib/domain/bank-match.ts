@@ -61,6 +61,8 @@ export interface NewEntryDraft {
   guessed?: boolean
   /** The register entry the counterparty is (§8.29). */
   party?: string
+  /** The business share of the rule that picked `catId` (§8.17), read with `voucherShare`. */
+  share?: number
 }
 
 /* -------------------------------------------------------------------------
@@ -364,6 +366,7 @@ function draftFor(
     vatRate: known?.vatRate ?? null,
     ...(guessed ? { guessed: true } : {}),
     ...(party ? { party: party.id } : {}),
+    ...(hit?.share !== undefined ? { share: hit.share } : {}),
   }
 }
 

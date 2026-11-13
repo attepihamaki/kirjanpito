@@ -61,6 +61,18 @@ function wholeAmounts(e: CalcInput): EntryAmounts {
   return { net: gross - vat, vat, gross }
 }
 
+/**
+ * The private part of a cost used partly privately (§6.12): what was paid
+ * less the cost and the deductible VAT counted. It is booked nowhere, so this
+ * is what explains the gap between `gross` and `net + vat`. Zero without a
+ * share.
+ */
+export function privatePart(e: CalcInput): Cents {
+  if (e.euPurchase || !isShare(e.share)) return 0
+  const a = calcEntry(e)
+  return a.gross - a.net - a.vat
+}
+
 /** The amounts of the whole voucher, before the business share (§6.12). */
 export function calcWhole(e: Omit<CalcInput, "share">): EntryAmounts {
   return e.euPurchase

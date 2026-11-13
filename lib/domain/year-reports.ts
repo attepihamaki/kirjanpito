@@ -235,8 +235,23 @@ function entryCells(
     ...(withAccount ? [row.line ? String(row.line.account) : ""] : []),
     signed(f, row.net, negative),
     vat,
-    signed(f, row.gross, negative),
+    withPrivatePart(f, row.gross, row.privatePart, negative),
   ]
+}
+
+/** A gross amount with the private part of a shared cost beneath it (§6.12). */
+function withPrivatePart(
+  f: ReportText,
+  gross: Cents,
+  part: Cents,
+  negative: boolean
+): string {
+  const amount = signed(f, gross, negative)
+  if (!part) return amount
+  return [
+    amount,
+    f.t("ledger.privatePart", { a: signed(f, part, negative) }),
+  ].join("\n")
 }
 
 function bookColumns(f: ReportText, withAccount: boolean): ReportColumn[] {
@@ -257,7 +272,7 @@ function totalCells(f: ReportText, t: Totals, negative: boolean): string[] {
   return [
     signed(f, t.net, negative),
     signed(f, t.vat, negative),
-    signed(f, t.gross, negative),
+    withPrivatePart(f, t.gross, t.privatePart, negative),
   ]
 }
 

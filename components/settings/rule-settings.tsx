@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { toast } from "@/components/ui/toast"
-import { LINE_BY_KEY } from "@/lib/domain/accounts"
+import { LINE_BY_KEY, canHaveShare, lineOf } from "@/lib/domain/accounts"
 import {
   MIN_RULE_TEXT,
   normalizeRuleValue,
@@ -34,8 +34,11 @@ import { validRates } from "@/lib/domain/vat-rates"
 import { uid } from "@/lib/domain/id"
 import { useBookStore } from "@/stores/book-store"
 
-/** The option that leaves the rate to the category. */
+/** The option that leaves the rate or the share to the category. */
 const CATEGORY_DEFAULT = "default"
+
+/** The shares a rule offers, as the category settings do (§6.12). */
+const SHARE_CHOICES = [100, 90, 75, 50, 25] as const
 
 const FIELD_LABEL = {
   text: "settings.rulesFieldText",
@@ -77,6 +80,7 @@ export function RuleSettings() {
   const [contains, setContains] = React.useState("")
   const [catId, setCatId] = React.useState("")
   const [rate, setRate] = React.useState(CATEGORY_DEFAULT)
+  const [share, setShare] = React.useState(CATEGORY_DEFAULT)
   const [error, setError] = React.useState<string | null>(null)
 
   /* Enabled categories, income before expenses, as the entry dialog lists them. */
@@ -103,6 +107,23 @@ export function RuleSettings() {
   const toRate = (value: string) =>
     value === CATEGORY_DEFAULT ? null : Number(value)
 
+  const shareOptions = (current: number | undefined) => [
+    { value: CATEGORY_DEFAULT, label: f.t("settings.rulesRateDefault") },
+    ...(current === undefined ||
+    SHARE_CHOICES.includes(current as (typeof SHARE_CHOICES)[number])
+      ? [...SHARE_CHOICES]
+      : [...SHARE_CHOICES, current].sort((a, b) => b - a)
+    ).map((n) => ({ value: String(n), label: `${n} %` })),
+  ]
+  /** A rule's share field: absent leaves the category's default. */
+  const shareField = (value: string): { share?: number } =>
+    value === CATEGORY_DEFAULT ? {} : { share: Number(value) }
+  /** Whether a share can apply on the category at all: a cost that is not money moving or an EU purchase. */
+  const takesShare = (id: string) => {
+    const cat = catMap.get(id)
+    return !!cat && canHaveShare(lineOf(cat), cat.euPurchase)
+  }
+
   const fieldOptions = RULE_FIELDS.map((value) => ({
     value,
     label: f.t(FIELD_LABEL[value]),
@@ -125,6 +146,7 @@ export function RuleSettings() {
       ...(field === "text" ? {} : { field }),
       catId,
       vatRate: toRate(rate),
+      ...(takesShare(catId) ? shareField(share) : {}),
     })
     setContains("")
     setError(null)
@@ -196,6 +218,14 @@ export function RuleSettings() {
           label={f.t("settings.defaultVat")}
           className="w-44"
         />
+        <OptionSelect
+          options={shareOptions(undefined)}
+          value={takesShare(catId) ? share : CATEGORY_DEFAULT}
+          onChange={setShare}
+          disabled={!takesShare(catId)}
+          label={f.t("settings.catShare")}
+          className="w-36"
+        />
         <Button type="submit">{f.t("settings.rulesAdd")}</Button>
         {error ? <FieldError className="basis-full">{error}</FieldError> : null}
       </form>
@@ -212,6 +242,7 @@ export function RuleSettings() {
               <TableHead>{f.t("settings.rulesContains")}</TableHead>
               <TableHead>{f.t("settings.rulesCategory")}</TableHead>
               <TableHead>{f.t("settings.defaultVat")}</TableHead>
+              <TableHead>{f.t("settings.catShare")}</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -236,13 +267,13 @@ export function RuleSettings() {
                           })
                           return
                         }
-                        upsert({
-                          id: rule.id,
+                        const changed: CategoryRule = {
+                          ...rule,
                           contains: value,
-                          ...(kind === "text" ? {} : { field: kind }),
-                          catId: rule.catId,
-                          vatRate: rule.vatRate,
-                        })
+                        }
+                        if (kind === "text") delete changed.field
+                        else changed.field = kind
+                        upsert(changed)
                       }}
                       label={f.t("settings.rulesField")}
                       className="w-44"
@@ -295,6 +326,28 @@ export function RuleSettings() {
                       label={f.t("settings.defaultVat")}
                       className="w-44"
                     />
+                  </TableCell>
+                  <TableCell>
+                    {takesShare(rule.catId) ? (
+                      <OptionSelect
+                        options={shareOptions(rule.share)}
+                        value={
+                          rule.share === undefined
+                            ? CATEGORY_DEFAULT
+                            : String(rule.share)
+                        }
+                        onChange={(next) => {
+                          const changed: CategoryRule = {
+                            ...rule,
+                            ...shareField(next),
+                          }
+                          if (next === CATEGORY_DEFAULT) delete changed.share
+                          upsert(changed)
+                        }}
+                        label={`${f.t("settings.catShare")}: ${shown(rule)}`}
+                        className="w-36"
+                      />
+                    ) : null}
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
                     <Button

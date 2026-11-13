@@ -5,6 +5,7 @@ import { toast } from "@/components/ui/toast"
 import {
   redateEntries,
   setEntriesPaid,
+  setEntriesShare,
   setEntriesVat,
 } from "@/lib/commands/bulk-commands"
 import type { Ctx } from "@/lib/commands/ctx"
@@ -102,6 +103,28 @@ describe("bulk edits", () => {
       entries: [entry("e", { euPurchase: "goods" as Entry["euPurchase"] })],
     })
     expect(await setEntriesVat(ctx, [byId("e")], 0)).toBe(false)
+  })
+
+  it("gives every selected cost one share, clears it at 100 and undoes it", async () => {
+    expect(await setEntriesShare(ctx, [byId("a"), byId("d")], 40)).toBe(true)
+    expect([byId("a").share, byId("d").share]).toEqual([40, 40])
+    expect(await setEntriesShare(ctx, [byId("a")], 100)).toBe(true)
+    expect("share" in byId("a")).toBe(false)
+    undo()
+    expect(byId("a").share).toBe(40)
+  })
+
+  it("refuses a share on income, and on a year whose Form 5 is filed", async () => {
+    useBookStore.setState({
+      entries: [entry("i", { type: "income", catId: "300-domestic" })],
+    })
+    expect(await setEntriesShare(ctx, [byId("i")], 50)).toBe(false)
+    expect(byId("i").share).toBeUndefined()
+    useBookStore.setState({
+      entries: [entry("a")],
+      form5Filed: { "2026": "2027-03-01" },
+    })
+    expect(await setEntriesShare(ctx, [byId("a")], 50)).toBe(false)
   })
 
   it("marks the selection paid on one day, the split's parts together", async () => {

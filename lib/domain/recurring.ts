@@ -1,4 +1,4 @@
-import { categoryShare } from "@/lib/domain/accounts"
+import { categoryShare, voucherShare } from "@/lib/domain/accounts"
 import { isShare } from "@/lib/domain/calc"
 import { tagsField } from "@/lib/domain/tags"
 import { isoDate, monthOf, yearOf } from "@/lib/domain/dates"
@@ -148,13 +148,7 @@ export function recurringToEntry(
 ): Entry {
   const date = recurringDate(r.day, month)
   const cat = cats?.get(r.catId)
-  /* The template's own share, else the category's; neither where a share cannot apply. */
-  const share =
-    r.share === 100
-      ? {}
-      : categoryShare(
-          cat && isShare(r.share) ? { ...cat, share: r.share } : cat
-        )
+  const share = voucherShare(cat, r.share)
   return {
     id: makeId(),
     date,

@@ -1,4 +1,4 @@
-import { LINE_BY_KEY } from "@/lib/domain/accounts"
+import { LINE_BY_KEY, categoryShare, voucherShare } from "@/lib/domain/accounts"
 import { canBeUnpaid, paidDate } from "@/lib/domain/open-items"
 import { paidChangeHitsForm5, type LockMarks } from "@/lib/domain/period-lock"
 import type { Attachment, CategoryMap, Entry } from "@/lib/domain/types"
@@ -184,6 +184,9 @@ export function canSplitLine(
  * rule that parts share a payment already holds when it is made. `ids` are the
  * part's own id and the link, used when the entry is not split yet.
  *
+ * A part on the entry's own category keeps the entry's business share, and a
+ * part on another category takes that category's default (§6.12).
+ *
  * The part must be smaller than the entry and have its sign, so the two always
  * add up to what the receipt said.
  */
@@ -226,6 +229,12 @@ export function carveSplit(
     amountMode: entry.amountMode,
     split,
   }
+  Object.assign(
+    next,
+    part.catId === entry.catId
+      ? voucherShare(cat, entry.share ?? 100)
+      : categoryShare(cat)
+  )
   if (entry.atts) next.atts = entry.atts.map((a) => ({ ...a }))
   if (entry.tags) next.tags = [...entry.tags]
   if (canBeUnpaid(line)) {

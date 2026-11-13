@@ -172,3 +172,26 @@ describe("ledgerReconciliation", () => {
     })
   })
 })
+
+describe("the private part of a shared cost (§6.12)", () => {
+  it("fills the gap between gross and net plus VAT, per row and in total", () => {
+    const phone: Entry = {
+      id: "p",
+      voucher: 1,
+      date: "2026-10-10",
+      description: "Puhelin",
+      type: "expense",
+      catId: "344-other",
+      amount: 12_550,
+      vatRate: 25.5,
+      amountMode: "gross",
+      share: 50,
+    }
+    const [account] = generalLedger([phone], cats, 2026)
+    const [row] = account.rows
+    expect(row.privatePart).toBe(6_275)
+    expect(row.net + row.vat + row.privatePart).toBe(row.gross)
+    expect(account.totals.privatePart).toBe(6_275)
+    expect(journal(sample, cats, 2026).expense.privatePart).toBe(0)
+  })
+})

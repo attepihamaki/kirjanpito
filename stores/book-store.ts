@@ -98,7 +98,8 @@ export type MonthFilter = number // 0 = whole year, 1-12 = that month
 export type TypeFilter = "all" | EntryType
 /** Entries that need a second look (§8.4), by the checks in `entry-checks.ts`. */
 /** "open" is not a check: an unpaid invoice is ordinary (§8.4). */
-export type CheckFilter = "all" | "open" | EntryCheck
+/** The ledger's check filter (§8.4): every entry, the open ones, the costs with a business share (§6.12), or one check. */
+export type CheckFilter = "all" | "open" | "shared" | EntryCheck
 
 export interface SortState<K extends string> {
   key: K

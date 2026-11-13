@@ -148,6 +148,16 @@ export function useDescribeYearEnd() {
               go(STATEMENT_ROUTES.inventory)
             ),
           }
+        case "sharedCosts":
+          return {
+            title: f.t("statement.yearEndShared", { n: item.data.n }),
+            sub: f.t("statement.yearEndSharedSub", {
+              a: f.money(item.data.privatePart),
+            }),
+            action: link(f.t("overview.showThem"), () =>
+              showInLedger("shared")
+            ),
+          }
         case "openItems":
           return {
             title: f.t("overview.openItems", { n: item.data.n }),

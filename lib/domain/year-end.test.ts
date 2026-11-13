@@ -136,6 +136,20 @@ describe("yearEndFindings", () => {
     expect(canLockYear(items)).toBe(true)
   })
 
+  it("sums the private part of the year's costs booked at a share", () => {
+    const shared = input({
+      entries: [
+        entry({ share: 50 }),
+        entry({ id: "b", date: "2025-05-01", share: 50, amount: -12_550 }),
+        entry({ id: "c", date: "2025-06-01", share: 50 }),
+        entry({ id: "d", date: "2024-06-01", share: 50 }),
+      ],
+    })
+    expect(
+      yearEndFindings(shared).find((f) => f.ruleId === "sharedCosts")?.data
+    ).toEqual({ n: 3, privatePart: 6_275 })
+  })
+
   it("lists empty months after the first entry, from the start month on", () => {
     const found = yearEndFindings(
       input({
