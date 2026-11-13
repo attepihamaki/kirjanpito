@@ -79,12 +79,21 @@ export const SETTINGS_FILE_NAME = "settings.json"
 /** Version of the shape below. A reader ignores keys it does not know. */
 export const SETTINGS_VERSION = 1
 
+/** The longest build name read back from a file. Anything longer is cut. */
+const WRITTEN_BY_MAX = 64
+
 const PAGE_SIZES = [10, 25, 50, 100] as const
 export type PageSize = (typeof PAGE_SIZES)[number]
 
 export type ThemeChoice = "light" | "dark" | "system"
 
 export interface BookSettings {
+  /**
+   * The build that wrote the file (`APP_BUILD`), such as "0.0.1+bff1bcc".
+   * Written on every save and read back only to name it in a notice; it
+   * says nothing about the book itself.
+   */
+  writtenBy?: string
   language: Lang
   theme: ThemeChoice
   /**
@@ -393,6 +402,9 @@ export function parseSettings(text: string): ParsedSettings {
   const out: ParsedSettings = {}
   if (typeof raw.version === "number" && raw.version > SETTINGS_VERSION) {
     out.fromNewerVersion = true
+  }
+  if (typeof raw.writtenBy === "string" && raw.writtenBy.trim()) {
+    out.writtenBy = raw.writtenBy.trim().slice(0, WRITTEN_BY_MAX)
   }
   if (raw.language === "fi" || raw.language === "en") {
     out.language = raw.language
@@ -734,6 +746,7 @@ export function parseSettings(text: string): ParsedSettings {
 export function serializeSettings(s: BookSettings): string {
   const file = {
     version: SETTINGS_VERSION,
+    ...(s.writtenBy ? { writtenBy: s.writtenBy } : {}),
     language: s.language,
     theme: s.theme,
     exportLang: s.exportLang,

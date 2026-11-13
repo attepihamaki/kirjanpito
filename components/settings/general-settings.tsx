@@ -25,6 +25,7 @@ import {
   removeBookEncryption,
   setBookPassword,
 } from "@/lib/commands/encryption-commands"
+import { APP_BUILD } from "@/lib/build-info"
 import { viewHelp } from "@/lib/domain/field-help"
 import { FEATURES, type Feature } from "@/lib/domain/features"
 import { RULES } from "@/lib/domain/rule-tables"
@@ -95,7 +96,8 @@ function RulesChecked() {
   const f = useFormatters()
   return (
     <p className="mt-4 text-sm text-muted-foreground">
-      {f.t("settings.rulesChecked", { d: f.date(RULES.checkedOn) })}
+      {f.t("settings.rulesChecked", { d: f.date(RULES.checkedOn) })}{" "}
+      {f.t("settings.appBuild", { b: APP_BUILD })}
     </p>
   )
 }

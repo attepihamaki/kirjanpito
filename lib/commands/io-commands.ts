@@ -4,6 +4,7 @@ import {
   inboxPaths,
   type InboxItem,
 } from "@/lib/domain/inbox"
+import { APP_BUILD } from "@/lib/build-info"
 import { toast } from "@/components/ui/toast"
 import type { DateRange } from "@/lib/domain/books"
 import { periodFromKey } from "@/lib/domain/vat-deadline"
@@ -177,7 +178,15 @@ function importSummary(
       .join(", ")
     text += ctx.t("io.skipped", { n: result.skipped.length, e: first })
   }
-  if (settings?.fromNewerVersion) text += ctx.t("io.settingsNewer")
+  if (settings?.fromNewerVersion) {
+    text += ctx.t("io.settingsNewer")
+    if (settings.writtenBy) {
+      text += ctx.t("io.settingsWrittenBy", {
+        b: settings.writtenBy,
+        c: APP_BUILD,
+      })
+    }
+  }
   return text
 }
 
@@ -808,6 +817,7 @@ function changedSince(version: BookVersion): boolean {
 function currentSettingsText(over: Partial<BookSettings> = {}): string {
   const s = useBookStore.getState()
   return serializeSettings({
+    writtenBy: APP_BUILD,
     language: useLangStore.getState().lang,
     theme: readStoredTheme(),
     exportLang: s.exportLang,

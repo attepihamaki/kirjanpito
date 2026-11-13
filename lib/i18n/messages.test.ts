@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync, statSync } from "node:fs"
+import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 
 import { defaultCategories } from "@/lib/domain/accounts"
@@ -96,6 +98,52 @@ describe("dictionary integrity", () => {
       if (typeof fi !== "string" || typeof en !== "string") continue
       expect(names(en), key).toEqual(names(fi))
     }
+  })
+})
+
+/** Every source file that may look a key up: the app, not the tests or the dictionaries. */
+function sourceText(): string {
+  const files: string[] = []
+  const walk = (dir: string) => {
+    for (const name of readdirSync(dir)) {
+      const path = join(dir, name)
+      if (statSync(path).isDirectory()) walk(path)
+      else if (/\.(ts|tsx)$/.test(name) && !/\.test\./.test(name))
+        files.push(path)
+    }
+  }
+  for (const dir of ["app", "components", "hooks", "lib", "stores"]) {
+    walk(join(process.cwd(), dir))
+  }
+  const dictionaries = join("lib", "i18n", "dict")
+  return files
+    .filter((path) => !path.includes(dictionaries))
+    .map((path) => readFileSync(path, "utf8"))
+    .join("\n")
+}
+
+describe("dictionary use", () => {
+  /*
+   * A key nothing looks up is text no user sees, and it still has to be kept
+   * in two languages. A key is used when the source spells it out in quotes,
+   * or builds it from a template that starts with everything up to its
+   * number, such as `landing.q${i}` or `vat.correction${code}`.
+   */
+  it("looks up every key somewhere in the app", () => {
+    const source = sourceText()
+    const templates = [
+      ...source.matchAll(/`([a-zA-Z0-9]+\.[a-zA-Z0-9]*)\$\{/g),
+    ].map((m) => m[1])
+    const unused = Object.keys(MESSAGES).filter(
+      (key) =>
+        !source.includes(`"${key}"`) &&
+        !source.includes(`'${key}'`) &&
+        !templates.some(
+          (prefix) =>
+            key.startsWith(prefix) && /^[0-9]/.test(key.slice(prefix.length))
+        )
+    )
+    expect(unused).toEqual([])
   })
 })
 

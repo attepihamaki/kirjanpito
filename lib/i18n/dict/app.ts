@@ -247,10 +247,6 @@ export const APP_DICT = {
     "Tositteessa on tallentamattomia muutoksia. Jos suljet ikkunan, ne menetetään.",
     "This voucher has unsaved changes. If you close the dialog, they’ll be lost.",
   ],
-  "confirm.discardCategory": [
-    "Olet täyttänyt uuden luokan tiedot, mutta luokkaa ei ole lisätty. Jos poistut sivulta, tiedot menetetään.",
-    "You’ve filled in a new category but haven’t added it. If you leave this page, it will be lost.",
-  ],
 
   // --- Shared by several views ---
   // The fill-in forms for OmaVero (§8.7, §8.8).
@@ -805,6 +801,7 @@ export const APP_DICT = {
     "Verosäännöt ja -rajat tarkistettu {d}.",
     "Tax rules and limits checked on {d}.",
   ],
+  "settings.appBuild": ["Sovelluksen versio {b}.", "App build {b}."],
   "overview.yearClosed": [
     "Tilikausi {y} on päättynyt",
     "Financial year {y} has ended",
@@ -1004,7 +1001,6 @@ export const APP_DICT = {
     "Lisää ensimmäinen tosite tai tuo aiemmat tositteet CSV-tiedostosta.",
     "Add your first voucher or import earlier vouchers from a CSV file.",
   ],
-  "ledger.startEmpty": ["Aloita tyhjästä", "Start from scratch"],
   "ledger.newEntry": ["Uusi tosite", "New voucher"],
   "ledger.wholeYear": ["Koko vuosi", "Whole year"],
   "ledger.incomeNet": ["Tulot, veroton", "Income, excl. VAT"],
@@ -1654,10 +1650,6 @@ export const APP_DICT = {
   "receipt.businessVat": ["Vähennettävä ALV", "Deductible VAT"],
   "ledger.sharePill": ["Osuus {p}", "Share {p}"],
   "settings.catShare": ["Yrityksen osuus", "Business share"],
-  "settings.catShareHint": [
-    "Esitäyttää uuden tositteen yrityksen osuuden, esimerkiksi 50 % puhelimelle. Voit muuttaa sen jokaisella tositteella.",
-    "Pre-fills the business share of a new voucher, for example 50 % for a phone. You can change it on each voucher.",
-  ],
   "entry.amountMode": ["Verollisuus", "VAT treatment"],
   "entry.amountModeInfo": [
     "Mitä verollisuus tarkoittaa?",
@@ -1708,7 +1700,6 @@ export const APP_DICT = {
   "entry.unknownCategory": ["Tuntematon luokka", "Unknown category"],
 
   // --- The paper preview's labels (§8.5) and the attachment files (§7.4) ---
-  "receipt.description": ["Kuvaus", "Description"],
   "receipt.purchaseBadge": [
     "Vähennetään ostojen verona",
     "Deducted as VAT on purchases",
@@ -2392,7 +2383,6 @@ export const APP_DICT = {
   ],
   "statement.revenue": ["Tuotot", "Revenue"],
   "statement.expenses": ["Elinkeinotoiminnan kulut", "Business expenses"],
-  "statement.profitOrLoss": ["Voitto tai tappio", "Profit or loss"],
   "statement.yearRunning": ["Tilikausi kesken", "Year in progress"],
   "statement.asideReturn": ["Veroilmoitus", "Tax return"],
   "statement.asideReturnBody": [
@@ -2467,7 +2457,6 @@ export const APP_DICT = {
     "Verottomat summat kuukausittain, {y}",
     "Amounts excl. VAT by month, {y}",
   ],
-  "summary.incomeAndExpenses": ["Tulot ja kulut", "Income and expenses"],
   "summary.sales": ["Myynti", "Sales"],
   "summary.expenses": ["Kulut", "Expenses"],
   "summary.chartLabel": [
@@ -2585,10 +2574,6 @@ export const APP_DICT = {
   // --- Fixed assets ---
 
   "balance.tab": ["Varat ja velat", "Assets and liabilities"],
-  "balance.intro": [
-    "Varat ja velat ratkaisevat, kuinka suuri osa tuloksesta on pääomatuloa. Ilmoita ne OmaVerossa tilikauden lopun tilanteen mukaan.",
-    "Assets and liabilities decide how much of the profit counts as capital income. Enter them in MyTax as they stood at the end of the financial year.",
-  ],
   "balance.notBank": [
     "Pankkitalletukset eivät kuulu näihin kohtiin.",
     "Bank deposits are in none of these fields.",
@@ -2686,7 +2671,6 @@ export const APP_DICT = {
     "Anna summa, esim. 124,50.",
     "Enter an amount, e.g. 124.50.",
   ],
-  "balance.inventoryTitle": ["Varaston muutos", "Change in inventory"],
   "balance.inventoryHint": [
     "Tavarat ja muu vaihto-omaisuus edellisen vuoden lopusta tämän vuoden loppuun. Tosite riville 333: {a}. Varaston kasvu pienentää kuluja.",
     "Goods and other current assets from the end of last year to the end of this one. The voucher on line 333: {a}. A growing stock lowers the cost.",
@@ -2764,18 +2748,7 @@ export const APP_DICT = {
     "Depreciation {y}, machinery and equipment",
   ],
   "assets.booked": ["Poisto kirjattu.", "Depreciation booked."],
-  "assets.yearEntries": ["Hankinnat ja myynnit {y}", "Purchases and sales {y}"],
-  "assets.noYearEntries": [
-    "Ei hankintoja tai myyntejä tänä vuonna.",
-    "No purchases or sales this year.",
-  ],
   "assets.schedule": ["Menojäännös vuosittain", "Balance by year"],
-  "assets.year": ["Vuosi", "Year"],
-  "assets.voucher": ["Nro", "No."],
-  "assets.date": ["Pvm", "Date"],
-  "assets.purchase": ["Hankinta", "Purchase"],
-  "assets.sale": ["Myynti", "Sale"],
-  "assets.listTitle": ["Käyttöomaisuusluettelo", "Fixed asset list"],
   "assets.listHint": [
     "Hankintatositteet vuoden {y} loppuun asti ja niihin linkitetyt myyntitositteet. Luettelo on muistiinpano: vero lasketaan edelleen yhtenä poistopohjana.",
     "Purchase vouchers up to the end of {y} and the sale vouchers linked to them. The list is a record only. The tax is still worked out on one pool.",
@@ -2784,12 +2757,10 @@ export const APP_DICT = {
     "Ei hankintatositteita. Aloitussaldoon sisältyvät hyödykkeet eivät näy luettelossa.",
     "No purchase vouchers. Assets inside the opening balance are not listed.",
   ],
-  "assets.listItem": ["Hyödyke", "Item"],
   "assets.listPurchase": ["Hankintatosite", "Purchase voucher"],
   "assets.listCost": ["Hankintameno", "Cost"],
   "assets.listSale": ["Myyntitosite", "Sale voucher"],
   "assets.listPrice": ["Myyntihinta", "Sale price"],
-  "assets.listStatus": ["Tila", "Status"],
   "assets.listInUse": ["Käytössä", "In use"],
   "assets.listSold": ["Myyty", "Sold"],
   "assets.listUnlinked": [
@@ -2801,7 +2772,6 @@ export const APP_DICT = {
     "Open the sale voucher and choose the purchase it sells on the Maksu tab.",
   ],
   "assets.used": ["Enimmäispoistosta kirjattu", "Booked of the maximum"],
-  "assets.calculation": ["Poistopohjan laskenta", "How the base is worked out"],
   "assets.openingTitle": ["Aloitussaldo", "Opening balance"],
   "assets.openingHint": [
     "Jos sinulla on omaisuutta ajalta ennen tätä kirjanpitoa, anna sen menojäännös vuoden {y} alussa. Luku on edellisen vuoden poistoerittelyssä (lomake 62).",
@@ -3174,7 +3144,6 @@ export const APP_DICT = {
     "Kuinka usein annat arvonlisäveroilmoituksen. Yleiskatsauksen eräpäivät lasketaan tämän mukaan.",
     "How often you file a VAT return. The due dates on the overview follow it.",
   ],
-  "settings.filing": ["ALV-ilmoitukset", "VAT returns"],
   "settings.change": ["Muuta", "Change"],
   "settings.done": ["Valmis", "Done"],
   "settings.notSet": ["Ei asetettu", "Not set"],
@@ -3502,7 +3471,6 @@ export const APP_DICT = {
   ],
   "settings.deleteBook": ["Poista kirjanpito", "Delete books"],
   "settings.bookDeleted": ["Kirjanpito poistettu.", "Books deleted."],
-  "settings.restored": ["Tositteet palautettu.", "Vouchers restored."],
 
   // --- Import and export (§7) ---
   "io.opening": ["Avataan tiedostoa…", "Opening the file…"],
@@ -3786,7 +3754,6 @@ export const APP_DICT = {
   "invoice.statusOverdue": ["Erääntynyt", "Overdue"],
   "invoice.statusPaid": ["Maksettu", "Paid"],
   "invoice.open": ["Avaa", "Open"],
-  "invoice.view": ["Näytä", "View"],
   "invoice.download": ["Lataa PDF", "Download PDF"],
   "invoice.markPaid": ["Merkitse maksetuksi", "Mark as paid"],
   "invoice.paidOn": ["Maksupäivä", "Paid on"],
@@ -3853,7 +3820,6 @@ export const APP_DICT = {
   "invoice.draftTitle": ["Laskun luonnos", "Invoice draft"],
   "invoice.viewTitle": ["Lasku {n}", "Invoice {n}"],
   "invoice.customer": ["Asiakas", "Customer"],
-  "invoice.customerPick": ["Asiakasrekisteristä", "From the register"],
   "invoice.customerSearch": [
     "Hae asiakasrekisteristä tai täytä tiedot alle",
     "Search the customer register or fill in the details below",
@@ -3947,7 +3913,6 @@ export const APP_DICT = {
     "Anna alennus prosentteina 0–100, enintään kahdella desimaalilla.",
     "Give the discount as a percent from 0 to 100, with at most two decimals.",
   ],
-  "invoice.totalDiscount": ["Alennus {p}", "Discount {p}"],
   "invoice.rowCategory": ["Luokka", "Category"],
   "invoice.rowTotal": ["Yhteensä", "Total"],
   "invoice.addRow": ["Lisää rivi", "Add row"],
@@ -4549,7 +4514,6 @@ export const APP_DICT = {
     "The cost billed on is no longer in the book.",
   ],
   "invoice.credit": ["Hyvitä", "Credit"],
-  "invoice.creditNote": ["Hyvityslasku", "Credit note"],
   "invoice.creditDraftTitle": ["Hyvityslaskun luonnos", "Credit note draft"],
   "invoice.creditViewTitle": ["Hyvityslasku {n}", "Credit note {n}"],
   "invoice.credits": ["Hyvitettävä lasku {n}", "Credits invoice {n}"],
@@ -4620,6 +4584,10 @@ export const APP_DICT = {
   "io.skippedRecords": [
     "{n} laskua, asiakasta tai varastoriviä tiedostosta ei voitu lukea, joten ne jätettiin pois. Älä tallenna tiedostoa päälle ennen kuin olet tarkistanut invoices.json, customers.json ja inventory.json, sillä tallennus poistaisi ne.",
     "{n} invoices, customers or stock rows in the file could not be read and were left out. Do not save over the file before you check invoices.json, customers.json and inventory.json, because saving would remove them.",
+  ],
+  "io.settingsWrittenBy": [
+    " Tiedoston kirjoitti versio {b}, ja käytössä on {c}.",
+    " The file was written by build {b}, and this is {c}.",
   ],
   "io.settingsNewer": [
     " Tiedosto on tehty uudemmalla versiolla, joten kaikkia asetuksia ei ehkä luettu.",
@@ -4924,10 +4892,6 @@ export const APP_DICT = {
     "Kopion lataaminen epäonnistui.",
     "Couldn’t download the copy.",
   ],
-  "io.zipFailed": [
-    "ZIP-tiedostoa ei voitu lukea.",
-    "Couldn’t read the ZIP file.",
-  ],
   "io.zipNoCsv": [
     "ZIP-tiedostosta ei löytynyt CSV-tiedostoa.",
     "No CSV file was found in the ZIP file.",
@@ -4973,12 +4937,7 @@ export const APP_DICT = {
     "Tätä tiedostoa ei voi esikatsella tässä selaimessa. Voit tallentaa alkuperäisen tiedoston.",
     "This file can’t be previewed in this browser. You can save the original file.",
   ],
-  "viewer.pdfFailed": [
-    "PDF-tiedoston avaaminen epäonnistui.",
-    "Couldn’t open the PDF file.",
-  ],
   "viewer.receiptOf": ["Liite {i} / {n}", "Attachment {i} of {n}"],
-  "viewer.saved": ["Tallennettu: {f}", "Saved: {f}"],
 
   "newYear.title": ["Vuoden {y} aloitus", "Opening {y}"],
   "newYear.intro": [
@@ -5093,7 +5052,6 @@ export const APP_DICT = {
     "Tiedostoa ei voitu lukea.",
     "The file could not be read.",
   ],
-  "bank.mapTitle": ["Valitse sarakkeet", "Choose the columns"],
   "bank.mapHint": [
     "Tiedoston rakennetta ei tunnistettu. Kerro, mistä sarakkeesta kukin tieto löytyy. Päivä ja summa (tai veloitus ja hyvitys) vaaditaan.",
     "The layout was not recognised. Say which column holds each field. A date and an amount (or a debit and a credit) are required.",
@@ -5294,7 +5252,6 @@ export const APP_DICT = {
     "Verojen ja maksujen eräpäivät vuonna {y}.",
     "Tax and payment due dates in {y}.",
   ],
-  "calendar.export": ["Vie kalenteriin", "Export to calendar"],
   "calendar.icsName": [
     "Kirjanpito: verokalenteri {y}",
     "Kirjanpito: tax calendar {y}",
@@ -5731,10 +5688,6 @@ export const APP_DICT = {
   "inventory.import": ["Tuo CSV", "Import CSV"],
   "inventory.export": ["Vie CSV", "Export CSV"],
   "inventory.pdf": ["Lataa inventaariolista", "Download the stocktake list"],
-  "inventory.pdfFailed": [
-    "Listaa ei voitu luoda.",
-    "The list could not be made.",
-  ],
   "inventory.startFromLast": [
     "Aloita vuoden {y} listasta",
     "Start from the {y} list",
@@ -5787,10 +5740,6 @@ export const APP_DICT = {
   "inventory.removeLayer": ["Poista ostoerä", "Remove the purchase"],
   "inventory.removeRow": ["Poista rivi {name}", "Remove the row {name}"],
   "inventory.newRow": ["Uusi tuote", "New product"],
-  "inventory.lowerHelp": [
-    "Tuotteen todennäköinen myynti- tai jälleenhankintahinta, kun se on hankintamenoa pienempi. Jätä tyhjäksi, jos arvo ei ole laskenut.",
-    "The probable sale or replacement price of one unit when it is below cost. Leave it empty if the value has not fallen.",
-  ],
   "inventory.problemNoName": ["Rivillä ei ole nimeä.", "The row has no name."],
   "inventory.problemNoCost": [
     "Rivillä on määrä mutta ei hintaa.",
@@ -5965,16 +5914,6 @@ export const APP_DICT = {
   "reconcile.deleted": [
     "Tiliote poistettu täsmäytyksestä.",
     "Statement removed from the reconciliation.",
-  ],
-  "inbox.tabCount": [
-    pl("Saapuneet (1)", "Saapuneet ({n})"),
-    pl("Inbox (1)", "Inbox ({n})"),
-  ],
-  "inbox.boxLabel": ["Saapuneiden pudotuslaatikko", "Inbox drop box"],
-  "inbox.boxTitle": ["Pudota kuitit tähän", "Drop receipts here"],
-  "inbox.boxHint": [
-    "Ne odottavat saapuneissa kirjaamista",
-    "They wait in the inbox to be booked",
   ],
   "inbox.subtitle": [
     "Tositteet, jotka odottavat kirjaamista",

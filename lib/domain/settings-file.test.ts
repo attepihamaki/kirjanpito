@@ -270,6 +270,22 @@ describe("settings.json", () => {
     expect(text.endsWith("\n")).toBe(true)
   })
 
+  it("records the build that wrote the file, and reads it back trimmed and capped", () => {
+    const text = serializeSettings({
+      ...settings(),
+      writtenBy: "0.0.1+abc1234",
+    })
+    expect(JSON.parse(text).writtenBy).toBe("0.0.1+abc1234")
+    expect(parseSettings(text).writtenBy).toBe("0.0.1+abc1234")
+    expect(JSON.parse(serializeSettings(settings())).writtenBy).toBeUndefined()
+    expect(parseSettings(JSON.stringify({ writtenBy: "  " })).writtenBy).toBe(
+      undefined
+    )
+    expect(
+      parseSettings(JSON.stringify({ writtenBy: "x".repeat(200) })).writtenBy
+    ).toHaveLength(64)
+  })
+
   it("reads nothing from a file that is not JSON or not an object", () => {
     expect(parseSettings("not json")).toEqual({})
     expect(parseSettings("[1, 2]")).toEqual({})
