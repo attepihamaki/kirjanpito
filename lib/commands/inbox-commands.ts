@@ -1,5 +1,6 @@
 import { toast } from "@/components/ui/toast"
 
+import { isHeic, storableImage } from "@/lib/browser/heic"
 import { getReceipt, putReceipt } from "@/lib/browser/receipt-store"
 import { todayIso } from "@/lib/domain/dates"
 import { uid } from "@/lib/domain/id"
@@ -34,10 +35,11 @@ async function readGuess(file: File): Promise<InboxGuess | undefined> {
  * a PDF's text gives. It throws when the browser cannot store the file.
  */
 export async function storeInboxFile(
-  file: File,
+  picked: File,
   day: string,
   fallbackName: string
 ): Promise<InboxItem> {
+  const file = isHeic(picked) ? await storableImage(picked) : picked
   const id = `a-${uid()}`
   await putReceipt(id, file)
   const guess = await readGuess(file)

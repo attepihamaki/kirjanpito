@@ -50,8 +50,6 @@ export function yearsAvailable(entries: readonly Entry[], selected: number) {
   return [...years].sort((a, b) => b - a)
 }
 
-export { hasReceipt } from "@/lib/domain/entry-checks"
-
 export function usedCategoryIds(entries: readonly Entry[]) {
   return new Set(entries.map((e) => e.catId))
 }

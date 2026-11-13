@@ -236,6 +236,7 @@ before any file is open, and must not read or write `bookkeeping` to get it.
   string itself, as next-themes writes `theme`, and `StoreHydrator` reads it
   after mount so the prerendered Finnish HTML and the first client render still
   match (§11b). Reading never creates the key — only the picker writes it.
+- localStorage `entry-draft` — the half-typed new voucher (§8.5), owned by `lib/browser/entry-draft.ts` (`ENTRY_DRAFT_KEY`): `{ book, savedAt, form }`, where `book` is the file name it was typed into. One at a time, never written to the file, and read back field by field against a fresh form, so it needs no version.
 - localStorage `theme` — owned by next-themes: `system` | `light` | `dark`.
   Its pre-paint inline script reads that key before any of our JS runs, so a
   second source of truth would drift.

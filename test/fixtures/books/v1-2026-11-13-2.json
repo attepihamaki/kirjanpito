@@ -1,0 +1,48 @@
+{
+  "entries": 56,
+  "vouchers": "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56",
+  "shared": 10,
+  "split": 2,
+  "tagged": 2,
+  "noted": 1,
+  "attachments": 2,
+  "receiptReasons": 10,
+  "ownerPaid": 2,
+  "rules": [
+    {
+      "contains": "Elisa",
+      "catId": "344-other",
+      "vatRate": null,
+      "share": 60
+    },
+    {
+      "contains": "Neste",
+      "catId": "344-vehicle",
+      "vatRate": 25.5,
+      "share": null
+    }
+  ],
+  "invoices": 9,
+  "customers": 5,
+  "inbox": 2,
+  "vatFiled": [
+    "2026-01"
+  ],
+  "businessName": "Fixture Oy",
+  "years": {
+    "2026": {
+      "income": {
+        "net": 1440299,
+        "vat": 367276,
+        "gross": 1807575,
+        "privatePart": 0
+      },
+      "expense": {
+        "net": 754843,
+        "vat": 110542,
+        "gross": 877345,
+        "privatePart": 11960
+      }
+    }
+  }
+}

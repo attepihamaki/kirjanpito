@@ -19,7 +19,7 @@ export function splitSiblings(
 
 /** What a receipt's payment is: the day it was paid, or open, and whether in cash. */
 function payment(e: Entry): string {
-  return `${paidDate(e) ?? "open"}|${e.cash ? "cash" : ""}`
+  return `${paidDate(e) ?? "open"}|${e.cash ? "cash" : ""}|${e.ownerPaid ? "owner" : ""}`
 }
 
 /**
@@ -60,9 +60,12 @@ export function sharePayment(
     const next: Entry = { ...e }
     delete next.paidOn
     delete next.cash
+    delete next.ownerPaid
     if (paid === null) next.paidOn = null
     else if (paid !== e.date) next.paidOn = paid
     if (source.cash && paid !== null) next.cash = true
+    if (source.ownerPaid && paid !== null && e.type === "expense")
+      next.ownerPaid = true
     return next
   })
 }
@@ -240,6 +243,7 @@ export function carveSplit(
   if (canBeUnpaid(line)) {
     if (entry.paidOn !== undefined) next.paidOn = entry.paidOn
     if (entry.cash) next.cash = true
+    if (entry.ownerPaid) next.ownerPaid = true
     if (entry.periodFrom && entry.periodTo) {
       next.periodFrom = entry.periodFrom
       next.periodTo = entry.periodTo

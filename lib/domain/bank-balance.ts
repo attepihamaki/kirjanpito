@@ -27,7 +27,7 @@ export interface BankEstimate {
  * cash never did, and a non-cash line moves no money at all.
  */
 export function movesBank(e: Entry, catMap: CategoryMap): boolean {
-  if (e.cash) return false
+  if (e.cash || e.ownerPaid) return false
   const line = catMap.get(e.catId)?.line
   return !(line && NON_CASH_LINES.has(line))
 }

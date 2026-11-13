@@ -24,6 +24,7 @@ import { EntryFigureList } from "@/components/entry/entry-figures"
 import { EntryHistory, hasHistory } from "@/components/entry/entry-history"
 import { ReceiptPreview } from "@/components/entry/receipt-preview"
 import { AttachmentViewer } from "@/components/receipt/receipt-viewer"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
@@ -97,7 +98,16 @@ import {
   vatNotDeductible,
 } from "@/lib/domain/entry-checks"
 import { isPdf } from "@/lib/domain/receipt-path"
+import { isHeic, storableImage } from "@/lib/browser/heic"
+import {
+  clearEntryDraft,
+  readEntryDraft,
+  restoreDraftForm,
+  writeEntryDraft,
+} from "@/lib/browser/entry-draft"
 import { addDays, isoDate, monthOf, todayIso, yearOf } from "@/lib/domain/dates"
+import { clock } from "@/lib/i18n/clock"
+import type { ReceiptReason } from "@/lib/domain/receipt-reason"
 import { billIban, billReference } from "@/lib/domain/bill-payment"
 import { formatIban } from "@/lib/domain/iban"
 import { formatReference } from "@/lib/domain/invoice-reference"
@@ -179,6 +189,8 @@ interface FormState {
   paid: string
   /** Paid in cash (§8.5). Ignored while the entry is open. */
   cash: boolean
+  /** Paid with the owner's own money (§6.7). Ignored while open, on income, and with `cash`. */
+  ownerPaid: boolean
   /** The buyer's VAT number on an EU sale (§8.7). */
   buyerVatId: string
   /** The business share in percent, "" for the whole voucher (§6.12). */
@@ -203,6 +215,8 @@ interface FormState {
   note: string
   /** Marked as still to check (§8.39). */
   toCheck: boolean
+  /** Why there is no receipt, "" for none given (§8.5). Kept only while none is attached. */
+  receiptReason: ReceiptReason | ""
 }
 
 /** The fields §8.5 validates, named as they are in `FormState`. */
@@ -226,6 +240,13 @@ const snapshot = (form: FormState) =>
 function shareText(cat: Category | undefined, own?: number): string {
   return String(voucherShare(cat, own).share ?? "")
 }
+
+/** How long typing has to pause before the draft is written (§8.5). */
+const DRAFT_DELAY_MS = 600
+
+/** The draft's book name for the demo, and for a book never saved to a file. */
+const DEMO_DRAFT_BOOK = "(demo)"
+const UNSAVED_DRAFT_BOOK = "(unsaved)"
 
 function defaultDate(year: number, month: number): string {
   const today = new Date()
@@ -277,6 +298,7 @@ function initialForm({
       // A bill from the inbox opens as one still to pay (§8.30, §8.31).
       paid: prefill?.paidOn === null ? "open" : "",
       cash: false,
+      ownerPaid: false,
       buyerVatId: prefill?.buyerVatId ?? "",
       share: prefill?.share ? String(prefill.share) : "",
       reverses: prefill?.reverses ?? "",
@@ -290,6 +312,7 @@ function initialForm({
       tags: [...(prefill?.tags ?? [])],
       note: prefill?.note ?? "",
       toCheck: prefill?.toCheck === true,
+      receiptReason: "",
     }
   }
   const today = todayIso()
@@ -317,6 +340,7 @@ function initialForm({
           : (editing.paidOn ?? "")
         : "",
     cash: !!editing.cash,
+    ownerPaid: !!editing.ownerPaid,
     buyerVatId: editing.buyerVatId ?? "",
     share: editing.share ? String(editing.share) : "",
     // A copy is a new voucher and reverses nothing until it is told to.
@@ -338,6 +362,8 @@ function initialForm({
     // A note and the flag are about this voucher, so a copy starts without them.
     note: mode === "copy" ? "" : (editing.note ?? ""),
     toCheck: mode !== "copy" && editing.toCheck === true,
+    // A copy of a bank fee is a bank fee, with the statement as its voucher too.
+    receiptReason: editing.receiptReason ?? "",
   }
 }
 
@@ -584,6 +610,8 @@ function EntryDialogForm({
   const vatPeriodKind = useBookStore((s) => s.vatPeriod)
   const customers = useBookStore((s) => s.customers)
   const categoryRules = useBookStore((s) => s.categoryRules)
+  const fileName = useBookStore((s) => s.fileName)
+  const demo = useBookStore((s) => s.demo)
 
   // Captured at mount: the form owns its values from here on.
   const [editing] = React.useState(() =>
@@ -606,6 +634,17 @@ function EntryDialogForm({
 
   const [form, setForm] = React.useState<FormState>(initial)
   const [baseline, setBaseline] = React.useState(() => snapshot(initial))
+  /*
+   * A new voucher opened empty keeps a draft in this browser (§8.5). One
+   * opened from a receipt, the inbox or another view starts from that, and
+   * a draft is not offered over it.
+   */
+  const draftable =
+    mode === "new" && !prefill && !files?.length && inboxId === undefined
+  const draftBook = demo ? DEMO_DRAFT_BOOK : (fileName ?? UNSAVED_DRAFT_BOOK)
+  const [pendingDraft, setPendingDraft] = React.useState(() =>
+    draftable ? readEntryDraft(draftBook) : null
+  )
   /*
    * The message and the field it belongs to: §8.5 shows one inline error
    * line, but the field it is about has to say so too, or a screen reader
@@ -800,7 +839,9 @@ function EntryDialogForm({
       setBusy(true)
       try {
         const added: Attachment[] = []
-        for (const file of accepted) {
+        for (const picked of accepted) {
+          /* Only a HEIC photo waits for conversion; anything else goes straight to storage. */
+          const file = isHeic(picked) ? await storableImage(picked) : picked
           const id = `a-${uid()}`
           pendingIds.current.add(id)
           setDraftIds([...useBookStore.getState().draftAttachmentIds, id])
@@ -1200,6 +1241,29 @@ function EntryDialogForm({
     ? RATES
     : [...RATES, form.vatRate]
   const dirty = snapshot(form) !== baseline
+
+  /* Written a moment after typing stops, and not while an older draft waits for an answer. */
+  React.useEffect(() => {
+    if (!draftable || pendingDraft || !dirty) return
+    const timer = window.setTimeout(
+      () => writeEntryDraft(draftBook, { ...form, atts: [] }),
+      DRAFT_DELAY_MS
+    )
+    return () => window.clearTimeout(timer)
+  }, [draftable, pendingDraft, dirty, draftBook, form])
+
+  const continueDraft = () => {
+    if (!pendingDraft) return
+    const next = restoreDraftForm(initial, pendingDraft.form, ["atts"])
+    keepRate.current = true
+    keepShare.current = next.share !== ""
+    setForm(next)
+    setPendingDraft(null)
+  }
+  const dropDraft = () => {
+    clearEntryDraft()
+    setPendingDraft(null)
+  }
   // A hint, never a block: corrections can carry an older rate (§5).
   const mismatch = rateMismatch(form.vatRate, form.date)
   const noDeduction = vatNotDeductible({ ...form, euPurchase }, catMap)
@@ -1306,7 +1370,10 @@ function EntryDialogForm({
   }
 
   const requestClose = async () => {
-    if (await confirmDiscard()) closeDialog()
+    if (!(await confirmDiscard())) return
+    /* A draft still waiting for an answer is kept for the next time. */
+    if (draftable && !pendingDraft) clearEntryDraft()
+    closeDialog()
   }
 
   /** Switch to the other end of a reversal, once nothing typed would be lost. */
@@ -1375,6 +1442,13 @@ function EntryDialogForm({
       ...(unpayable && form.cash && form.paid !== "open"
         ? { cash: true as const }
         : {}),
+      ...(unpayable &&
+      form.ownerPaid &&
+      !form.cash &&
+      form.type === "expense" &&
+      form.paid !== "open"
+        ? { ownerPaid: true as const }
+        : {}),
       ...(periodApplies && periodFilled
         ? { periodFrom: form.periodFrom, periodTo: form.periodTo }
         : {}),
@@ -1404,6 +1478,9 @@ function EntryDialogForm({
       ...tagsField(form.tags),
       ...noteField(form.note),
       ...toCheckField(form.toCheck),
+      ...(form.receiptReason && !form.atts.length
+        ? { receiptReason: form.receiptReason }
+        : {}),
       // A part stays a part of its receipt; a copy is a new voucher of its own.
       ...(mode === "edit" && editing?.split ? { split: editing.split } : {}),
     }
@@ -1504,6 +1581,7 @@ function EntryDialogForm({
           : f.t("entry.saved"),
       })
 
+    if (draftable) clearEntryDraft()
     if (andNew) {
       // Keep the date, reset the rest.
       const next: FormState = {
@@ -1633,6 +1711,26 @@ function EntryDialogForm({
         />
 
         <div className="min-h-0 flex-1 overflow-y-auto">
+          {pendingDraft ? (
+            <Alert className="rounded-none border-x-0 border-t-0 px-5">
+              <AlertDescription className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span>
+                  {f.t("entry.draftFound", {
+                    d: f.date(todayIso(new Date(pendingDraft.savedAt))),
+                    t: clock(f, new Date(pendingDraft.savedAt)),
+                  })}
+                </span>
+                <span className="flex gap-2">
+                  <Button size="sm" onClick={continueDraft}>
+                    {f.t("entry.draftContinue")}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={dropDraft}>
+                    {f.t("entry.draftDrop")}
+                  </Button>
+                </span>
+              </AlertDescription>
+            </Alert>
+          ) : null}
           {/* The paper sits on a sunken band, which is what tells it apart:
               it carries no border of its own. The attachments are beside it. */}
           <div className="flex flex-col gap-2 bg-muted/60 px-5 py-4">
@@ -1664,6 +1762,37 @@ function EntryDialogForm({
               <p className="text-sm text-muted-foreground">
                 {f.t("entry.splitFilesHint")}
               </p>
+            ) : null}
+            {form.atts.length === 0 && !lock ? (
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <OptionSelect
+                  options={[
+                    { value: "none", label: f.t("entry.receiptReasonNone") },
+                    {
+                      value: "statement",
+                      label: f.t("entry.receiptReasonStatement"),
+                    },
+                    { value: "other", label: f.t("entry.receiptReasonOther") },
+                  ]}
+                  value={form.receiptReason || "none"}
+                  onChange={(value) =>
+                    update({
+                      receiptReason:
+                        value === "none"
+                          ? ""
+                          : (value as FormState["receiptReason"]),
+                    })
+                  }
+                  label={f.t("entry.receiptReason")}
+                  size="sm"
+                  className="w-auto min-w-[14rem] bg-background"
+                />
+                {form.receiptReason === "other" && !form.note.trim() ? (
+                  <span className="text-xs text-muted-foreground">
+                    {f.t("entry.receiptReasonOtherHint")}
+                  </span>
+                ) : null}
+              </div>
             ) : null}
           </div>
 
@@ -2257,7 +2386,12 @@ function EntryDialogForm({
                             id="entry-cash"
                             checked={form.cash}
                             onCheckedChange={(checked) =>
-                              update({ cash: checked === true })
+                              update({
+                                cash: checked === true,
+                                ...(checked === true
+                                  ? { ownerPaid: false }
+                                  : {}),
+                              })
                             }
                           />
                           <div className="flex flex-col gap-0.5">
@@ -2276,6 +2410,34 @@ function EntryDialogForm({
                             </div>
                             <FieldDescription>
                               {f.t("entry.cashDesc")}
+                            </FieldDescription>
+                          </div>
+                        </Field>
+                      ) : null}
+
+                      {unpayable &&
+                      form.paid !== "open" &&
+                      form.type === "expense" ? (
+                        <Field orientation="horizontal" className="p-3">
+                          <Checkbox
+                            id="entry-owner-paid"
+                            checked={form.ownerPaid}
+                            onCheckedChange={(checked) =>
+                              update({
+                                ownerPaid: checked === true,
+                                ...(checked === true ? { cash: false } : {}),
+                              })
+                            }
+                          />
+                          <div className="flex flex-col gap-0.5">
+                            <FieldLabel
+                              htmlFor="entry-owner-paid"
+                              className="font-normal"
+                            >
+                              {f.t("entry.ownerPaidLabel")}
+                            </FieldLabel>
+                            <FieldDescription>
+                              {f.t("entry.ownerPaidDesc")}
                             </FieldDescription>
                           </div>
                         </Field>

@@ -1,5 +1,11 @@
 // @vitest-environment jsdom
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs"
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs"
 import { join } from "node:path"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -7,6 +13,7 @@ import { storeInboxFile } from "@/lib/commands/inbox-commands"
 import { buildBookFile, openFile } from "@/lib/commands/io-commands"
 import type { Ctx } from "@/lib/commands/ctx"
 import { journal } from "@/lib/domain/books"
+import { todayIso } from "@/lib/domain/dates"
 import { isShare } from "@/lib/domain/calc"
 import { demoBook, receiptPdf } from "@/lib/domain/demo-book"
 import { SETTINGS_VERSION } from "@/lib/domain/settings-file"
@@ -67,6 +74,8 @@ function summary() {
     tagged: s.entries.filter((e) => e.tags?.length).length,
     noted: s.entries.filter((e) => e.note).length,
     attachments: s.entries.reduce((n, e) => n + (e.atts?.length ?? 0), 0),
+    receiptReasons: s.entries.filter((e) => e.receiptReason).length,
+    ownerPaid: s.entries.filter((e) => e.ownerPaid).length,
     rules: s.categoryRules.map((r) => ({
       contains: r.contains,
       catId: r.catId,
@@ -110,6 +119,12 @@ async function fixtureBook(): Promise<void> {
   stored.set("a-receipt", new TextEncoder().encode("%PDF-1.4 fixture"))
   const entries = useBookStore.getState().entries.map((e, i) => {
     if (e.description.startsWith("Puhelinliittymä")) return { ...e, share: 60 }
+    if (e.description.startsWith("Pankin palvelumaksut")) {
+      return { ...e, receiptReason: "statement" as const }
+    }
+    if (e.description.startsWith("Tarvikkeet") && e.date > `${book.year}-05`) {
+      return { ...e, ownerPaid: true as const }
+    }
     if (i === 1) {
       return {
         ...e,
@@ -177,7 +192,12 @@ describe("book files written by earlier builds (§7.6)", () => {
       await fixtureBook()
       const file = await buildBookFile("kirjanpito")
       const bytes = new Uint8Array(await file.blob.arrayBuffer())
-      const name = `v${SETTINGS_VERSION}-${FIXTURE_TODAY}`
+      /* A second fixture of the same version written the same day takes a number. */
+      const base = `v${SETTINGS_VERSION}-${todayIso()}`
+      let name = base
+      for (let n = 2; existsSync(join(FIXTURES, `${name}.zip`)); n++) {
+        name = `${base}-${n}`
+      }
       /* What reading gives, not what was in memory, is the baseline. */
       await reopen(bytes, `${name}.zip`)
       mkdirSync(FIXTURES, { recursive: true })
@@ -211,7 +231,14 @@ describe("book files written by earlier builds (§7.6)", () => {
         readFileSync(join(FIXTURES, name.replace(/\.zip$/, ".json")), "utf8")
       )
       await reopen(bytes, name)
-      expect(summary()).toEqual(expected)
+      /*
+       * Only what the fixture recorded is compared, so a figure added to the
+       * summary later does not make an older fixture fail.
+       */
+      const actual: Record<string, unknown> = summary()
+      expect(
+        Object.fromEntries(Object.keys(expected).map((k) => [k, actual[k]]))
+      ).toEqual(expected)
       expect(useBookStore.getState().dirty).toBe(false)
     }
   )

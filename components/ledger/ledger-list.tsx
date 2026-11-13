@@ -27,7 +27,8 @@ export function LedgerList({ rows }: { rows: readonly Entry[] }) {
       {rows.map((entry) => {
         const income = entry.type === "income"
         const cat = catMap.get(entry.catId)
-        const noReceipt = (entry.atts ?? []).length === 0
+        const noReceipt =
+          (entry.atts ?? []).length === 0 && !entry.receiptReason
         return (
           <li key={entry.id}>
             <button

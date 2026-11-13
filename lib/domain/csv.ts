@@ -2,6 +2,10 @@ import Papa from "papaparse"
 
 import { noteField, normalizeNote, toCheckField } from "@/lib/domain/note"
 import {
+  receiptReasonCell,
+  receiptReasonField,
+} from "@/lib/domain/receipt-reason"
+import {
   DEFAULT_CATEGORY_FOR_ACCOUNT,
   DEFAULT_EN_NAMES,
   FORMER_ACCOUNTS,
@@ -250,6 +254,8 @@ export function serializeCsv(
         defuseFormula(normalizeNote(e.note)),
         e.toCheck ? CASH_TO_CSV[lang] : "",
         e.creditLoss ? CASH_TO_CSV[lang] : "",
+        e.atts?.length ? "" : receiptReasonCell(e.receiptReason, lang),
+        e.ownerPaid ? CASH_TO_CSV[lang] : "",
       ]
         .map(quote)
         .join(";")
@@ -632,6 +638,8 @@ export function parseCsv(
         CASH_VALUES.includes(get("to_check").trim().toLowerCase())
       ),
       ...creditLossColumn(get("credit_loss"), type, amount),
+      ...(paths.length ? {} : receiptReasonField(get("receipt_reason"))),
+      ...ownerPaidColumn(get("owner_paid"), type, paid, cat, get("cash")),
     })
 
     const splitRaw = get("split")
@@ -917,6 +925,23 @@ function cashColumn(
   if (!CASH_VALUES.includes(value.trim().toLowerCase())) return {}
   if (paid.paidOn === null || !canBeUnpaid(LINE_BY_KEY.get(cat.line))) return {}
   return { cash: true }
+}
+
+/**
+ * A cost paid with the owner's own money (§6.7). Kept only on a paid cost on
+ * a line that can be paid, and never beside `cash`, which says the money
+ * came from the till instead.
+ */
+function ownerPaidColumn(
+  value: string,
+  type: EntryType,
+  paid: { paidOn?: string | null },
+  cat: Category,
+  cash: string
+): { ownerPaid?: true } {
+  if (type !== "expense") return {}
+  if (CASH_VALUES.includes(cash.trim().toLowerCase())) return {}
+  return cashColumn(value, paid, cat).cash ? { ownerPaid: true } : {}
 }
 
 /**

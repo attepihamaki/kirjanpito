@@ -243,6 +243,12 @@ export const APP_DICT = {
   "confirm.discardTitle": ["Hylätäänkö muutokset?", "Discard changes?"],
   "confirm.discardConfirm": ["Hylkää muutokset", "Discard changes"],
   "confirm.keepEditing": ["Jatka muokkausta", "Keep editing"],
+  "entry.draftFound": [
+    "Keskeneräinen tosite {d} klo {t} jäi tallentamatta. Liitteet eivät säily luonnoksessa.",
+    "An unfinished voucher from {d} at {t} was not saved. Attachments are not kept in a draft.",
+  ],
+  "entry.draftContinue": ["Jatka luonnosta", "Continue the draft"],
+  "entry.draftDrop": ["Hylkää", "Discard"],
   "confirm.discardEntry": [
     "Tositteessa on tallentamattomia muutoksia. Jos suljet ikkunan, ne menetetään.",
     "This voucher has unsaved changes. If you close the dialog, they’ll be lost.",
@@ -1034,6 +1040,7 @@ export const APP_DICT = {
   ],
   "ledger.bulkDelete": ["Poista valitut", "Delete selected"],
   "ledger.bulkEdit": ["Muokkaa valittuja", "Edit selected"],
+  "ledger.selectedSum": ["Yhteensä", "Total"],
   "ledger.bulkDate": ["Vaihda päivämäärä", "Change date"],
   "ledger.bulkVat": ["Vaihda ALV-kanta", "Change VAT rate"],
   "ledger.bulkPay": ["Merkitse maksetuksi", "Mark as paid"],
@@ -1122,6 +1129,15 @@ export const APP_DICT = {
   "entry.logFieldCash": ["Maksutapa", "Payment method"],
   "entry.cash": ["Käteinen", "Cash"],
   "entry.cashLabel": ["Maksettu käteisellä", "Paid in cash"],
+  "entry.ownerPaidLabel": [
+    "Maksettu omilla varoilla",
+    "Paid with my own money",
+  ],
+  "entry.ownerPaidDesc": [
+    "Esimerkiksi omalla kortilla. Kulu vähennetään tavalliseen tapaan, mutta yrityksen pankkitilin arvio ei muutu.",
+    "For example with a private card. The cost is deducted as usual, but the business account's estimate does not change.",
+  ],
+  "entry.ownerPaidValue": ["Omilla varoilla", "Own money"],
   "entry.cashInfo": [
     "Mitä käteismaksu tarkoittaa?",
     "What does paid in cash mean?",
@@ -4572,6 +4588,25 @@ export const APP_DICT = {
   ],
   "ledger.creditLossPill": ["Luottotappio", "Credit loss"],
   "entry.logFieldCreditLoss": ["Luottotappio", "Credit loss"],
+  "entry.receiptReason": ["Ilman liitettä", "Without a receipt"],
+  "entry.receiptReasonNone": ["Liite puuttuu", "Receipt missing"],
+  "entry.receiptReasonStatement": [
+    "Tiliote on tosite",
+    "The bank statement is the voucher",
+  ],
+  "entry.receiptReasonOther": [
+    "Muu syy, kerrottu muistiinpanossa",
+    "Another reason, given in the note",
+  ],
+  "entry.receiptReasonOtherHint": [
+    "Kirjoita syy muistiinpanoon.",
+    "Write the reason in the note.",
+  ],
+  "ledger.receiptReasonPill": ["Tiliote tositteena", "Statement as voucher"],
+  "ledger.receiptReasonOtherPill": [
+    "Ilman liitettä, syy kerrottu",
+    "No receipt, reason given",
+  ],
   "invoice.send": ["Lähetä", "Send"],
   "invoice.sendAttach": [
     "PDF ladattiin. Liitä se avautuneeseen sähköpostiin.",

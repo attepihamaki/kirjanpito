@@ -30,7 +30,9 @@ import {
   setEntriesShare,
   setEntriesVat,
 } from "@/lib/commands/bulk-commands"
+import { Money } from "@/components/common/money"
 import { RATES, entryTakesShare } from "@/lib/domain/accounts"
+import { signedGross } from "@/lib/domain/calc"
 import { todayIso } from "@/lib/domain/dates"
 import type { MessageKey } from "@/lib/i18n/messages"
 import { indexCategories, type Entry } from "@/lib/domain/types"
@@ -129,6 +131,10 @@ export function BulkBar({
     >
       <span className="tabular text-sm font-medium">
         {f.t("ledger.selected", { n: selected.length })}
+      </span>
+      <span className="tabular text-sm text-muted-foreground">
+        {f.t("ledger.selectedSum")}{" "}
+        <Money cents={selected.reduce((sum, e) => sum + signedGross(e), 0)} />
       </span>
 
       {type && !euMixed ? (

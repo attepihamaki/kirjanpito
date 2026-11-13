@@ -74,8 +74,13 @@ function addedOn(log: readonly ChangeRecord[]): Map<string, string> {
  * Whether an entry has a receipt file the app can show. A receipt listed in
  * the CSV but missing from the ZIP does not count (§7.2).
  */
-export function hasReceipt(entry: Entry): boolean {
+function hasReceipt(entry: Entry): boolean {
   return entry.atts?.some((a) => a.id !== null) ?? false
+}
+
+/** Whether a missing receipt is a gap: none attached and no reason given for it (§8.5). */
+export function lacksReceipt(entry: Entry): boolean {
+  return !hasReceipt(entry) && !entry.receiptReason
 }
 
 /**
@@ -261,9 +266,7 @@ export const ENTRY_RULES = defineRules<EntryCheckContext, string>([
    * Every entry, calculated ones included: depreciation, line 354 and the
    * stock change rest on a memo voucher the calculator attaches (KPL 2:5).
    */
-  entryRule("noReceipt", "KPL 2:5", (ctx) =>
-    idsWhere(ctx, (e) => !hasReceipt(e))
-  ),
+  entryRule("noReceipt", "KPL 2:5", (ctx) => idsWhere(ctx, lacksReceipt)),
   entryRule("rateMismatch", "vero.fi, VAT rates", (ctx) =>
     idsWhere(ctx, (e) => rateMismatch(e.vatRate, e.date) !== null)
   ),

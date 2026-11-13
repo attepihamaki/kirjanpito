@@ -70,6 +70,8 @@ export const LOGGED_FIELDS = [
   "note",
   "toCheck",
   "creditLoss",
+  "receiptReason",
+  "ownerPaid",
 ] as const
 export type LoggedField = (typeof LOGGED_FIELDS)[number]
 
@@ -83,6 +85,7 @@ function logged(e: Entry, field: LoggedField): string | number | null {
     return names.length ? names.join(", ") : null
   }
   if (field === "cash") return e.cash ? "cash" : null
+  if (field === "ownerPaid") return e.ownerPaid ? "ownerPaid" : null
   if (field === "advance") return e.advance ? "advance" : null
   if (field === "toCheck") return e.toCheck ? "toCheck" : null
   if (field === "creditLoss") return e.creditLoss ? "creditLoss" : null
@@ -242,6 +245,7 @@ function putBack(
     else out.paidOn = String(value)
   } else if (
     field === "cash" ||
+    field === "ownerPaid" ||
     field === "advance" ||
     field === "toCheck" ||
     field === "creditLoss"

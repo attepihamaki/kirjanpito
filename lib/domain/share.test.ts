@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest"
 
 import { defaultCategories } from "@/lib/domain/accounts"
-import { calcEntry, calcWhole, isShare, privatePart } from "@/lib/domain/calc"
+import {
+  calcEntry,
+  calcWhole,
+  isShare,
+  privatePart,
+  signedGross,
+} from "@/lib/domain/calc"
 import { parseCsv, serializeCsv, type ImportSuccess } from "@/lib/domain/csv"
 import { incomeStatement } from "@/lib/domain/income-statement"
 import { parseSettings } from "@/lib/domain/settings-file"
@@ -87,7 +93,7 @@ describe("the business share of a cost", () => {
   it("reads a share with a percent sign, and drops one that does not fit", () => {
     const text = serializeCsv([phone({ share: 50 })], cats)
     const row = (cell: string) =>
-      text.replace(/;50;;;;;;;;;;;;;\r\n/, `;${cell};;;;;;;;;;;;;\r\n`)
+      text.replace(/;50;;;;;;;;;;;;;;;\r\n/, `;${cell};;;;;;;;;;;;;;;\r\n`)
     expect(read(row("75 %")).entries[0].share).toBe(75)
     for (const bad of ["100", "0", "abc", "5,5"]) {
       expect(read(row(bad)).entries[0].share).toBeUndefined()
@@ -138,5 +144,16 @@ describe("the business share of a cost", () => {
     expect(
       find(file("vat-payment", "vat-payment", 50), "vat-payment")?.share
     ).toBe(undefined)
+  })
+})
+
+describe("signedGross", () => {
+  it("is what was paid, in for income and out for a cost, share or not", () => {
+    expect(signedGross(phone({ share: 50 }))).toBe(-12_550)
+    expect(
+      signedGross(
+        phone({ type: "income", catId: "300-domestic", amount: 20_000 })
+      )
+    ).toBe(20_000)
   })
 })

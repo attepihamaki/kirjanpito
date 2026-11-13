@@ -1,3 +1,4 @@
+import type { ReceiptReason } from "@/lib/domain/receipt-reason"
 /**
  * Core domain types. Everything in `lib/domain` is pure TypeScript: no React,
  * no Next.js, no `window`, `Blob`, `localStorage` or `indexedDB`.
@@ -125,6 +126,14 @@ export interface Entry {
    * out (§8.5). Only on a paid entry on a line that can be paid.
    */
   cash?: true
+  /**
+   * Paid with the owner's own money (§6.7), such as a private card: the cost
+   * counts as any other, but no money left the business account, so it
+   * stays out of the bank estimate and the reconciliation, like `cash`. The
+   * owner's investment it amounts to is not booked as an entry of its own.
+   * Only on a paid cost on a line that can be paid, and never with `cash`.
+   */
+  ownerPaid?: true
   /** The buyer's VAT number on a sale to another EU country (§8.7). */
   buyerVatId?: string
   /**
@@ -200,6 +209,11 @@ export interface Entry {
   note?: string
   /** Marked by the user as still to check (§8.39). Reports nothing; the checks list it. */
   toCheck?: true
+  /**
+   * Why the voucher has no receipt attached (§8.5), such as the bank
+   * statement being the voucher. Only while it has none.
+   */
+  receiptReason?: ReceiptReason
   /**
    * Set on the reversal that writes off an unpaid sale as a credit loss
    * (§6.18). `reverses` names the sale. Only on income.

@@ -102,6 +102,7 @@ export function creditSettlement(
   const settled: Entry = { ...credit }
   delete settled.paidOn
   delete settled.cash
+  delete settled.ownerPaid
   return {
     target: { ...target, paidOn: paidOnFor(target.date, credit.date) },
     credit: settled,

@@ -613,9 +613,19 @@ function LedgerRow({
                 onChange={onRecategorize}
               />
               {attachments.length === 0 ? (
-                <Pill size="sm" tone="warning" className="shrink-0">
-                  {f.t("ledger.noReceiptPill")}
-                </Pill>
+                entry.receiptReason ? (
+                  <Pill size="sm" className="shrink-0">
+                    {f.t(
+                      entry.receiptReason === "statement"
+                        ? "ledger.receiptReasonPill"
+                        : "ledger.receiptReasonOtherPill"
+                    )}
+                  </Pill>
+                ) : (
+                  <Pill size="sm" tone="warning" className="shrink-0">
+                    {f.t("ledger.noReceiptPill")}
+                  </Pill>
+                )
               ) : null}
             </div>
           )}

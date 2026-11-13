@@ -44,6 +44,8 @@ const FIELD_LABEL = {
   note: "entry.logFieldNote",
   toCheck: "entry.logFieldToCheck",
   creditLoss: "entry.logFieldCreditLoss",
+  receiptReason: "entry.receiptReason",
+  ownerPaid: "entry.ownerPaidLabel",
 } as const satisfies Record<LoggedField, string>
 
 /** A field's value as a person reads it. */
@@ -76,6 +78,8 @@ function formatValue(
       return value === "income" ? f.t("common.income") : f.t("common.expense")
     case "cash":
       return f.t("entry.cash")
+    case "ownerPaid":
+      return f.t("entry.ownerPaidValue")
     case "advance":
       return f.t("entry.advanceValue")
     case "toCheck":
@@ -84,6 +88,12 @@ function formatValue(
       return f.t("entry.toCheckValue")
     case "split":
       return f.t("entry.logSplitValue")
+    case "receiptReason":
+      return f.t(
+        value === "statement"
+          ? "entry.receiptReasonStatement"
+          : "entry.receiptReasonOther"
+      )
     case "share":
       return `${Number(value)} %`
     case "reverses":

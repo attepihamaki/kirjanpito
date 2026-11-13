@@ -69,7 +69,7 @@ import {
 } from "@/components/common/limit-text"
 import { useBookStore, type CheckFilter } from "@/stores/book-store"
 import { useReceiptHashStore } from "@/stores/receipt-hash-store"
-import { hasReceipt } from "@/stores/selectors"
+import { lacksReceipt } from "@/lib/domain/entry-checks"
 
 const RULE_GAP_TEXT = {
   travel: "overview.rulesTravel",
@@ -158,7 +158,7 @@ export function RecentWidget() {
                       >
                         {e.description || f.t("ledger.noDescription")}
                       </span>
-                      {hasReceipt(e) ? null : (
+                      {!lacksReceipt(e) ? null : (
                         <span className="shrink-0 text-xs text-warning">
                           {f.t("overview.noReceipt")}
                         </span>
