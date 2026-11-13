@@ -1,7 +1,11 @@
+import { categoryShare } from "@/lib/domain/accounts"
+import { isShare } from "@/lib/domain/calc"
 import { tagsField } from "@/lib/domain/tags"
 import { isoDate, monthOf, yearOf } from "@/lib/domain/dates"
 import type {
   AmountMode,
+  Category,
+  CategoryMap,
   Cents,
   Entry,
   EntryType,
@@ -39,6 +43,13 @@ export interface RecurringEntry {
   every?: number
   /** The tags each entry made from it carries (§8.37). */
   tags?: string[]
+  /**
+   * Business share in whole percent for a cost used partly privately
+   * (§6.12): 1 to 99, or 100 for the whole voucher where the category's
+   * default is lower. Absent means the category's default when an entry is
+   * made.
+   */
+  share?: number
 }
 
 /** How many months apart a recurring entry can come. */
@@ -132,9 +143,18 @@ export function dueRecurring(
 export function recurringToEntry(
   r: RecurringEntry,
   month: string,
-  makeId: () => string
+  makeId: () => string,
+  cats?: CategoryMap
 ): Entry {
   const date = recurringDate(r.day, month)
+  const cat = cats?.get(r.catId)
+  /* The template's own share, else the category's; neither where a share cannot apply. */
+  const share =
+    r.share === 100
+      ? {}
+      : categoryShare(
+          cat && isShare(r.share) ? { ...cat, share: r.share } : cat
+        )
   return {
     id: makeId(),
     date,
@@ -145,6 +165,7 @@ export function recurringToEntry(
     vatRate: rateOnDate(r.vatRate, date),
     amountMode: r.amountMode,
     ...(r.euPurchase ? { euPurchase: r.euPurchase } : {}),
+    ...share,
     ...tagsField(r.tags),
   }
 }
@@ -152,14 +173,22 @@ export function recurringToEntry(
 /**
  * A template from an entry. The day comes from its date. A monthly template
  * carries no `every`, so a book that never uses another interval writes the
- * same `settings.json` as before intervals existed.
+ * same `settings.json` as before intervals existed. The entry's share is
+ * kept, and an entry with none on a category that has a default keeps 100,
+ * so the template books the whole voucher as the entry did (§6.12).
  */
 export function entryToRecurring(
   entry: Entry,
   id: string,
   from: string,
-  every = 1
+  every = 1,
+  cat?: Category
 ): RecurringEntry {
+  const share = isShare(entry.share)
+    ? entry.share
+    : categoryShare(cat).share
+      ? 100
+      : undefined
   return {
     id,
     description: entry.description.trim(),
@@ -173,5 +202,6 @@ export function entryToRecurring(
     from,
     ...(every !== 1 ? { every } : {}),
     ...tagsField(entry.tags),
+    ...(share ? { share } : {}),
   }
 }

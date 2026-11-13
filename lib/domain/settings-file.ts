@@ -225,6 +225,7 @@ function parseRecurring(value: unknown): RecurringEntry | null {
     from,
     every,
     tags,
+    share,
   } = value
   if (typeof id !== "string" || !id) return null
   if (typeof description !== "string" || !description.trim()) return null
@@ -250,6 +251,12 @@ function parseRecurring(value: unknown): RecurringEntry | null {
     from,
     ...(isEntryEvery(every) && every !== 1 ? { every } : {}),
     ...readTags(tags),
+    // A share belongs to a cost that is not an EU purchase (§6.12).
+    ...((isShare(share) || share === 100) &&
+    type === "expense" &&
+    !isEuPurchase(euPurchase)
+      ? { share }
+      : {}),
   }
 }
 

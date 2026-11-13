@@ -65,6 +65,7 @@ import { useReceiptHashStore } from "@/stores/receipt-hash-store"
 import { useReceiptTextStore } from "@/stores/receipt-text-store"
 
 const CHECK_LABEL = {
+  toCheck: "ledger.toCheck",
   noReceipt: "ledger.withoutReceipt",
   rateMismatch: "ledger.rateMismatch",
   futureDate: "ledger.futureDate",

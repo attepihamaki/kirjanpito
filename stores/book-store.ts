@@ -177,6 +177,8 @@ export type EntryPrefill = Partial<
     | "settles"
     | "atts"
     | "reverses"
+    | "note"
+    | "toCheck"
     | "party"
     | "buyerVatId"
     | "share"
@@ -257,6 +259,8 @@ export type DialogState =
   | { kind: "form5-details" }
   /** Carve a part off an entry, as another category or VAT rate (§8.4). */
   | { kind: "split"; entryId: string }
+  /** Write an unpaid sale, or what is open of its invoice, off as a credit loss (§6.18). */
+  | { kind: "credit-loss"; entryId: string }
   | { kind: "deduction"; which: "mileage" | "per-diem" | "home-office" }
   /** What carries into `year`, its starting figures and templates (§8.14). */
   | { kind: "new-year"; year: number }

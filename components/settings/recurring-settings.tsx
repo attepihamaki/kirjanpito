@@ -21,6 +21,8 @@ import {
 import { toast } from "@/components/ui/toast"
 import { formatMoneyPlain } from "@/lib/domain/money"
 import { evalAmount } from "@/lib/domain/amount-expr"
+import { canHaveShare, categoryShare, lineOf } from "@/lib/domain/accounts"
+import { isShare } from "@/lib/domain/calc"
 import {
   ENTRY_EVERY,
   everyOf,
@@ -28,7 +30,7 @@ import {
   type RecurringEntry,
 } from "@/lib/domain/recurring"
 import { everyLabel } from "@/lib/i18n/every-label"
-import { indexCategories } from "@/lib/domain/types"
+import { indexCategories, type Category } from "@/lib/domain/types"
 import { useBookStore } from "@/stores/book-store"
 
 /**
@@ -56,6 +58,53 @@ export function RecurringAmountInput({
         event.target.value = formatMoneyPlain(
           amount != null && amount !== 0 ? amount : r.amount
         )
+      }}
+    />
+  )
+}
+
+/**
+ * A template's business share (§6.12), committed on leaving the field. Empty
+ * means the category's default, which the placeholder shows. A category that
+ * cannot hold a share gets a dash.
+ */
+function RecurringShareInput({
+  template: r,
+  cat,
+}: {
+  template: RecurringEntry
+  cat: Category | undefined
+}) {
+  const f = useFormatters()
+  const upsertRecurring = useBookStore((s) => s.upsertRecurring)
+  if (!cat || !canHaveShare(lineOf(cat), cat.euPurchase)) {
+    return <span className="text-muted-foreground">–</span>
+  }
+  const fallback = categoryShare(cat).share
+  return (
+    <Input
+      key={r.share ?? ""}
+      aria-label={`${f.t("recurring.share")}: ${r.description}`}
+      inputMode="numeric"
+      className="tabular ml-auto w-16 text-right"
+      placeholder={`${fallback ?? 100}`}
+      defaultValue={r.share ?? ""}
+      onBlur={(event) => {
+        const text = event.target.value.replace(/[%\s]/g, "")
+        const share = Number(text)
+        /* 100 is kept only where it differs from the category's default. */
+        if (text === "" || (share === 100 && !fallback)) {
+          if (r.share !== undefined) {
+            const next = { ...r }
+            delete next.share
+            upsertRecurring(next)
+          }
+          event.target.value = ""
+        } else if (isShare(share) || share === 100) {
+          if (share !== r.share) upsertRecurring({ ...r, share })
+        } else {
+          event.target.value = r.share != null ? String(r.share) : ""
+        }
       }}
     />
   )
@@ -112,6 +161,9 @@ export function RecurringSettings() {
               <TableHead className="text-right">
                 {f.t("recurring.day")}
               </TableHead>
+              <TableHead className="text-right">
+                {f.t("recurring.share")}
+              </TableHead>
               <TableHead>{f.t("recurring.every")}</TableHead>
               <TableHead>{f.t("recurring.from")}</TableHead>
               <TableHead />
@@ -143,6 +195,9 @@ export function RecurringSettings() {
                       }
                     }}
                   />
+                </TableCell>
+                <TableCell className="text-right">
+                  <RecurringShareInput template={r} cat={catMap.get(r.catId)} />
                 </TableCell>
                 <TableCell>
                   <OptionSelect

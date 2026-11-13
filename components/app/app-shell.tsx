@@ -22,6 +22,7 @@ import { CategoryDialogs } from "@/components/settings/category-dialogs"
 import { SetupDialog } from "@/components/settings/setup-dialog"
 import { DeductionDialog } from "@/components/statement/deduction-dialog"
 import { SplitDialog } from "@/components/entry/split-dialog"
+import { CreditLossDialog } from "@/components/entry/credit-loss-dialog"
 import { Form5DetailsDialog } from "@/components/statement/form5-details-dialog"
 import { YearEndFiguresDialog } from "@/components/statement/year-end-figures-dialog"
 import { NewYearDialog } from "@/components/new-year/new-year-dialog"
@@ -302,6 +303,7 @@ function HydratedShell({ children }: { children: React.ReactNode }) {
         <YearEndFiguresDialog />
         <Form5DetailsDialog />
         <SplitDialog />
+        <CreditLossDialog />
         <DeductionDialog />
         <NewYearDialog />
         <VatReturnDialog />

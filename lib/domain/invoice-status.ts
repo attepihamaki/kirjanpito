@@ -1,4 +1,5 @@
 import { calcEntry } from "@/lib/domain/calc"
+import { writtenOffIds } from "@/lib/domain/credit-loss"
 import type { Invoice } from "@/lib/domain/invoice"
 import { creditedAmount, invoiceTotals } from "@/lib/domain/invoice-calc"
 import type { Cents, Entry } from "@/lib/domain/types"
@@ -17,6 +18,8 @@ export type InvoiceStatus =
   | "credit"
   /* An invoice a credit note or notes have taken in full. */
   | "credited"
+  /* An invoice written off, wholly or in what was left, as a credit loss (§6.18). */
+  | "creditLoss"
 
 /** The entries of an invoice that are still unpaid. */
 export function openEntries(
@@ -50,6 +53,9 @@ export function invoiceStatus(
   if (invoice.credits !== null) return "credit"
   const gross = invoiceTotals(invoice.rows, invoice.discount).gross
   if (gross > 0 && creditedAmount(invoice, invoices) >= gross) return "credited"
-  if (openEntries(invoice, byId).length === 0) return "paid"
+  if (openEntries(invoice, byId).length === 0) {
+    const off = writtenOffIds(byId)
+    return invoice.entryIds.some((id) => off.has(id)) ? "creditLoss" : "paid"
+  }
   return invoice.dueDate < today ? "overdue" : "open"
 }

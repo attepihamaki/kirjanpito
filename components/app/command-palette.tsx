@@ -236,7 +236,7 @@ export function CommandPalette({
       newestFirst,
       words,
       (e) =>
-        `${e.description} ${e.voucher ?? ""} ${e.date} ${f.date(e.date)} ${formatMoneyPlain(calcEntry(e).gross)}`,
+        `${e.description} ${e.voucher ?? ""} ${e.date} ${f.date(e.date)} ${formatMoneyPlain(calcEntry(e).gross)} ${e.note ?? ""}`,
       RESULT_LIMIT
     ).map<Item>((e) => ({
       id: `entry-${e.id}`,

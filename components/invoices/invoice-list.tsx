@@ -90,6 +90,7 @@ const STATUS_TONE = {
   paid: "income",
   credit: "neutral",
   credited: "neutral",
+  creditLoss: "expense",
 } as const satisfies Record<InvoiceStatus, "neutral" | "income" | "expense">
 
 /** Newest first: drafts at the top, then issued invoices by number. */
@@ -306,6 +307,7 @@ const FILTER_OF: Record<InvoiceStatus, Filter | null> = {
   paid: "paid",
   credit: null,
   credited: null,
+  creditLoss: "paid",
 }
 
 /** The invoices, newest first, with what can be done to each (§8.27). */
@@ -387,6 +389,7 @@ export function InvoiceList() {
     paid: f.t("invoice.statusPaid"),
     credit: f.t("invoice.statusCredit"),
     credited: f.t("invoice.statusCredited"),
+    creditLoss: f.t("invoice.statusCreditLoss"),
   }
 
   const open = (invoice: Invoice) =>
@@ -743,6 +746,21 @@ export function InvoiceList() {
                                   </DropdownMenuItem>
                                 ) : null}
                               </DropdownMenuGroup>
+                            </>
+                          ) : null}
+                          {unpaid && invoice.credits === null ? (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  openDialog({
+                                    kind: "credit-loss",
+                                    entryId: openEntries(invoice, byId)[0].id,
+                                  })
+                                }
+                              >
+                                {f.t("entry.creditLossAction")}
+                              </DropdownMenuItem>
                             </>
                           ) : null}
                           {draft || live ? (

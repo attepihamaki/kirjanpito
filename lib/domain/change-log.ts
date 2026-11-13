@@ -67,6 +67,9 @@ export const LOGGED_FIELDS = [
   "reference",
   "tags",
   "advance",
+  "note",
+  "toCheck",
+  "creditLoss",
 ] as const
 export type LoggedField = (typeof LOGGED_FIELDS)[number]
 
@@ -81,6 +84,8 @@ function logged(e: Entry, field: LoggedField): string | number | null {
   }
   if (field === "cash") return e.cash ? "cash" : null
   if (field === "advance") return e.advance ? "advance" : null
+  if (field === "toCheck") return e.toCheck ? "toCheck" : null
+  if (field === "creditLoss") return e.creditLoss ? "creditLoss" : null
   // An open voucher is told apart from one paid on its own date, which is null.
   if (field === "paidOn")
     return e.paidOn === null ? PAID_OPEN : (e.paidOn ?? null)
@@ -235,7 +240,12 @@ function putBack(
     if (value === PAID_OPEN) out.paidOn = null
     else if (value === null) delete out.paidOn
     else out.paidOn = String(value)
-  } else if (field === "cash" || field === "advance") {
+  } else if (
+    field === "cash" ||
+    field === "advance" ||
+    field === "toCheck" ||
+    field === "creditLoss"
+  ) {
     if (value === null) delete out[field]
     else out[field] = true
   } else if (value === null || value === "") {

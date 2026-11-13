@@ -665,6 +665,17 @@ export const APP_DICT = {
       "{n} expenses over the small purchase limit"
     ),
   ],
+  "overview.toCheck": [
+    pl(
+      "1 tosite merkitty tarkistettavaksi",
+      "{n} tositetta merkitty tarkistettavaksi"
+    ),
+    pl("1 voucher marked to check", "{n} vouchers marked to check"),
+  ],
+  "overview.toCheckSub": [
+    "Merkitsit nämä itse. Poista merkintä tositteelta, kun asia on selvä.",
+    "You marked these yourself. Clear the mark on the voucher once it is settled.",
+  ],
   "overview.largeExpenseSub": [
     "Yli 1 200 euron laite on yleensä kirjattava käyttöomaisuudeksi ja poistettava. Kerralla sen voi vähentää vain, jos käyttöikä on enintään 3 vuotta.",
     "Equipment over 1,200 euros is usually booked as a fixed asset and depreciated. Deducting it at once works only if its useful life is 3 years or less.",
@@ -1277,6 +1288,10 @@ export const APP_DICT = {
     "Pienhankinta kirjattu käyttöomaisuutena",
     "Small purchase booked as an asset",
   ],
+  "ledger.toCheck": ["Merkitty tarkistettavaksi", "Marked to check"],
+  "ledger.toCheckPill": ["Tarkistettava", "To check"],
+  "ledger.toCheckSet": ["Merkitse tarkistettavaksi", "Mark to check"],
+  "ledger.toCheckClear": ["Poista tarkistusmerkintä", "Clear the check mark"],
   "ledger.largeExpense": [
     "Suuri hankinta kirjattu kuluksi",
     "Large purchase booked as an expense",
@@ -1507,6 +1522,9 @@ export const APP_DICT = {
   "entry.logFieldTags": ["Tunnisteet", "Tags"],
   "entry.logFieldAdvance": ["Ennakkomaksu", "Advance payment"],
   "entry.advanceValue": ["Ennakkolasku", "Advance invoice"],
+  "entry.logFieldNote": ["Muistiinpano", "Note"],
+  "entry.logFieldToCheck": ["Tarkistettava", "To check"],
+  "entry.toCheckValue": ["Merkitty", "Marked"],
   "ledger.allTags": ["Kaikki tunnisteet", "All tags"],
   "ledger.tagFilter": ["Tunniste", "Tag"],
   "entry.tags": ["Tunnisteet", "Tags"],
@@ -1583,6 +1601,21 @@ export const APP_DICT = {
   ],
   "entry.logFieldShare": ["Yrityksen osuus", "Business share"],
   "entry.share": ["Yrityksen osuus", "Business share"],
+  "entry.note": ["Muistiinpano", "Note"],
+  "entry.noteInfo": ["Mikä muistiinpano on?", "What is a note?"],
+  "entry.noteHint": [
+    "Oma huomio tositteesta, esimerkiksi kysymys kirjanpitäjälle. Se ei näy ALV-ilmoituksessa eikä veroilmoituksessa, mutta päiväkirja säilytys- ja tarkastuspaketissa listaa sen.",
+    "Your own remark on the voucher, such as a question for your accountant. It is not on the VAT return or the tax return, but the journal in the retention and audit packages lists it.",
+  ],
+  "entry.notePlaceholder": [
+    "Esim. Kysy kirjanpitäjältä, onko tämä edustusta",
+    "E.g. Ask the accountant whether this is entertainment",
+  ],
+  "entry.toCheckLabel": ["Tarkistettava", "To check"],
+  "entry.toCheckDesc": [
+    "Näkyy Tarkistettavaa-listassa, kunnes poistat merkinnän.",
+    "Shows in the checks list until you clear it.",
+  ],
   "entry.shareInfo": [
     "Mikä on yrityksen osuus?",
     "What is the business share?",
@@ -2505,6 +2538,7 @@ export const APP_DICT = {
   "recurring.category": ["Luokka", "Category"],
   "recurring.amount": ["Summa", "Amount"],
   "recurring.day": ["Päivä", "Day"],
+  "recurring.share": ["Osuus", "Share"],
   "recurring.from": ["Alkaen", "From"],
   "recurring.deleted": [
     "Toistuva tosite poistettu.",
@@ -4497,6 +4531,47 @@ export const APP_DICT = {
   ],
   "invoice.statusCredit": ["Hyvitys", "Credit"],
   "invoice.statusCredited": ["Hyvitetty", "Credited"],
+  "invoice.statusCreditLoss": ["Luottotappio", "Credit loss"],
+  "entry.creditLossAction": [
+    "Kirjaa luottotappioksi",
+    "Write off as a credit loss",
+  ],
+  "entry.creditLossTitle": [
+    "Kirjaa luottotappioksi",
+    "Write off as a credit loss",
+  ],
+  "entry.creditLossHint": [
+    "Myynti, jota ei enää saada, poistetaan myynnistä sinä päivänä, kun tappio todetaan. Sen ALV vähennetään saman kuukauden ilmoituksella, ja avoin saatava suljetaan.",
+    "A sale that will not be paid comes off the sales on the day the loss is found. Its VAT comes off that month's return, and the open receivable is closed.",
+  ],
+  "entry.creditLossEvidence": [
+    "Säilytä näyttö perinnästä, esimerkiksi perintätoimiston tai ulosoton ilmoitus, ja liitä se kirjauksen tositteeksi. Pelkkä maksamatta jättäminen ei ole luottotappio, jos ostaja pystyisi maksamaan.",
+    "Keep the evidence of collection, such as a notice from a debt collector or the bailiff, and attach it to the entry. A buyer who could pay but refuses is not a credit loss.",
+  ],
+  "entry.creditLossDate": ["Tappio todettu", "Loss found on"],
+  "entry.creditLossAmount": [
+    "Poistetaan myynnistä {a}",
+    "Comes off the sales: {a}",
+  ],
+  "entry.creditLossDescription": ["Luottotappio: {x}", "Credit loss: {x}"],
+  "entry.creditLossDone": [
+    "Kirjattu luottotappioksi {a}.",
+    "Written off as a credit loss: {a}.",
+  ],
+  "entry.creditLossBadDate": [
+    "Päivä ei voi olla ennen myyntiä.",
+    "The date cannot be before the sale.",
+  ],
+  "entry.creditLossLocked": [
+    "Päivä osuu ilmoitetulle kaudelle. Valitse päivä avoimelta kaudelta.",
+    "The date falls in a filed period. Pick a date in an open period.",
+  ],
+  "entry.creditLossNothing": [
+    "Kirjattavaa ei ole: myynti on jo maksettu.",
+    "Nothing to write off: the sale is paid.",
+  ],
+  "ledger.creditLossPill": ["Luottotappio", "Credit loss"],
+  "entry.logFieldCreditLoss": ["Luottotappio", "Credit loss"],
   "invoice.send": ["Lähetä", "Send"],
   "invoice.sendAttach": [
     "PDF ladattiin. Liitä se avautuneeseen sähköpostiin.",

@@ -15,6 +15,7 @@ import { rateMismatch } from "@/lib/domain/vat-rates"
  * entry may be right, and saving is never blocked by one.
  */
 export type EntryCheck =
+  | "toCheck"
   | "noReceipt"
   | "rateMismatch"
   | "futureDate"
@@ -28,6 +29,7 @@ export type EntryCheck =
   | "largeExpense"
 
 export const ENTRY_CHECKS: readonly EntryCheck[] = [
+  "toCheck",
   "noReceipt",
   "rateMismatch",
   "futureDate",
@@ -253,6 +255,8 @@ const idsWhere = (ctx: EntryCheckContext, keep: (e: Entry) => boolean) =>
  * are hints, never errors (`severity: "warn"`): the entry may be right.
  */
 export const ENTRY_RULES = defineRules<EntryCheckContext, string>([
+  // Marked by the user, so it leads the list (§8.39).
+  entryRule("toCheck", "app", (ctx) => idsWhere(ctx, (e) => !!e.toCheck)),
   /*
    * Every entry, calculated ones included: depreciation, line 354 and the
    * stock change rest on a memo voucher the calculator attaches (KPL 2:5).

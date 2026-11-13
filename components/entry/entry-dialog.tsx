@@ -26,6 +26,7 @@ import { ReceiptPreview } from "@/components/entry/receipt-preview"
 import { AttachmentViewer } from "@/components/receipt/receipt-viewer"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Textarea } from "@/components/ui/textarea"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,9 +74,11 @@ import {
   LINE_BY_KEY,
   RATES,
   categoryName,
+  categoryShare,
   isEuSaleKind,
 } from "@/lib/domain/accounts"
 import { isPeriod } from "@/lib/domain/accrual"
+import { NOTE_MAX, noteField, toCheckField } from "@/lib/domain/note"
 import { calcEntry, euPurchaseVat, isShare } from "@/lib/domain/calc"
 import {
   describeInvoice,
@@ -196,6 +199,10 @@ interface FormState {
   reference: string
   /** The voucher's tags (§8.37). */
   tags: string[]
+  /** The user's own note (§8.39). */
+  note: string
+  /** Marked as still to check (§8.39). */
+  toCheck: boolean
 }
 
 /** The fields §8.5 validates, named as they are in `FormState`. */
@@ -276,6 +283,8 @@ function initialForm({
       iban: prefill?.iban ? formatIban(prefill.iban) : "",
       reference: prefill?.reference ? formatReference(prefill.reference) : "",
       tags: [...(prefill?.tags ?? [])],
+      note: prefill?.note ?? "",
+      toCheck: prefill?.toCheck === true,
     }
   }
   const today = todayIso()
@@ -321,6 +330,9 @@ function initialForm({
         ? formatReference(editing.reference)
         : "",
     tags: [...(editing.tags ?? [])],
+    // A note and the flag are about this voucher, so a copy starts without them.
+    note: mode === "copy" ? "" : (editing.note ?? ""),
+    toCheck: mode !== "copy" && editing.toCheck === true,
   }
 }
 
@@ -696,6 +708,25 @@ function EntryDialogForm({
       )
       const readRate = euCategory ? null : (ruleHit?.vatRate ?? guess.vatRate)
       if (readRate != null) keepRate.current = true
+      /*
+       * The share the seller's last voucher had on the same category, else
+       * the category's default, unless the user typed one (§6.12).
+       */
+      const pickedCat = cats.find(
+        (c) => c.id === (previousCat?.catId ?? suggested?.id)
+      )
+      const sharePatch: Partial<FormState> =
+        keepShare.current || !pickedCat
+          ? {}
+          : {
+              share: String(
+                (!ruleHit &&
+                previous?.catId === pickedCat.id &&
+                categoryShare({ ...pickedCat, share: previous.share }).share
+                  ? previous.share
+                  : categoryShare(pickedCat).share) ?? ""
+              ),
+            }
 
       setForm((prev) => ({
         ...prev,
@@ -706,6 +737,7 @@ function EntryDialogForm({
           : suggested
             ? { type: "expense" as const, catId: suggested.id }
             : {}),
+        ...sharePatch,
         amount: guess.amount != null ? formatMoneyPlain(guess.amount) : "",
         /*
          * A bill not yet due is a bill to pay (§8.30): it opens with its due
@@ -1364,6 +1396,8 @@ function EntryDialogForm({
         ? { party: form.party }
         : {}),
       ...tagsField(form.tags),
+      ...noteField(form.note),
+      ...toCheckField(form.toCheck),
       // A part stays a part of its receipt; a copy is a new voucher of its own.
       ...(mode === "edit" && editing?.split ? { split: editing.split } : {}),
     }
@@ -1443,7 +1477,8 @@ function EntryDialogForm({
           entry,
           template?.id ?? uid(),
           template?.from ?? entry.date.slice(0, 7),
-          form.repeatEvery
+          form.repeatEvery,
+          catMap.get(entry.catId)
         )
       )
     } else if (mode === "edit" && template) {
@@ -1983,7 +2018,29 @@ function EntryDialogForm({
                       </ToggleGroup>
                     </Field>
                   )}
+                </fieldset>
 
+                {/* The note and the flag report nothing, so a locked voucher keeps them open (§8.39). */}
+                <Field>
+                  <div className="flex items-center gap-1">
+                    <FieldLabel htmlFor="entry-note">
+                      {f.t("entry.note")}
+                    </FieldLabel>
+                    <InfoPopover label={f.t("entry.noteInfo")}>
+                      {f.t("entry.noteHint")}
+                    </InfoPopover>
+                  </div>
+                  <Textarea
+                    id="entry-note"
+                    rows={2}
+                    maxLength={NOTE_MAX}
+                    value={form.note}
+                    placeholder={f.t("entry.notePlaceholder")}
+                    onChange={(e) => update({ note: e.target.value })}
+                  />
+                </Field>
+
+                <fieldset disabled={!!lock} className="contents">
                   <Field>
                     <div className="flex items-center gap-1">
                       <FieldLabel htmlFor="entry-tags">
@@ -2003,6 +2060,26 @@ function EntryDialogForm({
                     />
                   </Field>
                 </fieldset>
+                <Field orientation="horizontal">
+                  <Checkbox
+                    id="entry-to-check"
+                    checked={form.toCheck}
+                    onCheckedChange={(checked) =>
+                      update({ toCheck: checked === true })
+                    }
+                  />
+                  <div className="flex flex-col gap-0.5">
+                    <FieldLabel
+                      htmlFor="entry-to-check"
+                      className="font-normal"
+                    >
+                      {f.t("entry.toCheckLabel")}
+                    </FieldLabel>
+                    <FieldDescription>
+                      {f.t("entry.toCheckDesc")}
+                    </FieldDescription>
+                  </div>
+                </Field>
               </FieldGroup>
             </TabsContent>
 

@@ -105,7 +105,7 @@ function RecurringDialogForm({ month }: { month: string }) {
   const add = async () => {
     const added = due
       .filter((r) => chosen.has(r.id))
-      .map((r) => recurringToEntry(r, month, () => `e-${uid()}`))
+      .map((r) => recurringToEntry(r, month, () => `e-${uid()}`, catMap))
     const done = await addEntriesWithUndo(
       ctx,
       added,

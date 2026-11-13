@@ -247,10 +247,31 @@ export function renameEntry(
   store.updateEntries([renamed])
   if (template && text) {
     store.upsertRecurring(
-      entryToRecurring(renamed, template.id, template.from, everyOf(template))
+      entryToRecurring(
+        renamed,
+        template.id,
+        template.from,
+        everyOf(template),
+        store.cats.find((c) => c.id === renamed.catId)
+      )
     )
   }
   offerEditUndo(ctx, entry, recurringBefore)
+  return true
+}
+
+/**
+ * Set or clear the voucher's "to check" mark (§8.39). It reports nothing, so a
+ * locked voucher takes it too. The toast undoes it.
+ */
+export function setToCheck(ctx: Ctx, entry: Entry, on: boolean): boolean {
+  if (!!entry.toCheck === on) return false
+  const store = useBookStore.getState()
+  const next = { ...entry }
+  if (on) next.toCheck = true
+  else delete next.toCheck
+  store.updateEntries([next])
+  offerEditUndo(ctx, entry, store.recurring)
   return true
 }
 

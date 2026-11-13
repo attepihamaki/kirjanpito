@@ -5,6 +5,7 @@ import type { EntryCheck } from "@/lib/domain/entry-checks"
  * overview's checklist and the year-end dialog word them alike.
  */
 export const CHECK_TEXT = {
+  toCheck: { title: "overview.toCheck", sub: "overview.toCheckSub" },
   noReceipt: {
     title: "overview.withoutReceipt",
     sub: "overview.withoutReceiptSub",

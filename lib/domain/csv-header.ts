@@ -17,6 +17,9 @@ import type { Lang } from "@/lib/domain/types"
  * received, `pay_iban` and `pay_reference` how it is paid (§8.30). `tags`
  * holds the voucher's tags separated by `|` (§8.37). `advance` marks a sale
  * booked by an advance invoice, whose VAT falls on its payment date (§6.17).
+ * `note` is the user's own note and `to_check` marks a voucher still to check
+ * (§8.39). `credit_loss` marks the reversal that writes off an unpaid sale
+ * (§6.18).
  *
  * These names are the canonical ones the parser works in. What a file is
  * written with is `csvHeaderLine`, which follows the book's export language;
@@ -55,6 +58,9 @@ export const CSV_HEADER = [
   "pay_reference",
   "tags",
   "advance",
+  "note",
+  "to_check",
+  "credit_loss",
 ] as const
 
 export type CsvColumn = (typeof CSV_HEADER)[number]
@@ -93,6 +99,9 @@ const FINNISH_LABELS: Readonly<Record<CsvColumn, string>> = {
   pay_reference: "maksuviite",
   tags: "tunnisteet",
   advance: "ennakko",
+  note: "muistiinpano",
+  to_check: "tarkistettava",
+  credit_loss: "luottotappio",
 }
 
 /** The label a column is written under, for a header or an error message. */

@@ -2,11 +2,15 @@
 
 import * as React from "react"
 import {
+  BanIcon,
   CircleCheckIcon,
   CopyIcon,
+  FlagIcon,
+  FlagOffIcon,
   PaperclipIcon,
   PencilIcon,
   SplitIcon,
+  StickyNoteIcon,
   Trash2Icon,
 } from "lucide-react"
 
@@ -39,8 +43,10 @@ import {
   markEntryPaid,
   recategorizeEntries,
   renameEntry,
+  setToCheck,
 } from "@/lib/commands/bulk-commands"
 import { calcEntry, isShare } from "@/lib/domain/calc"
+import { canWriteOff } from "@/lib/domain/credit-loss"
 import { formatDayMonth, yearOf } from "@/lib/domain/dates"
 import { viewHelp } from "@/lib/domain/field-help"
 import type { OptionalLedgerColumn } from "@/lib/domain/ledger-columns"
@@ -88,6 +94,8 @@ export function LedgerTable({
   const toggleSort = useBookStore((s) => s.toggleLedgerSort)
   const openDialog = useBookStore((s) => s.openDialog)
   const allEntries = useBookStore((s) => s.entries)
+  const cats = useBookStore((s) => s.cats)
+  const catMap = React.useMemo(() => indexCategories(cats), [cats])
   const hiddenList = useBookStore((s) => s.ledgerHidden)
   const hidden = React.useMemo(() => new Set(hiddenList), [hiddenList])
   const splitVouchers = React.useMemo(
@@ -222,6 +230,12 @@ export function LedgerTable({
             }
             onSplit={() => openDialog({ kind: "split", entryId: entry.id })}
             onMarkPaid={() => void markEntryPaid(ctx, entry)}
+            onToggleCheck={() => setToCheck(ctx, entry, !entry.toCheck)}
+            onCreditLoss={
+              canWriteOff(entry, catMap)
+                ? () => openDialog({ kind: "credit-loss", entryId: entry.id })
+                : undefined
+            }
             onDelete={() => void deleteEntry(ctx, entry)}
             onViewReceipt={(index) =>
               openDialog({ kind: "viewer", entryId: entry.id, index })
@@ -305,6 +319,8 @@ function LedgerRow({
   onCopy,
   onSplit,
   onMarkPaid,
+  onToggleCheck,
+  onCreditLoss,
   onDelete,
   onViewReceipt,
 }: {
@@ -329,6 +345,9 @@ function LedgerRow({
   onCopy: () => void
   onSplit: () => void
   onMarkPaid: () => void
+  onToggleCheck: () => void
+  /** Absent when the voucher is not an unpaid sale (§6.18). */
+  onCreditLoss?: () => void
   onDelete: () => void
   onViewReceipt: (index: number) => void
 }) {
@@ -473,6 +492,16 @@ function LedgerRow({
                 )}
               >
                 {entry.description || f.t("ledger.noDescription")}
+                {entry.creditLoss ? (
+                  <Pill size="sm" tone="expense" className="ml-2">
+                    {f.t("ledger.creditLossPill")}
+                  </Pill>
+                ) : null}
+                {entry.toCheck ? (
+                  <Pill size="sm" tone="warning" className="ml-2">
+                    {f.t("ledger.toCheckPill")}
+                  </Pill>
+                ) : null}
                 {entry.paidOn === null ? (
                   <Pill size="sm" className="ml-2">
                     {f.t("ledger.openPill")}
@@ -539,6 +568,16 @@ function LedgerRow({
                     </span>
                   ) : null}
                 </Button>
+              ) : null}
+              {entry.note ? (
+                <span
+                  role="img"
+                  className="inline-flex shrink-0 text-muted-foreground print:hidden [&_svg]:size-3.5"
+                  aria-label={`${f.t("entry.note")}: ${entry.note}`}
+                  title={entry.note}
+                >
+                  <StickyNoteIcon aria-hidden />
+                </span>
               ) : null}
               <Button
                 variant="ghost"
@@ -671,6 +710,16 @@ function LedgerRow({
             {f.t("ledger.markPaid")}
           </ContextMenuItem>
         ) : null}
+        {onCreditLoss ? (
+          <ContextMenuItem onClick={onCreditLoss}>
+            <BanIcon />
+            {f.t("entry.creditLossAction")}
+          </ContextMenuItem>
+        ) : null}
+        <ContextMenuItem onClick={onToggleCheck}>
+          {entry.toCheck ? <FlagOffIcon /> : <FlagIcon />}
+          {f.t(entry.toCheck ? "ledger.toCheckClear" : "ledger.toCheckSet")}
+        </ContextMenuItem>
         {locked ? null : (
           <>
             <ContextMenuSeparator />

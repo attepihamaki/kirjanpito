@@ -1,5 +1,6 @@
 import Papa from "papaparse"
 
+import { noteField, normalizeNote, toCheckField } from "@/lib/domain/note"
 import {
   DEFAULT_CATEGORY_FOR_ACCOUNT,
   DEFAULT_EN_NAMES,
@@ -246,6 +247,9 @@ export function serializeCsv(
         e.reference ?? "",
         defuseFormula(formatTagsCell(e.tags)),
         e.advance ? CASH_TO_CSV[lang] : "",
+        defuseFormula(normalizeNote(e.note)),
+        e.toCheck ? CASH_TO_CSV[lang] : "",
+        e.creditLoss ? CASH_TO_CSV[lang] : "",
       ]
         .map(quote)
         .join(";")
@@ -623,6 +627,11 @@ export function parseCsv(
       ...billColumns(get("pay_iban"), get("pay_reference"), type, paid, cat),
       ...tagsField(parseTagsCell(restoreFormula(get("tags")))),
       ...advanceColumn(get("advance"), type, cat),
+      ...noteField(restoreFormula(get("note"))),
+      ...toCheckField(
+        CASH_VALUES.includes(get("to_check").trim().toLowerCase())
+      ),
+      ...creditLossColumn(get("credit_loss"), type, amount),
     })
 
     const splitRaw = get("split")
@@ -881,6 +890,19 @@ function advanceColumn(
   if (!CASH_VALUES.includes(value.trim().toLowerCase())) return {}
   if (type !== "income" || !canBeUnpaid(LINE_BY_KEY.get(cat.line))) return {}
   return { advance: true }
+}
+
+/**
+ * Whether the row is the reversal of a credit loss (§6.18). Kept only on
+ * negative income, which is what a reversal is.
+ */
+function creditLossColumn(
+  value: string,
+  type: EntryType,
+  amount: number
+): { creditLoss?: true } {
+  if (!CASH_VALUES.includes(value.trim().toLowerCase())) return {}
+  return type === "income" && amount < 0 ? { creditLoss: true } : {}
 }
 
 /**

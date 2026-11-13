@@ -10,7 +10,8 @@ import {
   withEvery,
   type RecurringEntry,
 } from "@/lib/domain/recurring"
-import type { Entry } from "@/lib/domain/types"
+import { defaultCategories } from "@/lib/domain/accounts"
+import { indexCategories, type Entry } from "@/lib/domain/types"
 
 const rent: RecurringEntry = {
   id: "r1",
@@ -128,5 +129,66 @@ describe("recurring entries", () => {
     ).toBe(3)
     expect(withEvery({ ...rent, every: 6 }, 1)).toEqual(rent)
     expect(withEvery(rent, 6).every).toBe(6)
+  })
+
+  describe("business share (§6.12)", () => {
+    const cats = indexCategories(
+      defaultCategories().map((c) => (c.id === "343" ? { ...c, share: 50 } : c))
+    )
+    const cat = cats.get("343")
+
+    it("books the category's default when the template has no share", () => {
+      expect(recurringToEntry(rent, "2026-03", () => "x", cats).share).toBe(50)
+    })
+
+    it("books the template's own share over the category's", () => {
+      const made = recurringToEntry(
+        { ...rent, share: 30 },
+        "2026-03",
+        () => "x",
+        cats
+      )
+      expect(made.share).toBe(30)
+    })
+
+    it("books the whole voucher when the template says 100", () => {
+      const made = recurringToEntry(
+        { ...rent, share: 100 },
+        "2026-03",
+        () => "x",
+        cats
+      )
+      expect(made).not.toHaveProperty("share")
+    })
+
+    it("books no share on an income template", () => {
+      const sale = {
+        ...rent,
+        type: "income" as const,
+        catId: "300-domestic",
+        share: 40,
+      }
+      expect(
+        recurringToEntry(sale, "2026-03", () => "x", cats)
+      ).not.toHaveProperty("share")
+    })
+
+    it("keeps the entry's share, and 100 when the entry cleared the default", () => {
+      expect(
+        entryToRecurring(
+          booked("2026-05-14", { share: 20 }),
+          "r2",
+          "2026-05",
+          1,
+          cat
+        ).share
+      ).toBe(20)
+      expect(
+        entryToRecurring(booked("2026-05-14"), "r2", "2026-05", 1, cat).share
+      ).toBe(100)
+      expect(
+        entryToRecurring(booked("2026-05-14"), "r2", "2026-05")
+      ).not.toHaveProperty("share")
+    })
   })
 })

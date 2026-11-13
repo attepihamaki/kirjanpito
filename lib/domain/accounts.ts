@@ -1,3 +1,4 @@
+import { isShare } from "@/lib/domain/calc"
 import type {
   Bucket,
   Category,
@@ -857,6 +858,16 @@ export function defaultCategories(): Category[] {
 
 export function lineOf(cat: Category): AccountLine | undefined {
   return LINE_BY_KEY.get(cat.line)
+}
+
+/**
+ * The business share a new voucher on `cat` starts with (§6.12): the
+ * category's default, where a share can apply at all. Spread into an entry.
+ */
+export function categoryShare(cat: Category | undefined): { share?: number } {
+  return cat && isShare(cat.share) && canHaveShare(lineOf(cat), cat.euPurchase)
+    ? { share: cat.share }
+    : {}
 }
 
 export function lineName(line: AccountLine, lang: Lang): string {

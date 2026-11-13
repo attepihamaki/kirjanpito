@@ -192,6 +192,19 @@ export interface Entry {
    * is open (§6.17). Only on income on a line that can be paid.
    */
   advance?: true
+  /**
+   * The user's own note on the voucher (§8.39): a question for the
+   * accountant or a reminder. It reports nothing and is printed only in the
+   * journal of the retention and audit packages.
+   */
+  note?: string
+  /** Marked by the user as still to check (§8.39). Reports nothing; the checks list it. */
+  toCheck?: true
+  /**
+   * Set on the reversal that writes off an unpaid sale as a credit loss
+   * (§6.18). `reverses` names the sale. Only on income.
+   */
+  creditLoss?: true
 }
 
 /** A category (luokka) the user books entries to. */

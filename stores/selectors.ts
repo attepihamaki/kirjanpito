@@ -101,7 +101,7 @@ function ledgerValue(
   }
 }
 
-/** The entry's own fields: voucher number, description and category (§8.4). */
+/** The entry's own fields: voucher number, description, category, tags and note (§8.4). */
 function matchesFields(
   e: Entry,
   needle: string,
@@ -114,7 +114,8 @@ function matchesFields(
     (e.voucher !== undefined && String(e.voucher) === needle) ||
     e.description.toLowerCase().includes(needle) ||
     name.toLowerCase().includes(needle) ||
-    (e.tags ?? []).some((t) => t.toLowerCase().includes(needle))
+    (e.tags ?? []).some((t) => t.toLowerCase().includes(needle)) ||
+    (!!e.note && e.note.toLowerCase().includes(needle))
   )
 }
 

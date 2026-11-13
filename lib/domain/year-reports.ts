@@ -210,9 +210,15 @@ function entryCells(
   const showCat =
     catLabel !== null &&
     (withAccount || !row.line || catLabel !== f.lineName(row.line))
+  /* The journal carries the user's note, for the accountant who reads the package (§8.39). */
+  const note =
+    withAccount && entry.note
+      ? `${f.t("entry.note")}: ${entry.note.replace(/\s*\n\s*/g, " / ")}`
+      : null
   const description = [
     entry.description || f.t("ledger.noDescription"),
     showCat ? catLabel : null,
+    note,
   ]
     .filter((s): s is string => s !== null)
     .join("\n")
