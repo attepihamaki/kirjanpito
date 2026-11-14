@@ -312,3 +312,88 @@ describe("tax widget", () => {
     expect(flat(tax.textContent)).toContain("406,67 € / kk · 24,4 %")
   })
 })
+
+describe("safe-to-withdraw widget", () => {
+  /* Hidden by default, so `loadShown` shows it with every other widget. */
+  const loadShown = (
+    overrides: Partial<ReturnType<typeof useBookStore.getState>> = {}
+  ) =>
+    load({
+      overviewLayout: DEFAULT_LAYOUT.map((w) => ({ ...w, hidden: false })),
+      ...overrides,
+    })
+
+  it("starts hidden", () => {
+    load()
+    mount()
+    expect(
+      screen.queryByText(/Anna pankkitilin saldo Pankkitili-kortissa/)
+    ).toBeNull()
+  })
+
+  const big = (el: HTMLElement) =>
+    flat(el.querySelector(".text-4xl")?.textContent ?? "")
+
+  it("points at the bank balance until one is given", () => {
+    loadShown()
+    mount()
+    expect(
+      screen.getByText(/Anna pankkitilin saldo Pankkitili-kortissa/)
+    ).toBeInTheDocument()
+  })
+
+  it("lists every line, says which estimates are missing and keeps the buffer back", async () => {
+    vi.useRealTimers()
+    vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true })
+    vi.setSystemTime(new Date(2026, 9, 31, 9, 0))
+    loadShown({ bankBalance: { amount: 1_000_000, date: "2026-10-31" } })
+    mount()
+    const user = userEvent.setup()
+
+    const card = widget(/Voit nostaa arviolta/)
+    const text = flat(card.textContent)
+    expect(text).toContain("Pankkitili arviolta")
+    expect(text).toContain("ALV maksamatta")
+    expect(text).toContain("Maksamattomat ostolaskut")
+    expect(text).toContain("Ei arviota")
+    expect(text).toContain("Ei YEL-tuloa")
+    const before = big(card)
+
+    await user.click(screen.getByRole("button", { name: "Muuta puskuria" }))
+    await user.type(screen.getByLabelText("Puskuri (€)"), "500")
+    await user.click(screen.getByRole("button", { name: "Tallenna puskuri" }))
+
+    expect(useBookStore.getState().withdrawBuffer).toBe(50_000)
+    expect(useBookStore.getState().dirty).toBe(true)
+    const cents = (s: string) => Number(s.replace(/[^\d]/g, ""))
+    expect(cents(before) - cents(big(widget(/Voit nostaa arviolta/)))).toBe(
+      50_000
+    )
+  })
+
+  it("never shows less than 0, and gives the shortfall instead", () => {
+    loadShown({
+      bankBalance: { amount: 10_000, date: "2026-10-31" },
+      withdrawBuffer: 100_000,
+    })
+    mount()
+    const card = widget(/Voit nostaa arviolta/)
+    expect(big(card)).toBe("0,00 €")
+    expect(flat(card.textContent)).toMatch(/Varaukset ylittävät saldon/)
+  })
+
+  it("opens a withdrawal voucher dated today", async () => {
+    loadShown({ bankBalance: { amount: 1_000_000, date: "2026-10-31" } })
+    mount()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    await user.click(
+      screen.getByRole("button", { name: "Kirjaa yksityisotto" })
+    )
+    const dialog = useBookStore.getState().dialog
+    expect(dialog).toMatchObject({
+      kind: "entry",
+      mode: "new",
+      prefill: { catId: "owner-withdrawal", date: "2026-10-31" },
+    })
+  })
+})

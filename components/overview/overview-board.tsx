@@ -43,6 +43,7 @@ import { ResultWidget } from "@/components/overview/result-widget"
 import { TaxWidget } from "@/components/overview/tax-widget"
 import { CashflowWidget } from "@/components/overview/cashflow-widget"
 import { VatWidget } from "@/components/overview/vat-widget"
+import { WithdrawWidget } from "@/components/overview/withdraw-widget"
 import {
   moveWidget,
   normalizeLayout,
@@ -62,6 +63,7 @@ const WIDGETS: Record<
   tax: { title: "overview.widgetTax", Component: TaxWidget },
   vat: { title: "overview.widgetVat", Component: VatWidget },
   bank: { title: "overview.widgetBank", Component: BankWidget },
+  withdraw: { title: "overview.widgetWithdraw", Component: WithdrawWidget },
   cashflow: { title: "overview.widgetCashflow", Component: CashflowWidget },
   months: {
     title: "overview.widgetMonths",

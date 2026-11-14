@@ -117,6 +117,7 @@ function settings(): BookSettings {
     ],
     assetOpening: { year: 2026, amount: 300_000 },
     bankBalance: { amount: -12_345, date: "2026-10-31" },
+    withdrawBuffer: 50_000,
     payMonths: {
       yel: [1, 7],
       advanceTax: [2, 4, 6],
@@ -347,6 +348,19 @@ describe("settings.json", () => {
       ).billsIgnored
     ).toEqual(["party:p1@2026-11", "text:b"])
     expect(parseSettings(JSON.stringify({})).billsIgnored).toBeUndefined()
+  })
+
+  it("keeps a whole, non-negative withdrawal buffer and leaves it out at 0", () => {
+    const buffer = (value: unknown) =>
+      parseSettings(JSON.stringify({ withdrawBuffer: value })).withdrawBuffer
+    expect(buffer(50_000)).toBe(50_000)
+    expect(buffer(-1)).toBeUndefined()
+    expect(buffer(12.5)).toBeUndefined()
+    expect(buffer("500")).toBeUndefined()
+    const written = JSON.parse(
+      serializeSettings({ ...settings(), withdrawBuffer: 0 })
+    ) as Record<string, unknown>
+    expect(written).not.toHaveProperty("withdrawBuffer")
   })
 
   it("keeps saved bank layouts that can read a file, once per signature", () => {
@@ -608,6 +622,7 @@ describe("overview layout", () => {
       "tax",
       "vat",
       "bank",
+      "withdraw",
       "cashflow",
       "months",
       "sales",

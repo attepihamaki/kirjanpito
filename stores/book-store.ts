@@ -372,6 +372,8 @@ export interface BookState {
    * positive cents (§6.15). Saved in settings.json.
    */
   taxLosses: Record<string, Cents>
+  /** What the safe-to-withdraw figure always keeps in the bank (§8.12). Saved in settings.json. */
+  withdrawBuffer: Cents
   /** Year → ISO date its Form 5 was marked as filed (§8.8). Saved in settings.json. */
   form5Filed: Record<string, string>
   /**
@@ -606,6 +608,7 @@ export interface BookActions {
       bankMappings?: SavedBankMapping[]
       bankStatements?: StatementRecord[]
       taxLosses?: Record<string, Cents>
+      withdrawBuffer?: Cents
       form5Filed?: Record<string, string>
       archives?: Record<string, ArchiveStub>
       recurring?: RecurringEntry[]
@@ -701,6 +704,8 @@ export interface BookActions {
   unignoreBill(key: string): void
   /** Set the loss confirmed for a year, or clear it with null (§6.15). */
   setTaxLoss(year: number, amount: Cents | null): void
+  /** Set what the safe-to-withdraw figure keeps back (§8.12); 0 for none. */
+  setWithdrawBuffer(cents: Cents): void
   setForm5Filed(year: number, date: string | null): void
   /**
    * Take an archived year out of the working book (§8.19): drop its entries,
@@ -821,6 +826,7 @@ function initialState(): BookState {
     bankMappings: [],
     bankStatements: [],
     taxLosses: {},
+    withdrawBuffer: 0,
     form5Filed: {},
     archives: {},
     archiveYear: null,
@@ -912,6 +918,7 @@ type PersistedBook = Pick<
   | "bankMappings"
   | "bankStatements"
   | "taxLosses"
+  | "withdrawBuffer"
   | "form5Filed"
   | "archives"
   | "archiveYear"
@@ -1103,6 +1110,7 @@ const BOOK_DATA_KEYS: readonly (keyof BookState)[] = [
   "bankMappings",
   "bankStatements",
   "taxLosses",
+  "withdrawBuffer",
   "form5Filed",
   "archives",
   "recurring",
@@ -1210,6 +1218,7 @@ export const useBookStore = create<BookStore>()(
           bankMappings: [],
           bankStatements: [],
           taxLosses: {},
+          withdrawBuffer: 0,
           form5Filed: {},
           archives: {},
           recurring: [],
@@ -1327,6 +1336,7 @@ export const useBookStore = create<BookStore>()(
           bankMappings: [],
           bankStatements: [],
           taxLosses: {},
+          withdrawBuffer: 0,
           form5Filed: {},
           archives: {},
           recurring: [],
@@ -1401,6 +1411,7 @@ export const useBookStore = create<BookStore>()(
           bankMappings: s.bankMappings ?? [],
           bankStatements: s.bankStatements ?? [],
           taxLosses: s.taxLosses ?? {},
+          withdrawBuffer: s.withdrawBuffer ?? 0,
           form5Filed: s.form5Filed ?? {},
           archives: s.archives ?? {},
           archiveYear: next.archiveYear ?? null,
@@ -1692,6 +1703,11 @@ export const useBookStore = create<BookStore>()(
         else taxLosses[String(year)] = amount
         set({ taxLosses, dirty: true })
       },
+      setWithdrawBuffer: (cents) => {
+        const withdrawBuffer = Math.max(0, Math.round(cents))
+        if (withdrawBuffer === get().withdrawBuffer) return
+        set({ withdrawBuffer, dirty: true })
+      },
       setOverviewLayout: (overviewLayout) =>
         set({ overviewLayout, dirty: true }),
       upsertRecurring: (template) => {
@@ -1924,6 +1940,7 @@ export const useBookStore = create<BookStore>()(
         bankMappings: s.bankMappings,
         bankStatements: s.bankStatements,
         taxLosses: s.taxLosses,
+        withdrawBuffer: s.withdrawBuffer,
         form5Filed: s.form5Filed,
         archives: s.archives,
         archiveYear: s.archiveYear,

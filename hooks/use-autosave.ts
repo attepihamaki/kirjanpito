@@ -47,6 +47,7 @@ export function useAutosave() {
   const yearsArchived = useBookStore((s) => s.yearsArchived)
   const retentionNoted = useBookStore((s) => s.retentionNoted)
   const taxLosses = useBookStore((s) => s.taxLosses)
+  const withdrawBuffer = useBookStore((s) => s.withdrawBuffer)
   const form5Filed = useBookStore((s) => s.form5Filed)
   const vatPeriod = useBookStore((s) => s.vatPeriod)
   const layout = useBookStore((s) => s.overviewLayout)
@@ -89,6 +90,7 @@ export function useAutosave() {
     yearsArchived,
     retentionNoted,
     taxLosses,
+    withdrawBuffer,
     form5Filed,
     vatPeriod,
     layout,

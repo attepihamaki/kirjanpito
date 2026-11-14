@@ -12,6 +12,7 @@ const OVERVIEW_WIDGETS = [
   "tax",
   "vat",
   "bank",
+  "withdraw",
   "cashflow",
   "months",
   "sales",
@@ -36,13 +37,16 @@ export interface OverviewWidget {
  * chart is the one widget that also spans two rows when wide, beside sales
  * and expenses. The tax estimate starts hidden, since it needs details from
  * the user before it shows anything (§6.14), and so does the cash-flow
- * forecast, which is an estimate a user turns on when they want it.
+ * forecast, which is an estimate a user turns on when they want it. The
+ * safe-to-withdraw figure starts hidden too: it shows nothing until a bank
+ * balance is given.
  */
 export const DEFAULT_LAYOUT: readonly OverviewWidget[] = [
   { id: "result", size: "S", hidden: false },
   { id: "tax", size: "S", hidden: true },
   { id: "vat", size: "S", hidden: false },
   { id: "bank", size: "S", hidden: false },
+  { id: "withdraw", size: "S", hidden: true },
   { id: "cashflow", size: "L", hidden: true },
   { id: "months", size: "L", hidden: false },
   { id: "sales", size: "S", hidden: false },

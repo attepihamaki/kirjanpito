@@ -25,12 +25,10 @@ import {
   type TaxPayment,
 } from "@/lib/domain/cash-forecast"
 import { yearOf } from "@/lib/domain/dates"
+import { isUnfiled } from "@/lib/domain/safe-to-withdraw"
 import { taxCalendar } from "@/lib/domain/tax-calendar"
 import { bookStartDate } from "@/lib/domain/vat-deadline"
 import { useBookStore } from "@/stores/book-store"
-
-/** The VAT periods whose return is still to be paid. */
-const UNPAID = new Set(["overdue", "due", "open", "future"])
 
 /**
  * The cash-flow forecast (§8.12): the bank balance today carried through the
@@ -55,7 +53,7 @@ export function CashflowWidget() {
   const forecast = React.useMemo(() => {
     const { today, entries, catMap } = data
     const taxes: TaxPayment[] = data.timeline
-      .filter((p) => UNPAID.has(p.status))
+      .filter((p) => isUnfiled(p.status))
       .map((p) => ({
         kind: "vat" as const,
         date: p.due,

@@ -186,6 +186,7 @@ export async function restoreEarlierSave(
       retentionNoted: book.retentionNoted,
       billsIgnored: book.billsIgnored,
       taxLosses: book.taxLosses,
+      withdrawBuffer: book.withdrawBuffer,
       form5Filed: book.form5Filed,
       archives: book.archives,
       recurring: book.recurring,

@@ -135,6 +135,8 @@ export interface BookSettings {
   billsIgnored?: string[]
   /** Year (`"2024"`) → the loss confirmed in the assessment, in cents (§6.15). */
   taxLosses: Record<string, number>
+  /** What the safe-to-withdraw figure always keeps in the bank, in cents (§8.12). Absent means 0. */
+  withdrawBuffer?: number
   /** Year (`"2025"`) → ISO date its Form 5 was marked as filed (§8.8). */
   form5Filed: Record<string, string>
   /** Year (`"2025"`) → where its entries went when it was archived (§8.19). */
@@ -546,6 +548,13 @@ export function parseSettings(text: string): ParsedSettings {
     }
     out.taxLosses = losses
   }
+  if (
+    typeof raw.withdrawBuffer === "number" &&
+    Number.isSafeInteger(raw.withdrawBuffer) &&
+    raw.withdrawBuffer >= 0
+  ) {
+    out.withdrawBuffer = raw.withdrawBuffer
+  }
   if (isRecord(raw.form5Filed)) {
     const filed: Record<string, string> = {}
     for (const [key, date] of Object.entries(raw.form5Filed)) {
@@ -810,6 +819,7 @@ export function serializeSettings(s: BookSettings): string {
     changeLog: s.changeLog,
     ...(s.inbox?.length ? { inbox: s.inbox } : {}),
     ...(s.billsIgnored?.length ? { billsIgnored: s.billsIgnored } : {}),
+    ...(s.withdrawBuffer ? { withdrawBuffer: s.withdrawBuffer } : {}),
     ...(s.bankMappings?.length ? { bankMappings: s.bankMappings } : {}),
     ...(s.bankStatements?.length ? { bankStatements: s.bankStatements } : {}),
   }

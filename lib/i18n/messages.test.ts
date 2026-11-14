@@ -83,6 +83,7 @@ describe("dictionary integrity", () => {
       "taxEstimate",
       "vat",
       "viewer",
+      "withdraw",
     ]
     for (const key of Object.keys(MESSAGES)) {
       expect(key, key).toMatch(/^[a-z][A-Za-z]*\.[a-z][A-Za-z0-9]*$/)

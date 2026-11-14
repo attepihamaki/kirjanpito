@@ -3,6 +3,7 @@ import {
   type IncomeTaxRow,
   type RuleTables,
 } from "@/lib/domain/rule-tables"
+import { lossAvailable, type LossInput } from "@/lib/domain/tax-loss"
 import type { Cents } from "@/lib/domain/types"
 
 /**
@@ -210,4 +211,54 @@ export function estimateIncomeTax(
 export function yearPace(profit: Cents, elapsedMonths: number): Cents {
   if (elapsedMonths <= 0 || elapsedMonths >= 12) return profit
   return Math.round((profit / elapsedMonths) * 12)
+}
+
+/** What the tax widget and the safe-to-withdraw figure read (§6.14, §8.12). */
+export interface BusinessTaxFigures {
+  /** On the profit to date. */
+  toDate: IncomeTaxEstimate
+  /** On the whole year at the same pace, or null for a year not in progress. */
+  pace: IncomeTaxEstimate | null
+  yel: YelEstimate | null
+  /** Advance tax booked for the year (line 365). */
+  paid: Cents
+  /** The year's tax less `paid`: positive is still to set aside, negative is covered. */
+  left: Cents
+}
+
+/**
+ * The year's business tax from its result to date, after the losses carried
+ * forward (§6.15), set against the advance tax booked. The whole year at the
+ * same pace is the target while the year is in progress, the result to date
+ * once it is over. Null without a municipal rate.
+ */
+export function businessTaxFigures(input: {
+  result: Cents
+  elapsedMonths: number
+  profile: TaxProfile
+  row: IncomeTaxRow
+  paid: Cents
+  losses: LossInput
+  year: number
+}): BusinessTaxFigures | null {
+  const { result, elapsedMonths, profile, row, paid, losses, year } = input
+  const afterLosses = (profit: Cents) =>
+    profit - lossAvailable(losses, year, profit)
+  const toDate = estimateIncomeTax(afterLosses(result), profile, row)
+  if (!toDate) return null
+  const pace =
+    elapsedMonths > 0 && elapsedMonths < 12
+      ? estimateIncomeTax(
+          afterLosses(yearPace(result, elapsedMonths)),
+          profile,
+          row
+        )
+      : null
+  return {
+    toDate,
+    pace,
+    yel: estimateYel(profile, row),
+    paid,
+    left: (pace ?? toDate).businessTax - paid,
+  }
 }

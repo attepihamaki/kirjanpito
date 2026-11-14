@@ -329,6 +329,12 @@ const VIEW_TOPICS: Record<string, HelpTopic> = {
       en: "The app cannot see your bank. The estimate is the balance you typed in plus the vouchers paid since. Taxes and other payments that are not booked are missing.",
     },
   },
+  "overview.withdraw": {
+    text: {
+      fi: "Pankkitilin arvio, josta on vähennetty maksamaton ALV, tämän vuoden tulovero, jota ennakkovero ei vielä kata, seuraava YEL-maksu, maksamattomat ostolaskut ja oma puskurisi. ALV-palautuksia ja avoimia myyntilaskuja ei lisätä, ennen kuin raha on tilillä.",
+      en: "The bank estimate less the VAT not yet paid, this year's income tax that the advance tax does not cover yet, the next YEL premium, unpaid bills and your own buffer. VAT refunds and open sales invoices are not added until the money is in the account.",
+    },
+  },
   "ledger.vat": {
     text: {
       fi: "Tositteen arvonlisävero. Myynnistä se on veroa, jonka tilität Verohallinnolle, ja ostosta veroa, jonka saat yleensä vähentää. Osittain vähennettävässä ostossa vähennys on vain yrityksen osuus.",

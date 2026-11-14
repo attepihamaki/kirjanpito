@@ -9,13 +9,7 @@ import { Panel } from "@/components/common/panel"
 import { useFormatters } from "@/components/lang-provider"
 import { useOverviewData } from "@/components/overview/overview-data"
 import { advanceTaxPaid } from "@/lib/domain/advance-tax"
-import {
-  estimateIncomeTax,
-  estimateYel,
-  incomeTaxRow,
-  yearPace,
-} from "@/lib/domain/income-tax"
-import { lossAvailable } from "@/lib/domain/tax-loss"
+import { businessTaxFigures, incomeTaxRow } from "@/lib/domain/income-tax"
 import { SETTINGS_ROUTES } from "@/lib/site"
 import { useLossInput } from "@/hooks/use-loss-input"
 import { useBookStore } from "@/stores/book-store"
@@ -34,29 +28,21 @@ export function TaxWidget() {
   const row = incomeTaxRow(year)
   const losses = useLossInput()
 
-  const figures = React.useMemo(() => {
-    if (!row) return null
-    /* Earlier confirmed losses come off the profit first (§6.15). */
-    const afterLosses = (profit: number) =>
-      profit - lossAvailable(losses, year, profit)
-    const toDate = estimateIncomeTax(
-      afterLosses(statement.result),
-      profile,
+  const figures = React.useMemo(
+    () =>
       row
-    )
-    if (!toDate) return null
-    const pace = estimateIncomeTax(
-      afterLosses(yearPace(statement.result, elapsedMonths)),
-      profile,
-      row
-    )
-    return {
-      toDate,
-      pace: elapsedMonths > 0 && elapsedMonths < 12 ? pace : null,
-      yel: estimateYel(profile, row),
-      paid: advanceTaxPaid(entries, year),
-    }
-  }, [row, statement.result, profile, elapsedMonths, entries, year, losses])
+        ? businessTaxFigures({
+            result: statement.result,
+            elapsedMonths,
+            profile,
+            row,
+            paid: advanceTaxPaid(entries, year),
+            losses,
+            year,
+          })
+        : null,
+    [row, statement.result, profile, elapsedMonths, entries, year, losses]
+  )
 
   const settingsLink = (label: string) => (
     <ButtonLink
@@ -83,9 +69,7 @@ export function TaxWidget() {
     )
   }
 
-  const { toDate, pace, yel, paid } = figures
-  const target = (pace ?? toDate).businessTax
-  const left = target - paid
+  const { toDate, pace, yel, paid, left } = figures
   const p = toDate.parts
 
   return (
