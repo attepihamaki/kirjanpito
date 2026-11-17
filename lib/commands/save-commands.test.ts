@@ -840,15 +840,25 @@ describe("another book taking over during a save (§7.5)", () => {
   const OTHER_CSV =
     "date;description;type;account;category;amount;vat\n2026-02-01;Toinen;kulu;333;;1,00;0\n"
 
-  /** A linked ZIP whose write waits until the test lets it finish. */
+  /**
+   * A linked ZIP whose write waits until the test lets it finish. `started`
+   * settles once the save has packed the book and reached the write, which
+   * takes as long as the machine makes it, so a test waits on it and not on a
+   * timer.
+   */
   function slowZip() {
     const handle = fakeHandle("kirjanpito.zip")
     let finish = () => {}
+    let start = () => {}
     const gate = new Promise<void>((resolve) => {
       finish = resolve
     })
+    const started = new Promise<void>((resolve) => {
+      start = resolve
+    })
     handle.createWritable.mockImplementation(async () => ({
       write: async (blob: Blob) => {
+        start()
         await gate
         handle.written.push(blob)
       },
@@ -858,10 +868,8 @@ describe("another book taking over during a save (§7.5)", () => {
       abort: async () => {},
     }))
     linkZip(handle)
-    return { handle, finish }
+    return { handle, finish, started }
   }
-
-  const tick = () => new Promise((resolve) => setTimeout(resolve, 20))
 
   beforeEach(() => {
     vi.unstubAllGlobals()
@@ -876,11 +884,11 @@ describe("another book taking over during a save (§7.5)", () => {
   })
 
   it("leaves a file opened meanwhile linked to itself", async () => {
-    const { handle, finish } = slowZip()
+    const { handle, finish, started } = slowZip()
     const other = fakeHandle("toinen.csv")
 
     const saving = saveBook(ctx, "kirjanpito")
-    await tick()
+    await started
     await openFile(
       ctx,
       new File([OTHER_CSV], other.name, { lastModified: 5000 }),
@@ -900,10 +908,10 @@ describe("another book taking over during a save (§7.5)", () => {
   })
 
   it("does not link a closed book's file again", async () => {
-    const { finish } = slowZip()
+    const { finish, started } = slowZip()
 
     const saving = saveBook(ctx, "kirjanpito")
-    await tick()
+    await started
     useBookStore.getState().closeBook()
     finish()
     await saving
@@ -915,12 +923,12 @@ describe("another book taking over during a save (§7.5)", () => {
   })
 
   it("holds for autosave too", async () => {
-    const { finish } = slowZip()
+    const { finish, started } = slowZip()
     const other = fakeHandle("toinen.csv")
     useBookStore.setState({ autosave: true })
 
     const saving = autosaveBook(ctx)
-    await tick()
+    await started
     await openFile(
       ctx,
       new File([OTHER_CSV], other.name, { lastModified: 5000 }),
@@ -944,7 +952,7 @@ describe("another book taking over during a save (§7.5)", () => {
     )
 
     const saving = saveBook(ctx, "kirjanpito")
-    await tick()
+    await vi.waitFor(() => expect(handle.queryPermission).toHaveBeenCalled())
     useBookStore.getState().newBook(2026, "fi")
     grant("granted")
     await saving
