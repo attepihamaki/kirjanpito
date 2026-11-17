@@ -19,7 +19,7 @@ import type { BankBalance } from "@/lib/domain/bank-balance"
 import {
   parseSavedMappings,
   type SavedBankMapping,
-} from "@/lib/domain/bank-csv"
+} from "@/lib/domain/bank-mapping"
 import {
   parseStatementRecords,
   type StatementRecord,
