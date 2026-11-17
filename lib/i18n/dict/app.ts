@@ -701,6 +701,20 @@ export const APP_DICT = {
       "{n} expenses over the small purchase limit"
     ),
   ],
+  "overview.smallPurchaseCap": [
+    pl(
+      "1 kulu pienhankintojen vuosirajan jälkeen",
+      "{n} kulua pienhankintojen vuosirajan jälkeen"
+    ),
+    pl(
+      "1 expense past the yearly small purchase limit",
+      "{n} expenses past the yearly small purchase limit"
+    ),
+  ],
+  "overview.smallPurchaseCapSub": [
+    "Rivin 344 kulut, joista jokainen on enintään 1 200 euroa, ylittävät vuodessa 3 600 euroa. Jos näiden joukossa on laitteita, niitä voi vähentää heti vain 3 600 euroon asti. Loput poistetaan, ellei laitteen käyttöikä ole enintään 3 vuotta.",
+    "Costs on line 344 of up to 1,200 euros each add up to over 3,600 euros this year. If some of them are equipment, only 3,600 euros of it can be deducted at once. The rest is depreciated, unless the equipment lasts 3 years or less.",
+  ],
   "overview.toCheck": [
     pl(
       "1 tosite merkitty tarkistettavaksi",
@@ -1363,6 +1377,10 @@ export const APP_DICT = {
   "ledger.largeExpense": [
     "Suuri hankinta kirjattu kuluksi",
     "Large purchase booked as an expense",
+  ],
+  "ledger.smallPurchaseCap": [
+    "Pienhankintojen vuoden raja ylittyy",
+    "Past the yearly small purchase limit",
   ],
   "ledger.copyAsNew": ["Kopioi", "Copy"],
   "ledger.deleteEntry": ["Poista tosite", "Delete voucher"],
@@ -2756,8 +2774,8 @@ export const APP_DICT = {
   "assets.tab": ["Poistot", "Depreciation"],
   "assets.title": ["Koneet ja kalusto {y}", "Machinery and equipment {y}"],
   "assets.intro": [
-    "Yli kolme vuotta käytettävä tai yli 1 200 euron hankinta kirjataan luokkaan ”Koneiden ja kaluston hankinta”. Sen arvonlisävero tulee ALV-ilmoitukselle, mutta kulu vähennetään poistoina. Poisto on enintään 25 % menojäännöksestä, ja 1 200 euron tai pienemmän menojäännöksen voi poistaa kerralla.",
-    "A purchase with a life of over three years or a price over €1,200 goes on the “Purchase of machinery and equipment” category. Its VAT counts on the VAT return, but the cost is deducted as depreciation. Depreciation is at most 25% of the undepreciated balance, and a balance of €1,200 or less can be written off at once.",
+    "Yli 1 200 euron hankinta, jota käytetään yli kolme vuotta, kirjataan luokkaan ”Koneiden ja kaluston hankinta”. Samaan luokkaan kuuluu myös pienhankinta, joka ylittää 3 600 euron vuosirajan ja jota käytetään yli kolme vuotta. Sen arvonlisävero tulee ALV-ilmoitukselle, mutta kulu vähennetään poistoina. Poisto on enintään 25 % menojäännöksestä. Kun koko menojäännös on 1 200 euroa tai vähemmän, sen voi poistaa kerralla.",
+    "A purchase over €1,200 that is used for more than three years goes on the “Purchase of machinery and equipment” category, and so does a small purchase that goes beyond the €3,600 yearly limit and is used for more than three years. Its VAT counts on the VAT return, but the cost is deducted as depreciation. Depreciation is at most 25% of the undepreciated balance. When the whole balance is €1,200 or less, it can be written off at once.",
   ],
   "assets.smallNote": [
     "Pienhankinnan (enintään 1 200 euroa, yhteensä enintään 3 600 euroa vuodessa) ja enintään kolme vuotta käytettävän hankinnan voi kirjata suoraan kuluksi. Rivin 337 tositteet luetaan tämän menojäännöksen poistoiksi. Rakennukset ja muu poistettava omaisuus eivät kuulu tähän laskelmaan.",

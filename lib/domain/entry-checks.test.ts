@@ -380,6 +380,69 @@ describe("largeExpense", () => {
   })
 })
 
+describe("smallPurchaseCap", () => {
+  const cost = (id: string, euros: number, date = "2026-03-01") =>
+    entry({
+      id,
+      date,
+      catId: "344-other",
+      amount: euros * 100,
+      amountMode: "net",
+    })
+
+  it("flags the costs after the year's total passes the cap", () => {
+    const rows = [
+      cost("a", 1200, "2026-01-01"),
+      cost("b", 1200, "2026-02-01"),
+      cost("c", 1200, "2026-03-01"),
+      cost("d", 100, "2026-04-01"),
+      cost("e", 50, "2026-05-01"),
+    ]
+    expect(flagged("smallPurchaseCap", rows).sort()).toEqual(["d", "e"])
+  })
+
+  it("flags nothing while the total stays at the cap", () => {
+    const rows = [cost("a", 1200), cost("b", 1200), cost("c", 1200)]
+    expect(flagged("smallPurchaseCap", rows)).toEqual([])
+  })
+
+  it("leaves a cost above the item limit out of the total", () => {
+    const rows = [cost("a", 1201), cost("b", 3600)]
+    expect(flagged("smallPurchaseCap", rows)).toEqual([])
+  })
+
+  it("leaves other lines, EU purchases and credit notes out", () => {
+    const rows = [
+      cost("a", 1200, "2026-01-01"),
+      cost("b", 1200, "2026-02-01"),
+      cost("c", 1200, "2026-03-01"),
+      { ...cost("d", 500, "2026-04-01"), catId: "333" },
+      { ...cost("e", 500, "2026-05-01"), euPurchase: "services" as const },
+      { ...cost("f", 500, "2026-06-01"), reverses: "a" },
+    ]
+    expect(flagged("smallPurchaseCap", rows)).toEqual([])
+  })
+
+  it("compares the amount without VAT", () => {
+    const gross = (id: string, date: string) =>
+      entry({
+        id,
+        date,
+        catId: "344-other",
+        amount: 150_000,
+        amountMode: "gross",
+      })
+    // 1 500 € with 25.5 % VAT is about 1 195 € net, so each is within the item limit.
+    const rows = [
+      gross("a", "2026-01-01"),
+      gross("b", "2026-02-01"),
+      gross("c", "2026-03-01"),
+      gross("d", "2026-04-01"),
+    ]
+    expect(flagged("smallPurchaseCap", rows)).toEqual(["d"])
+  })
+})
+
 describe("lateCash", () => {
   const added = (entryId: string, at: string) => ({
     at,

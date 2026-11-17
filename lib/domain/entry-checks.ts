@@ -27,6 +27,7 @@ export type EntryCheck =
   | "lateCash"
   | "smallAsset"
   | "largeExpense"
+  | "smallPurchaseCap"
 
 export const ENTRY_CHECKS: readonly EntryCheck[] = [
   "toCheck",
@@ -41,6 +42,7 @@ export const ENTRY_CHECKS: readonly EntryCheck[] = [
   "lateCash",
   "smallAsset",
   "largeExpense",
+  "smallPurchaseCap",
 ]
 
 /**
@@ -424,6 +426,36 @@ export const ENTRY_RULES = defineRules<EntryCheckContext, string>([
         calcEntry(e).net > limitOn("smallPurchaseItem", e.date)
     )
   ),
+  entryRule("smallPurchaseCap", "vero.fi, Poistot ja pienhankinnat", (ctx) => {
+    /*
+     * Small purchases may be deducted at once only up to the year's cap
+     * (EVL 33 §). Line 344 "other" is where they are booked as costs, but it
+     * holds services too, and the app cannot tell which entries are
+     * equipment. So the check adds up every line 344 cost that is within the
+     * item limit, in date order, and flags the ones after the cap is passed.
+     * It is a hint only: the user knows which of them are equipment.
+     * EU purchases on that line are services, and credit notes reverse a
+     * purchase and are not one.
+     */
+    const costs = ctx.entries
+      .filter(
+        (e) =>
+          e.type === "expense" &&
+          ctx.cats.get(e.catId)?.line === "344-other" &&
+          !e.euPurchase &&
+          !e.reverses
+      )
+      .map((e) => ({ id: e.id, date: e.date, net: calcEntry(e).net }))
+      .filter((p) => p.net > 0 && p.net <= limitOn("smallPurchaseItem", p.date))
+      .sort((a, b) => a.date.localeCompare(b.date))
+    const out: string[] = []
+    let total = 0
+    for (const p of costs) {
+      total += p.net
+      if (total > limitOn("smallPurchaseYear", p.date)) out.push(p.id)
+    }
+    return out
+  }),
 ])
 
 /**

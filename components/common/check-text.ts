@@ -44,6 +44,10 @@ export const CHECK_TEXT = {
     title: "overview.largeExpense",
     sub: "overview.largeExpenseSub",
   },
+  smallPurchaseCap: {
+    title: "overview.smallPurchaseCap",
+    sub: "overview.smallPurchaseCapSub",
+  },
 } as const satisfies Record<EntryCheck, { title: string; sub: string }>
 
 /**
@@ -54,4 +58,5 @@ export const CHECK_TEXT = {
 export const INFO_CHECKS: ReadonlySet<EntryCheck> = new Set([
   "smallAsset",
   "largeExpense",
+  "smallPurchaseCap",
 ])

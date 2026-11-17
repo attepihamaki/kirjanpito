@@ -78,6 +78,7 @@ const CHECK_LABEL = {
   lateCash: "ledger.lateCash",
   smallAsset: "ledger.smallAsset",
   largeExpense: "ledger.largeExpense",
+  smallPurchaseCap: "ledger.smallPurchaseCap",
 } as const satisfies Record<EntryCheck, string>
 
 const NO_IDS: ReadonlySet<string> = new Set()
