@@ -5902,6 +5902,10 @@ export const APP_DICT = {
     "The booked stock change is {a}, but the list now gives {b}.",
   ],
   "inbox.tab": ["Saapuneet", "Inbox"],
+  "inbox.linkWaiting": [
+    pl("Saapuneet, 1 tosite odottaa", "Saapuneet, {n} tositetta odottaa"),
+    pl("Inbox, 1 receipt waiting", "Inbox, {n} receipts waiting"),
+  ],
   "reconcile.tab": ["Täsmäytys", "Reconciliation"],
   "reconcile.subtitle": [
     "Pankin tiliotteet {y} verrattuna kirjanpitoon",

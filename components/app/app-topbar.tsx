@@ -4,6 +4,7 @@ import { PanelLeftIcon, SearchIcon } from "lucide-react"
 
 import { FileMenu } from "@/components/app/file-menu"
 import { SavedClock } from "@/components/app/file-status"
+import { InboxLink } from "@/components/app/inbox-link"
 import { LangToggle } from "@/components/app/lang-toggle"
 import { MessagesButton } from "@/components/app/messages-button"
 import { ThemeToggle } from "@/components/app/theme-toggle"
@@ -73,6 +74,7 @@ export function AppTopbar({
 
         <div className="ml-auto flex items-center gap-2">
           <SavedClock />
+          <InboxLink />
           <ThemeToggle />
           <LangToggle />
           <MessagesButton />
