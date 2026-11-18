@@ -16,16 +16,15 @@ import type { Cents } from "@/lib/domain/types"
  * and says nothing about entries. Matching and booking live elsewhere.
  */
 
-/** One transaction of a statement. The amount is signed: money in is positive. */
 export {
   mappingComplete,
   MAX_MAPPING_NAME,
-  parseSavedMappings,
   type BankField,
   type BankMapping,
   type SavedBankMapping,
 } from "@/lib/domain/bank-mapping"
 
+/** One transaction of a statement. The amount is signed: money in is positive. */
 export interface BankRow {
   /** Booking date, ISO. */
   date: string
