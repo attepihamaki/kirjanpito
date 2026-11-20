@@ -75,7 +75,7 @@ jobs:
             pr=$(gh pr list --repo "$REPO" --state open --json number,headRefName \
               --jq "map(select(.headRefName | startswith(\"claude/issue-$NUMBER-\"))) | .[0].number // empty")
             if [ -n "$pr" ]; then
-              gh issue comment "$NUMBER" --repo "$REPO" --body "Pull request #$pr is already open for this issue. Comment there with @claude so the change lands on the same branch; a run started here would begin a new branch from main."
+              gh issue comment "$NUMBER" --repo "$REPO" --body "Pull request #$pr is already open for this issue. Comment there with \`@claude\` so the change lands on the same branch; a run started here would begin a new branch from main."
               skip=true
             fi
           fi
@@ -150,7 +150,8 @@ jobs:
             gh label create model:sonnet --repo "$REPO" --color 1d76db --description "Claude runs on Sonnet 5.5" --force >/dev/null
             gh issue edit "$NUMBER" --repo "$REPO" --add-label "model:$model" >/dev/null
             gh issue comment "$NUMBER" --repo "$REPO" --body "Model: **$model** (\`model:$model\`). $reason
-          To switch, change the label; it applies from the next @claude run."
+
+          To switch, change the label; it applies from the next \`@claude\` run."
           fi
           echo "model=$model" >> "$GITHUB_OUTPUT"
 
@@ -235,11 +236,11 @@ jobs:
           body="Closes #$NUMBER
 
           Implemented by Claude on \`model:$MODEL\`; the issue has the discussion and the run summary.
-          To request changes, comment on this pull request with @claude, or start a review whose summary mentions @claude."
+          To request changes, comment on this pull request with \`@claude\`, or start a review whose summary mentions \`@claude\`."
 
           if ! url=$(gh pr create --repo "$REPO" --draft --base "$BASE" --head "$BRANCH" --title "$title" --body "$body"); then
             echo "::error::Could not open the pull request. Enable Settings → Actions → General → Allow GitHub Actions to create and approve pull requests."
             exit 1
           fi
           gh pr edit "$url" --repo "$REPO" --add-label "model:$MODEL"
-          gh issue comment "$NUMBER" --repo "$REPO" --body "Opened draft pull request $url. Review it there; a comment with @claude on the pull request continues on the same branch."
+          gh issue comment "$NUMBER" --repo "$REPO" --body "Opened draft pull request $url. Review it there; a comment with \`@claude\` on the pull request continues on the same branch."
