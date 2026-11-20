@@ -1,11 +1,10 @@
 # Runs the same checks as the deploy, on every pull request and on every push
 # to a Claude branch, so a change is known to pass before it is merged.
 #
-# Claude's branches are checked on push. Their pull requests are opened by the
-# workflow token, and GitHub holds a pull request run that token starts for
-# approval; the push run attaches its result to the same head commit, so it
-# shows on the pull request without one. The pull request trigger skips those
-# branches so each commit is checked once.
+# Claude's branches are checked on push, so a branch is checked before anyone
+# opens a pull request from it. The push run attaches its result to the head
+# commit, so it also shows on that pull request, and the pull request trigger
+# skips those branches so each commit is checked once.
 #
 # `workflow_dispatch` checks a branch on demand, when that branch's copy of
 # this file has the trigger; an older branch is brought up to date with `gh
