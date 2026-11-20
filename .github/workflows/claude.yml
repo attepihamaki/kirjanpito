@@ -2,9 +2,9 @@
 # CLAUDE.md §2d; in short:
 #
 #   1. A developer opens an issue, or comments on one, with @claude.
-#   2. `route` picks the model: a `model:opus` or `model:sonnet` label wins;
-#      without one, a short read-only Claude run classifies the task, and the
-#      label it chose is added so the developer can see and change it.
+#   2. `model-route` picks the model: a `model:opus` or `model:sonnet` label
+#      wins; without one, a short read-only Claude run classifies the task,
+#      and the label it chose is added so the developer can see and change it.
 #   3. `claude` does the work on a new `claude/issue-N-…` branch, runs
 #      `npm run check`, and reports in the issue with the action's
 #      "Create PR" link. If the task is unclear it asks numbered questions and
@@ -25,7 +25,7 @@ on:
   issues:
     types: [opened]
   # issue_comment runs with write access on comments from anyone, which is
-  # why zizmor flags it. Here `route` lets only the owner, members and
+  # why zizmor flags it. Here `model-route` lets only the owner, members and
   # collaborators through, the action checks write access again, and its
   # restrict_untrusted_prs default keeps a stranger's pull request from
   # running its own code with that access.
@@ -39,7 +39,8 @@ on:
 permissions: {}
 
 jobs:
-  route:
+  model-route:
+    name: Model route
     # The repository is public: only the owner, members and collaborators may
     # start a run. The action checks write access itself, but only after this
     # job has already labelled and commented, so the gate is here as well.
@@ -154,12 +155,12 @@ jobs:
           echo "model=$model" >> "$GITHUB_OUTPUT"
 
   claude:
-    needs: route
+    needs: model-route
     runs-on: ubuntu-latest
     timeout-minutes: 60
     # One run at a time per issue or pull request, so two runs never push to the same branch.
     concurrency:
-      group: claude-${{ needs.route.outputs.number }}
+      group: claude-${{ needs.model-route.outputs.number }}
       cancel-in-progress: false
     permissions:
       contents: write
@@ -194,7 +195,7 @@ jobs:
           additional_permissions: |
             actions: read
           claude_args: |
-            --model claude-${{ needs.route.outputs.model }}-5-5
+            --model claude-${{ needs.model-route.outputs.model }}-5-5
             --max-turns 80
             --allowedTools "Bash(npm run check),Bash(npm run test),Bash(npm run typecheck),Bash(npm run lint),Bash(npm run format),Bash(npm run format:check),Bash(npm run docs:check),Bash(npm run unused),Bash(npm run build),Bash(npx vitest run *),Bash(git status),Bash(git diff *),Bash(git log *)"
             --append-system-prompt "You are running unattended in GitHub Actions for the kirjanpito repository. A developer reads your comments and makes every decision; you implement them.
