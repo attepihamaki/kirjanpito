@@ -1,0 +1,57 @@
+# Opens an issue a month before CLAUDE_CODE_OAUTH_TOKEN expires. The token
+# from `claude setup-token` lasts one year, and every Claude run fails once it
+# has expired (CLAUDE.md §2d).
+#
+# The expiry date is the repository variable CLAUDE_TOKEN_EXPIRES (YYYY-MM-DD),
+# set when the token is created:
+#   gh variable set CLAUDE_TOKEN_EXPIRES --body 2027-11-19
+name: Claude token reminder
+
+on:
+  schedule:
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      EXPIRES: ${{ vars.CLAUDE_TOKEN_EXPIRES }}
+    steps:
+      - name: Open the issue when the token expires within 30 days
+        run: |
+          set -euo pipefail
+          if [ -z "$EXPIRES" ]; then
+            echo "::warning::Set the repository variable CLAUDE_TOKEN_EXPIRES (YYYY-MM-DD) to the expiry date of CLAUDE_CODE_OAUTH_TOKEN."
+            exit 0
+          fi
+          if ! expires=$(date -u -d "$EXPIRES" +%s 2>/dev/null); then
+            echo "::error::CLAUDE_TOKEN_EXPIRES is not a date: $EXPIRES"
+            exit 1
+          fi
+          days=$(( (expires - $(date -u +%s)) / 86400 ))
+          echo "The token expires in $days days."
+          if [ "$days" -gt 30 ]; then
+            exit 0
+          fi
+
+          title="Renew the Claude Code token (expires $EXPIRES)"
+          open=$(gh issue list --repo "$REPO" --state open --search "\"$title\" in:title" --json number --jq length)
+          if [ "$open" != 0 ]; then
+            exit 0
+          fi
+          gh issue create --repo "$REPO" --title "$title" --body-file - <<'EOF'
+          The subscription token that the Claude workflow signs in with expires soon. Every Claude run fails after that date.
+
+          1. On your own machine, run `claude setup-token` and copy the token it prints.
+          2. Replace the secret: `gh secret set CLAUDE_CODE_OAUTH_TOKEN` and paste the token.
+          3. Record the new expiry date, one year from today: `gh variable set CLAUDE_TOKEN_EXPIRES --body YYYY-MM-DD`
+          4. Close this issue.
+          EOF

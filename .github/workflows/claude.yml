@@ -13,7 +13,8 @@
 #   5. Review happens on the pull request: a comment or review containing
 #      @claude makes Claude continue on the same branch.
 #
-# Only users with write access can trigger a run (the action checks it).
+# Only the owner, members and collaborators can start a run; the action also
+# checks that the user has write access.
 # Runs are authenticated with the CLAUDE_CODE_OAUTH_TOKEN secret, a one-year
 # subscription token from `claude setup-token`.
 #
@@ -35,11 +36,16 @@ permissions: {}
 
 jobs:
   route:
+    # The repository is public: only the owner, members and collaborators may
+    # start a run. The action checks write access itself, but only after this
+    # job has already labelled and commented, so the gate is here as well.
+    # The association is the comment's or review's own, else the issue's.
     if: |
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association || github.event.review.author_association || github.event.issue.author_association) && (
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude'))) ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude'))
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -90,6 +96,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       # A prompt puts the action in automation mode: no branch, no comment, only the structured answer.
       - id: triage
@@ -141,10 +148,14 @@ jobs:
             [ -n "$triage" ] || triage='{}'
             model=$(jq -r '.model // empty' <<<"$triage" 2>/dev/null || true)
             reason=$(jq -r '.reason // empty' <<<"$triage" 2>/dev/null || true)
-            if [ -z "$model" ]; then
-              model=sonnet
-              reason="The classification did not return an answer, so the default was used."
-            fi
+            # The value goes into --model, so anything but the two names falls back to the default.
+            case "$model" in
+              opus | sonnet) ;;
+              *)
+                model=sonnet
+                reason="The classification did not return a usable answer, so the default was used."
+                ;;
+            esac
 
             gh label create model:opus --repo "$REPO" --color 5319e7 --description "Claude runs on Opus 5.5" --force >/dev/null
             gh label create model:sonnet --repo "$REPO" --color 1d76db --description "Claude runs on Sonnet 5.5" --force >/dev/null

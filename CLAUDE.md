@@ -157,6 +157,7 @@ Node 24 (`.nvmrc`). `npm install` also installs the git hooks of §11b.
 - **`docs:check`** (`scripts/check-docs.mjs`): every `CLAUDE.md §X` in code must name an existing `##` or `###` heading exactly, and every repository path in backticks in this file and in `spec/` must exist. So a section is never renumbered, a new one takes the next free number, and a renamed file is renamed in the docs in the same commit.
 - **`unused`** (knip): an unused file, export or dependency fails CI. Delete it rather than keep it for later.
 - **Formatting**: Prettier, no semicolons, double quotes, width 80. The pre-commit hook formats and lints staged files.
+- **Workflows** (`.github/workflows/workflow-lint.yml`): a change under `.github/` is checked by actionlint and zizmor. Every action is pinned to a commit SHA with its version in a comment, every job sets its own `permissions` and `timeout-minutes`, a checkout that does not push sets `persist-credentials: false`, and text a user wrote reaches a `run` script only through `env`. Dependabot (`.github/dependabot.yml`) proposes action and npm updates weekly, each after a cooldown.
 
 ### Adding a dependency
 
@@ -178,12 +179,14 @@ Ask first. The CSP in `lib/site.ts` allows no `eval` and no wasm, so a library t
 
 Claude Code runs in GitHub Actions (`.github/workflows/claude.yml`) on the repository owner's subscription token. A developer writes the task; Claude implements it; the developer decides.
 
-1. **A developer opens an issue with `@claude`** in its title or body, or mentions `@claude` in a comment on an issue. Only users with write access can start a run.
+1. **A developer opens an issue with `@claude`** in its title or body, or mentions `@claude` in a comment on an issue. The repository is public, so only its owner, members and collaborators can start a run; anyone else's mention is ignored.
 2. **The model is chosen per issue.** A `model:opus` or `model:sonnet` label decides. Without one, a short read-only run classifies the task, adds the label and says why in a comment. Opus takes calculations, tax rules, stored data and file formats, changes across several modules, and bugs without an obvious cause; Sonnet takes the rest. Changing the label changes the model from the next run.
 3. **Claude works on a new `claude/issue-<n>-<timestamp>` branch**, adds tests and runs `npm run check` before each commit.
 4. **When the task is unclear** or needs a product, UX, data format or tax rule decision, Claude asks numbered questions in the issue and commits nothing. The developer answers in a comment with `@claude`.
 5. **When the branch has commits, the workflow opens a draft pull request** that closes the issue and carries the model label, also after a run that failed partway, so the work stays reachable. Its comment in the issue is the pointer to use; the action's own "Create PR" link in Claude's comment cannot be turned off and is to be ignored. Claude never opens, approves or merges a pull request; the developer marks it ready and merges it.
 6. **Review happens on the pull request**, and so do answers to questions Claude asked after committing. A comment, a line comment or a review summary that mentions `@claude` makes Claude continue on the same branch. A comment on the issue while its pull request is open gets a pointer to the pull request instead, because a run on an issue always starts a new branch from `main`.
 7. **CI** (`.github/workflows/ci.yml`) runs `npm run check` and the build on every pull request and every push to a `claude/` branch. Claude pushes as the Claude app, not with the workflow token, because a push made with the workflow token starts no workflow; `gh workflow run ci.yml --ref <branch>` checks a branch on demand when the branch's own `ci.yml` has that trigger; `gh pr update-branch <number>` brings an older branch up to date and starts the check with its push.
+
+The subscription token in the `CLAUDE_CODE_OAUTH_TOKEN` secret lasts one year. Its expiry date is the repository variable `CLAUDE_TOKEN_EXPIRES`, and `.github/workflows/claude-token-reminder.yml` opens an issue with the renewal steps a month before it.
 
 Writing an issue for Claude: say what should change and why, how to tell it is done, and the spec section if you know it. One issue is one change. The instructions Claude follows in a run are the `--append-system-prompt` in the workflow and this file.
