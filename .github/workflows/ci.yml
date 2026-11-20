@@ -1,0 +1,43 @@
+# Runs the same checks as the deploy, on every pull request and on every push
+# to a Claude branch, so a change is known to pass before it is merged.
+#
+# Claude's pull requests are opened by the workflow token, and GitHub starts
+# no workflow for a pull request that token opens. The push trigger on
+# `claude/**` covers them instead: the result attaches to the branch's head
+# commit and shows on the pull request. The pull request trigger skips those
+# branches so each commit is checked once.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: ["claude/**"]
+
+permissions:
+  contents: read
+
+# A newer commit on the same branch makes the running check obsolete.
+concurrency:
+  group: ci-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    if: github.event_name == 'push' || !startsWith(github.head_ref, 'claude/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # typecheck, formatting, lint, docs pointers, unused code and unit tests
+      - run: npm run check
+
+      # `postbuild` verifies the export, including the CSP.
+      - run: npm run build

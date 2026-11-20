@@ -1,0 +1,14 @@
+# The workflows pin every action to a commit SHA. Dependabot proposes the
+# update when an action publishes a new release, so the pins do not go stale;
+# its pull requests run the CI workflow like any other.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: build(ci)

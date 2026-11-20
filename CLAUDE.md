@@ -1,8 +1,8 @@
 # Kirjanpito: project context for Claude Code
 
-This file explains what the app is, what has been decided and built so far, and how to carry it into the real project. The prototype was built as a single HTML file (the "artifact"), which is provided alongside this file together with the original Excel workbook `docs/reference/kirjanpito.xlsx`. The artifact is the reference implementation for behaviour, texts and design. This file and the files it indexes in `spec/` are the reference for intent and rules. If they disagree, ask the user. **For Form 5 the specification in `docs/specs/` outranks this file and the code**: a field code, its label, a sum or a check is whatever the PDF says. When this file contradicts it, fix this file.
+This file explains what the app is, what has been decided, how the repository is worked on, and where every rule is written down. The app was ported from a prototype built as a single HTML file (the "artifact"), kept in `docs/prototype/` together with the original Excel workbook `docs/reference/kirjanpito.xlsx`. The artifact is the reference implementation for behaviour, texts and design. This file and the files it indexes in `spec/` are the reference for intent and rules. If they disagree, ask the user. **For Form 5 the specification in `docs/specs/` outranks this file and the code**: a field code, its label, a sum or a check is whatever the PDF says. When this file contradicts it, fix this file.
 
-> **`docs/` is local-only and gitignored, except `docs/specs/`.** Neither the workbook nor the prototype is in the repository: they are the user's source material, not part of the published project. References to them below are still accurate for a working copy that has them. Without them, this file is the specification — §3 describes the workbook sheet by sheet, §10 lists the reference figures the tests assert, and §11 records the palette the prototype defines, so nothing here depends on opening either file. `docs/specs/` is tracked and holds Verohallinto's published specifications, the reference the tax logic is built against: today `verohallinto_tietuekuvaus_2026_5.pdf`, the Form 5 data file specification for 2026 (version 1.0, 22.9.2026).
+> **`docs/` is local-only and gitignored, except `docs/specs/`.** Neither the workbook nor the prototype is in the repository: they are the user's source material, not part of the published project. References to them below are still accurate for a working copy that has them. Without them, this file is the specification — §3 describes the workbook sheet by sheet, §10 lists the reference figures the tests assert, and §11 records the palette the prototype defines, so nothing here depends on opening either file. `docs/specs/` is tracked and holds Verohallinto's published specifications, the reference the tax logic is built against: today `verohallinto_tietuekuvaus_2026_5.pdf`, the Form 5 data file specification for 2026 (version 1.0, 22.9.2026), and `verohallinto_tietuekuvaus_vsralvkv_290824.pdf`, the data file specification of the periodic tax return (kausiveroilmoitus) that the VAT return follows.
 
 The user writes in Finnish and English. The app's default language is Finnish.
 
@@ -14,7 +14,7 @@ The user writes in Finnish and English. The app's default language is Finnish.
 
 | sections     | file                          | covers                                                                                                                                                                                                                                                                                                                                             |
 | ------------ | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1, 2, 2b     | this file                     | purpose, stack, how comments are written                                                                                                                                                                                                                                                                                                           |
+| 1 to 2d      | this file                     | purpose, stack, how comments are written, working in the repository, Claude on GitHub                                                                                                                                                                                                                                                              |
 | 3, 4, 5      | `spec/data-model.md`          | the Excel workbook, the data model, the chart of accounts and categories                                                                                                                                                                                                                                                                           |
 | 6            | `spec/rules.md`               | VAT, income statement and every calculation rule, rule engine and rule tables, partial deduction                                                                                                                                                                                                                                                   |
 | 7            | `spec/files.md`               | CSV, ZIP, receipts, saving back to the file, `settings.json`, encryption, integrity seal, spreadsheet, cloud storage                                                                                                                                                                                                                               |
@@ -42,7 +42,7 @@ The app does not file anything and is not tax advice. A short disclaimer to this
 
 ### Core product idea: the file is the database
 
-There is **no backend, no account and no database**. The user opens their bookkeeping from a file, works on it in the browser, and writes it back to a file.
+There is **no backend, no account and no database**. The user opens their bookkeeping from a file, works on it in the browser, and writes it back to a file. The one server-side piece is optional and outside the app: `server/enable-banking-proxy/` is a small Node proxy a user runs themselves to sign requests to the Enable Banking API for the bank connection.
 
 - The file is a **ZIP**: the entries as a CSV, a `settings.json` with everything else that belongs to the bookkeeping (§7.6), and the receipt files in folders by year and month.
 - A bare **CSV** can still be opened, but it holds the entries only. The app always writes a ZIP.
@@ -51,22 +51,23 @@ There is **no backend, no account and no database**. The user opens their bookke
 
 ---
 
-## 2. Target stack
+## 2. Stack
 
-- **Next.js** (App Router) with **TypeScript**, **React** and **shadcn/ui**. The user will create the project from a shadcn/ui template and connect the shadcn/ui skill.
-- The whole app is **client-side**. Prefer `output: "export"` (static export). No API routes or server actions are needed.
-- Suggested libraries:
+- **Next.js** (App Router) with **TypeScript**, **React** and **shadcn/ui**, whose components here are built on `@base-ui/react` primitives. `lucide-react` provides the icons. The shadcn skill is installed for Claude Code.
+- The whole app is **client-side**, built with `output: "export"` (static export). There are no server actions. The only route handlers, `app/icons/[file]/route.tsx` and `app/og/[file]/route.tsx`, are `force-static` and run at build time.
+- Libraries:
   - `papaparse` for CSV parsing. Row validation is hand-written in `lib/domain/csv.ts` rather than done with `zod`: §7.1 requires the import to be _lenient_ — a bad row is skipped and counted, never rejected — and every problem is reported as a machine-readable code the i18n layer translates. A schema validator would have to be unwrapped back into exactly that shape. `zod` was removed from the dependencies.
   - `@zip.js/zip.js` for ZIP import and export, including AES encryption (§7.8). `lib/domain/zip.ts` imports its `index-native.js` build, which uses the browser's own deflate and needs neither web workers nor wasm, and `configure({ useWebWorkers: false })` keeps it inside the CSP of §11b.
   - `@dnd-kit/core` and `@dnd-kit/sortable` for rearranging the overview's widgets (§8.12). Native HTML drag and drop has no keyboard or touch support, and dnd-kit's keyboard sensor gives both.
-  - `pdfjs-dist` for rendering PDFs. **The worker is copied to `public/pdf.worker.min.mjs` by `scripts/copy-pdf-worker.mjs` on `predev`/`prebuild`, and `workerSrc` points at that fixed URL.** The `new URL(..., import.meta.url)` form was rejected: the worker is an ES module bundle, and whether Turbopack copies it as an asset or pulls it into the module graph differs between the dev server and the export — a failure that would surface only in production. pdfjs is still imported dynamically, from `lib/browser/pdf.ts` alone.
-  - `pdf-lib` for writing the memo vouchers of calculated entries (§8.8). `lib/browser/memo-pdf.ts`, `lib/browser/report-pdf.ts` (§8.21), `lib/browser/invoice-pdf.ts` and `lib/browser/invoice-attachments.ts` (§8.27) are the only modules that import it, and the commands that use them import them dynamically, so no bundle carries it until an entry is booked or a package is made.
+  - `pdfjs-dist` for rendering PDFs. **The worker is copied to `public/pdf.worker.min.mjs` by `scripts/copy-pdf-worker.mjs` on `predev`/`prebuild`, and `workerSrc` points at that fixed URL.** The `new URL(..., import.meta.url)` form was rejected: the worker is an ES module bundle, and whether Turbopack copies it as an asset or pulls it into the module graph differs between the dev server and the export — a failure that would surface only in production. pdfjs is still imported dynamically, and outside tests only from `lib/browser/pdf.ts`.
+  - `pdf-lib` for writing the memo vouchers of calculated entries (§8.8). `lib/browser/memo-pdf.ts`, `lib/browser/report-pdf.ts` (§8.21), `lib/browser/invoice-pdf.ts` and `lib/browser/invoice-attachments.ts` (§8.27) are the only modules outside tests that import it, and the commands that use them import them dynamically, so no bundle carries it until an entry is booked or a package is made.
   - `@zxing/library` for reading a bill's bank barcode and EPC QR code from a photo or a PDF (§8.30), where the browser has no `BarcodeDetector`. It is plain JavaScript, so it needs no `wasm-unsafe-eval`, and `lib/browser/barcode.ts` is the only module that imports it, dynamically.
-  - `idb` or `idb-keyval` for IndexedDB.
+  - `idb-keyval` for IndexedDB, used by the stores in `lib/browser/`.
+  - `recharts` for the charts of the overview and the summary view, and `qrcode-generator` for the EPC QR code on an invoice (`lib/browser/invoice-pdf.ts`).
   - `next-themes` for light, dark and system theme (the standard shadcn approach).
   - Tables are hand-composed on shadcn's `Table`, **not** `@tanstack/react-table`, which was removed from the dependencies. Sorting, filtering and pagination all live in the store — they have to, because the toolbar, the month chips and the totals cards read the same state — which would leave a table adapter owning nothing. See the comment at the top of `components/ledger/ledger-table.tsx`.
   - Toasts are `components/ui/toast.tsx`, **not** `sonner`, which was removed from the dependencies. It is a provider, so it wraps the tree in `HtmlShell` rather than sitting beside it. Its viewport is the one layer above the `z-50` that dialogs, sheets and overlays share: they are all portalled to the body, where an equal z-index is settled by DOM order, and the provider's portal is always the earliest. Toasts are raised from inside dialogs, so **the viewport stays at `z-100`**.
-  - State: a small store such as Zustand with a persistence layer, or React context plus `useReducer`. Keep the domain logic (calculations, CSV, paths) in plain TypeScript modules with no React, so it can be unit-tested.
+  - State lives in Zustand stores in `stores/`; the book store persists itself with Zustand's `persist` middleware (§12). Keep the domain logic (calculations, CSV, paths) in plain TypeScript modules with no React, so it can be unit-tested.
 - Money is always stored as **integer cents**, never floats.
 
 ### Things in the artifact that exist only because of claude.ai, and should not be ported
@@ -117,3 +118,72 @@ this file today, who has no way to check a claim about anything outside it.
   to how they are laid out.
 - Two adjacent one-line comments that say different things are separated by a
   blank line, so they do not read as one run of `//`.
+
+---
+
+## 2c. Working in the repository
+
+### Commands
+
+Node 24 (`.nvmrc`). `npm install` also installs the git hooks of §11b.
+
+| command                 | what it does                                                                                                                                                         |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`           | dev server; `predev` checks the Node version and copies the pdf.js worker                                                                                            |
+| `npm run check`         | the gate CI runs before anything ships: `typecheck`, `format:check`, `lint` (no warnings allowed), `docs:check`, `unused` (knip), `test`. Run it before every commit |
+| `npx vitest run <file>` | one test file                                                                                                                                                        |
+| `npm run test:coverage` | coverage of `lib/domain` and `lib/i18n`, with thresholds that fail the run                                                                                           |
+| `npm run build`         | the static export to `out/`; `postbuild` writes the service worker and `scripts/verify-export.mjs` checks the export, the CSP included                               |
+| `npm run format`        | Prettier over every `.ts` and `.tsx` file                                                                                                                            |
+
+### Layout
+
+- `lib/domain/` — pure TypeScript: calculations, CSV, ZIP, paths, rules. No React, no Next.js, no `window`, `Blob`, `localStorage` or `indexedDB` (`lib/domain/types.ts`). Everything that can be tested without a browser lives here.
+- `lib/browser/` — browser APIs: IndexedDB stores, file handles, PDF reading and writing, barcode reading, the service worker.
+- `lib/commands/` — actions that tie the stores and the browser modules together; `lib/ui/` — confirmation and password prompts.
+- `lib/i18n/` — `t.ts`, `messages.ts` and the dictionaries in `lib/i18n/dict/` (§9).
+- `stores/` — Zustand stores. `hooks/` — React hooks. `components/<area>/` — views and their parts; `components/ui/` holds the shadcn primitives (§11).
+- `app/` — routes (§11b). `data/rules.json` — the rule tables (§6). `scripts/` — build and check scripts. `server/` — the optional bank proxy, not part of the app.
+
+### Tests
+
+- Vitest. Unit tests sit next to the module as `name.test.ts` under `lib/` and `stores/`; component tests are `test/*.test.tsx` and start with `// @vitest-environment jsdom`. Everything else runs in Node.
+- `test/setup.ts` pins the time zone to Europe/Helsinki, installs `fake-indexeddb` and restores mocks after each test.
+- The §10 reference book is in `lib/domain/test-helpers/` (`lib/domain/test-helpers/canonical.ts`, `lib/domain/test-helpers/sample-book.ts`); ESLint forbids importing it outside tests. Whole fixture books are in `test/fixtures/`.
+- A change in logic comes with a test that fails without it. Money in tests is integer cents, as everywhere.
+
+### Rules the checks enforce
+
+- **`docs:check`** (`scripts/check-docs.mjs`): every `CLAUDE.md §X` in code must name an existing `##` or `###` heading exactly, and every repository path in backticks in this file and in `spec/` must exist. So a section is never renumbered, a new one takes the next free number, and a renamed file is renamed in the docs in the same commit.
+- **`unused`** (knip): an unused file, export or dependency fails CI. Delete it rather than keep it for later.
+- **Formatting**: Prettier, no semicolons, double quotes, width 80. The pre-commit hook formats and lints staged files.
+
+### Adding a dependency
+
+Ask first. The CSP in `lib/site.ts` allows no `eval` and no wasm, so a library that needs either does not work in the export. A heavy library is imported with `await import()` from one module in `lib/browser/`, so it stays out of the landing page's bundle; §2 lists each one and where it is imported.
+
+### Commits, branches and pull requests
+
+- Conventional Commits, `type(scope): summary`, lowercase and imperative: `feat(ledger): …`, `fix(vat): …`, `docs(spec): …`, `test(save): …`, `refactor(i18n): …`, `build(deps): …`. The scope is the area changed, in the words of the table above.
+- Work that needs review goes on a branch and through a pull request; a small fix may go straight to `main`. Pull requests are merged with a merge commit.
+- A behaviour change updates the spec section that owns it in the same pull request.
+
+### Next.js version
+
+`AGENTS.md` is written by `next dev`. It points to the documentation bundled with the installed Next.js in `node_modules/next/dist/docs/`, which is the reference for Next.js APIs here; this version differs from older ones.
+
+---
+
+## 2d. Claude on GitHub
+
+Claude Code runs in GitHub Actions (`.github/workflows/claude.yml`) on the repository owner's subscription token. A developer writes the task; Claude implements it; the developer decides.
+
+1. **A developer opens an issue with `@claude`** in its title or body, or mentions `@claude` in a comment on an issue. Only users with write access can start a run.
+2. **The model is chosen per issue.** A `model:opus` or `model:sonnet` label decides. Without one, a short read-only run classifies the task, adds the label and says why in a comment. Opus takes calculations, tax rules, stored data and file formats, changes across several modules, and bugs without an obvious cause; Sonnet takes the rest. Changing the label changes the model from the next run.
+3. **Claude works on a new `claude/issue-<n>-<timestamp>` branch**, adds tests and runs `npm run check` before each commit.
+4. **When the task is unclear** or needs a product, UX, data format or tax rule decision, Claude asks numbered questions in the issue and commits nothing. The developer answers in a comment with `@claude`.
+5. **When the branch has commits, the workflow opens a draft pull request** that closes the issue and carries the model label. Claude never opens, approves or merges a pull request; the developer marks it ready and merges it.
+6. **Review happens on the pull request.** A comment, a line comment or a review summary that mentions `@claude` makes Claude continue on the same branch. A comment on the issue while its pull request is open gets a pointer to the pull request instead, because a run on an issue always starts a new branch from `main`.
+7. **CI** (`.github/workflows/ci.yml`) runs `npm run check` and the build on every pull request and every push to a `claude/` branch.
+
+Writing an issue for Claude: say what should change and why, how to tell it is done, and the spec section if you know it. One issue is one change. The instructions Claude follows in a run are the `--append-system-prompt` in the workflow and this file.
