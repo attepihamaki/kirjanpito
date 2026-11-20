@@ -7,7 +7,9 @@
 # shows on the pull request without one. The pull request trigger skips those
 # branches so each commit is checked once.
 #
-# `workflow_dispatch` checks any branch on demand:
+# `workflow_dispatch` checks a branch on demand, when that branch's copy of
+# this file has the trigger; an older branch is brought up to date with `gh
+# pr update-branch <number>`, whose push starts the check as well:
 #   gh workflow run ci.yml --ref <branch>
 name: CI
 
