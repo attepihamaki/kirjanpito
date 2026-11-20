@@ -1,17 +1,21 @@
 # Runs the same checks as the deploy, on every pull request and on every push
 # to a Claude branch, so a change is known to pass before it is merged.
 #
-# Claude's pull requests are opened by the workflow token, and GitHub starts
-# no workflow for a pull request that token opens. The push trigger on
-# `claude/**` covers them instead: the result attaches to the branch's head
-# commit and shows on the pull request. The pull request trigger skips those
+# Claude's branches are checked on push. Their pull requests are opened by the
+# workflow token, and GitHub holds a pull request run that token starts for
+# approval; the push run attaches its result to the same head commit, so it
+# shows on the pull request without one. The pull request trigger skips those
 # branches so each commit is checked once.
+#
+# `workflow_dispatch` checks any branch on demand:
+#   gh workflow run ci.yml --ref <branch>
 name: CI
 
 on:
   pull_request:
   push:
     branches: ["claude/**"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -23,7 +27,7 @@ concurrency:
 
 jobs:
   check:
-    if: github.event_name == 'push' || !startsWith(github.head_ref, 'claude/')
+    if: github.event_name != 'pull_request' || !startsWith(github.head_ref, 'claude/')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
