@@ -30,11 +30,13 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: "#ffffff",
     theme_color: "#ffffff",
     launch_handler: { client_mode: "focus-existing" },
-    icons: APP_ICONS.filter((icon) => icon.purpose !== "apple").map((icon) => ({
+    icons: APP_ICONS.filter(
+      (icon) => icon.purpose === "any" || icon.purpose === "maskable"
+    ).map((icon) => ({
       src: appIconUrl(icon.file),
       sizes: `${icon.size}x${icon.size}`,
       type: "image/png",
-      purpose: icon.purpose as "any" | "maskable",
+      purpose: icon.purpose,
     })),
   }
 }

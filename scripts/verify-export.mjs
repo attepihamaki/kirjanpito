@@ -164,6 +164,8 @@ for (const [path, what] of [
   [join(OUT, "pdf.worker.min.mjs"), "the pdf.js worker (copied on prebuild)"],
   [join(OUT, "og", "opengraph-image.png"), "the Open Graph card"],
   [join(OUT, "icons", "apple-touch-icon.png"), "the iOS home-screen icon"],
+  [join(OUT, "icons", "favicon-32.png"), "the browser tab icon"],
+  [join(OUT, "icons", "favicon-48.png"), "the browser tab icon"],
 ]) {
   if (!existsSync(path)) fail(`Missing ${relative(OUT, path)} — ${what}.`)
 }
