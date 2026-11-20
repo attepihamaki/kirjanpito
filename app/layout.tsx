@@ -22,8 +22,17 @@ export const metadata: Metadata = {
   },
   description:
     "Selaimessa toimiva yhdenkertainen kirjanpito toiminimelle. Laskee arvonlisäveron ja tuloslaskelman veroilmoitusta varten. Ei tiliä, ei tietokantaa. Tiedot pysyvät omalla koneellasi.",
-  // iOS reads its home-screen icon from this link, not from the manifest.
-  icons: { apple: appIconUrl("apple-touch-icon.png") },
+  /*
+   * The tab icon is the K mark as two PNGs. iOS reads its home-screen icon
+   * from the apple link, not from the manifest.
+   */
+  icons: {
+    icon: [
+      { url: appIconUrl("favicon-32.png"), sizes: "32x32", type: "image/png" },
+      { url: appIconUrl("favicon-48.png"), sizes: "48x48", type: "image/png" },
+    ],
+    apple: appIconUrl("apple-touch-icon.png"),
+  },
 }
 
 export default function RootLayout({

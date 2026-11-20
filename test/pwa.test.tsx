@@ -20,14 +20,21 @@ describe("web app manifest (§11b)", () => {
     }
   })
 
-  it("lists the icons the route handler writes, the apple one aside", () => {
+  it("lists the icons the route handler writes, the apple and favicon ones aside", () => {
     const listed = (manifest().icons ?? []).map((icon) => icon.src)
     expect(listed).toEqual(
-      APP_ICONS.filter((icon) => icon.purpose !== "apple").map((icon) =>
-        appIconUrl(icon.file)
-      )
+      APP_ICONS.filter(
+        (icon) => icon.purpose === "any" || icon.purpose === "maskable"
+      ).map((icon) => appIconUrl(icon.file))
     )
     expect(listed.length).toBeGreaterThan(0)
+  })
+
+  it("has a favicon of the K mark at 32 and 48 px", () => {
+    const sizes = APP_ICONS.filter((i) => i.purpose === "favicon").map(
+      (i) => i.size
+    )
+    expect(sizes).toEqual([32, 48])
   })
 })
 

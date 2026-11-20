@@ -12,7 +12,7 @@ export function AppIcon({
   size,
   purpose,
 }: Pick<AppIconSpec, "size" | "purpose">) {
-  const bleed = purpose !== "any"
+  const bleed = purpose === "maskable" || purpose === "apple"
 
   return (
     <div

@@ -23,9 +23,12 @@ export const SERVICE_WORKER_URL = `${BASE_PATH}/sw.js`
  *
  * `any` icons are a rounded square on a transparent ground. `maskable` and
  * `apple` fill the whole square, because the platform cuts its own shape out
- * of them.
+ * of them. `favicon` icons are the same rounded square at the sizes a browser
+ * tab and a bookmark use; the manifest leaves them out.
  */
 export const APP_ICONS = [
+  { file: "favicon-32.png", size: 32, purpose: "favicon" },
+  { file: "favicon-48.png", size: 48, purpose: "favicon" },
   { file: "icon-192.png", size: 192, purpose: "any" },
   { file: "icon-512.png", size: 512, purpose: "any" },
   { file: "icon-maskable-512.png", size: 512, purpose: "maskable" },
