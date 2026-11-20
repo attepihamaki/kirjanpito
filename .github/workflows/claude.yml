@@ -25,7 +25,12 @@ name: Claude
 on:
   issues:
     types: [opened]
-  issue_comment:
+  # issue_comment runs with write access on comments from anyone, which is
+  # why zizmor flags it. Here `route` lets only the owner, members and
+  # collaborators through, the action checks write access again, and its
+  # restrict_untrusted_prs default keeps a stranger's pull request from
+  # running its own code with that access.
+  issue_comment: # zizmor: ignore[dangerous-triggers]
     types: [created]
   pull_request_review_comment:
     types: [created]
