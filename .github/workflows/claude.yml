@@ -190,6 +190,9 @@ jobs:
         uses: anthropics/claude-code-action@c84e279f859e2591391e95bd309286eb111c345f # v1.0.284
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # GitHub links a commit to the account whose user ID is in its noreply email; 209825114 is claude[bot].
+          bot_id: "209825114"
+          bot_name: claude[bot]
           # Lets Claude read the results of CI runs on the pull request.
           additional_permissions: |
             actions: read
