@@ -4,7 +4,7 @@ This file explains what the app is, what has been decided, how the repository is
 
 > **`docs/` is local-only and gitignored, except `docs/specs/`.** Neither the workbook nor the prototype is in the repository: they are the user's source material, not part of the published project. References to them below are still accurate for a working copy that has them. Without them, this file is the specification — §3 describes the workbook sheet by sheet, §10 lists the reference figures the tests assert, and §11 records the palette the prototype defines, so nothing here depends on opening either file. `docs/specs/` is tracked and holds Verohallinto's published specifications, the reference the tax logic is built against: today `verohallinto_tietuekuvaus_2026_5.pdf`, the Form 5 data file specification for 2026 (version 1.0, 22.9.2026), and `verohallinto_tietuekuvaus_vsralvkv_290824.pdf`, the data file specification of the periodic tax return (kausiveroilmoitus) that the VAT return follows.
 
-The user writes in Finnish and English. The app's default language is Finnish.
+The user writes in Finnish and English. The app's default language is Finnish. **Write in English**: replies, comments in issues and pull requests, commit messages and code comments, whatever language the request is in. Finnish appears only as a term the app's Finnish interface or a tax form uses, quoted, with the English meaning in parentheses the first time, for example "Tositteet" (vouchers).
 
 ## Where to look
 
@@ -184,6 +184,6 @@ Claude Code runs in GitHub Actions (`.github/workflows/claude.yml`) on the repos
 4. **When the task is unclear** or needs a product, UX, data format or tax rule decision, Claude asks numbered questions in the issue and commits nothing. The developer answers in a comment with `@claude`.
 5. **When the branch has commits, the workflow opens a draft pull request** that closes the issue and carries the model label. Claude never opens, approves or merges a pull request; the developer marks it ready and merges it.
 6. **Review happens on the pull request.** A comment, a line comment or a review summary that mentions `@claude` makes Claude continue on the same branch. A comment on the issue while its pull request is open gets a pointer to the pull request instead, because a run on an issue always starts a new branch from `main`.
-7. **CI** (`.github/workflows/ci.yml`) runs `npm run check` and the build on every pull request and every push to a `claude/` branch.
+7. **CI** (`.github/workflows/ci.yml`) runs `npm run check` and the build on every pull request and every push to a `claude/` branch. Claude pushes as the Claude app, not with the workflow token, because a push made with the workflow token starts no workflow; `gh workflow run ci.yml --ref <branch>` checks a branch on demand.
 
 Writing an issue for Claude: say what should change and why, how to tell it is done, and the spec section if you know it. One issue is one change. The instructions Claude follows in a run are the `--append-system-prompt` in the workflow and this file.
