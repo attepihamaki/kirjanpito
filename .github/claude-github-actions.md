@@ -75,37 +75,7 @@ Once the admin confirms the token is stored, delete the item or stop sharing it.
 
 ## Step 3: store the token (repository admin)
 
-Everything is done by hand on the repository's **Settings → Secrets and variables → Actions** page: <https://github.com/attepihamaki/kirjanpito/settings/secrets/actions>. Each person needs two things there: their own secret, and an entry in the `CLAUDE_USERS` list.
-
-1. **The secret.** On the **Secrets** tab, click **New repository secret**.
-   - **Name:** `CLAUDE_TOKEN_` followed by the person's GitHub login in upper case, with `-` written as `_`. For `attepihamaki` that is `CLAUDE_TOKEN_ATTEPIHAMAKI`; for `atte-p` it would be `CLAUDE_TOKEN_ATTE_P`.
-   - **Secret:** the token from the password manager, without spaces or line breaks.
-2. **The list entry.** On the **Variables** tab, open `CLAUDE_USERS` (pencil icon), or create it with **New repository variable** if it does not exist yet. Add the person's entry:
-
-   ```json
-   {"github":"attepihamaki","secret":"ATTEPIHAMAKI","added":"2026-11-20","expires":"2027-11-20"}
-   ```
-
-   The variable is a JSON list, so the entries sit between `[` and `]`, separated by commas. With two people:
-
-   ```json
-   [{"github":"attepihamaki","secret":"ATTEPIHAMAKI","added":"2026-11-20","expires":"2027-11-20"},{"github":"atte-p","secret":"ATTE_P","added":"2026-12-01","expires":"2027-12-01"}]
-   ```
-
-3. **Confirm** to the person that the token is stored, so they can clean up the password manager item.
-
-The fields:
-
-| field     | what it holds                                                                                  |
-| --------- | ---------------------------------------------------------------------------------------------- |
-| `github`  | the person's GitHub login; upper or lower case does not matter                                 |
-| `secret`  | the secret's name after `CLAUDE_TOKEN_`, exactly: upper-case letters, digits and `_` only      |
-| `added`   | the date the person was added, `YYYY-MM-DD`; for information only                              |
-| `expires` | the date the token was created plus one year, `YYYY-MM-DD`; the token reminder reads this date |
-
-Use straight double quotes (`"`). An editor that turns them into curly quotes breaks the list, and the workflow then stops with "CLAUDE_USERS is not a JSON array". Paste the value into any JSON validator first if unsure.
-
-To check the setup: the **Secrets** tab lists every `CLAUDE_TOKEN_<NAME>` (values are never shown), and the **Variables** tab shows `CLAUDE_USERS`. Every `secret` in the list needs a matching secret.
+The admin adds the person's secret `CLAUDE_TOKEN_<NAME>` and their entry in `CLAUDE_USERS`, then confirms to the person that the token is stored, so they can clean up the password manager item. The exact steps, with examples, are in "For the repository admin" below.
 
 ## Step 4: test it (you)
 
@@ -129,18 +99,137 @@ If Claude comments that you have no token set up, or that your secret is missing
 A token lasts one year. From 30 days before it expires, `.github/workflows/claude-token-reminder.yml` keeps an issue titled "Claude tokens expiring soon" open, mentioning everyone who has to renew. It is updated every Monday and closes itself once every token is renewed.
 
 1. **You:** run `claude setup-token` again and hand the new token over as in step 2.
-2. **Admin:** on the **Secrets** tab, update `CLAUDE_TOKEN_<NAME>` (pencil icon) with the new token.
-3. **Admin:** in `CLAUDE_USERS`, change the person's `expires` to the new token's creation date plus one year.
+2. **Admin:** replace the secret and update `expires`, as in "Renewing a token" below.
 
 An entry without a valid `expires` date fails the reminder run, so it shows in the Actions tab.
 
 ## Leaving the team
 
-On the day someone leaves, the repository admin:
+On the day someone leaves, the repository admin removes their secret and list entry, as in "Removing a person" below, and removes their access to the repository if it is no longer needed.
 
-1. deletes their `CLAUDE_TOKEN_<NAME>` on the **Secrets** tab,
-2. deletes their entry in `CLAUDE_USERS`, together with the comma that separated it from the next one,
-3. removes their access to the repository if it is no longer needed.
+## For the repository admin
+
+Everything is done by hand on the repository's **Settings → Secrets and variables → Actions** page: <https://github.com/attepihamaki/kirjanpito/settings/secrets/actions>. Each person needs exactly two things there:
+
+1. a **secret** `CLAUDE_TOKEN_<NAME>` holding their token, on the **Secrets** tab, and
+2. an **entry** in the variable `CLAUDE_USERS`, on the **Variables** tab, that maps their GitHub login to that secret and records when the token expires.
+
+The workflow finds the person in `CLAUDE_USERS` and reads the secret named there. If either is missing or the names do not match, Claude does not run for that person and comments why.
+
+### The secret name
+
+`CLAUDE_TOKEN_` followed by the person's GitHub login in upper case, with `-` written as `_`:
+
+| GitHub login   | secret name                   | `secret` value in `CLAUDE_USERS` |
+| -------------- | ----------------------------- | -------------------------------- |
+| `attepihamaki` | `CLAUDE_TOKEN_ATTEPIHAMAKI`   | `ATTEPIHAMAKI`                   |
+| `atte-p`       | `CLAUDE_TOKEN_ATTE_P`         | `ATTE_P`                         |
+| `Maria-Dev2`   | `CLAUDE_TOKEN_MARIA_DEV2`     | `MARIA_DEV2`                     |
+
+Only upper-case letters, digits and `_` are allowed in a secret name.
+
+### The CLAUDE_USERS fields
+
+`CLAUDE_USERS` is a JSON list with one entry per person:
+
+```json
+{"github":"attepihamaki","secret":"ATTEPIHAMAKI","added":"2026-11-20","expires":"2027-11-20"}
+```
+
+| field     | what it holds                                                                                  |
+| --------- | ---------------------------------------------------------------------------------------------- |
+| `github`  | the person's GitHub login; upper or lower case does not matter                                 |
+| `secret`  | the secret's name after `CLAUDE_TOKEN_`, exactly                                               |
+| `added`   | the date the person was added, `YYYY-MM-DD`; for information only                              |
+| `expires` | the date the token was created plus one year, `YYYY-MM-DD`; the token reminder reads this date |
+
+Write the whole value on one line, with straight double quotes (`"`). An editor that turns them into curly quotes breaks the list, and the workflow then stops with "CLAUDE_USERS is not a JSON array". Paste the value into any JSON validator first if unsure.
+
+### Adding the first person
+
+The person `attepihamaki` created their token on 2026-11-20.
+
+1. **Secrets** tab → **New repository secret**:
+   - **Name:** `CLAUDE_TOKEN_ATTEPIHAMAKI`
+   - **Secret:** the token from the password manager, without spaces or line breaks
+   - **Add secret**
+2. **Variables** tab → **New repository variable**:
+   - **Name:** `CLAUDE_USERS`
+   - **Value:**
+
+     ```json
+     [{"github":"attepihamaki","secret":"ATTEPIHAMAKI","added":"2026-11-20","expires":"2027-11-20"}]
+     ```
+
+   - **Add variable**
+3. Tell the person their token is stored.
+
+### Adding another person
+
+The person `atte-p` created their token on 2026-12-01.
+
+1. **Secrets** tab → **New repository secret**: name `CLAUDE_TOKEN_ATTE_P`, the token as the secret.
+2. **Variables** tab → the pencil icon next to `CLAUDE_USERS`. Add the new entry before the closing `]`, separated from the previous one by a comma.
+
+   Before:
+
+   ```json
+   [{"github":"attepihamaki","secret":"ATTEPIHAMAKI","added":"2026-11-20","expires":"2027-11-20"}]
+   ```
+
+   After:
+
+   ```json
+   [{"github":"attepihamaki","secret":"ATTEPIHAMAKI","added":"2026-11-20","expires":"2027-11-20"},{"github":"atte-p","secret":"ATTE_P","added":"2026-12-01","expires":"2027-12-01"}]
+   ```
+
+3. **Update variable**, and tell the person their token is stored.
+
+### Renewing a token
+
+`atte-p` created a new token on 2027-11-25.
+
+1. **Secrets** tab → the pencil icon next to `CLAUDE_TOKEN_ATTE_P` → paste the new token → **Update secret**. The name stays the same.
+2. **Variables** tab → the pencil icon next to `CLAUDE_USERS` → change only that person's `expires` (and `added`, if you like):
+
+   Before:
+
+   ```json
+   [{"github":"attepihamaki","secret":"ATTEPIHAMAKI","added":"2026-11-20","expires":"2027-11-20"},{"github":"atte-p","secret":"ATTE_P","added":"2026-12-01","expires":"2027-12-01"}]
+   ```
+
+   After:
+
+   ```json
+   [{"github":"attepihamaki","secret":"ATTEPIHAMAKI","added":"2026-11-20","expires":"2027-11-20"},{"github":"atte-p","secret":"ATTE_P","added":"2027-11-25","expires":"2028-11-25"}]
+   ```
+
+### Removing a person
+
+`atte-p` leaves the team.
+
+1. **Secrets** tab → the trash icon next to `CLAUDE_TOKEN_ATTE_P` → confirm.
+2. **Variables** tab → the pencil icon next to `CLAUDE_USERS` → delete the person's entry together with the comma before it:
+
+   Before:
+
+   ```json
+   [{"github":"attepihamaki","secret":"ATTEPIHAMAKI","added":"2026-11-20","expires":"2027-11-20"},{"github":"atte-p","secret":"ATTE_P","added":"2026-12-01","expires":"2027-12-01"}]
+   ```
+
+   After:
+
+   ```json
+   [{"github":"attepihamaki","secret":"ATTEPIHAMAKI","added":"2026-11-20","expires":"2027-11-20"}]
+   ```
+
+If the last person is removed, the value is `[]`.
+
+### Checking the setup
+
+- The **Secrets** tab lists every `CLAUDE_TOKEN_<NAME>`; values are never shown.
+- The **Variables** tab shows `CLAUDE_USERS`. Every `secret` in it needs a secret named `CLAUDE_TOKEN_` plus that value, and every secret should have an entry.
+- After the person's first `@claude`, the run's summary in the **Actions** tab says "Claude runs on <login>'s request using CLAUDE_TOKEN_<NAME>".
 
 ## Usage limits
 
