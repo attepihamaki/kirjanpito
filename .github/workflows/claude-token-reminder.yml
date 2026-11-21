@@ -1,9 +1,9 @@
 # Keeps one issue open while any Claude token expires within 30 days. A token
 # from `claude setup-token` lasts one year, and @claude stops working for its
-# owner once it has expired (CLAUDE.md §2d).
+# person once it has expired (CLAUDE.md §2d).
 #
 # The expiry dates are the `expires` fields of the CLAUDE_USERS variable,
-# which a repository admin sets when adding or renewing a token. The
+# which the repository owner sets when adding or renewing a token. The
 # issue mentions everyone who has to renew, is updated every week, and is
 # closed once no token expires within 30 days.
 name: Claude token reminder
@@ -63,13 +63,13 @@ jobs:
           fi
 
           body=$(cat <<EOF
-          These Claude tokens expire within 30 days. Once a token has expired, @claude stops working for its owner.
+          These Claude tokens expire within 30 days. Once a token has expired, @claude stops working for that person.
 
           $list
 
           To renew:
-          1. The owner runs \`claude setup-token\` on their own machine and gives the new token to a repository admin through the password manager.
-          2. The admin replaces the secret \`CLAUDE_TOKEN_<NAME>\` and changes the person's \`expires\` in \`CLAUDE_USERS\`, as \`.github/claude-github-actions.md\` describes.
+          1. The person runs \`claude setup-token\` on their own machine and hands the new token to the repository owner through a safe channel.
+          2. The repository owner replaces the secret \`CLAUDE_TOKEN_<NAME>\` and changes the person's \`expires\` in \`CLAUDE_USERS\`, as \`.github/claude-github-actions.md\` describes.
 
           This issue is updated every Monday and closes itself once every token is renewed. See \`.github/claude-github-actions.md\`.
           EOF

@@ -1,8 +1,8 @@
 # Claude on GitHub: setup guide
 
-Mention `@claude` in an issue, a comment on an issue or pull request, or a pull request review, and Claude answers or makes the change. Each run uses the **Claude token of the person who mentioned `@claude`**, so it counts against that person's own Claude seat. There is no shared API key and no shared token: someone without their own token gets a comment pointing here, and Claude does not run.
+Mention `@claude` in an issue, a comment on an issue or pull request, or a pull request review, and Claude answers or makes the change. Each run uses the **Claude token of the person who mentioned `@claude`**, so it counts against that person's own Claude plan. There is no shared API key and no shared token: someone without their own token gets a comment pointing here, and Claude does not run.
 
-This guide covers everything from creating your token to using Claude, renewing the token and leaving the team. How the workflow itself behaves is in `CLAUDE.md` §2d.
+This guide covers everything from creating your token to using Claude, renewing the token and stopping. How the workflow itself behaves is in `CLAUDE.md` §2d.
 
 ## How it works
 
@@ -25,22 +25,22 @@ Only the repository's owner, members and collaborators can start a run, and the 
 
 You need:
 
-- **A Claude seat** on the company's Claude account. The token is tied to it, and every run uses its limits.
+- **A Claude account on a plan that includes Claude Code**, such as Pro or Max. The token is tied to your account, and every run uses your plan's limits.
 - **A GitHub account with write access** to this repository. The repository owner adds you as a collaborator.
-- **Access to the team's password manager**, to hand the token over.
+- **A safe way to hand the token to the repository owner**, such as a password manager you both use or an end-to-end encrypted message.
 
-The **repository admin** stores tokens and edits the user list. Today that is the repository owner, `attepihamaki`.
+The **repository owner**, `attepihamaki`, stores the tokens and edits the user list. Only the owner can change a repository's secrets and variables.
 
 ## Setup at a glance
 
-| Step | Who                   | What                                                    | Time        |
-| ---- | --------------------- | ------------------------------------------------------- | ----------- |
-| 1    | you                   | Create your Claude token                                | 2 minutes   |
-| 2    | you                   | Hand it to the repository admin in the password manager | 1 minute    |
-| 3    | the repository admin  | Store the token and add you to the user list            | 2 minutes   |
-| 4    | you                   | Test with an issue that mentions `@claude`              | a few minutes |
+| Step | Who                  | What                                         | Time          |
+| ---- | -------------------- | -------------------------------------------- | ------------- |
+| 1    | you                  | Create your Claude token                     | 2 minutes     |
+| 2    | you                  | Hand it to the repository owner safely       | 1 minute      |
+| 3    | the repository owner | Store the token and add you to the user list | 2 minutes     |
+| 4    | you                  | Test with an issue that mentions `@claude`   | a few minutes |
 
-If you are the repository admin setting up your own token, do steps 1, 3 and 4 and skip the handover.
+If you are the repository owner setting up your own token, do steps 1, 3 and 4 and skip the handover.
 
 ## Step 1: create your Claude token (you)
 
@@ -56,26 +56,25 @@ If you are the repository admin setting up your own token, do steps 1, 3 and 4 a
    claude setup-token
    ```
 
-   A browser window opens. Sign in with your **company Claude account**, the one that holds your seat, not a personal one. When you approve, the terminal prints the token.
+   A browser window opens. Sign in with the **Claude account whose plan the runs should use**. When you approve, the terminal prints the token.
 
-3. **Copy the token** straight into the password manager item of step 2. Also note **today's date**: the token is valid for one year from today, and that date goes into the user list.
+3. **Copy the token** straight into wherever you hand it over in step 2. Also note **today's date**: the token is valid for one year from today, and that date goes into the user list.
 
-Never paste the token into Claude, an issue, a pull request, a commit, a chat message or an email. Anyone holding it can use your Claude seat.
+Never paste the token into Claude, an issue, a pull request, a commit, a chat message or an email. Anyone holding it can use your Claude plan.
 
 ## Step 2: hand the token over (you)
 
-1. In the team's password manager, create a new item, for example a secure note, titled **"Claude token for GitHub: <your GitHub login>"**, with:
+1. Send the repository owner, through a safe channel such as a shared password manager item or an end-to-end encrypted message:
    - **the token**
    - **your GitHub login**, exactly as on github.com
    - **the date you created the token**, `YYYY-MM-DD`
-2. **Share the item with the repository admin only.**
-3. Tell the admin it is there, by chat or in person, without the token itself.
+2. Never use ordinary chat, email, an issue or a commit for the token itself.
 
-Once the admin confirms the token is stored, delete the item or stop sharing it. GitHub then holds the only copy you need: a token can always be replaced by creating a new one.
+Once the owner confirms the token is stored, delete the item or the message. GitHub then holds the only copy you need: a token can always be replaced by creating a new one.
 
-## Step 3: store the token (repository admin)
+## Step 3: store the token (repository owner)
 
-The admin adds the person's secret `CLAUDE_TOKEN_<NAME>` and their entry in `CLAUDE_USERS`, then confirms to the person that the token is stored, so they can clean up the password manager item. The exact steps, with examples, are in "For the repository admin" below.
+The owner adds the person's secret `CLAUDE_TOKEN_<NAME>` and their entry in `CLAUDE_USERS`, then confirms to the person that the token is stored, so they can delete the handover item or message. The exact steps, with examples, are in "For the repository owner" below.
 
 ## Step 4: test it (you)
 
@@ -99,15 +98,15 @@ If Claude comments that you have no token set up, or that your secret is missing
 A token lasts one year. From 30 days before it expires, `.github/workflows/claude-token-reminder.yml` keeps an issue titled "Claude tokens expiring soon" open, mentioning everyone who has to renew. It is updated every Monday and closes itself once every token is renewed.
 
 1. **You:** run `claude setup-token` again and hand the new token over as in step 2.
-2. **Admin:** replace the secret and update `expires`, as in "Renewing a token" below.
+2. **Owner:** replace the secret and update `expires`, as in "Renewing a token" below.
 
 An entry without a valid `expires` date fails the reminder run, so it shows in the Actions tab.
 
-## Leaving the team
+## Stopping
 
-On the day someone leaves, the repository admin removes their secret and list entry, as in "Removing a person" below, and removes their access to the repository if it is no longer needed.
+When someone no longer works on the repository, the repository owner removes their secret and list entry, as in "Removing a person" below, and removes their access to the repository if it is no longer needed.
 
-## For the repository admin
+## For the repository owner
 
 Everything is done by hand on the repository's **Settings → Secrets and variables → Actions** page: <https://github.com/attepihamaki/kirjanpito/settings/secrets/actions>. Each person needs exactly two things there:
 
@@ -151,7 +150,7 @@ The person `attepihamaki` created their token on 2026-11-20.
 
 1. **Secrets** tab → **New repository secret**:
    - **Name:** `CLAUDE_TOKEN_ATTEPIHAMAKI`
-   - **Secret:** the token from the password manager, without spaces or line breaks
+   - **Secret:** the token the person handed over, without spaces or line breaks
    - **Add secret**
 2. **Variables** tab → **New repository variable**:
    - **Name:** `CLAUDE_USERS`
@@ -206,7 +205,7 @@ The person `atte-p` created their token on 2026-12-01.
 
 ### Removing a person
 
-`atte-p` leaves the team.
+`atte-p` no longer works on the repository.
 
 1. **Secrets** tab → the trash icon next to `CLAUDE_TOKEN_ATTE_P` → confirm.
 2. **Variables** tab → the pencil icon next to `CLAUDE_USERS` → delete the person's entry together with the comma before it:
@@ -237,14 +236,10 @@ If the last person is removed, the value is `[]`.
 - When someone reaches their limit, their runs fail with the error in Claude's comment. Other people's runs are unaffected.
 - Every run also uses GitHub Actions minutes.
 
-## For an organization (later)
-
-The same steps work on the organization's **Settings → Secrets and variables → Actions** page, with **Repository access** set to the repositories that use Claude. Keep that list complete on the secrets and on `CLAUDE_USERS` alike. A public repository such as kirjanpito keeps repository secrets; read the security note below before moving tokens to the organization.
-
 ## Security
 
-- **Anyone who can push a branch to this repository can read every stored token.** A workflow they add on their own branch runs with the repository's secrets, and CODEOWNERS or branch protection on `main` do not prevent that. Today only the owner can push here. Before adding a collaborator, or moving the tokens to the organization, decide how to protect them: for example a GitHub Environment that only `main` can use, which also means `@claude` in pull request reviews and line comments no longer runs.
-- Tokens travel only through the password manager and GitHub's secret settings, never through chat, email, issues, commits or Claude.
+- **Every collaborator who can push a branch to this repository can read every stored token.** A workflow they add on their own branch runs with the repository's secrets, and CODEOWNERS or branch protection on `main` do not prevent that. Give push access only to people you would trust with your token. If that ever stops being enough, a GitHub Environment that only `main` can use protects the tokens, at the cost of `@claude` no longer running from pull request reviews and line comments.
+- Tokens travel only through a safe handover channel and GitHub's secret settings, never through ordinary chat, email, issues, commits or Claude.
 - Claude works on branches; people open, review and merge the pull requests.
 
 ## Troubleshooting
@@ -252,8 +247,8 @@ The same steps work on the organization's **Settings → Secrets and variables �
 | Symptom                                                   | Fix                                                                                                           |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | "you have no Claude token set up"                         | Your entry is missing from `CLAUDE_USERS`, or its `github` login is misspelled. Do steps 1 to 3.             |
-| "the secret `CLAUDE_TOKEN_X` is missing or not shared"    | The secret was deleted or misnamed, or an organization secret is not shared with this repository.            |
+| "the secret `CLAUDE_TOKEN_X` is missing"                  | The secret was deleted, or its name does not match the `secret` value in `CLAUDE_USERS`.                     |
 | The run fails with an authentication error                | The token has expired or been revoked: renew it.                                                             |
-| The run fails with a usage or rate limit                  | That person's seat limit is reached: wait, or have someone else mention `@claude`.                           |
+| The run fails with a usage or rate limit                  | That person's plan limit is reached: wait, or have someone else mention `@claude`.                           |
 | The resolve job fails: "CLAUDE_USERS is not a JSON array" | A quote, comma or bracket is wrong. Check the value in a JSON validator and fix it.                          |
 | Nothing happens at all                                    | You have no write access, the workflow is not on `main`, Actions are disabled, or the Claude GitHub App has no access to the repository. |
