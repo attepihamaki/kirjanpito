@@ -76,6 +76,7 @@ jobs:
           LOGIN: ${{ github.actor }}
           ASSOC: ${{ github.event.comment.author_association || github.event.review.author_association || github.event.issue.author_association }}
           NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+          GUIDE: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.repository.default_branch }}/.github/claude-github-actions.md
         run: |
           set -euo pipefail
           users="${USERS:-[]}"
@@ -92,7 +93,7 @@ jobs:
             echo "::notice::$LOGIN has no Claude token in CLAUDE_USERS, so Claude does not run."
             case "$ASSOC" in
               OWNER | MEMBER | COLLABORATOR)
-                gh issue comment "$NUMBER" --repo "$REPO" --body "@$LOGIN Claude did not run because you have no Claude token set up for GitHub Actions. See \`.github/claude-github-actions.md\`, \"Setup at a glance\"."
+                gh issue comment "$NUMBER" --repo "$REPO" --body "@$LOGIN Claude did not run because you have no Claude token set up for GitHub Actions. See [Setup at a glance]($GUIDE#setup-at-a-glance) in the setup guide."
                 ;;
             esac
             exit 0
@@ -138,10 +139,11 @@ jobs:
           REPO: ${{ github.repository }}
           LOGIN: ${{ github.actor }}
           NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+          GUIDE: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.repository.default_branch }}/.github/claude-github-actions.md
         run: |
           set -euo pipefail
           if [ -z "$TOKEN" ]; then
-            gh issue comment "$NUMBER" --repo "$REPO" --body "@$LOGIN Claude did not run: you are listed in CLAUDE_USERS, but the secret \`$NAME\` is missing. Ask the repository owner to add it, as \`.github/claude-github-actions.md\` describes."
+            gh issue comment "$NUMBER" --repo "$REPO" --body "@$LOGIN Claude did not run: you are listed in CLAUDE_USERS, but the secret \`$NAME\` is missing. Ask the repository owner to add it, as [Step 3 of the setup guide]($GUIDE#step-3-store-the-token-repository-owner) describes."
             echo "::error::The secret $NAME is missing."
             exit 1
           fi
