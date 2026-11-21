@@ -16,15 +16,20 @@
 #
 # Only the owner, members and collaborators can start a run; the action also
 # checks that the user has write access.
-# Runs are authenticated with the CLAUDE_CODE_OAUTH_TOKEN secret, a one-year
-# subscription token from `claude setup-token`.
+#
+# Each run uses the Claude token of the person who mentioned @claude. `resolve`
+# looks up `github.actor` in the CLAUDE_USERS variable, which names their
+# secret CLAUDE_TOKEN_<NAME>, a one-year subscription token from
+# `claude setup-token`. A member without a token gets a comment pointing to
+# .github/claude-github-actions.md, and Claude does not run. The secrets are
+# managed with scripts/claude-users.sh.
 name: Claude
 
 on:
   issues:
     types: [opened]
   # issue_comment runs with write access on comments from anyone, which is
-  # why zizmor flags it. Here the job's `if:` lets only the owner, members and
+  # why zizmor flags it. Here `resolve`'s `if:` lets only the owner, members and
   # collaborators through, the action checks write access again, and its
   # restrict_untrusted_prs default keeps a stranger's pull request from
   # running its own code with that access.
@@ -38,7 +43,8 @@ on:
 permissions: {}
 
 jobs:
-  claude:
+  resolve:
+    name: Resolve token
     # The repository is public: only the owner, members and collaborators may
     # start a run. The action checks write access itself, but only after the
     # checkout and `npm ci`, so the gate is here as well. The association is
@@ -49,6 +55,66 @@ jobs:
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+      pull-requests: write
+    outputs:
+      found: ${{ steps.user.outputs.found }}
+      secret: ${{ steps.user.outputs.secret }}
+    steps:
+      # CLAUDE_FALLBACK_SECRET names a shared token for members not in CLAUDE_USERS; unset, everyone needs their own.
+      - id: user
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          USERS: ${{ vars.CLAUDE_USERS }}
+          FALLBACK: ${{ vars.CLAUDE_FALLBACK_SECRET }}
+          LOGIN: ${{ github.actor }}
+          ASSOC: ${{ github.event.comment.author_association || github.event.review.author_association || github.event.issue.author_association }}
+          NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          users="${USERS:-[]}"
+          if ! jq -e 'type == "array"' <<<"$users" >/dev/null 2>&1; then
+            echo "::error::The CLAUDE_USERS variable is not a JSON array."
+            exit 1
+          fi
+          secret=$(jq -r --arg login "$LOGIN" '
+            map(select((.github // "" | ascii_downcase) == ($login | ascii_downcase)))
+            | first | .secret // empty' <<<"$users")
+          used=own
+          if [ -z "$secret" ] && [ -n "${FALLBACK:-}" ]; then
+            secret="$FALLBACK"
+            used=fallback
+          fi
+
+          if [ -z "$secret" ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::$LOGIN has no Claude token in CLAUDE_USERS, so Claude does not run."
+            case "$ASSOC" in
+              OWNER | MEMBER | COLLABORATOR)
+                gh issue comment "$NUMBER" --repo "$REPO" --body "@$LOGIN Claude did not run because you have no Claude token set up for GitHub Actions. See \`.github/claude-github-actions.md\`, \"Getting your own Claude token\"."
+                ;;
+            esac
+            exit 0
+          fi
+
+          # The suffix becomes part of a secret name, so only the characters a secret name allows pass.
+          if ! [[ "$secret" =~ ^[A-Z0-9_]+$ ]]; then
+            echo "::error::Invalid secret suffix '$secret' for $LOGIN in CLAUDE_USERS (allowed: A-Z, 0-9, _)."
+            exit 1
+          fi
+          {
+            echo "found=true"
+            echo "secret=$secret"
+          } >> "$GITHUB_OUTPUT"
+          echo "Claude runs on $LOGIN's request using CLAUDE_TOKEN_$secret ($used token)." >> "$GITHUB_STEP_SUMMARY"
+
+  claude:
+    needs: resolve
+    if: needs.resolve.outputs.found == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     # One run at a time per issue or pull request, so two runs never push to the same branch.
@@ -62,6 +128,22 @@ jobs:
       id-token: write
       actions: read
     steps:
+      - name: Check that the token secret exists
+        env:
+          TOKEN: ${{ secrets[format('CLAUDE_TOKEN_{0}', needs.resolve.outputs.secret)] }}
+          NAME: CLAUDE_TOKEN_${{ needs.resolve.outputs.secret }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          LOGIN: ${{ github.actor }}
+          NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          if [ -z "$TOKEN" ]; then
+            gh issue comment "$NUMBER" --repo "$REPO" --body "@$LOGIN Claude did not run: you are listed in CLAUDE_USERS, but the secret \`$NAME\` is missing or not shared with this repository. Ask a repository admin to add it with \`scripts/claude-users.sh add\`."
+            echo "::error::The secret $NAME is missing."
+            exit 1
+          fi
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
@@ -80,7 +162,8 @@ jobs:
       - id: claude
         uses: anthropics/claude-code-action@c84e279f859e2591391e95bd309286eb111c345f # v1.0.284
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # The token of the person who mentioned @claude, as `resolve` found it.
+          claude_code_oauth_token: ${{ secrets[format('CLAUDE_TOKEN_{0}', needs.resolve.outputs.secret)] }}
           # GitHub links a commit to the account whose user ID is in its noreply email; 209825114 is claude[bot].
           bot_id: "209825114"
           bot_name: claude[bot]
