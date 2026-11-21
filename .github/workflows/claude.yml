@@ -171,12 +171,13 @@ jobs:
             --model ${{ (contains(github.event.issue.labels.*.name, 'model:opus') || contains(github.event.pull_request.labels.*.name, 'model:opus')) && 'claude-opus-5-5' || 'claude-sonnet-5-5' }}
             --max-turns 80
             --permission-mode acceptEdits
-            --allowedTools "Bash(npm ci),Bash(npm run check),Bash(npm run test),Bash(npm run typecheck),Bash(npm run lint),Bash(npm run format),Bash(npm run format:check),Bash(npm run docs:check),Bash(npm run unused),Bash(npm run build),Bash(npx vitest run *),Bash(git status),Bash(git diff *),Bash(git log *)"
+            --allowedTools "Bash(npm ci),Bash(npm run check),Bash(npm run test),Bash(npm run typecheck),Bash(npm run lint),Bash(npm run format),Bash(npm run format:check),Bash(npm run docs:check),Bash(npm run unused),Bash(npm run build),Bash(npx vitest run *),Bash(git status),Bash(git diff *),Bash(git log *),Bash(ls),Bash(ls *),Bash(wc *),Bash(cat *)"
             --append-system-prompt "You are running unattended in GitHub Actions. A developer reads your comments and makes every decision; you implement them. CLAUDE.md holds the rules for working in this repository; these points add what a run on GitHub needs.
             1. Decide whether the task is clear. If it is ambiguous, contradicts the spec, or needs a product, UX, data format or tax rule decision, or a new dependency, do not guess. Post your questions as a numbered list, say what you would do for each likely answer, and stop without committing.
             2. If npm run check fails and you cannot fix the cause, commit nothing and report the failing output.
             3. If you committed work and still have questions, end by saying that the answers belong on a pull request opened from this branch, so the next run continues on the same branch.
             4. On a pull request, handle every review comment you were given and say how each one was handled.
             5. On a pull request whose branch changes package.json or package-lock.json, run npm ci before the checks, so they run against the branch's packages.
-            6. End with a short comment: what changed and why, the files touched, the npm run check and build results, and anything you did not verify or that needs a decision."
+            6. The run ends the moment you give your final reply, and anything still running is lost. Subagents are fine, but run them and every command in the foreground and wait for each result. If you did start a background command or subagent, read its result before you reply. Post your findings with the comment tool before you finish.
+            7. End with a short comment: what changed and why, the files touched, the npm run check and build results, and anything you did not verify or that needs a decision."
 
