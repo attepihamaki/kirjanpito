@@ -76,6 +76,7 @@ jobs:
           LOGIN: ${{ github.actor }}
           ASSOC: ${{ github.event.comment.author_association || github.event.review.author_association || github.event.issue.author_association }}
           NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+          GUIDE: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.repository.default_branch }}/.github/claude-github-actions.md
         run: |
           set -euo pipefail
           users="${USERS:-[]}"
@@ -92,7 +93,7 @@ jobs:
             echo "::notice::$LOGIN has no Claude token in CLAUDE_USERS, so Claude does not run."
             case "$ASSOC" in
               OWNER | MEMBER | COLLABORATOR)
-                gh issue comment "$NUMBER" --repo "$REPO" --body "@$LOGIN Claude did not run because you have no Claude token set up for GitHub Actions. See \`.github/claude-github-actions.md\`, \"Setup at a glance\"."
+                gh issue comment "$NUMBER" --repo "$REPO" --body "@$LOGIN Claude did not run because you have no Claude token set up for GitHub Actions. To set one up, follow the [setup guide]($GUIDE#setup-at-a-glance)."
                 ;;
             esac
             exit 0
@@ -116,7 +117,8 @@ jobs:
     needs: resolve
     if: needs.resolve.outputs.found == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # The whole run, setup included, has 20 minutes; there is no turn limit.
+    timeout-minutes: 20
     # One run at a time per issue or pull request, so two runs never push to the same branch.
     concurrency:
       group: claude-${{ github.event.issue.number || github.event.pull_request.number }}
@@ -137,10 +139,11 @@ jobs:
           REPO: ${{ github.repository }}
           LOGIN: ${{ github.actor }}
           NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+          GUIDE: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.repository.default_branch }}/.github/claude-github-actions.md
         run: |
           set -euo pipefail
           if [ -z "$TOKEN" ]; then
-            gh issue comment "$NUMBER" --repo "$REPO" --body "@$LOGIN Claude did not run: you are listed in CLAUDE_USERS, but the secret \`$NAME\` is missing. Ask the repository owner to add it, as \`.github/claude-github-actions.md\` describes."
+            gh issue comment "$NUMBER" --repo "$REPO" --body "@$LOGIN Claude did not run: you are listed in CLAUDE_USERS, but the secret \`$NAME\` is missing. Ask the repository owner to add it, as [Step 3 of the setup guide]($GUIDE#step-3-store-the-token-repository-owner) describes."
             echo "::error::The secret $NAME is missing."
             exit 1
           fi
@@ -169,9 +172,8 @@ jobs:
           # Sonnet unless the issue or pull request has the `model:opus` label.
           claude_args: |
             --model ${{ (contains(github.event.issue.labels.*.name, 'model:opus') || contains(github.event.pull_request.labels.*.name, 'model:opus')) && 'claude-opus-5-5' || 'claude-sonnet-5-5' }}
-            --max-turns 80
             --permission-mode acceptEdits
-            --allowedTools "Bash(npm ci),Bash(npm run check),Bash(npm run test),Bash(npm run typecheck),Bash(npm run lint),Bash(npm run format),Bash(npm run format:check),Bash(npm run docs:check),Bash(npm run unused),Bash(npm run build),Bash(npx vitest run *),Bash(git status),Bash(git diff *),Bash(git log *),Bash(ls),Bash(ls *),Bash(wc *),Bash(cat *)"
+            --allowedTools "Bash(npm ci),Bash(npm run check),Bash(npm run test),Bash(npm run typecheck),Bash(npm run lint),Bash(npm run format),Bash(npm run format:check),Bash(npm run docs:check),Bash(npm run unused),Bash(npm run build),Bash(npx vitest run *),Bash(git status),Bash(git diff *),Bash(git log *),Bash(ls),Bash(ls *),Bash(wc *),Bash(cat *),Bash(gh issue create *)"
             --append-system-prompt "You are running unattended in GitHub Actions. A developer reads your comments and makes every decision; you implement them. CLAUDE.md holds the rules for working in this repository; these points add what a run on GitHub needs.
             1. Decide whether the task is clear. If it is ambiguous, contradicts the spec, or needs a product, UX, data format or tax rule decision, or a new dependency, do not guess. Post your questions as a numbered list, say what you would do for each likely answer, and stop without committing.
             2. If npm run check fails and you cannot fix the cause, commit nothing and report the failing output.
@@ -179,5 +181,8 @@ jobs:
             4. On a pull request, handle every review comment you were given and say how each one was handled.
             5. On a pull request whose branch changes package.json or package-lock.json, run npm ci before the checks, so they run against the branch's packages.
             6. The run ends the moment you give your final reply, and anything still running is lost. Subagents are fine, but run them and every command in the foreground and wait for each result. If you did start a background command or subagent, read its result before you reply. Post your findings with the comment tool before you finish.
-            7. End with a short comment: what changed and why, the files touched, the npm run check and build results, and anything you did not verify or that needs a decision."
+            7. The run is stopped after 20 minutes, setup included, and anything not pushed by then is lost. Commit and push each finished item before you start the next.
+            8. If a request clearly holds more than one run can finish, for example several independent changes, change nothing. Instead propose separate issues as a numbered list, each with a title, what should change and why, how to tell it is done, the spec section, and whether it needs the model:opus label (CLAUDE.md, Claude on GitHub). Ask the developer to approve them in a comment that mentions you.
+            9. Create issues only when the developer's latest comment approves issues you proposed, and then exactly the approved ones, with gh issue create. Each body ends with 'Part of #<this issue>', neither title nor body contains '@claude', and an issue that needs Opus gets --label model:opus. List the new issues' links in your reply. Never create an issue without that approval.
+            10. End with a short comment: what changed and why, the files touched, the npm run check and build results, and anything you did not verify or that needs a decision."
 
