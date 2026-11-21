@@ -45,6 +45,15 @@ describe("xlsx writer (§7.10)", () => {
     expect(sheetRef("Kevät's")).toBe("'Kevät''s'")
   })
 
+  it("keeps exactly the characters XML 1.0 allows", () => {
+    expect(xmlText("a\tb\nc\rd")).toBe("a\tb\nc\rd")
+    expect(xmlText("\u0000\u0008\u000b\u000c\u001f")).toBe("")
+    expect(xmlText(" ퟿�")).toBe(" ퟿�")
+    expect(xmlText("x￾￿y")).toBe("xy")
+    expect(xmlText("x\ud800y\udfffz")).toBe("xyz")
+    expect(xmlText("€ 😀 \u{10ffff}")).toBe("€ 😀 \u{10ffff}")
+  })
+
   it("writes every part an .xlsx needs", () => {
     const sheet: Sheet = {
       name: "Taulu",
