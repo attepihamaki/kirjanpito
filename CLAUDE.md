@@ -157,7 +157,7 @@ Node 24 (`.nvmrc`). `npm install` also installs the git hooks of §11b.
 - **`docs:check`** (`scripts/check-docs.mjs`): every `CLAUDE.md §X` in code must name an existing `##` or `###` heading exactly, and every repository path in backticks in this file and in `spec/` must exist. So a section is never renumbered, a new one takes the next free number, and a renamed file is renamed in the docs in the same commit.
 - **`unused`** (knip): an unused file, export or dependency fails CI. Delete it rather than keep it for later.
 - **Formatting**: Prettier, no semicolons, double quotes, width 80. The pre-commit hook formats and lints staged files.
-- **Workflows** (`.github/workflows/workflow-lint.yml`): a change under `.github/` is checked by actionlint and zizmor. Every action is pinned to a commit SHA with its version in a comment, every job sets its own `permissions` and `timeout-minutes`, a checkout that does not push sets `persist-credentials: false`, and text a user wrote reaches a `run` script only through `env`. Dependabot (`.github/dependabot.yml`) proposes action and npm updates weekly, each after a cooldown.
+- **Workflows** (`.github/workflows/workflow-lint.yml`): a change under `.github/` is checked by actionlint and zizmor. Every action is pinned to a commit SHA with its version in a comment, every job sets its own `permissions` and `timeout-minutes`, a checkout that does not push sets `persist-credentials: false`, and text a user wrote reaches a `run` script only through `env`. Node and `npm ci` are set up in one place, the composite action `.github/actions/setup/action.yml`, which the CI, deploy and Claude workflows use. Dependabot (`.github/dependabot.yml`) proposes action and npm updates weekly, each after a cooldown.
 
 ### Adding a dependency
 
@@ -167,6 +167,8 @@ Ask first. The CSP in `lib/site.ts` allows no `eval` and no wasm, so a library t
 
 - Conventional Commits, `type(scope): summary`, lowercase and imperative: `feat(ledger): …`, `fix(vat): …`, `docs(spec): …`, `test(save): …`, `refactor(i18n): …`, `build(deps): …`. The scope is the area changed, in the words of the table above.
 - Work that needs review goes on a branch and through a pull request; a small fix may go straight to `main`. Pull requests are merged with a merge commit.
+- Keep a change to what was asked; do not refactor unrelated code. The subject of a branch's first commit describes the whole change, since it is the natural pull request title.
+- Run `npm run check` before every commit. A change that touches `app/`, `public/`, `scripts/`, `next.config.ts`, the service worker or anything in the page head also runs `npm run build`, which verifies the export.
 - A behaviour change updates the spec section that owns it in the same pull request.
 
 ### Next.js version

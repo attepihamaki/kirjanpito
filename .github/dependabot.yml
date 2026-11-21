@@ -6,8 +6,9 @@
 # Security updates are not delayed by it.
 version: 2
 updates:
+  # The composite action in .github/actions/ pins setup-node too, so its folder is watched as well.
   - package-ecosystem: github-actions
-    directory: /
+    directories: ["/", "/.github/actions/*"]
     schedule:
       interval: weekly
     cooldown:

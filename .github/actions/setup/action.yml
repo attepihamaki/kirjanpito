@@ -1,0 +1,16 @@
+# Node and the project's dependencies, the same way in every workflow that
+# builds or checks the app: Node 24, the major version `.nvmrc` pins, with the
+# npm cache, then `npm ci` from the lockfile.
+name: Set up Node and dependencies
+description: Installs Node 24 with the npm cache and runs npm ci.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: 24
+        cache: npm
+
+    - run: npm ci
+      shell: bash
