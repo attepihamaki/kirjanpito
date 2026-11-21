@@ -93,7 +93,7 @@ jobs:
             echo "::notice::$LOGIN has no Claude token in CLAUDE_USERS, so Claude does not run."
             case "$ASSOC" in
               OWNER | MEMBER | COLLABORATOR)
-                gh issue comment "$NUMBER" --repo "$REPO" --body "@$LOGIN Claude did not run because you have no Claude token set up for GitHub Actions. See [Setup at a glance]($GUIDE#setup-at-a-glance) in the setup guide."
+                gh issue comment "$NUMBER" --repo "$REPO" --body "@$LOGIN Claude did not run because you have no Claude token set up for GitHub Actions. To set one up, follow the [setup guide]($GUIDE#setup-at-a-glance)."
                 ;;
             esac
             exit 0
