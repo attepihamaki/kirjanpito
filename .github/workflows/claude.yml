@@ -21,8 +21,8 @@
 # looks up `github.actor` in the CLAUDE_USERS variable, which names their
 # secret CLAUDE_TOKEN_<NAME>, a one-year subscription token from
 # `claude setup-token`. A member without a token gets a comment pointing to
-# .github/claude-github-actions.md, and Claude does not run. The secrets are
-# managed with scripts/claude-users.sh.
+# .github/claude-github-actions.md, and Claude does not run. A repository
+# admin manages the secrets and the list by hand, as that guide describes.
 name: Claude
 
 on:
@@ -133,7 +133,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "$TOKEN" ]; then
-            gh issue comment "$NUMBER" --repo "$REPO" --body "@$LOGIN Claude did not run: you are listed in CLAUDE_USERS, but the secret \`$NAME\` is missing or not shared with this repository. Ask a repository admin to add it with \`scripts/claude-users.sh add\`."
+            gh issue comment "$NUMBER" --repo "$REPO" --body "@$LOGIN Claude did not run: you are listed in CLAUDE_USERS, but the secret \`$NAME\` is missing or not shared with this repository. Ask a repository admin to add it, as \`.github/claude-github-actions.md\` describes."
             echo "::error::The secret $NAME is missing."
             exit 1
           fi

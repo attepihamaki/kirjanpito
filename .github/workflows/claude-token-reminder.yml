@@ -3,7 +3,7 @@
 # owner once it has expired (CLAUDE.md §2d).
 #
 # The expiry dates are the `expires` fields of the CLAUDE_USERS variable,
-# which scripts/claude-users.sh writes when it adds or renews a token. The
+# which a repository admin sets when adding or renewing a token. The
 # issue mentions everyone who has to renew, is updated every week, and is
 # closed once no token expires within 30 days.
 name: Claude token reminder
@@ -35,7 +35,7 @@ jobs:
             exit 1
           fi
           if [ "$(jq 'length' <<<"${USERS:-[]}")" = 0 ]; then
-            echo "::warning::CLAUDE_USERS is empty. Add tokens with scripts/claude-users.sh add."
+            echo "::warning::CLAUDE_USERS is empty. Add tokens as .github/claude-github-actions.md describes."
             exit 0
           fi
 
@@ -69,7 +69,7 @@ jobs:
 
           To renew:
           1. The owner runs \`claude setup-token\` on their own machine and gives the new token to a repository admin through the password manager.
-          2. The admin runs \`scripts/claude-users.sh add <github-login> -R $REPO\`, which replaces the secret and records the new expiry date.
+          2. The admin replaces the secret \`CLAUDE_TOKEN_<NAME>\` and changes the person's \`expires\` in \`CLAUDE_USERS\`, as \`.github/claude-github-actions.md\` describes.
 
           This issue is updated every Monday and closes itself once every token is renewed. See \`.github/claude-github-actions.md\`.
           EOF
