@@ -1,6 +1,6 @@
 # Claude on GitHub: each person on their own Claude seat
 
-Mention `@claude` in an issue, a comment on an issue or pull request, or a pull request review, and Claude answers or makes the change. Each run uses the **Claude token of the person who mentioned `@claude`**, so it counts against that person's own Claude seat. There is no shared API key. How the workflow works as a whole is in `CLAUDE.md` §2d.
+Mention `@claude` in an issue, a comment on an issue or pull request, or a pull request review, and Claude answers or makes the change. Each run uses the **Claude token of the person who mentioned `@claude`**, so it counts against that person's own Claude seat. There is no shared API key and no shared token: someone without their own token is told how to add one. How the workflow works as a whole is in `CLAUDE.md` §2d.
 
 ## How it works
 
@@ -16,7 +16,6 @@ Mention `@claude` in an issue, a comment on an issue or pull request, or a pull 
 | ------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------ |
 | Each person's token      | secret `CLAUDE_TOKEN_<NAME>`      | `CLAUDE_TOKEN_ATTEPIHAMAKI`                                                                      |
 | Who uses which token     | variable `CLAUDE_USERS` (JSON)    | `[{"github":"attepihamaki","secret":"ATTEPIHAMAKI","added":"2026-11-21","expires":"2027-11-21"}]` |
-| Optional shared fallback | variable `CLAUDE_FALLBACK_SECRET` | `TEAM` → anyone not listed uses `CLAUDE_TOKEN_TEAM`. Unset (the default), everyone needs their own token. |
 
 Only the repository's owner, members and collaborators can start a run, and the action checks write access again. Anyone else's mention is ignored.
 

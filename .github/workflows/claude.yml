@@ -64,13 +64,12 @@ jobs:
       found: ${{ steps.user.outputs.found }}
       secret: ${{ steps.user.outputs.secret }}
     steps:
-      # CLAUDE_FALLBACK_SECRET names a shared token for members not in CLAUDE_USERS; unset, everyone needs their own.
+      # There is no shared token: a person not in CLAUDE_USERS is told how to add their own.
       - id: user
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           USERS: ${{ vars.CLAUDE_USERS }}
-          FALLBACK: ${{ vars.CLAUDE_FALLBACK_SECRET }}
           LOGIN: ${{ github.actor }}
           ASSOC: ${{ github.event.comment.author_association || github.event.review.author_association || github.event.issue.author_association }}
           NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
@@ -84,11 +83,6 @@ jobs:
           secret=$(jq -r --arg login "$LOGIN" '
             map(select((.github // "" | ascii_downcase) == ($login | ascii_downcase)))
             | first | .secret // empty' <<<"$users")
-          used=own
-          if [ -z "$secret" ] && [ -n "${FALLBACK:-}" ]; then
-            secret="$FALLBACK"
-            used=fallback
-          fi
 
           if [ -z "$secret" ]; then
             echo "found=false" >> "$GITHUB_OUTPUT"
@@ -110,7 +104,7 @@ jobs:
             echo "found=true"
             echo "secret=$secret"
           } >> "$GITHUB_OUTPUT"
-          echo "Claude runs on $LOGIN's request using CLAUDE_TOKEN_$secret ($used token)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Claude runs on $LOGIN's request using CLAUDE_TOKEN_$secret." >> "$GITHUB_STEP_SUMMARY"
 
   claude:
     needs: resolve
