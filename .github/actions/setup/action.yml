@@ -1,6 +1,12 @@
 # Node and the project's dependencies, the same way in every workflow that
 # builds or checks the app: Node 24, the major version `.nvmrc` pins, with the
 # npm cache, then `npm ci` from the lockfile.
+#
+# Workflows call it as `./.github/actions/setup` with zizmor's
+# self-repository finding ignored: GitHub's `$/` form is not yet known to
+# actionlint. Switch the three `uses:` lines to `$/.github/actions/setup` once
+# it is. Nothing clones code before these steps, so the relative path always
+# resolves to this file.
 name: Set up Node and dependencies
 description: Installs Node 24 with the npm cache and runs npm ci.
 

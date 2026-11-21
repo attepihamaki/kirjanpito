@@ -130,7 +130,8 @@ jobs:
     steps:
       - name: Check that the token secret exists
         env:
-          TOKEN: ${{ secrets[format('CLAUDE_TOKEN_{0}', needs.resolve.outputs.secret)] }}
+          # The token is chosen per person at run time, which takes a dynamic lookup and hands this job the whole secrets context.
+          TOKEN: ${{ secrets[format('CLAUDE_TOKEN_{0}', needs.resolve.outputs.secret)] }} # zizmor: ignore[overprovisioned-secrets]
           NAME: CLAUDE_TOKEN_${{ needs.resolve.outputs.secret }}
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -152,12 +153,12 @@ jobs:
           # app instead, so CI runs on Claude's branches.
           persist-credentials: false
 
-      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/setup # zizmor: ignore[self-repository]
 
       - uses: anthropics/claude-code-action@c84e279f859e2591391e95bd309286eb111c345f # v1.0.284
         with:
           # The token of the person who mentioned @claude, as `resolve` found it.
-          claude_code_oauth_token: ${{ secrets[format('CLAUDE_TOKEN_{0}', needs.resolve.outputs.secret)] }}
+          claude_code_oauth_token: ${{ secrets[format('CLAUDE_TOKEN_{0}', needs.resolve.outputs.secret)] }} # zizmor: ignore[overprovisioned-secrets]
           # GitHub links a commit to the account whose user ID is in its noreply email; 209825114 is claude[bot].
           bot_id: "209825114"
           bot_name: claude[bot]

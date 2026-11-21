@@ -238,7 +238,7 @@ If the last person is removed, the value is `[]`.
 
 ## Security
 
-- **Every collaborator who can push a branch to this repository can read every stored token.** A workflow they add on their own branch runs with the repository's secrets, and CODEOWNERS or branch protection on `main` do not prevent that. Give push access only to people you would trust with your token. If that ever stops being enough, a GitHub Environment that only `main` can use protects the tokens, at the cost of `@claude` no longer running from pull request reviews and line comments.
+- **Every collaborator who can push a branch to this repository can read every stored token.** A workflow they add on their own branch runs with the repository's secrets, and CODEOWNERS or branch protection on `main` do not prevent that. Because the token is chosen per person while the workflow runs, the Claude job also receives every `CLAUDE_TOKEN_*` secret, masked in its logs, not only the one it uses. Give push access only to people you would trust with your token. If that ever stops being enough, a GitHub Environment that only `main` can use protects the tokens, at the cost of `@claude` no longer running from pull request reviews and line comments.
 - Tokens travel only through a safe handover channel and GitHub's secret settings, never through ordinary chat, email, issues, commits or Claude.
 - Claude works on branches; people open, review and merge the pull requests.
 
