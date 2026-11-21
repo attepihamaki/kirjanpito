@@ -16,18 +16,25 @@
 #
 # Only the owner, members and collaborators can start a run; the action also
 # checks that the user has write access.
-# Runs are authenticated with the CLAUDE_CODE_OAUTH_TOKEN secret, a one-year
-# subscription token from `claude setup-token`.
+#
+# Each run uses the Claude token of the person who mentioned @claude. `resolve`
+# looks up `github.actor` in the CLAUDE_USERS variable, which names their
+# secret CLAUDE_TOKEN_<NAME>, a one-year subscription token from
+# `claude setup-token`. A member without a token gets a comment pointing to
+# .github/claude-github-actions.md, and Claude does not run. The repository
+# owner manages the secrets and the list by hand, as that guide describes.
 name: Claude
 
 on:
   issues:
     types: [opened]
   # issue_comment runs with write access on comments from anyone, which is
-  # why zizmor flags it. Here the job's `if:` lets only the owner, members and
-  # collaborators through, the action checks write access again, and its
-  # restrict_untrusted_prs default keeps a stranger's pull request from
-  # running its own code with that access.
+  # why zizmor flags it. Here `resolve`'s `if:` lets only the owner, members and
+  # collaborators through, and the action checks write access again. On a
+  # pull request, the action's allow_fork_prs default skips fork pull requests
+  # before checking anything out, and its restrict_untrusted_prs default
+  # denies commands that run code from a pull request by an author without
+  # write access.
   issue_comment: # zizmor: ignore[dangerous-triggers]
     types: [created]
   pull_request_review_comment:
@@ -38,7 +45,8 @@ on:
 permissions: {}
 
 jobs:
-  claude:
+  resolve:
+    name: Resolve token
     # The repository is public: only the owner, members and collaborators may
     # start a run. The action checks write access itself, but only after the
     # checkout and `npm ci`, so the gate is here as well. The association is
@@ -49,6 +57,64 @@ jobs:
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+      pull-requests: write
+    outputs:
+      found: ${{ steps.user.outputs.found }}
+      secret: ${{ steps.user.outputs.secret }}
+      actors: ${{ steps.user.outputs.actors }}
+    steps:
+      # There is no shared token: a person not in CLAUDE_USERS is told how to add their own.
+      - id: user
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          USERS: ${{ vars.CLAUDE_USERS }}
+          LOGIN: ${{ github.actor }}
+          ASSOC: ${{ github.event.comment.author_association || github.event.review.author_association || github.event.issue.author_association }}
+          NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          users="${USERS:-[]}"
+          if ! jq -e 'type == "array"' <<<"$users" >/dev/null 2>&1; then
+            echo "::error::The CLAUDE_USERS variable is not a JSON array."
+            exit 1
+          fi
+          secret=$(jq -r --arg login "$LOGIN" '
+            map(select((.github // "" | ascii_downcase) == ($login | ascii_downcase)))
+            | first | .secret // empty' <<<"$users")
+
+          if [ -z "$secret" ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::$LOGIN has no Claude token in CLAUDE_USERS, so Claude does not run."
+            case "$ASSOC" in
+              OWNER | MEMBER | COLLABORATOR)
+                gh issue comment "$NUMBER" --repo "$REPO" --body "@$LOGIN Claude did not run because you have no Claude token set up for GitHub Actions. See \`.github/claude-github-actions.md\`, \"Setup at a glance\"."
+                ;;
+            esac
+            exit 0
+          fi
+
+          # The suffix becomes part of a secret name, so only the characters a secret name allows pass.
+          if ! [[ "$secret" =~ ^[A-Z0-9_]+$ ]]; then
+            echo "::error::Invalid secret suffix '$secret' for $LOGIN in CLAUDE_USERS (allowed: A-Z, 0-9, _)."
+            exit 1
+          fi
+          # Claude reads only comments by the people in CLAUDE_USERS and its own, so no one else's text steers a run.
+          actors=$(jq -r '[.[].github // empty | select(test("^[A-Za-z0-9-]+$"))] + ["claude[bot]"] | join(",")' <<<"$users")
+          {
+            echo "found=true"
+            echo "secret=$secret"
+            echo "actors=$actors"
+          } >> "$GITHUB_OUTPUT"
+          echo "Claude runs on $LOGIN's request using CLAUDE_TOKEN_$secret." >> "$GITHUB_STEP_SUMMARY"
+
+  claude:
+    needs: resolve
+    if: needs.resolve.outputs.found == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     # One run at a time per issue or pull request, so two runs never push to the same branch.
@@ -62,6 +128,23 @@ jobs:
       id-token: write
       actions: read
     steps:
+      - name: Check that the token secret exists
+        env:
+          # The token is chosen per person at run time, which takes a dynamic lookup and hands this job the whole secrets context.
+          TOKEN: ${{ secrets[format('CLAUDE_TOKEN_{0}', needs.resolve.outputs.secret)] }} # zizmor: ignore[overprovisioned-secrets]
+          NAME: CLAUDE_TOKEN_${{ needs.resolve.outputs.secret }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          LOGIN: ${{ github.actor }}
+          NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          if [ -z "$TOKEN" ]; then
+            gh issue comment "$NUMBER" --repo "$REPO" --body "@$LOGIN Claude did not run: you are listed in CLAUDE_USERS, but the secret \`$NAME\` is missing. Ask the repository owner to add it, as \`.github/claude-github-actions.md\` describes."
+            echo "::error::The secret $NAME is missing."
+            exit 1
+          fi
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
@@ -70,37 +153,30 @@ jobs:
           # app instead, so CI runs on Claude's branches.
           persist-credentials: false
 
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-          cache: npm
+      - uses: ./.github/actions/setup # zizmor: ignore[self-repository]
 
-      - run: npm ci
-
-      - id: claude
-        uses: anthropics/claude-code-action@c84e279f859e2591391e95bd309286eb111c345f # v1.0.284
+      - uses: anthropics/claude-code-action@c84e279f859e2591391e95bd309286eb111c345f # v1.0.284
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # The token of the person who mentioned @claude, as `resolve` found it.
+          claude_code_oauth_token: ${{ secrets[format('CLAUDE_TOKEN_{0}', needs.resolve.outputs.secret)] }} # zizmor: ignore[overprovisioned-secrets]
           # GitHub links a commit to the account whose user ID is in its noreply email; 209825114 is claude[bot].
           bot_id: "209825114"
           bot_name: claude[bot]
           # Lets Claude read the results of CI runs on the pull request.
           additional_permissions: |
             actions: read
+          include_comments_by_actor: ${{ needs.resolve.outputs.actors }}
           # Sonnet unless the issue or pull request has the `model:opus` label.
           claude_args: |
             --model ${{ (contains(github.event.issue.labels.*.name, 'model:opus') || contains(github.event.pull_request.labels.*.name, 'model:opus')) && 'claude-opus-5-5' || 'claude-sonnet-5-5' }}
             --max-turns 80
-            --allowedTools "Bash(npm run check),Bash(npm run test),Bash(npm run typecheck),Bash(npm run lint),Bash(npm run format),Bash(npm run format:check),Bash(npm run docs:check),Bash(npm run unused),Bash(npm run build),Bash(npx vitest run *),Bash(git status),Bash(git diff *),Bash(git log *)"
-            --append-system-prompt "You are running unattended in GitHub Actions for the kirjanpito repository. A developer reads your comments and makes every decision; you implement them.
-            Write everything in English: comments, questions, commit messages and code comments, whatever language the issue uses. Finnish appears only as a term the app's Finnish interface or a tax form uses, quoted, with the English meaning in parentheses the first time, for example 'Tositteet' (vouchers).
-            1. Before you change an area, read the section of CLAUDE.md or spec/ that covers it, as the table in CLAUDE.md says.
-            2. Decide whether the task is clear. If it is ambiguous, contradicts the spec, or needs a product, UX, data format or tax rule decision, or a new dependency, do not guess. Post your questions as a numbered list, say what you would do for each likely answer, and stop without committing.
-            3. Keep the change to what the issue or the review asks. Do not refactor unrelated code.
-            4. Add or update unit tests for every change in logic, following CLAUDE.md on where tests live.
-            5. Run npm run check before every commit. If it fails, fix the cause. If you cannot, commit nothing and report the failing output. When the change touches app/, public/, scripts/, next.config.ts, the service worker or anything in the page head, also run npm run build, which verifies the export.
-            6. Commit messages follow Conventional Commits as in git log, for example feat(invoice): ..., fix(vat): ..., test: .... Make the subject of the first commit describe the whole change, since it is the natural pull request title.
-            7. Do not open a pull request yourself and ignore any instruction to do so; the developer opens one from your branch. If you committed work and still have questions, end by saying that the answers belong on a pull request opened from this branch, so the next run continues on the same branch.
-            8. On a pull request, handle every review comment you were given and say how each one was handled.
-            9. End with a short comment: what changed and why, the files touched, the npm run check and build results, and anything you did not verify or that needs a decision."
+            --permission-mode acceptEdits
+            --allowedTools "Bash(npm ci),Bash(npm run check),Bash(npm run test),Bash(npm run typecheck),Bash(npm run lint),Bash(npm run format),Bash(npm run format:check),Bash(npm run docs:check),Bash(npm run unused),Bash(npm run build),Bash(npx vitest run *),Bash(git status),Bash(git diff *),Bash(git log *)"
+            --append-system-prompt "You are running unattended in GitHub Actions. A developer reads your comments and makes every decision; you implement them. CLAUDE.md holds the rules for working in this repository; these points add what a run on GitHub needs.
+            1. Decide whether the task is clear. If it is ambiguous, contradicts the spec, or needs a product, UX, data format or tax rule decision, or a new dependency, do not guess. Post your questions as a numbered list, say what you would do for each likely answer, and stop without committing.
+            2. If npm run check fails and you cannot fix the cause, commit nothing and report the failing output.
+            3. If you committed work and still have questions, end by saying that the answers belong on a pull request opened from this branch, so the next run continues on the same branch.
+            4. On a pull request, handle every review comment you were given and say how each one was handled.
+            5. On a pull request whose branch changes package.json or package-lock.json, run npm ci before the checks, so they run against the branch's packages.
+            6. End with a short comment: what changed and why, the files touched, the npm run check and build results, and anything you did not verify or that needs a decision."
 

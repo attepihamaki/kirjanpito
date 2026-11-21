@@ -59,7 +59,7 @@ const STYLES_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 /** Text safe inside an XML element or attribute; characters XML 1.0 cannot hold are dropped. */
 export function xmlText(value: string): string {
   return value
-    .replace(/[^\t\n\r -퟿-�\u{10000}-\u{10FFFF}]/gu, "")
+    .replace(/[^\t\n\r\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/gu, "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")

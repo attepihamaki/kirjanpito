@@ -157,7 +157,7 @@ Node 24 (`.nvmrc`). `npm install` also installs the git hooks of §11b.
 - **`docs:check`** (`scripts/check-docs.mjs`): every `CLAUDE.md §X` in code must name an existing `##` or `###` heading exactly, and every repository path in backticks in this file and in `spec/` must exist. So a section is never renumbered, a new one takes the next free number, and a renamed file is renamed in the docs in the same commit.
 - **`unused`** (knip): an unused file, export or dependency fails CI. Delete it rather than keep it for later.
 - **Formatting**: Prettier, no semicolons, double quotes, width 80. The pre-commit hook formats and lints staged files.
-- **Workflows** (`.github/workflows/workflow-lint.yml`): a change under `.github/` is checked by actionlint and zizmor. Every action is pinned to a commit SHA with its version in a comment, every job sets its own `permissions` and `timeout-minutes`, a checkout that does not push sets `persist-credentials: false`, and text a user wrote reaches a `run` script only through `env`. Dependabot (`.github/dependabot.yml`) proposes action and npm updates weekly, each after a cooldown.
+- **Workflows** (`.github/workflows/workflow-lint.yml`): a change under `.github/` is checked by actionlint and zizmor. Every action is pinned to a commit SHA with its version in a comment, every job sets its own `permissions` and `timeout-minutes`, a checkout that does not push sets `persist-credentials: false`, and text a user wrote reaches a `run` script only through `env`. Node and `npm ci` are set up in one place, the composite action `.github/actions/setup/action.yml`, which the CI, deploy and Claude workflows use. Dependabot (`.github/dependabot.yml`) proposes action and npm updates weekly, each after a cooldown.
 
 ### Adding a dependency
 
@@ -167,6 +167,8 @@ Ask first. The CSP in `lib/site.ts` allows no `eval` and no wasm, so a library t
 
 - Conventional Commits, `type(scope): summary`, lowercase and imperative: `feat(ledger): …`, `fix(vat): …`, `docs(spec): …`, `test(save): …`, `refactor(i18n): …`, `build(deps): …`. The scope is the area changed, in the words of the table above.
 - Work that needs review goes on a branch and through a pull request; a small fix may go straight to `main`. Pull requests are merged with a merge commit.
+- Keep a change to what was asked; do not refactor unrelated code. The subject of a branch's first commit describes the whole change, since it is the natural pull request title.
+- Run `npm run check` before every commit. A change that touches `app/`, `public/`, `scripts/`, `next.config.ts`, the service worker or anything in the page head also runs `npm run build`, which verifies the export.
 - A behaviour change updates the spec section that owns it in the same pull request.
 
 ### Next.js version
@@ -177,9 +179,9 @@ Ask first. The CSP in `lib/site.ts` allows no `eval` and no wasm, so a library t
 
 ## 2d. Claude on GitHub
 
-Claude Code runs in GitHub Actions (`.github/workflows/claude.yml`) on the repository owner's subscription token. A developer writes the task; Claude implements it; the developer decides.
+Claude Code runs in GitHub Actions (`.github/workflows/claude.yml`) on the subscription token of whoever mentions `@claude`. A developer writes the task; Claude implements it; the developer decides.
 
-1. **A developer opens an issue with `@claude`** in its title or body, or mentions `@claude` in a comment on an issue. The repository is public, so only its owner, members and collaborators can start a run; anyone else's mention is ignored.
+1. **A developer opens an issue with `@claude`** in its title or body, or mentions `@claude` in a comment on an issue. The repository is public, so only its owner, members and collaborators can start a run; anyone else's mention is ignored. The run uses the Claude token of the person who mentioned `@claude`; a member without one gets a comment pointing to the setup guide, and Claude does not run.
 2. **The model is Sonnet unless a label says otherwise.** A `model:opus` label on the issue, or on the pull request when the mention is there, makes the run use Opus. The label is read when a run starts, so adding or removing it applies from the next `@claude` mention. A pull request does not inherit its issue's label. Use Opus for calculations, tax rules, stored data and file formats, changes across several modules, and bugs without an obvious cause.
 3. **Claude works on a new `claude/issue-<n>-<timestamp>` branch**, adds tests and runs `npm run check` before each commit.
 4. **When the task is unclear** or needs a product, UX, data format or tax rule decision, Claude asks numbered questions in the issue and commits nothing. The developer answers in a comment with `@claude`.
@@ -187,6 +189,6 @@ Claude Code runs in GitHub Actions (`.github/workflows/claude.yml`) on the repos
 6. **Review happens on the pull request**, and so do answers to questions Claude asked after committing. A comment, a line comment or a review summary that mentions `@claude` makes Claude continue on the same branch. A mention on the issue always starts a new branch from `main`, so once a branch has work worth keeping, open its pull request and continue there.
 7. **CI** (`.github/workflows/ci.yml`) runs `npm run check` and the build on every pull request and every push to a `claude/` branch. Claude pushes as the Claude app, not with the workflow token, because a push made with the workflow token starts no workflow; `gh workflow run ci.yml --ref <branch>` checks a branch on demand when the branch's own `ci.yml` has that trigger; `gh pr update-branch <number>` brings an older branch up to date and starts the check with its push.
 
-The subscription token in the `CLAUDE_CODE_OAUTH_TOKEN` secret lasts one year. Its expiry date is the repository variable `CLAUDE_TOKEN_EXPIRES`, and `.github/workflows/claude-token-reminder.yml` opens an issue with the renewal steps a month before it.
+Each person's token from `claude setup-token` is the secret `CLAUDE_TOKEN_<NAME>` and lasts one year. The repository variable `CLAUDE_USERS` maps each GitHub login to its secret and records the token's expiry date; the repository owner adds, renews and removes a person by hand in the repository settings, as the guide describes. `.github/workflows/claude-token-reminder.yml` reads those dates every Monday and keeps one issue, mentioning everyone whose token expires within 30 days, open until all are renewed. `.github/claude-github-actions.md` is the setup guide, including the security trade-off of storing the tokens as repository secrets.
 
 Writing an issue for Claude: say what should change and why, how to tell it is done, and the spec section if you know it. One issue is one change. The instructions Claude follows in a run are the `--append-system-prompt` in the workflow and this file.
