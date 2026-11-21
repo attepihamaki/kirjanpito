@@ -1,34 +1,21 @@
-# Runs the same checks as the deploy, on every pull request and on every push
-# to a Claude branch, so a change is known to pass before it is merged.
-#
-# Claude's branches are checked on push, so a branch is checked before anyone
-# opens a pull request from it. The push run attaches its result to the head
-# commit, so it also shows on that pull request, and the pull request trigger
-# skips those branches so each commit is checked once.
-#
-# `workflow_dispatch` checks a branch on demand, when that branch's copy of
-# this file has the trigger; an older branch is brought up to date with `gh
-# pr update-branch <number>`, whose push starts the check as well:
-#   gh workflow run ci.yml --ref <branch>
+# Runs the same checks as the deploy on every pull request, so a change is
+# known to pass before it is merged. Branches without a pull request, Claude's
+# included, are not checked until one is opened.
 name: CI
 
 on:
   pull_request:
-  push:
-    branches: ["claude/**"]
-  workflow_dispatch:
 
 permissions:
   contents: read
 
-# A newer commit on the same branch makes the running check obsolete.
+# A newer commit on the same pull request makes the running check obsolete.
 concurrency:
-  group: ci-${{ github.head_ref || github.ref }}
+  group: ci-${{ github.head_ref }}
   cancel-in-progress: true
 
 jobs:
   check:
-    if: github.event_name != 'pull_request' || !startsWith(github.head_ref, 'claude/')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
